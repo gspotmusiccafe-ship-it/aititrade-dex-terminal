@@ -1,0 +1,146 @@
+import { useQuery } from "@tanstack/react-query";
+import { Heart, Play, Clock, Shuffle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TrackCard } from "@/components/track-card";
+import { usePlayer } from "@/lib/player-context";
+import { useAuth } from "@/hooks/use-auth";
+import type { TrackWithArtist } from "@shared/schema";
+
+export default function LikedSongsPage() {
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { playTrack } = usePlayer();
+
+  const { data: likedTracks, isLoading } = useQuery<TrackWithArtist[]>({
+    queryKey: ["/api/user/liked-tracks"],
+    enabled: isAuthenticated,
+  });
+
+  const handlePlayAll = () => {
+    if (likedTracks && likedTracks.length > 0) {
+      playTrack(likedTracks[0], likedTracks);
+    }
+  };
+
+  const handleShuffle = () => {
+    if (likedTracks && likedTracks.length > 0) {
+      const shuffled = [...likedTracks].sort(() => Math.random() - 0.5);
+      playTrack(shuffled[0], shuffled);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-full pb-28">
+        <Skeleton className="h-64 w-full" />
+        <div className="px-6 py-8 space-y-2">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-full pb-28 px-6 py-8 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <Heart className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">Liked Songs</h2>
+          <p className="text-muted-foreground mb-6">
+            Sign in to save your favorite tracks and access them anytime
+          </p>
+          <Button asChild>
+            <a href="/api/login">Sign In</a>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full pb-28">
+      {/* Header with Gradient */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-purple-600/30 via-blue-600/20 to-transparent" />
+        <div className="relative px-6 py-12">
+          <div className="flex items-end gap-6">
+            <div className="w-48 h-48 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center shadow-2xl">
+              <Heart className="h-24 w-24 text-white fill-white" />
+            </div>
+            <div className="flex-1 pb-2">
+              <p className="text-sm uppercase tracking-wide mb-2">Playlist</p>
+              <h1 className="text-4xl sm:text-5xl font-bold mb-4">Liked Songs</h1>
+              <p className="text-muted-foreground">
+                {likedTracks?.length || 0} songs
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="px-6 py-4 flex items-center gap-4">
+        <Button
+          size="lg"
+          className="rounded-full h-14 w-14"
+          onClick={handlePlayAll}
+          disabled={!likedTracks || likedTracks.length === 0}
+          data-testid="button-play-liked"
+        >
+          <Play className="h-6 w-6 ml-0.5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleShuffle}
+          disabled={!likedTracks || likedTracks.length === 0}
+          data-testid="button-shuffle-liked"
+        >
+          <Shuffle className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Track List */}
+      <div className="px-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-2 py-2 border-b border-border/50 text-xs text-muted-foreground uppercase tracking-wide">
+          <div className="w-8 text-center">#</div>
+          <div className="flex-1">Title</div>
+          <div className="hidden md:block w-20 text-right">Plays</div>
+          <div className="flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+          </div>
+          <div className="w-10" />
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2 mt-2">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded" />
+            ))}
+          </div>
+        ) : likedTracks && likedTracks.length > 0 ? (
+          <div className="space-y-1 mt-2">
+            {likedTracks.map((track, index) => (
+              <TrackCard
+                key={track.id}
+                track={track}
+                index={index}
+                queue={likedTracks}
+                showCover={true}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-16 text-muted-foreground">
+            <Heart className="h-12 w-12 mx-auto mb-3 opacity-50" />
+            <p className="text-lg">Songs you like will appear here</p>
+            <p className="text-sm">Save songs by tapping the heart icon</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

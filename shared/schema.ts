@@ -1,18 +1,169 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { sql, relations } from "drizzle-orm";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
+export * from "./models/auth";
+
+export const artists = pgTable("artists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  bio: text("bio"),
+  profileImage: text("profile_image"),
+  coverImage: text("cover_image"),
+  verified: boolean("verified").default(false),
+  monthlyListeners: integer("monthly_listeners").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const albums = pgTable("albums", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artists.id),
+  title: varchar("title").notNull(),
+  coverImage: text("cover_image"),
+  releaseDate: timestamp("release_date"),
+  isPrerelease: boolean("is_prerelease").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const tracks = pgTable("tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artists.id),
+  albumId: varchar("album_id").references(() => albums.id),
+  title: varchar("title").notNull(),
+  duration: integer("duration").notNull(),
+  audioUrl: text("audio_url").notNull(),
+  coverImage: text("cover_image"),
+  playCount: integer("play_count").default(0),
+  isPrerelease: boolean("is_prerelease").default(false),
+  releaseDate: timestamp("release_date"),
+  genre: varchar("genre"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const videos = pgTable("videos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artists.id),
+  title: varchar("title").notNull(),
+  description: text("description"),
+  videoUrl: text("video_url").notNull(),
+  thumbnailUrl: text("thumbnail_url"),
+  duration: integer("duration").notNull(),
+  viewCount: integer("view_count").default(0),
+  isPrerelease: boolean("is_prerelease").default(false),
+  releaseDate: timestamp("release_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const memberships = pgTable("memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  tier: varchar("tier").notNull().default("free"),
+  startDate: timestamp("start_date").defaultNow(),
+  endDate: timestamp("end_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playlists = pgTable("playlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  description: text("description"),
+  coverImage: text("cover_image"),
+  isPublic: boolean("is_public").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playlistTracks = pgTable("playlist_tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  playlistId: varchar("playlist_id").notNull().references(() => playlists.id),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  position: integer("position").notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export const likedTracks = pgTable("liked_tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  likedAt: timestamp("liked_at").defaultNow(),
+});
+
+export const followedArtists = pgTable("followed_artists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  artistId: varchar("artist_id").notNull().references(() => artists.id),
+  followedAt: timestamp("followed_at").defaultNow(),
+});
+
+export const recentlyPlayed = pgTable("recently_played", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  playedAt: timestamp("played_at").defaultNow(),
+});
+
+// Relations
+export const artistsRelations = relations(artists, ({ many }) => ({
+  tracks: many(tracks),
+  albums: many(albums),
+  videos: many(videos),
+}));
+
+export const albumsRelations = relations(albums, ({ one, many }) => ({
+  artist: one(artists, { fields: [albums.artistId], references: [artists.id] }),
+  tracks: many(tracks),
+}));
+
+export const tracksRelations = relations(tracks, ({ one }) => ({
+  artist: one(artists, { fields: [tracks.artistId], references: [artists.id] }),
+  album: one(albums, { fields: [tracks.albumId], references: [albums.id] }),
+}));
+
+export const videosRelations = relations(videos, ({ one }) => ({
+  artist: one(artists, { fields: [videos.artistId], references: [artists.id] }),
+}));
+
+export const playlistsRelations = relations(playlists, ({ many }) => ({
+  tracks: many(playlistTracks),
+}));
+
+export const playlistTracksRelations = relations(playlistTracks, ({ one }) => ({
+  playlist: one(playlists, { fields: [playlistTracks.playlistId], references: [playlists.id] }),
+  track: one(tracks, { fields: [playlistTracks.trackId], references: [tracks.id] }),
+}));
+
+// Insert schemas
+export const insertArtistSchema = createInsertSchema(artists).omit({ id: true, createdAt: true });
+export const insertAlbumSchema = createInsertSchema(albums).omit({ id: true, createdAt: true });
+export const insertTrackSchema = createInsertSchema(tracks).omit({ id: true, createdAt: true, playCount: true });
+export const insertVideoSchema = createInsertSchema(videos).omit({ id: true, createdAt: true, viewCount: true });
+export const insertMembershipSchema = createInsertSchema(memberships).omit({ id: true, createdAt: true });
+export const insertPlaylistSchema = createInsertSchema(playlists).omit({ id: true, createdAt: true });
+export const insertPlaylistTrackSchema = createInsertSchema(playlistTracks).omit({ id: true, addedAt: true });
+export const insertLikedTrackSchema = createInsertSchema(likedTracks).omit({ id: true, likedAt: true });
+export const insertFollowedArtistSchema = createInsertSchema(followedArtists).omit({ id: true, followedAt: true });
+
+// Types
+export type InsertArtist = z.infer<typeof insertArtistSchema>;
+export type Artist = typeof artists.$inferSelect;
+export type InsertAlbum = z.infer<typeof insertAlbumSchema>;
+export type Album = typeof albums.$inferSelect;
+export type InsertTrack = z.infer<typeof insertTrackSchema>;
+export type Track = typeof tracks.$inferSelect;
+export type InsertVideo = z.infer<typeof insertVideoSchema>;
+export type Video = typeof videos.$inferSelect;
+export type InsertMembership = z.infer<typeof insertMembershipSchema>;
+export type Membership = typeof memberships.$inferSelect;
+export type InsertPlaylist = z.infer<typeof insertPlaylistSchema>;
+export type Playlist = typeof playlists.$inferSelect;
+export type PlaylistTrack = typeof playlistTracks.$inferSelect;
+export type LikedTrack = typeof likedTracks.$inferSelect;
+export type FollowedArtist = typeof followedArtists.$inferSelect;
+
+// Extended types for frontend use
+export type TrackWithArtist = Track & { artist: Artist };
+export type AlbumWithArtist = Album & { artist: Artist };
+export type ArtistWithStats = Artist & { trackCount?: number };
