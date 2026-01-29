@@ -422,5 +422,199 @@ export async function registerRoutes(
     }
   });
 
+  // ============ Admin Routes ============
+
+  // Admin middleware
+  const isAdmin = async (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated || !req.isAuthenticated() || !req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const isAdminUser = await storage.isUserAdmin(req.user.claims.sub);
+    if (!isAdminUser) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    next();
+  };
+
+  // Check if user is admin
+  app.get("/api/admin/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const isAdminUser = await storage.isUserAdmin(req.user.claims.sub);
+      res.json({ isAdmin: isAdminUser });
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      res.status(500).json({ message: "Failed to check admin status" });
+    }
+  });
+
+  // Get analytics dashboard data
+  app.get("/api/admin/analytics", isAdmin, async (req: any, res) => {
+    try {
+      const analytics = await storage.getAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // Get all users
+  app.get("/api/admin/users", isAdmin, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Suspend/unsuspend user
+  app.patch("/api/admin/users/:id/suspend", isAdmin, async (req: any, res) => {
+    try {
+      const { suspend } = req.body;
+      const user = await storage.updateUser(req.params.id, { isSuspended: suspend });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Make/remove admin
+  app.patch("/api/admin/users/:id/admin", isAdmin, async (req: any, res) => {
+    try {
+      const { isAdmin: makeAdmin } = req.body;
+      const user = await storage.updateUser(req.params.id, { isAdmin: makeAdmin });
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  // Delete user
+  app.delete("/api/admin/users/:id", isAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteUser(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // Get all artists
+  app.get("/api/admin/artists", isAdmin, async (req: any, res) => {
+    try {
+      const artists = await storage.getAllArtists();
+      res.json(artists);
+    } catch (error) {
+      console.error("Error fetching artists:", error);
+      res.status(500).json({ message: "Failed to fetch artists" });
+    }
+  });
+
+  // Get pending artist applications
+  app.get("/api/admin/artists/pending", isAdmin, async (req: any, res) => {
+    try {
+      const pending = await storage.getPendingArtists();
+      res.json(pending);
+    } catch (error) {
+      console.error("Error fetching pending artists:", error);
+      res.status(500).json({ message: "Failed to fetch pending artists" });
+    }
+  });
+
+  // Approve artist
+  app.patch("/api/admin/artists/:id/approve", isAdmin, async (req: any, res) => {
+    try {
+      const artist = await storage.approveArtist(req.params.id);
+      if (!artist) {
+        return res.status(404).json({ message: "Artist not found" });
+      }
+      res.json(artist);
+    } catch (error) {
+      console.error("Error approving artist:", error);
+      res.status(500).json({ message: "Failed to approve artist" });
+    }
+  });
+
+  // Reject artist
+  app.patch("/api/admin/artists/:id/reject", isAdmin, async (req: any, res) => {
+    try {
+      const { reason } = req.body;
+      const artist = await storage.rejectArtist(req.params.id, reason || "Application rejected");
+      if (!artist) {
+        return res.status(404).json({ message: "Artist not found" });
+      }
+      res.json(artist);
+    } catch (error) {
+      console.error("Error rejecting artist:", error);
+      res.status(500).json({ message: "Failed to reject artist" });
+    }
+  });
+
+  // Delete artist
+  app.delete("/api/admin/artists/:id", isAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteArtist(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting artist:", error);
+      res.status(500).json({ message: "Failed to delete artist" });
+    }
+  });
+
+  // Delete track (content moderation)
+  app.delete("/api/admin/tracks/:id", isAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteTrack(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting track:", error);
+      res.status(500).json({ message: "Failed to delete track" });
+    }
+  });
+
+  // Delete video (content moderation)
+  app.delete("/api/admin/videos/:id", isAdmin, async (req: any, res) => {
+    try {
+      await storage.deleteVideo(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      res.status(500).json({ message: "Failed to delete video" });
+    }
+  });
+
+  // Get all memberships
+  app.get("/api/admin/memberships", isAdmin, async (req: any, res) => {
+    try {
+      const memberships = await storage.getAllMemberships();
+      res.json(memberships);
+    } catch (error) {
+      console.error("Error fetching memberships:", error);
+      res.status(500).json({ message: "Failed to fetch memberships" });
+    }
+  });
+
+  // Get all tracks for moderation
+  app.get("/api/admin/tracks", isAdmin, async (req: any, res) => {
+    try {
+      const tracks = await storage.getFeaturedTracks(100);
+      res.json(tracks);
+    } catch (error) {
+      console.error("Error fetching tracks:", error);
+      res.status(500).json({ message: "Failed to fetch tracks" });
+    }
+  });
+
   return httpServer;
 }

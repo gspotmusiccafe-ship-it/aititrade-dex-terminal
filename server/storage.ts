@@ -9,6 +9,7 @@ import {
   likedTracks,
   followedArtists,
   recentlyPlayed,
+  users,
   type Artist,
   type InsertArtist,
   type Album,
@@ -23,9 +24,10 @@ import {
   type InsertPlaylist,
   type TrackWithArtist,
   type AlbumWithArtist,
+  type User,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, ilike, or, sql } from "drizzle-orm";
+import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
 
 export interface IStorage {
   // Artists
@@ -76,6 +78,29 @@ export interface IStorage {
   // Videos
   getArtistVideos(artistId: string): Promise<Video[]>;
   createVideo(video: InsertVideo): Promise<Video>;
+  
+  // Admin operations
+  isUserAdmin(userId: string): Promise<boolean>;
+  getAllUsers(): Promise<User[]>;
+  getUser(userId: string): Promise<User | undefined>;
+  updateUser(userId: string, data: { isSuspended?: boolean; isAdmin?: boolean }): Promise<User | undefined>;
+  deleteUser(userId: string): Promise<void>;
+  getAllArtists(): Promise<Artist[]>;
+  getPendingArtists(): Promise<Artist[]>;
+  approveArtist(artistId: string): Promise<Artist | undefined>;
+  rejectArtist(artistId: string, reason: string): Promise<Artist | undefined>;
+  deleteArtist(artistId: string): Promise<void>;
+  deleteTrack(trackId: string): Promise<void>;
+  deleteVideo(videoId: string): Promise<void>;
+  getAllMemberships(): Promise<(Membership & { user?: User })[]>;
+  getAnalytics(): Promise<{
+    totalUsers: number;
+    totalArtists: number;
+    totalTracks: number;
+    totalPlays: number;
+    premiumMembers: number;
+    artistProMembers: number;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -335,6 +360,112 @@ export class DatabaseStorage implements IStorage {
   async createVideo(video: InsertVideo): Promise<Video> {
     const [newVideo] = await db.insert(videos).values(video).returning();
     return newVideo;
+  }
+
+  // Admin operations
+  async isUserAdmin(userId: string): Promise<boolean> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user?.isAdmin === true;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async getUser(userId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user || undefined;
+  }
+
+  async updateUser(userId: string, data: { isSuspended?: boolean; isAdmin?: boolean }): Promise<User | undefined> {
+    const [updated] = await db.update(users).set(data).where(eq(users.id, userId)).returning();
+    return updated || undefined;
+  }
+
+  async deleteUser(userId: string): Promise<void> {
+    // Delete user's related data first
+    await db.delete(likedTracks).where(eq(likedTracks.userId, userId));
+    await db.delete(followedArtists).where(eq(followedArtists.userId, userId));
+    await db.delete(playlists).where(eq(playlists.userId, userId));
+    await db.delete(memberships).where(eq(memberships.userId, userId));
+    await db.delete(recentlyPlayed).where(eq(recentlyPlayed.userId, userId));
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async getAllArtists(): Promise<Artist[]> {
+    return db.select().from(artists).orderBy(desc(artists.createdAt));
+  }
+
+  async getPendingArtists(): Promise<Artist[]> {
+    return db.select().from(artists).where(eq(artists.approvalStatus, "pending")).orderBy(desc(artists.createdAt));
+  }
+
+  async approveArtist(artistId: string): Promise<Artist | undefined> {
+    const [updated] = await db.update(artists).set({ approvalStatus: "approved" }).where(eq(artists.id, artistId)).returning();
+    return updated || undefined;
+  }
+
+  async rejectArtist(artistId: string, reason: string): Promise<Artist | undefined> {
+    const [updated] = await db.update(artists).set({ approvalStatus: "rejected", rejectionReason: reason }).where(eq(artists.id, artistId)).returning();
+    return updated || undefined;
+  }
+
+  async deleteArtist(artistId: string): Promise<void> {
+    // Delete artist's content first
+    await db.delete(tracks).where(eq(tracks.artistId, artistId));
+    await db.delete(videos).where(eq(videos.artistId, artistId));
+    await db.delete(albums).where(eq(albums.artistId, artistId));
+    await db.delete(followedArtists).where(eq(followedArtists.artistId, artistId));
+    await db.delete(artists).where(eq(artists.id, artistId));
+  }
+
+  async deleteTrack(trackId: string): Promise<void> {
+    await db.delete(likedTracks).where(eq(likedTracks.trackId, trackId));
+    await db.delete(playlistTracks).where(eq(playlistTracks.trackId, trackId));
+    await db.delete(recentlyPlayed).where(eq(recentlyPlayed.trackId, trackId));
+    await db.delete(tracks).where(eq(tracks.id, trackId));
+  }
+
+  async deleteVideo(videoId: string): Promise<void> {
+    await db.delete(videos).where(eq(videos.id, videoId));
+  }
+
+  async getAllMemberships(): Promise<(Membership & { user?: User })[]> {
+    const result = await db
+      .select()
+      .from(memberships)
+      .leftJoin(users, eq(memberships.userId, users.id))
+      .orderBy(desc(memberships.createdAt));
+    
+    return result.map(r => ({
+      ...r.memberships,
+      user: r.users || undefined,
+    }));
+  }
+
+  async getAnalytics(): Promise<{
+    totalUsers: number;
+    totalArtists: number;
+    totalTracks: number;
+    totalPlays: number;
+    premiumMembers: number;
+    artistProMembers: number;
+  }> {
+    const [userCount] = await db.select({ count: count() }).from(users);
+    const [artistCount] = await db.select({ count: count() }).from(artists);
+    const [trackCount] = await db.select({ count: count() }).from(tracks);
+    const [playSum] = await db.select({ sum: sql<number>`COALESCE(SUM(play_count), 0)` }).from(tracks);
+    const [premiumCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "premium"), eq(memberships.isActive, true)));
+    const [artistProCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "artist"), eq(memberships.isActive, true)));
+
+    return {
+      totalUsers: userCount?.count || 0,
+      totalArtists: artistCount?.count || 0,
+      totalTracks: trackCount?.count || 0,
+      totalPlays: Number(playSum?.sum) || 0,
+      premiumMembers: premiumCount?.count || 0,
+      artistProMembers: artistProCount?.count || 0,
+    };
   }
 }
 

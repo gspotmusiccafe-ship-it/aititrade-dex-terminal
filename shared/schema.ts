@@ -14,6 +14,8 @@ export const artists = pgTable("artists", {
   coverImage: text("cover_image"),
   verified: boolean("verified").default(false),
   monthlyListeners: integer("monthly_listeners").default(0),
+  approvalStatus: varchar("approval_status").default("pending"), // pending, approved, rejected
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
