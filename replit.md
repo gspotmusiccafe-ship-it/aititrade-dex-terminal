@@ -30,6 +30,13 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - **Premium**: 2-week early access to releases, lossless audio, offline downloads
 - **Artist Pro**: All Premium features + unlimited uploads, analytics
 
+### Admin Portal
+- **Dashboard**: Platform analytics (total users, artists, tracks, plays, revenue)
+- **User Management**: View, suspend/unsuspend, make admin, delete users
+- **Artist Management**: View all artists, approve/reject applications
+- **Content Moderation**: Remove tracks/videos that violate guidelines
+- **Membership Management**: View all subscriptions
+
 ## Project Structure
 
 ```
@@ -79,6 +86,22 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - `GET /api/user/liked-tracks` - Liked songs
 - `GET /api/user/followed-artists` - Followed artists
 
+### Admin (requires isAdmin=true)
+- `GET /api/admin/check` - Check if user is admin
+- `GET /api/admin/analytics` - Platform statistics
+- `GET /api/admin/users` - All users list
+- `PATCH /api/admin/users/:id/suspend` - Suspend/unsuspend user
+- `PATCH /api/admin/users/:id/admin` - Toggle admin status
+- `DELETE /api/admin/users/:id` - Delete user
+- `GET /api/admin/artists` - All artists
+- `GET /api/admin/artists/pending` - Pending artist applications
+- `PATCH /api/admin/artists/:id/approve` - Approve artist
+- `PATCH /api/admin/artists/:id/reject` - Reject artist
+- `DELETE /api/admin/artists/:id` - Delete artist
+- `DELETE /api/admin/tracks/:id` - Remove track (moderation)
+- `DELETE /api/admin/videos/:id` - Remove video (moderation)
+- `GET /api/admin/memberships` - All memberships
+
 ## Theme
 
 The app uses a dark-mode-first design with a green accent color (similar to Spotify's brand aesthetic). Theme colors are configured in:
@@ -100,3 +123,4 @@ This starts both the Express API server and Vite development server.
 - Database migrations: `npm run db:push`
 - Demo data is automatically seeded on first startup
 - The music player context manages global playback state
+- To make a user an admin: Run `UPDATE users SET is_admin = true WHERE id = 'user-id';` in the database

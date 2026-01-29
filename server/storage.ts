@@ -384,6 +384,11 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(userId: string): Promise<void> {
     // Delete user's related data first
+    // Get user's playlists first to delete playlist tracks
+    const userPlaylists = await db.select().from(playlists).where(eq(playlists.userId, userId));
+    for (const playlist of userPlaylists) {
+      await db.delete(playlistTracks).where(eq(playlistTracks.playlistId, playlist.id));
+    }
     await db.delete(likedTracks).where(eq(likedTracks.userId, userId));
     await db.delete(followedArtists).where(eq(followedArtists.userId, userId));
     await db.delete(playlists).where(eq(playlists.userId, userId));
@@ -411,7 +416,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteArtist(artistId: string): Promise<void> {
-    // Delete artist's content first
+    // Delete artist's content first, handling all references
+    // Get all tracks by this artist
+    const artistTracks = await db.select().from(tracks).where(eq(tracks.artistId, artistId));
+    // Delete references to artist's tracks
+    for (const track of artistTracks) {
+      await db.delete(likedTracks).where(eq(likedTracks.trackId, track.id));
+      await db.delete(playlistTracks).where(eq(playlistTracks.trackId, track.id));
+      await db.delete(recentlyPlayed).where(eq(recentlyPlayed.trackId, track.id));
+    }
+    // Now safe to delete tracks
     await db.delete(tracks).where(eq(tracks.artistId, artistId));
     await db.delete(videos).where(eq(videos.artistId, artistId));
     await db.delete(albums).where(eq(albums.artistId, artistId));
