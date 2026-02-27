@@ -377,6 +377,167 @@ function EditTrackDialog({ track, artistId }: { track: Track; artistId: string }
   );
 }
 
+function EditProfileDialog({ artist }: { artist: Artist }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState(artist.name);
+  const [bio, setBio] = useState(artist.bio || "");
+  const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [profilePreview, setProfilePreview] = useState<string | null>(artist.profileImage || null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(artist.coverImage || null);
+  const { toast } = useToast();
+
+  const updateMutation = useMutation({
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch("/api/artists/profile", {
+        method: "PATCH",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Update failed" }));
+        throw new Error(err.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/artist-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists/top"] });
+      setOpen(false);
+      toast({ title: "Profile updated!", description: "Your artist profile has been saved." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("bio", bio);
+    if (profileFile) formData.append("profileImage", profileFile);
+    if (coverFile) formData.append("coverImage", coverFile);
+    updateMutation.mutate(formData);
+  };
+
+  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileFile(file);
+      setProfilePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      setCoverPreview(URL.createObjectURL(file));
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" data-testid="button-edit-profile">
+          <Edit className="h-4 w-4 mr-2" />
+          Edit Profile
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Edit Artist Profile</DialogTitle>
+          <DialogDescription>
+            Update your artist name, bio, and images.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Profile Image</Label>
+            <div className="flex items-center gap-4">
+              <div
+                className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-border cursor-pointer hover:border-primary/50 transition-colors flex items-center justify-center bg-muted/30"
+                onClick={() => document.getElementById("profileImageInput")?.click()}
+              >
+                <input
+                  id="profileImageInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  onChange={handleProfileChange}
+                  className="hidden"
+                  data-testid="input-profile-image"
+                />
+                {profilePreview ? (
+                  <img src={profilePreview} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Click to upload your artist photo. Square images work best.
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Cover Image</Label>
+            <div
+              className="w-full h-32 rounded-lg overflow-hidden border-2 border-dashed border-border cursor-pointer hover:border-primary/50 transition-colors flex items-center justify-center bg-muted/30"
+              onClick={() => document.getElementById("coverImageInput")?.click()}
+            >
+              <input
+                id="coverImageInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                onChange={handleCoverChange}
+                className="hidden"
+                data-testid="input-cover-image-profile"
+              />
+              {coverPreview ? (
+                <img src={coverPreview} alt="Cover" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center">
+                  <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-1" />
+                  <p className="text-xs text-muted-foreground">Add cover banner image</p>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="editArtistName">Artist Name</Label>
+            <Input
+              id="editArtistName"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              data-testid="input-edit-artist-name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="editArtistBio">Bio</Label>
+            <Textarea
+              id="editArtistBio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={3}
+              placeholder="Tell your fans about yourself..."
+              data-testid="input-edit-artist-bio"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving..." : "Save Profile"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ArtistDashboard({ artist }: { artist: Artist }) {
   const { data: tracks, isLoading: loadingTracks } = useQuery<Track[]>({
     queryKey: ["/api/artist", artist.id, "tracks"],
@@ -422,10 +583,15 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
 
   return (
     <div className="space-y-8">
+      {artist.coverImage && (
+        <div className="w-full h-48 rounded-xl overflow-hidden -mb-4">
+          <img src={artist.coverImage} alt={`${artist.name} cover`} className="w-full h-full object-cover" />
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center">
+        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center overflow-hidden flex-shrink-0">
           {artist.profileImage ? (
-            <img src={artist.profileImage} alt={artist.name} className="w-full h-full object-cover rounded-full" />
+            <img src={artist.profileImage} alt={artist.name} className="w-full h-full object-cover" />
           ) : (
             <span className="text-4xl font-bold text-primary">{artist.name[0]}</span>
           )}
@@ -441,10 +607,7 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
           </div>
           <p className="text-muted-foreground">{artist.bio || "No bio yet"}</p>
         </div>
-        <Button variant="outline" data-testid="button-edit-profile">
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Profile
-        </Button>
+        <EditProfileDialog artist={artist} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -250,6 +250,52 @@ export async function registerRoutes(
     }
   });
 
+  // Update artist profile (with optional image uploads)
+  app.patch("/api/artists/profile", isAuthenticated, upload.fields([
+    { name: "profileImage", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 },
+  ]), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(404).json({ message: "Artist profile not found" });
+      }
+
+      const updates: any = {};
+      if (req.body.name && req.body.name.trim()) updates.name = req.body.name.trim();
+      if (req.body.bio !== undefined) updates.bio = req.body.bio.trim();
+
+      const profileFile = req.files?.profileImage?.[0];
+      const coverFile = req.files?.coverImage?.[0];
+
+      if (profileFile) {
+        if (artist.profileImage && artist.profileImage.startsWith("/uploads/")) {
+          const oldFile = path.join(uploadsDir, path.basename(artist.profileImage));
+          fs.unlink(oldFile, () => {});
+        }
+        updates.profileImage = `/uploads/${profileFile.filename}`;
+      }
+      if (coverFile) {
+        if (artist.coverImage && artist.coverImage.startsWith("/uploads/")) {
+          const oldFile = path.join(uploadsDir, path.basename(artist.coverImage));
+          fs.unlink(oldFile, () => {});
+        }
+        updates.coverImage = `/uploads/${coverFile.filename}`;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return res.json(artist);
+      }
+
+      const updated = await storage.updateArtist(artist.id, updates);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating artist profile:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Upload track (artists only)
   app.post("/api/tracks", isAuthenticated, upload.fields([
     { name: "audioFile", maxCount: 1 },
