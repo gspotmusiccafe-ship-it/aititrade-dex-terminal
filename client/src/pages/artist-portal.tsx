@@ -42,37 +42,68 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
-  const [duration, setDuration] = useState(180);
   const [isPrerelease, setIsPrerelease] = useState(false);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [fileName, setFileName] = useState("");
   const { toast } = useToast();
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAudioFile(file);
+      setFileName(file.name);
+      const audio = new Audio();
+      audio.src = URL.createObjectURL(file);
+      audio.onloadedmetadata = () => {
+        setAudioDuration(Math.round(audio.duration));
+        URL.revokeObjectURL(audio.src);
+      };
+    }
+  };
+
   const uploadMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/tracks", data);
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch("/api/tracks", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Upload failed" }));
+        throw new Error(err.message);
+      }
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/artist", artistId, "tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
       setOpen(false);
       setTitle("");
       setGenre("");
+      setAudioFile(null);
+      setFileName("");
+      setAudioDuration(0);
       toast({ title: "Track uploaded!", description: "Your track is now available." });
     },
-    onError: () => {
-      toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
+    onError: (error: Error) => {
+      toast({ title: "Upload failed", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    uploadMutation.mutate({
-      artistId,
-      title,
-      genre,
-      duration,
-      isPrerelease,
-      audioUrl: "/demo-audio.mp3",
-      coverImage: null,
-    });
+    if (!audioFile) {
+      toast({ title: "No audio file", description: "Please select an audio file to upload.", variant: "destructive" });
+      return;
+    }
+    const formData = new FormData();
+    formData.append("audioFile", audioFile);
+    formData.append("title", title);
+    formData.append("genre", genre);
+    formData.append("duration", String(audioDuration || 180));
+    formData.append("isPrerelease", String(isPrerelease));
+    uploadMutation.mutate(formData);
   };
 
   return (
@@ -91,6 +122,39 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="audioFile">Audio File</Label>
+            <div
+              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
+              onClick={() => document.getElementById("audioFileInput")?.click()}
+            >
+              <input
+                id="audioFileInput"
+                type="file"
+                accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a,.webm"
+                onChange={handleFileChange}
+                className="hidden"
+                data-testid="input-audio-file"
+              />
+              {fileName ? (
+                <div className="space-y-1">
+                  <Music className="h-8 w-8 mx-auto text-primary" />
+                  <p className="text-sm font-medium truncate">{fileName}</p>
+                  {audioDuration > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Duration: {Math.floor(audioDuration / 60)}:{(audioDuration % 60).toString().padStart(2, '0')}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Click to select audio file</p>
+                  <p className="text-xs text-muted-foreground">MP3, WAV, OGG, FLAC, AAC (max 50MB)</p>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="title">Track Title</Label>
             <Input
@@ -112,18 +176,6 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
               data-testid="input-track-genre"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="duration">Duration (seconds)</Label>
-            <Input
-              id="duration"
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(parseInt(e.target.value))}
-              min={30}
-              max={600}
-              data-testid="input-track-duration"
-            />
-          </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label>Pre-release</Label>
@@ -141,7 +193,7 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={uploadMutation.isPending}>
+            <Button type="submit" disabled={uploadMutation.isPending || !audioFile}>
               {uploadMutation.isPending ? "Uploading..." : "Upload Track"}
             </Button>
           </DialogFooter>

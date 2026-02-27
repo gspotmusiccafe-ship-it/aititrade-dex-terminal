@@ -1,8 +1,38 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
+import express from "express";
 import { storage } from "./storage";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema } from "@shared/schema";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const audioStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
+  filename: (_req, file, cb) => {
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
+
+const upload = multer({
+  storage: audioStorage,
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac", "audio/aac", "audio/mp4", "audio/x-m4a", "audio/webm"];
+    if (allowed.includes(file.mimetype) || file.originalname.match(/\.(mp3|wav|ogg|flac|aac|m4a|webm)$/i)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only audio files are allowed"));
+    }
+  },
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -11,6 +41,32 @@ export async function registerRoutes(
   // Setup Replit Auth
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  app.get("/uploads/:filename", async (req: any, res) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      const filePath = path.join(uploadsDir, filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".aac": "audio/aac",
+        ".m4a": "audio/mp4",
+        ".webm": "audio/webm",
+      };
+      res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
+      res.set("Content-Disposition", "inline");
+      res.set("X-Content-Type-Options", "nosniff");
+      res.sendFile(filePath);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
 
   // ============ Public Routes ============
 
@@ -177,7 +233,7 @@ export async function registerRoutes(
   });
 
   // Upload track (artists only)
-  app.post("/api/tracks", isAuthenticated, async (req: any, res) => {
+  app.post("/api/tracks", isAuthenticated, upload.single("audioFile"), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const artist = await storage.getArtistByUserId(userId);
@@ -186,16 +242,39 @@ export async function registerRoutes(
         return res.status(403).json({ message: "You must be an artist to upload tracks" });
       }
 
-      // Ensure the track is being uploaded to the user's own artist profile
-      if (req.body.artistId !== artist.id) {
-        return res.status(403).json({ message: "Cannot upload tracks for other artists" });
+      if (!req.file) {
+        return res.status(400).json({ message: "Audio file is required" });
       }
 
-      const validated = insertTrackSchema.parse(req.body);
+      const title = (req.body.title || "").trim();
+      if (!title || title.length > 200) {
+        fs.unlink(path.join(uploadsDir, req.file.filename), () => {});
+        return res.status(400).json({ message: "Track title is required (max 200 characters)" });
+      }
+
+      const audioUrl = `/uploads/${req.file.filename}`;
+      const duration = parseInt(req.body.duration);
+
+      const trackData = {
+        artistId: artist.id,
+        title,
+        genre: (req.body.genre || "").trim() || null,
+        duration: isNaN(duration) || duration < 1 ? 180 : duration,
+        isPrerelease: req.body.isPrerelease === "true",
+        audioUrl,
+        coverImage: null,
+        albumId: null,
+        releaseDate: null,
+      };
+
+      const validated = insertTrackSchema.parse(trackData);
       const track = await storage.createTrack(validated);
       res.status(201).json(track);
     } catch (error) {
       console.error("Error creating track:", error);
+      if (req.file) {
+        fs.unlink(path.join(uploadsDir, req.file.filename), () => {});
+      }
       res.status(500).json({ message: "Failed to create track" });
     }
   });

@@ -46,8 +46,9 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 │   │   ├── pages/         # Route pages
 │   │   ├── hooks/         # Custom React hooks
 │   │   └── lib/           # Utilities and context
+├── uploads/                # Uploaded audio files (served via /uploads/:filename)
 ├── server/                 # Express backend
-│   ├── routes.ts          # API endpoints
+│   ├── routes.ts          # API endpoints (includes multer file upload + protected audio serving)
 │   ├── storage.ts         # Database operations
 │   ├── db.ts              # Database connection
 │   └── seed.ts            # Demo data seeding
