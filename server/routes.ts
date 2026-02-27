@@ -668,7 +668,7 @@ export async function registerRoutes(
       }
 
       const audioUrl = track.audioUrl;
-      if (!audioUrl || audioUrl === "/demo-audio.mp3") {
+      if (!audioUrl || audioUrl === "/demo-audio.mp3" || audioUrl === "/uploads/demo-audio.wav") {
         return res.status(404).json({ message: "No downloadable audio file available" });
       }
 

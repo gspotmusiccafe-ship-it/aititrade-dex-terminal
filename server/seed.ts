@@ -78,29 +78,29 @@ export async function seedDatabase() {
     // Create tracks
     const demoTracks = [
       // Nova Sound tracks
-      { artistId: artist1.id, albumId: album1.id, title: "Digital Dawn", duration: 245, audioUrl: "/demo-audio.mp3", playCount: 125000, genre: "Electronic", isPrerelease: false },
-      { artistId: artist1.id, albumId: album1.id, title: "Neon Streets", duration: 198, audioUrl: "/demo-audio.mp3", playCount: 98000, genre: "Electronic", isPrerelease: false },
-      { artistId: artist1.id, albumId: album1.id, title: "Midnight Protocol", duration: 312, audioUrl: "/demo-audio.mp3", playCount: 76000, genre: "Electronic", isPrerelease: false },
-      { artistId: artist1.id, title: "Future Echoes", duration: 267, audioUrl: "/demo-audio.mp3", playCount: 45000, genre: "Electronic", isPrerelease: true },
+      { artistId: artist1.id, albumId: album1.id, title: "Digital Dawn", duration: 245, audioUrl: "/uploads/demo-audio.wav", playCount: 125000, genre: "Electronic", isPrerelease: false },
+      { artistId: artist1.id, albumId: album1.id, title: "Neon Streets", duration: 198, audioUrl: "/uploads/demo-audio.wav", playCount: 98000, genre: "Electronic", isPrerelease: false },
+      { artistId: artist1.id, albumId: album1.id, title: "Midnight Protocol", duration: 312, audioUrl: "/uploads/demo-audio.wav", playCount: 76000, genre: "Electronic", isPrerelease: false },
+      { artistId: artist1.id, title: "Future Echoes", duration: 267, audioUrl: "/uploads/demo-audio.wav", playCount: 45000, genre: "Electronic", isPrerelease: true },
 
       // The Midnight Echo tracks
-      { artistId: artist2.id, albumId: album2.id, title: "Sunset Boulevard", duration: 234, audioUrl: "/demo-audio.mp3", playCount: 89000, genre: "Indie Rock", isPrerelease: false },
-      { artistId: artist2.id, albumId: album2.id, title: "Lost in California", duration: 278, audioUrl: "/demo-audio.mp3", playCount: 67000, genre: "Indie Rock", isPrerelease: false },
-      { artistId: artist2.id, title: "Ocean Waves", duration: 195, audioUrl: "/demo-audio.mp3", playCount: 52000, genre: "Indie Rock", isPrerelease: true },
+      { artistId: artist2.id, albumId: album2.id, title: "Sunset Boulevard", duration: 234, audioUrl: "/uploads/demo-audio.wav", playCount: 89000, genre: "Indie Rock", isPrerelease: false },
+      { artistId: artist2.id, albumId: album2.id, title: "Lost in California", duration: 278, audioUrl: "/uploads/demo-audio.wav", playCount: 67000, genre: "Indie Rock", isPrerelease: false },
+      { artistId: artist2.id, title: "Ocean Waves", duration: 195, audioUrl: "/uploads/demo-audio.wav", playCount: 52000, genre: "Indie Rock", isPrerelease: true },
 
       // Crystal Waves tracks
-      { artistId: artist3.id, title: "Velvet Touch", duration: 218, audioUrl: "/demo-audio.mp3", playCount: 45000, genre: "R&B", isPrerelease: false },
-      { artistId: artist3.id, title: "Starlight Serenade", duration: 256, audioUrl: "/demo-audio.mp3", playCount: 38000, genre: "R&B", isPrerelease: false },
-      { artistId: artist3.id, title: "Golden Hour", duration: 289, audioUrl: "/demo-audio.mp3", playCount: 29000, genre: "R&B", isPrerelease: true },
+      { artistId: artist3.id, title: "Velvet Touch", duration: 218, audioUrl: "/uploads/demo-audio.wav", playCount: 45000, genre: "R&B", isPrerelease: false },
+      { artistId: artist3.id, title: "Starlight Serenade", duration: 256, audioUrl: "/uploads/demo-audio.wav", playCount: 38000, genre: "R&B", isPrerelease: false },
+      { artistId: artist3.id, title: "Golden Hour", duration: 289, audioUrl: "/uploads/demo-audio.wav", playCount: 29000, genre: "R&B", isPrerelease: true },
 
       // Pulse Theory tracks
-      { artistId: artist4.id, albumId: album3.id, title: "Drop Zone", duration: 187, audioUrl: "/demo-audio.mp3", playCount: 230000, genre: "EDM", isPrerelease: false },
-      { artistId: artist4.id, albumId: album3.id, title: "Bass Cannon", duration: 205, audioUrl: "/demo-audio.mp3", playCount: 189000, genre: "EDM", isPrerelease: false },
-      { artistId: artist4.id, albumId: album3.id, title: "Festival Anthem", duration: 241, audioUrl: "/demo-audio.mp3", playCount: 156000, genre: "EDM", isPrerelease: true },
+      { artistId: artist4.id, albumId: album3.id, title: "Drop Zone", duration: 187, audioUrl: "/uploads/demo-audio.wav", playCount: 230000, genre: "EDM", isPrerelease: false },
+      { artistId: artist4.id, albumId: album3.id, title: "Bass Cannon", duration: 205, audioUrl: "/uploads/demo-audio.wav", playCount: 189000, genre: "EDM", isPrerelease: false },
+      { artistId: artist4.id, albumId: album3.id, title: "Festival Anthem", duration: 241, audioUrl: "/uploads/demo-audio.wav", playCount: 156000, genre: "EDM", isPrerelease: true },
 
       // Velvet Dreams tracks
-      { artistId: artist5.id, title: "Smooth Operator", duration: 298, audioUrl: "/demo-audio.mp3", playCount: 67000, genre: "Jazz", isPrerelease: false },
-      { artistId: artist5.id, title: "Midnight Jazz", duration: 345, audioUrl: "/demo-audio.mp3", playCount: 54000, genre: "Jazz", isPrerelease: false },
+      { artistId: artist5.id, title: "Smooth Operator", duration: 298, audioUrl: "/uploads/demo-audio.wav", playCount: 67000, genre: "Jazz", isPrerelease: false },
+      { artistId: artist5.id, title: "Midnight Jazz", duration: 345, audioUrl: "/uploads/demo-audio.wav", playCount: 54000, genre: "Jazz", isPrerelease: false },
     ];
 
     await db.insert(tracks).values(demoTracks);

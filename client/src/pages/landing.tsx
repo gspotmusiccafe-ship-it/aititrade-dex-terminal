@@ -98,15 +98,24 @@ function HeroPlayer() {
       }
     };
     const onEnded = () => skipTo(currentIndex + 1, true);
+    const onError = () => {
+      setIsPlaying(false);
+      setIsLoaded(false);
+      if (playlist.length > 1) {
+        setTimeout(() => skipTo(currentIndex + 1, false), 500);
+      }
+    };
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
     audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);
       audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
     };
   }, [currentIndex, skipTo, wantAutoPlay]);
 
