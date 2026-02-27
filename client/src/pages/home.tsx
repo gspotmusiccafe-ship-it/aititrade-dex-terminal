@@ -8,6 +8,7 @@ import { AlbumCard } from "@/components/album-card";
 import { ArtistCard } from "@/components/artist-card";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 import type { TrackWithArtist, AlbumWithArtist, Artist } from "@shared/schema";
 
 function SectionSkeleton({ count = 5 }: { count?: number }) {
@@ -171,8 +172,8 @@ export default function HomePage() {
               <Clock className="h-5 w-5 text-primary" />
               <h2 className="text-xl font-bold">New Releases</h2>
             </div>
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/browse/albums">See All</a>
+            <Button variant="ghost" size="sm" asChild data-testid="link-see-all-albums">
+              <Link href="/browse/albums">See All</Link>
             </Button>
           </div>
 
@@ -195,8 +196,8 @@ export default function HomePage() {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold">Popular Artists</h2>
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/browse/artists">See All</a>
+            <Button variant="ghost" size="sm" asChild data-testid="link-see-all-artists">
+              <Link href="/browse/artists">See All</Link>
             </Button>
           </div>
 

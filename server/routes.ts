@@ -126,7 +126,8 @@ export async function registerRoutes(
   // New album releases
   app.get("/api/albums/new", async (req, res) => {
     try {
-      const albums = await storage.getNewReleases(10);
+      const limit = Math.min(Number(req.query.limit) || 10, 100);
+      const albums = await storage.getNewReleases(limit);
       res.json(albums);
     } catch (error) {
       console.error("Error fetching new releases:", error);
@@ -137,7 +138,8 @@ export async function registerRoutes(
   // Top artists
   app.get("/api/artists/top", async (req, res) => {
     try {
-      const artists = await storage.getTopArtists(10);
+      const limit = Math.min(Number(req.query.limit) || 10, 100);
+      const artists = await storage.getTopArtists(limit);
       res.json(artists);
     } catch (error) {
       console.error("Error fetching top artists:", error);
