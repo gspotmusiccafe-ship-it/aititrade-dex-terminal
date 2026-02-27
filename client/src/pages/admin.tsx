@@ -1123,9 +1123,27 @@ export default function AdminPage() {
   return (
     <div className="min-h-full pb-28 px-6 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
-          <Shield className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold" data-testid="text-admin-title">Admin Portal</h1>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold" data-testid="text-admin-title">Admin Portal</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <a href="https://suno.com/create/" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="gap-2" data-testid="link-suno">
+                <Music className="h-4 w-4" />
+                Suno Music Production
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </a>
+            <a href="https://jumpstr.io" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="gap-2" data-testid="link-jumpstr">
+                <Disc3 className="h-4 w-4" />
+                Jumpstr Distribution
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </a>
+          </div>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
