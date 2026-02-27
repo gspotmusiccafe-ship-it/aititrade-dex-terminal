@@ -1,11 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Music, ListMusic, User, Plus, Heart } from "lucide-react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Playlist, Artist } from "@shared/schema";
 
 function PlaylistCard({ playlist }: { playlist: Playlist }) {
@@ -58,6 +63,9 @@ function FollowedArtistCard({ artist }: { artist: Artist }) {
 
 export default function LibraryPage() {
   const { user, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
 
   const { data: playlists, isLoading: loadingPlaylists } = useQuery<Playlist[]>({
     queryKey: ["/api/playlists"],
@@ -73,6 +81,27 @@ export default function LibraryPage() {
     queryKey: ["/api/user/liked-tracks/count"],
     enabled: isAuthenticated,
   });
+
+  const createPlaylistMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiRequest("POST", "/api/playlists", { name });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/playlists"] });
+      setShowCreateDialog(false);
+      setNewPlaylistName("");
+      toast({ title: "Playlist created", description: "Your new playlist is ready." });
+    },
+    onError: () => {
+      toast({ title: "Failed to create playlist", variant: "destructive" });
+    },
+  });
+
+  const handleCreatePlaylist = () => {
+    if (!newPlaylistName.trim()) return;
+    createPlaylistMutation.mutate(newPlaylistName.trim());
+  };
 
   if (authLoading) {
     return (
@@ -108,10 +137,37 @@ export default function LibraryPage() {
     <div className="min-h-full pb-28 px-6 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Your Library</h1>
-        <Button size="icon" variant="ghost" data-testid="button-create-playlist">
+        <Button size="icon" variant="ghost" onClick={() => setShowCreateDialog(true)} data-testid="button-create-playlist">
           <Plus className="h-5 w-5" />
         </Button>
       </div>
+
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Playlist</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Playlist name"
+            value={newPlaylistName}
+            onChange={(e) => setNewPlaylistName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreatePlaylist()}
+            data-testid="input-playlist-name"
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setShowCreateDialog(false)} data-testid="button-cancel-playlist">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreatePlaylist}
+              disabled={!newPlaylistName.trim() || createPlaylistMutation.isPending}
+              data-testid="button-confirm-create-playlist"
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="playlists" className="w-full">
         <TabsList className="mb-6">
@@ -153,7 +209,7 @@ export default function LibraryPage() {
             <div className="text-center py-12 text-muted-foreground">
               <ListMusic className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No playlists yet</p>
-              <Button variant="link" className="mt-2" data-testid="button-create-first-playlist">
+              <Button variant="link" className="mt-2" onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-playlist">
                 <Plus className="h-4 w-4 mr-1" />
                 Create your first playlist
               </Button>

@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { Play, Shuffle, CheckCircle2, Users, UserPlus } from "lucide-react";
+import { Play, Shuffle, CheckCircle2, Users, UserPlus, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { TrackCard } from "@/components/track-card";
 import { AlbumCard } from "@/components/album-card";
 import { usePlayer } from "@/lib/player-context";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Artist, TrackWithArtist, AlbumWithArtist, Video } from "@shared/schema";
 
 function extractYouTubeId(url: string): string | null {
@@ -26,6 +29,8 @@ export default function ArtistPage() {
   const [, params] = useRoute("/artist/:id");
   const artistId = params?.id;
   const { playTrack } = usePlayer();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
 
   const { data: artist, isLoading: loadingArtist } = useQuery<Artist>({
     queryKey: ["/api/artists", artistId],
@@ -46,6 +51,34 @@ export default function ArtistPage() {
     queryKey: ["/api/artists", artistId, "videos"],
     enabled: !!artistId,
   });
+
+  const { data: followStatus } = useQuery<{ following: boolean }>({
+    queryKey: ["/api/user/followed-artists", artistId, "check"],
+    queryFn: () => fetch(`/api/user/followed-artists/${artistId}/check`, { credentials: "include" }).then(r => r.json()),
+    enabled: !!artistId && isAuthenticated,
+  });
+
+  const followMutation = useMutation({
+    mutationFn: async () => {
+      if (followStatus?.following) {
+        await apiRequest("DELETE", `/api/user/followed-artists/${artistId}`);
+      } else {
+        await apiRequest("POST", `/api/user/followed-artists/${artistId}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/followed-artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/followed-artists", artistId, "check"] });
+    },
+  });
+
+  const handleFollow = () => {
+    if (!isAuthenticated) {
+      toast({ title: "Sign in required", description: "Log in to follow artists.", variant: "destructive" });
+      return;
+    }
+    followMutation.mutate();
+  };
 
   const handlePlayAll = () => {
     if (tracks && tracks.length > 0) {
@@ -151,9 +184,24 @@ export default function ArtistPage() {
         >
           <Shuffle className="h-5 w-5" />
         </Button>
-        <Button variant="outline" className="rounded-full" data-testid="button-follow-artist">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Follow
+        <Button
+          variant={followStatus?.following ? "default" : "outline"}
+          className="rounded-full"
+          onClick={handleFollow}
+          disabled={followMutation.isPending}
+          data-testid="button-follow-artist"
+        >
+          {followStatus?.following ? (
+            <>
+              <UserCheck className="h-4 w-4 mr-2" />
+              Following
+            </>
+          ) : (
+            <>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Follow
+            </>
+          )}
         </Button>
       </div>
 

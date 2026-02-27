@@ -523,6 +523,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/user/followed-artists/:artistId/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const following = await storage.isFollowingArtist(userId, req.params.artistId);
+      res.json({ following });
+    } catch (error) {
+      res.json({ following: false });
+    }
+  });
+
   app.post("/api/user/followed-artists/:artistId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

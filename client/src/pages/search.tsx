@@ -37,6 +37,7 @@ export default function SearchPage() {
     artists: Artist[];
   }>({
     queryKey: ["/api/search", debouncedQuery],
+    queryFn: () => fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, { credentials: "include" }).then(r => r.json()),
     enabled: debouncedQuery.length > 1,
   });
 

@@ -69,6 +69,7 @@ export interface IStorage {
   followArtist(userId: string, artistId: string): Promise<void>;
   unfollowArtist(userId: string, artistId: string): Promise<void>;
   getFollowedArtists(userId: string): Promise<Artist[]>;
+  isFollowingArtist(userId: string, artistId: string): Promise<boolean>;
   
   // Memberships
   getUserMembership(userId: string): Promise<Membership | undefined>;
@@ -338,6 +339,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(followedArtists.followedAt));
     
     return result.map(r => r.artists);
+  }
+
+  async isFollowingArtist(userId: string, artistId: string): Promise<boolean> {
+    const [result] = await db
+      .select()
+      .from(followedArtists)
+      .where(and(eq(followedArtists.userId, userId), eq(followedArtists.artistId, artistId)));
+    return !!result;
   }
 
   // Memberships

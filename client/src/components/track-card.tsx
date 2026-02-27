@@ -1,9 +1,11 @@
-import { Play, Pause, Clock, Download, Star } from "lucide-react";
+import { Play, Pause, Clock, Download, Star, Heart } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { TrackWithArtist } from "@shared/schema";
 
 interface TrackCardProps {
@@ -26,12 +28,42 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
   const { toast } = useToast();
   const isCurrentTrack = currentTrack?.id === track.id;
 
-  const handlePlay = () => {
+  const { data: isLiked } = useQuery<{ liked: boolean }>({
+    queryKey: ["/api/user/liked-tracks", track.id, "check"],
+    queryFn: () => fetch(`/api/user/liked-tracks/${track.id}/check`, { credentials: "include" }).then(r => r.json()),
+    enabled: isAuthenticated,
+  });
+
+  const likeMutation = useMutation({
+    mutationFn: async () => {
+      if (isLiked?.liked) {
+        await apiRequest("DELETE", `/api/user/liked-tracks/${track.id}`);
+      } else {
+        await apiRequest("POST", `/api/user/liked-tracks/${track.id}`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks", track.id, "check"] });
+    },
+  });
+
+  const handlePlay = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (isCurrentTrack) {
       togglePlay();
     } else {
       playTrack(track, queue);
     }
+  };
+
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      toast({ title: "Sign in required", description: "Log in to save tracks.", variant: "destructive" });
+      return;
+    }
+    likeMutation.mutate();
   };
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -67,6 +99,7 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
       className={`group flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer ${
         isCurrentTrack ? "bg-primary/10" : ""
       }`}
+      onClick={() => handlePlay()}
       data-testid={`track-card-${track.id}`}
     >
       {showCover && track.coverImage ? (
@@ -134,6 +167,17 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
         <Clock className="h-3 w-3" />
         {formatDuration(track.duration)}
       </div>
+
+      <Button
+        size="icon"
+        variant="ghost"
+        className={isLiked?.liked ? "text-primary" : "opacity-0 group-hover:opacity-100 transition-opacity"}
+        onClick={handleLike}
+        title={isLiked?.liked ? "Remove from Liked Songs" : "Save to Liked Songs"}
+        data-testid={`button-like-track-${track.id}`}
+      >
+        <Heart className={`h-4 w-4 ${isLiked?.liked ? "fill-primary" : ""}`} />
+      </Button>
 
       <Button
         size="icon"
