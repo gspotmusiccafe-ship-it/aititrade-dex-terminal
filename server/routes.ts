@@ -230,7 +230,7 @@ export async function registerRoutes(
     }
   });
 
-  // Create artist profile
+  // Create artist profile (requires Gold or Artist Pro membership)
   app.post("/api/artists", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -239,6 +239,12 @@ export async function registerRoutes(
       const existing = await storage.getArtistByUserId(userId);
       if (existing) {
         return res.status(400).json({ message: "Artist profile already exists" });
+      }
+
+      // Require Gold or Artist Pro membership
+      const membership = await storage.getUserMembership(userId);
+      if (!membership || !membership.isActive || !["gold", "artist"].includes(membership.tier)) {
+        return res.status(403).json({ message: "Artist profile requires a Gold ($6.99/mo) or Artist Pro ($19.99/mo) subscription" });
       }
 
       const validated = insertArtistSchema.parse({ ...req.body, userId });

@@ -16,6 +16,11 @@ import {
   Star,
   Heart,
   ImagePlus,
+  Crown,
+  Check,
+  ArrowRight,
+  Mic2,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -248,42 +253,257 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
   );
 }
 
-function ArtistSetupCard() {
+function ArtistOnboarding() {
+  const [step, setStep] = useState<"plan" | "profile">("plan");
+  const [selectedPlan, setSelectedPlan] = useState<"gold" | "artist" | null>(null);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
+  const [profileFile, setProfileFile] = useState<File | null>(null);
+  const [profilePreview, setProfilePreview] = useState<string | null>(null);
   const { toast } = useToast();
 
+  const { data: membership, isLoading: membershipLoading } = useQuery<{ tier: string; isActive: boolean }>({
+    queryKey: ["/api/user/membership"],
+  });
+
+  const currentTier = membership?.tier || "free";
+  const alreadyQualified = currentTier === "gold" || currentTier === "artist";
+
+  const upgradeMutation = useMutation({
+    mutationFn: async (tier: string) => {
+      return apiRequest("POST", "/api/user/membership/upgrade", { tier });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
+      setStep("profile");
+    },
+    onError: () => {
+      toast({ title: "Subscription failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
   const createArtistMutation = useMutation({
-    mutationFn: async (data: any) => {
-      return apiRequest("POST", "/api/artists", data);
+    mutationFn: async (formData: FormData) => {
+      const res = await fetch("/api/artists", {
+        method: "POST",
+        body: JSON.stringify({ name: formData.get("name"), bio: formData.get("bio") }),
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to create profile");
+      const artist = await res.json();
+
+      const imgFile = profileFile;
+      if (imgFile) {
+        const imgForm = new FormData();
+        imgForm.append("profileImage", imgFile);
+        imgForm.append("name", formData.get("name") as string);
+        await fetch("/api/artists/profile", {
+          method: "PATCH",
+          body: imgForm,
+          credentials: "include",
+        });
+      }
+      return artist;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/artist-profile"] });
-      toast({ title: "Artist profile created!", description: "You can now start uploading music." });
+      toast({ title: "Welcome aboard!", description: "Your artist profile is live. Start uploading music!" });
     },
     onError: () => {
       toast({ title: "Failed to create profile", description: "Please try again.", variant: "destructive" });
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleProfileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createArtistMutation.mutate({ name, bio });
+    const formData = new FormData();
+    formData.append("name", name);
+    formData.append("bio", bio);
+    createArtistMutation.mutate(formData);
   };
+
+  const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfileFile(file);
+      setProfilePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const artistPlans = [
+    {
+      id: "gold" as const,
+      name: "Gold Artist",
+      price: "$6.99",
+      period: "/month",
+      icon: Crown,
+      color: "text-yellow-500",
+      borderColor: "border-yellow-500/50",
+      bgColor: "bg-yellow-500/10",
+      features: [
+        "Upload tracks with cover artwork",
+        "Artist profile & bio page",
+        "Play count analytics",
+        "Unlimited released music streaming",
+        "Unlimited pre-release previews",
+        "Unlimited MP3 downloads",
+      ],
+    },
+    {
+      id: "artist" as const,
+      name: "Artist Pro",
+      price: "$19.99",
+      period: "/month",
+      icon: Sparkles,
+      color: "text-primary",
+      borderColor: "border-primary",
+      bgColor: "bg-primary/10",
+      popular: true,
+      features: [
+        "Everything in Gold Artist",
+        "Unlimited track uploads",
+        "Upload music videos",
+        "Advanced analytics dashboard",
+        "Scheduled releases",
+        "Fan engagement tools",
+        "Priority artist support",
+      ],
+    },
+  ];
+
+  if (membershipLoading) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <Skeleton className="h-16 w-16 rounded-full mx-auto mb-4" />
+        <Skeleton className="h-8 w-64 mx-auto mb-2" />
+        <Skeleton className="h-4 w-96 mx-auto mb-8" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Skeleton className="h-64 rounded-lg" />
+          <Skeleton className="h-64 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "plan" && !alreadyQualified) {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <Mic2 className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2" data-testid="text-onboarding-title">
+            Become an Artist on AITIFY
+          </h2>
+          <p className="text-muted-foreground max-w-md mx-auto">
+            Choose your artist plan to start uploading music, building your fanbase, and earning from your art.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          {artistPlans.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`relative overflow-hidden cursor-pointer transition-all ${
+                selectedPlan === plan.id
+                  ? `${plan.borderColor} ring-2 ring-primary/20`
+                  : "border-border/50 hover:border-border"
+              }`}
+              onClick={() => setSelectedPlan(plan.id)}
+              data-testid={`onboarding-plan-${plan.id}`}
+            >
+              {plan.popular && (
+                <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-center py-1 text-xs font-medium">
+                  Recommended
+                </div>
+              )}
+              <CardContent className={`p-6 ${plan.popular ? "pt-10" : ""}`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`w-10 h-10 rounded-full ${plan.bgColor} flex items-center justify-center`}>
+                    <plan.icon className={`h-5 w-5 ${plan.color}`} />
+                  </div>
+                  <div>
+                    <h3 className={`font-bold text-lg ${plan.color}`}>{plan.name}</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">{plan.price}</span>
+                      <span className="text-sm text-muted-foreground">{plan.period}</span>
+                    </div>
+                  </div>
+                </div>
+                <ul className="space-y-2.5">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <Check className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <div className="text-center">
+          <Button
+            size="lg"
+            disabled={!selectedPlan || upgradeMutation.isPending}
+            onClick={() => selectedPlan && upgradeMutation.mutate(selectedPlan)}
+            className="min-w-[200px]"
+            data-testid="button-subscribe-artist"
+          >
+            {upgradeMutation.isPending ? "Processing..." : (
+              <>
+                Subscribe & Continue
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground mt-3">
+            Cancel anytime. 7-day free trial included.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="max-w-lg mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Music className="h-5 w-5 text-primary" />
-          Create Your Artist Profile
+          Set Up Your Artist Profile
         </CardTitle>
         <CardDescription>
-          Set up your artist profile to start uploading music and videos
+          Create your artist identity — this is how fans will find and follow you.
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleProfileSubmit} className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-border cursor-pointer hover:border-primary/50 transition-colors flex items-center justify-center bg-muted/30 flex-shrink-0"
+              onClick={() => document.getElementById("onboardingProfileImage")?.click()}
+            >
+              <input
+                id="onboardingProfileImage"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                onChange={handleProfileImageChange}
+                className="hidden"
+                data-testid="input-onboarding-profile-image"
+              />
+              {profilePreview ? (
+                <img src={profilePreview} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <ImagePlus className="h-6 w-6 text-muted-foreground" />
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Artist Photo</p>
+              <p>Click to upload (optional)</p>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="artistName">Artist / Band Name</Label>
             <Input
@@ -306,7 +526,7 @@ function ArtistSetupCard() {
               data-testid="input-artist-bio"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={createArtistMutation.isPending}>
+          <Button type="submit" className="w-full" disabled={createArtistMutation.isPending} data-testid="button-create-artist">
             {createArtistMutation.isPending ? "Creating..." : "Create Artist Profile"}
           </Button>
         </form>
@@ -873,7 +1093,7 @@ export default function ArtistPortalPage() {
       {artistProfile ? (
         <ArtistDashboard artist={artistProfile} />
       ) : (
-        <ArtistSetupCard />
+        <ArtistOnboarding />
       )}
     </div>
   );

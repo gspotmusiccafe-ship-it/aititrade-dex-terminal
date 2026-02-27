@@ -1,4 +1,4 @@
-import { Crown, Check, Star, Zap, Headphones, Download, Music, Eye } from "lucide-react";
+import { Crown, Check, Star, Zap, Headphones, Download, Music, Eye, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +76,24 @@ const plans = [
     popular: false,
     cta: "Get Gold",
     color: "text-yellow-500",
+  },
+  {
+    id: "artist",
+    name: "Artist Pro",
+    price: "$19.99",
+    period: "/month",
+    description: "Upload music, build your fanbase, and earn",
+    features: [
+      { text: "Everything in Gold", included: true },
+      { text: "Unlimited track uploads", included: true },
+      { text: "Upload music videos", included: true },
+      { text: "Advanced analytics dashboard", included: true },
+      { text: "Fan engagement tools", included: true },
+      { text: "Priority artist support", included: true },
+    ],
+    popular: false,
+    cta: "Go Artist Pro",
+    color: "text-primary",
   },
 ];
 
@@ -178,7 +196,7 @@ export default function MembershipPage() {
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.id}

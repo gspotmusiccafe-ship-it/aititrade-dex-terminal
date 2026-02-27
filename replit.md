@@ -31,7 +31,8 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - **Silver ($1.99/mo)**: No downloads, 5 pre-release previews/month, unlimited released music
 - **Bronze ($3.99/mo)**: 10 MP3 downloads, 20 previews/month, unlimited released music
 - **Gold ($6.99/mo)**: Unlimited downloads, unlimited previews, lossless audio, unlimited released music
-- **Artist Pro ($19.99/mo)**: All Gold features + unlimited uploads, analytics
+- **Artist Pro ($19.99/mo)**: All Gold features + unlimited uploads, analytics, fan engagement tools
+- **Artist Onboarding**: Users must subscribe to Gold ($6.99) or Artist Pro ($19.99) before creating an artist profile. The Artist Portal shows a plan selection step before profile creation.
 
 ### Admin Portal
 - **Dashboard**: Platform analytics (total users, artists, tracks, plays, revenue)

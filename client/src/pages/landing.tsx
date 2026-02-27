@@ -67,6 +67,19 @@ const membershipTiers = [
     ],
     highlight: false,
   },
+  {
+    name: "Artist Pro",
+    price: "$19.99",
+    period: "/month",
+    features: [
+      "Everything in Gold",
+      "Unlimited track uploads",
+      "Upload music videos",
+      "Advanced analytics",
+      "Fan engagement tools",
+    ],
+    highlight: false,
+  },
 ];
 
 export default function LandingPage() {
@@ -237,7 +250,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
             {membershipTiers.map((tier, index) => (
               <Card
                 key={index}
