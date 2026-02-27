@@ -121,6 +121,28 @@ export const jamSessions = pgTable("jam_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const jamSessionEngagement = pgTable("jam_session_engagement", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  action: varchar("action").notNull(),
+  trackName: text("track_name"),
+  trackArtist: text("track_artist"),
+  spotifyUri: text("spotify_uri"),
+  metadata: text("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const jamSessionListeners = pgTable("jam_session_listeners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  userName: varchar("user_name"),
+  userEmail: varchar("user_email"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+  leftAt: timestamp("left_at"),
+});
+
 // Relations
 export const artistsRelations = relations(artists, ({ many }) => ({
   tracks: many(tracks),
@@ -162,6 +184,8 @@ export const insertPlaylistTrackSchema = createInsertSchema(playlistTracks).omit
 export const insertLikedTrackSchema = createInsertSchema(likedTracks).omit({ id: true, likedAt: true });
 export const insertFollowedArtistSchema = createInsertSchema(followedArtists).omit({ id: true, followedAt: true });
 export const insertJamSessionSchema = createInsertSchema(jamSessions).omit({ id: true, createdAt: true, lastTriggered: true });
+export const insertJamSessionEngagementSchema = createInsertSchema(jamSessionEngagement).omit({ id: true, createdAt: true });
+export const insertJamSessionListenerSchema = createInsertSchema(jamSessionListeners).omit({ id: true, joinedAt: true, leftAt: true });
 
 // Types
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
@@ -181,6 +205,10 @@ export type LikedTrack = typeof likedTracks.$inferSelect;
 export type FollowedArtist = typeof followedArtists.$inferSelect;
 export type InsertJamSession = z.infer<typeof insertJamSessionSchema>;
 export type JamSession = typeof jamSessions.$inferSelect;
+export type InsertJamSessionEngagement = z.infer<typeof insertJamSessionEngagementSchema>;
+export type JamSessionEngagement = typeof jamSessionEngagement.$inferSelect;
+export type InsertJamSessionListener = z.infer<typeof insertJamSessionListenerSchema>;
+export type JamSessionListener = typeof jamSessionListeners.$inferSelect;
 
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };

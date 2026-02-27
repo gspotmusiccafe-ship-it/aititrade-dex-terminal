@@ -7,8 +7,8 @@ import express from "express";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, insertJamSessionSchema } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
+import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getUncachableSpotifyClient } from "./spotify";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -848,6 +848,37 @@ export async function registerRoutes(
     }
   });
 
+  // Jam Session Engagement Overview (must be before :id routes)
+  app.get("/api/jam-sessions/engagement/overview", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userSessions = await db.select().from(jamSessions).where(eq(jamSessions.userId, userId));
+      const sessionIds = userSessions.map(s => s.id);
+      if (!sessionIds.length) return res.json({ sessions: [], totalListeners: 0, totalEngagements: 0 });
+
+      const overview = await Promise.all(sessionIds.map(async (sid) => {
+        const listenerCount = await db.select({ total: sql<number>`COUNT(DISTINCT ${jamSessionListeners.userId})` })
+          .from(jamSessionListeners).where(eq(jamSessionListeners.sessionId, sid));
+        const engagementCount = await db.select({ total: count() })
+          .from(jamSessionEngagement).where(eq(jamSessionEngagement.sessionId, sid));
+        const session = userSessions.find(s => s.id === sid)!;
+        return {
+          ...session,
+          uniqueListeners: Number(listenerCount[0]?.total || 0),
+          totalEngagements: Number(engagementCount[0]?.total || 0),
+        };
+      }));
+
+      const totalListeners = overview.reduce((sum, s) => sum + s.uniqueListeners, 0);
+      const totalEngagements = overview.reduce((sum, s) => sum + s.totalEngagements, 0);
+
+      res.json({ sessions: overview, totalListeners, totalEngagements });
+    } catch (error) {
+      console.error("Error fetching engagement overview:", error);
+      res.status(500).json({ message: "Failed to fetch engagement overview" });
+    }
+  });
+
   // Jam Sessions CRUD
   app.get("/api/jam-sessions", isAuthenticated, async (req: any, res) => {
     try {
@@ -924,6 +955,120 @@ export async function registerRoutes(
     } catch (error: any) {
       console.error("Jam session play error:", error);
       res.status(400).json({ message: error.message || "Failed to start playback. Make sure Spotify is open on a device." });
+    }
+  });
+
+  app.post("/api/jam-sessions/:id/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const session = await db.select().from(jamSessions).where(eq(jamSessions.id, req.params.id));
+      if (!session.length) return res.status(404).json({ message: "Session not found" });
+
+      const existing = await db.select().from(jamSessionListeners)
+        .where(and(eq(jamSessionListeners.sessionId, req.params.id), eq(jamSessionListeners.userId, userId), sql`${jamSessionListeners.leftAt} IS NULL`));
+      if (existing.length) return res.json(existing[0]);
+
+      const user = await storage.getUser(userId);
+      const [listener] = await db.insert(jamSessionListeners).values({
+        sessionId: req.params.id,
+        userId,
+        userName: user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email : null,
+        userEmail: user?.email || null,
+      }).returning();
+      res.json(listener);
+    } catch (error) {
+      console.error("Error joining session:", error);
+      res.status(500).json({ message: "Failed to join session" });
+    }
+  });
+
+  app.post("/api/jam-sessions/:id/leave", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await db.update(jamSessionListeners)
+        .set({ leftAt: new Date() })
+        .where(and(eq(jamSessionListeners.sessionId, req.params.id), eq(jamSessionListeners.userId, userId), sql`${jamSessionListeners.leftAt} IS NULL`));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to leave session" });
+    }
+  });
+
+  app.post("/api/jam-sessions/:id/engagement", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { action, trackName, trackArtist, spotifyUri, metadata } = req.body;
+      if (!action) return res.status(400).json({ message: "Action is required" });
+      const validActions = ["play", "save", "share", "skip", "like", "add_to_playlist"];
+      if (!validActions.includes(action)) return res.status(400).json({ message: "Invalid action type" });
+
+      const [engagement] = await db.insert(jamSessionEngagement).values({
+        sessionId: req.params.id,
+        userId,
+        action,
+        trackName: trackName || null,
+        trackArtist: trackArtist || null,
+        spotifyUri: spotifyUri || null,
+        metadata: metadata || null,
+      }).returning();
+      res.json(engagement);
+    } catch (error) {
+      console.error("Error recording engagement:", error);
+      res.status(500).json({ message: "Failed to record engagement" });
+    }
+  });
+
+  app.get("/api/jam-sessions/:id/engagement", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const session = await db.select().from(jamSessions).where(and(eq(jamSessions.id, req.params.id), eq(jamSessions.userId, userId)));
+      if (!session.length) return res.status(404).json({ message: "Session not found" });
+
+      const engagements = await db.select().from(jamSessionEngagement)
+        .where(eq(jamSessionEngagement.sessionId, req.params.id))
+        .orderBy(desc(jamSessionEngagement.createdAt));
+
+      const listeners = await db.select().from(jamSessionListeners)
+        .where(eq(jamSessionListeners.sessionId, req.params.id))
+        .orderBy(desc(jamSessionListeners.joinedAt));
+
+      const actionCounts = await db.select({
+        action: jamSessionEngagement.action,
+        total: count(),
+      }).from(jamSessionEngagement)
+        .where(eq(jamSessionEngagement.sessionId, req.params.id))
+        .groupBy(jamSessionEngagement.action);
+
+      const uniqueListenerCount = await db.select({
+        total: sql<number>`COUNT(DISTINCT ${jamSessionListeners.userId})`,
+      }).from(jamSessionListeners)
+        .where(eq(jamSessionListeners.sessionId, req.params.id));
+
+      const topTracks = await db.select({
+        trackName: jamSessionEngagement.trackName,
+        trackArtist: jamSessionEngagement.trackArtist,
+        spotifyUri: jamSessionEngagement.spotifyUri,
+        total: count(),
+      }).from(jamSessionEngagement)
+        .where(and(eq(jamSessionEngagement.sessionId, req.params.id), eq(jamSessionEngagement.action, "play")))
+        .groupBy(jamSessionEngagement.trackName, jamSessionEngagement.trackArtist, jamSessionEngagement.spotifyUri)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      res.json({
+        session: session[0],
+        engagements,
+        listeners,
+        stats: {
+          actionCounts: actionCounts.reduce((acc: any, row: any) => { acc[row.action] = Number(row.total); return acc; }, {}),
+          uniqueListeners: Number(uniqueListenerCount[0]?.total || 0),
+          totalEngagements: engagements.length,
+          topTracks,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching engagement:", error);
+      res.status(500).json({ message: "Failed to fetch engagement data" });
     }
   });
 

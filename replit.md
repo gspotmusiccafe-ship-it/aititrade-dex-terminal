@@ -69,6 +69,9 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - **memberships**: User subscription tiers
 - **likedTracks**: User's liked songs
 - **followedArtists**: User's followed artists
+- **jamSessions**: Scheduled Spotify playback sessions
+- **jamSessionEngagement**: Engagement tracking (play, save, share, like, skip actions per session)
+- **jamSessionListeners**: Tracks which accounts joined/left each jam session
 
 ## API Endpoints
 
@@ -124,6 +127,11 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - `PATCH /api/jam-sessions/:id/toggle` - Toggle active/inactive
 - `DELETE /api/jam-sessions/:id` - Delete jam session
 - `POST /api/jam-sessions/:id/play-now` - Trigger immediate playback
+- `POST /api/jam-sessions/:id/join` - Join a session (records listener)
+- `POST /api/jam-sessions/:id/leave` - Leave a session
+- `POST /api/jam-sessions/:id/engagement` - Record engagement action (play, save, share, like, skip, add_to_playlist)
+- `GET /api/jam-sessions/:id/engagement` - Get session engagement detail (listeners, actions, top tracks, stats)
+- `GET /api/jam-sessions/engagement/overview` - Get engagement overview across all user's sessions
 
 ## Theme
 
