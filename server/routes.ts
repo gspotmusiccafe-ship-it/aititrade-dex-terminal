@@ -5,8 +5,10 @@ import fs from "fs";
 import multer from "multer";
 import express from "express";
 import { storage } from "./storage";
+import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -290,6 +292,63 @@ export async function registerRoutes(
     }
   });
 
+  // Update track (artist's own track)
+  app.patch("/api/tracks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "You must be an artist" });
+      }
+      const track = await storage.getTrack(req.params.id);
+      if (!track || track.artistId !== artist.id) {
+        return res.status(403).json({ message: "Cannot edit this track" });
+      }
+      const updates: any = {};
+      if (req.body.title !== undefined) {
+        const trimmedTitle = String(req.body.title).trim();
+        if (!trimmedTitle || trimmedTitle.length > 200) {
+          return res.status(400).json({ message: "Track title is required (max 200 characters)" });
+        }
+        updates.title = trimmedTitle;
+      }
+      if (req.body.genre !== undefined) updates.genre = String(req.body.genre).trim() || null;
+      if (req.body.isPrerelease !== undefined) updates.isPrerelease = Boolean(req.body.isPrerelease);
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ message: "No updates provided" });
+      }
+      const [updated] = await db.update(tracks).set(updates).where(eq(tracks.id, req.params.id)).returning();
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating track:", error);
+      res.status(500).json({ message: "Failed to update track" });
+    }
+  });
+
+  // Delete track (artist's own track)
+  app.delete("/api/tracks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "You must be an artist" });
+      }
+      const track = await storage.getTrack(req.params.id);
+      if (!track || track.artistId !== artist.id) {
+        return res.status(403).json({ message: "Cannot delete this track" });
+      }
+      await storage.deleteTrack(req.params.id);
+      if (track.audioUrl.startsWith("/uploads/")) {
+        const filename = track.audioUrl.replace("/uploads/", "");
+        fs.unlink(path.join(uploadsDir, filename), () => {});
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting track:", error);
+      res.status(500).json({ message: "Failed to delete track" });
+    }
+  });
+
   // User's playlists
   app.get("/api/playlists", isAuthenticated, async (req: any, res) => {
     try {
@@ -335,6 +394,16 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching liked tracks count:", error);
       res.status(500).json({ message: "Failed to fetch count" });
+    }
+  });
+
+  app.get("/api/user/liked-tracks/:trackId/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const liked = await storage.isTrackLiked(userId, req.params.trackId);
+      res.json({ liked });
+    } catch (error) {
+      res.json({ liked: false });
     }
   });
 

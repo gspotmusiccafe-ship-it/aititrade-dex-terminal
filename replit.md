@@ -82,9 +82,15 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 ### Authenticated
 - `GET /api/user/artist-profile` - User's artist profile
 - `POST /api/artists` - Create artist profile
-- `POST /api/tracks` - Upload new track
+- `POST /api/tracks` - Upload new track (multipart/form-data with audioFile)
+- `PATCH /api/tracks/:id` - Update own track (title, genre, prerelease)
+- `DELETE /api/tracks/:id` - Delete own track (artist only)
+- `POST /api/tracks/:id/play` - Increment play count
 - `GET /api/playlists` - User's playlists
 - `GET /api/user/liked-tracks` - Liked songs
+- `GET /api/user/liked-tracks/:trackId/check` - Check if track is liked
+- `POST /api/user/liked-tracks/:trackId` - Like a track
+- `DELETE /api/user/liked-tracks/:trackId` - Unlike a track
 - `GET /api/user/followed-artists` - Followed artists
 
 ### Admin (requires isAdmin=true)

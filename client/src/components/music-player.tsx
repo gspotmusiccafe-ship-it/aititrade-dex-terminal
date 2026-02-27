@@ -1,7 +1,9 @@
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/lib/player-context";
+import { useToast } from "@/hooks/use-toast";
 
 function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -17,12 +19,51 @@ export function MusicPlayer() {
     volume,
     progress,
     duration,
+    shuffle,
+    repeat,
     togglePlay,
     nextTrack,
     prevTrack,
     setVolume,
     seekTo,
+    toggleShuffle,
+    toggleRepeat,
   } = usePlayer();
+
+  const { toast } = useToast();
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentTrack) {
+      fetch(`/api/user/liked-tracks/${currentTrack.id}/check`, { credentials: "include" })
+        .then(res => {
+          if (!res.ok) return { liked: false };
+          return res.json();
+        })
+        .then(data => setIsLiked(data.liked))
+        .catch(() => setIsLiked(false));
+    }
+  }, [currentTrack?.id]);
+
+  const handleLike = async () => {
+    if (!currentTrack || likeLoading) return;
+    setLikeLoading(true);
+    try {
+      if (isLiked) {
+        await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "DELETE", credentials: "include" });
+        setIsLiked(false);
+        toast({ title: "Removed from liked songs" });
+      } else {
+        await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "POST", credentials: "include" });
+        setIsLiked(true);
+        toast({ title: "Added to liked songs" });
+      }
+    } catch {
+      toast({ title: "Please sign in to like tracks", variant: "destructive" });
+    }
+    setLikeLoading(false);
+  };
 
   if (!currentTrack) {
     return (
@@ -35,7 +76,6 @@ export function MusicPlayer() {
   return (
     <div className="fixed bottom-0 left-0 right-0 h-20 md:h-24 bg-gradient-to-t from-black/90 to-black/70 backdrop-blur-xl border-t border-white/5 z-50" data-testid="music-player">
       <div className="h-full px-4 flex items-center justify-between gap-4 max-w-screen-2xl mx-auto">
-        {/* Track Info */}
         <div className="flex items-center gap-3 min-w-0 flex-1 max-w-[300px]">
           <div className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 bg-muted">
             {currentTrack.coverImage ? (
@@ -58,15 +98,27 @@ export function MusicPlayer() {
               {currentTrack.artist?.name}
             </p>
           </div>
-          <Button variant="ghost" size="icon" className="flex-shrink-0 hidden md:flex" data-testid="button-like-track">
-            <Heart className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0 hidden md:flex"
+            onClick={handleLike}
+            disabled={likeLoading}
+            data-testid="button-like-track"
+          >
+            <Heart className={`h-4 w-4 ${isLiked ? "fill-primary text-primary" : ""}`} />
           </Button>
         </div>
 
-        {/* Playback Controls */}
         <div className="flex flex-col items-center gap-1 flex-1 max-w-[600px]">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="hidden md:flex text-muted-foreground hover:text-foreground" data-testid="button-shuffle">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`hidden md:flex hover:text-foreground ${shuffle ? "text-primary" : "text-muted-foreground"}`}
+              onClick={toggleShuffle}
+              data-testid="button-shuffle"
+            >
               <Shuffle className="h-4 w-4" />
             </Button>
             <Button variant="ghost" size="icon" onClick={prevTrack} data-testid="button-prev-track">
@@ -87,12 +139,17 @@ export function MusicPlayer() {
             <Button variant="ghost" size="icon" onClick={nextTrack} data-testid="button-next-track">
               <SkipForward className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="hidden md:flex text-muted-foreground hover:text-foreground" data-testid="button-repeat">
-              <Repeat className="h-4 w-4" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`hidden md:flex hover:text-foreground ${repeat !== "off" ? "text-primary" : "text-muted-foreground"}`}
+              onClick={toggleRepeat}
+              data-testid="button-repeat"
+            >
+              {repeat === "one" ? <Repeat1 className="h-4 w-4" /> : <Repeat className="h-4 w-4" />}
             </Button>
           </div>
 
-          {/* Progress Bar */}
           <div className="w-full flex items-center gap-2">
             <span className="text-xs text-muted-foreground w-10 text-right">
               {formatTime(progress)}
@@ -111,7 +168,6 @@ export function MusicPlayer() {
           </div>
         </div>
 
-        {/* Volume Controls */}
         <div className="hidden md:flex items-center gap-2 flex-1 justify-end max-w-[200px]">
           <Button
             variant="ghost"

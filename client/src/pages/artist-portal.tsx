@@ -12,8 +12,9 @@ import {
   TrendingUp,
   Edit,
   Trash2,
-  Eye,
+  Play,
   Star,
+  Heart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -36,7 +37,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { Artist, Track, Album } from "@shared/schema";
+import { usePlayer } from "@/lib/player-context";
+import type { Artist, Track, Album, TrackWithArtist } from "@shared/schema";
 
 function UploadTrackDialog({ artistId }: { artistId: string }) {
   const [open, setOpen] = useState(false);
@@ -270,21 +272,113 @@ function ArtistSetupCard() {
   );
 }
 
+function EditTrackDialog({ track, artistId }: { track: Track; artistId: string }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState(track.title);
+  const [genre, setGenre] = useState(track.genre || "");
+  const [isPrerelease, setIsPrerelease] = useState(track.isPrerelease || false);
+  const { toast } = useToast();
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("PATCH", `/api/tracks/${track.id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artist", artistId, "tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+      setOpen(false);
+      toast({ title: "Track updated!" });
+    },
+    onError: () => {
+      toast({ title: "Update failed", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" data-testid={`button-edit-track-${track.id}`}>
+          <Edit className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Track</DialogTitle>
+          <DialogDescription>Update track details</DialogDescription>
+        </DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); updateMutation.mutate({ title, genre, isPrerelease }); }} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="editTitle">Track Title</Label>
+            <Input id="editTitle" value={title} onChange={(e) => setTitle(e.target.value)} required data-testid="input-edit-track-title" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="editGenre">Genre</Label>
+            <Input id="editGenre" value={genre} onChange={(e) => setGenre(e.target.value)} data-testid="input-edit-track-genre" />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Pre-release</Label>
+              <p className="text-xs text-muted-foreground">Only Premium members can access for 2 weeks</p>
+            </div>
+            <Switch checked={isPrerelease} onCheckedChange={setIsPrerelease} data-testid="switch-edit-prerelease" />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ArtistDashboard({ artist }: { artist: Artist }) {
   const { data: tracks, isLoading: loadingTracks } = useQuery<Track[]>({
     queryKey: ["/api/artist", artist.id, "tracks"],
   });
+  const { toast } = useToast();
+  const { playTrack } = usePlayer();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (trackId: string) => {
+      return apiRequest("DELETE", `/api/tracks/${trackId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artist", artist.id, "tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+      toast({ title: "Track deleted" });
+    },
+    onError: () => {
+      toast({ title: "Delete failed", variant: "destructive" });
+    },
+  });
+
+  const handlePlay = (track: Track) => {
+    const trackWithArtist: TrackWithArtist = { ...track, artist };
+    const allTracksWithArtist = (tracks || []).map(t => ({ ...t, artist }));
+    playTrack(trackWithArtist, allTracksWithArtist);
+  };
+
+  const handleDelete = (trackId: string, title: string) => {
+    if (confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+      deleteMutation.mutate(trackId);
+    }
+  };
+
+  const totalPlays = tracks?.reduce((sum, t) => sum + (t.playCount || 0), 0) || 0;
+  const topTrack = tracks?.length ? [...tracks].sort((a, b) => (b.playCount || 0) - (a.playCount || 0))[0] : null;
 
   const stats = [
     { label: "Monthly Listeners", value: artist.monthlyListeners?.toLocaleString() || "0", icon: Users },
     { label: "Total Tracks", value: tracks?.length || 0, icon: Music },
     { label: "Pre-releases", value: tracks?.filter(t => t.isPrerelease).length || 0, icon: Star },
-    { label: "Total Plays", value: tracks?.reduce((sum, t) => sum + (t.playCount || 0), 0).toLocaleString() || "0", icon: TrendingUp },
+    { label: "Total Plays", value: totalPlays.toLocaleString(), icon: TrendingUp },
   ];
 
   return (
     <div className="space-y-8">
-      {/* Artist Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center">
           {artist.profileImage ? (
@@ -310,7 +404,6 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
         </Button>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <Card key={i}>
@@ -319,13 +412,12 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
                 <stat.icon className="h-4 w-4" />
                 <span className="text-xs">{stat.label}</span>
               </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
+              <p className="text-2xl font-bold" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>{stat.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Content Tabs */}
       <Tabs defaultValue="tracks">
         <div className="flex items-center justify-between mb-4">
           <TabsList>
@@ -357,9 +449,15 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               {tracks.map((track) => (
                 <Card key={track.id} className="hover-elevate">
                   <CardContent className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                      <Disc3 className="h-6 w-6 text-primary" />
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handlePlay(track)}
+                      className="w-12 h-12 rounded bg-gradient-to-br from-primary/20 to-accent/20"
+                      data-testid={`button-play-track-${track.id}`}
+                    >
+                      <Play className="h-6 w-6 text-primary" />
+                    </Button>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium truncate">{track.title}</p>
@@ -378,13 +476,15 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
                       {(track.playCount || 0).toLocaleString()} plays
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button size="icon" variant="ghost">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="text-destructive">
+                      <EditTrackDialog track={track} artistId={artist.id} />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive"
+                        onClick={() => handleDelete(track.id, track.title)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-track-${track.id}`}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -410,11 +510,109 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
         </TabsContent>
 
         <TabsContent value="analytics">
-          <div className="text-center py-12 text-muted-foreground">
-            <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Analytics dashboard coming soon</p>
-            <p className="text-sm mt-1">Track your plays, listeners, and engagement metrics</p>
-          </div>
+          {loadingTracks ? (
+            <div className="space-y-4">
+              <Skeleton className="h-32 w-full rounded-lg" />
+              <Skeleton className="h-64 w-full rounded-lg" />
+            </div>
+          ) : tracks && tracks.length > 0 ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                      <TrendingUp className="h-4 w-4" />
+                      <span className="text-xs">Total Plays</span>
+                    </div>
+                    <p className="text-3xl font-bold" data-testid="stat-analytics-total-plays">{totalPlays.toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                      <Users className="h-4 w-4" />
+                      <span className="text-xs">Monthly Listeners</span>
+                    </div>
+                    <p className="text-3xl font-bold" data-testid="stat-analytics-listeners">{(artist.monthlyListeners || 0).toLocaleString()}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                      <Heart className="h-4 w-4" />
+                      <span className="text-xs">Avg Plays Per Track</span>
+                    </div>
+                    <p className="text-3xl font-bold" data-testid="stat-analytics-avg-plays">
+                      {tracks.length > 0 ? Math.round(totalPlays / tracks.length).toLocaleString() : "0"}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {topTrack && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Star className="h-5 w-5 text-primary" />
+                      Top Performing Track
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                        <Music className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xl font-bold" data-testid="text-top-track-title">{topTrack.title}</p>
+                        <p className="text-muted-foreground">{(topTrack.playCount || 0).toLocaleString()} plays • {topTrack.genre || "Unknown genre"}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Track Performance</CardTitle>
+                  <CardDescription>Play counts for each of your tracks</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {[...tracks].sort((a, b) => (b.playCount || 0) - (a.playCount || 0)).map((track, index) => {
+                      const maxPlays = Math.max(...tracks.map(t => t.playCount || 0), 1);
+                      const percentage = ((track.playCount || 0) / maxPlays) * 100;
+                      return (
+                        <div key={track.id} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground w-6">{index + 1}.</span>
+                              <span className="font-medium truncate">{track.title}</span>
+                              {track.isPrerelease && (
+                                <Badge variant="secondary" className="bg-primary/20 text-primary text-xs">Pre-release</Badge>
+                              )}
+                            </div>
+                            <span className="text-muted-foreground">{(track.playCount || 0).toLocaleString()}</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No analytics yet</p>
+              <p className="text-sm mt-1">Upload tracks and start getting plays to see your analytics</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -100,6 +100,12 @@ export interface IStorage {
     totalPlays: number;
     premiumMembers: number;
     artistProMembers: number;
+    totalAlbums: number;
+    totalVideos: number;
+    totalPlaylists: number;
+    estimatedRevenue: number;
+    topTracks: { title: string; artistName: string; playCount: number }[];
+    topArtists: { name: string; monthlyListeners: number; trackCount: number }[];
   }>;
 }
 
@@ -464,6 +470,12 @@ export class DatabaseStorage implements IStorage {
     totalPlays: number;
     premiumMembers: number;
     artistProMembers: number;
+    totalAlbums: number;
+    totalVideos: number;
+    totalPlaylists: number;
+    estimatedRevenue: number;
+    topTracks: { title: string; artistName: string; playCount: number }[];
+    topArtists: { name: string; monthlyListeners: number; trackCount: number }[];
   }> {
     const [userCount] = await db.select({ count: count() }).from(users);
     const [artistCount] = await db.select({ count: count() }).from(artists);
@@ -471,6 +483,31 @@ export class DatabaseStorage implements IStorage {
     const [playSum] = await db.select({ sum: sql<number>`COALESCE(SUM(play_count), 0)` }).from(tracks);
     const [premiumCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "premium"), eq(memberships.isActive, true)));
     const [artistProCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "artist"), eq(memberships.isActive, true)));
+    const [albumCount] = await db.select({ count: count() }).from(albums);
+    const [videoCount] = await db.select({ count: count() }).from(videos);
+    const [playlistCount] = await db.select({ count: count() }).from(playlists);
+
+    const topTracksData = await db.select({
+      title: tracks.title,
+      artistName: artists.name,
+      playCount: tracks.playCount,
+    }).from(tracks)
+      .innerJoin(artists, eq(tracks.artistId, artists.id))
+      .orderBy(desc(tracks.playCount))
+      .limit(5);
+
+    const topArtistsData = await db.select({
+      name: artists.name,
+      monthlyListeners: artists.monthlyListeners,
+      trackCount: sql<number>`CAST(COUNT(${tracks.id}) AS INTEGER)`,
+    }).from(artists)
+      .leftJoin(tracks, eq(artists.id, tracks.artistId))
+      .groupBy(artists.id, artists.name, artists.monthlyListeners)
+      .orderBy(desc(artists.monthlyListeners))
+      .limit(5);
+
+    const premiumRevenue = (premiumCount?.count || 0) * 9.99;
+    const artistProRevenue = (artistProCount?.count || 0) * 19.99;
 
     return {
       totalUsers: userCount?.count || 0,
@@ -479,6 +516,12 @@ export class DatabaseStorage implements IStorage {
       totalPlays: Number(playSum?.sum) || 0,
       premiumMembers: premiumCount?.count || 0,
       artistProMembers: artistProCount?.count || 0,
+      totalAlbums: albumCount?.count || 0,
+      totalVideos: videoCount?.count || 0,
+      totalPlaylists: playlistCount?.count || 0,
+      estimatedRevenue: Math.round((premiumRevenue + artistProRevenue) * 100) / 100,
+      topTracks: topTracksData.map(t => ({ title: t.title, artistName: t.artistName, playCount: t.playCount || 0 })),
+      topArtists: topArtistsData.map(a => ({ name: a.name, monthlyListeners: a.monthlyListeners || 0, trackCount: a.trackCount })),
     };
   }
 }

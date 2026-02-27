@@ -1,8 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,6 +37,12 @@ interface Analytics {
   totalPlays: number;
   premiumMembers: number;
   artistProMembers: number;
+  totalAlbums: number;
+  totalVideos: number;
+  totalPlaylists: number;
+  estimatedRevenue: number;
+  topTracks: { title: string; artistName: string; playCount: number }[];
+  topArtists: { name: string; monthlyListeners: number; trackCount: number }[];
 }
 
 function StatCard({ title, value, icon: Icon, description }: { title: string; value: number | string; icon: any; description?: string }) {
@@ -61,30 +67,112 @@ function AnalyticsDashboard() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-4" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-20" />
-            </CardContent>
-          </Card>
-        ))}
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <StatCard title="Total Users" value={analytics?.totalUsers || 0} icon={Users} />
-      <StatCard title="Total Artists" value={analytics?.totalArtists || 0} icon={Music} />
-      <StatCard title="Total Tracks" value={analytics?.totalTracks || 0} icon={Music} />
-      <StatCard title="Total Plays" value={analytics?.totalPlays?.toLocaleString() || 0} icon={BarChart3} />
-      <StatCard title="Premium Members" value={analytics?.premiumMembers || 0} icon={Crown} description="$9.99/month tier" />
-      <StatCard title="Artist Pro Members" value={analytics?.artistProMembers || 0} icon={Crown} description="$19.99/month tier" />
+    <div className="space-y-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard title="Total Users" value={analytics?.totalUsers || 0} icon={Users} />
+        <StatCard title="Total Artists" value={analytics?.totalArtists || 0} icon={UserCheck} />
+        <StatCard title="Total Tracks" value={analytics?.totalTracks || 0} icon={Music} />
+        <StatCard title="Total Plays" value={analytics?.totalPlays?.toLocaleString() || "0"} icon={TrendingUp} />
+        <StatCard title="Premium Members" value={analytics?.premiumMembers || 0} icon={Crown} description="$9.99/month" />
+        <StatCard title="Artist Pro" value={analytics?.artistProMembers || 0} icon={Crown} description="$19.99/month" />
+        <StatCard title="Est. Monthly Revenue" value={`$${(analytics?.estimatedRevenue || 0).toFixed(2)}`} icon={DollarSign} />
+        <StatCard title="Total Playlists" value={analytics?.totalPlaylists || 0} icon={ListMusic} />
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Top Tracks
+            </CardTitle>
+            <CardDescription>Most played tracks on the platform</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analytics?.topTracks && analytics.topTracks.length > 0 ? (
+              <div className="space-y-3">
+                {analytics.topTracks.map((track, index) => {
+                  const maxPlays = analytics.topTracks[0]?.playCount || 1;
+                  const percentage = (track.playCount / maxPlays) * 100;
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-muted-foreground w-5">{index + 1}.</span>
+                          <span className="font-medium truncate">{track.title}</span>
+                          <span className="text-muted-foreground text-xs truncate">by {track.artistName}</span>
+                        </div>
+                        <span className="text-muted-foreground ml-2 whitespace-nowrap">{track.playCount.toLocaleString()}</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${percentage}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">No track data yet</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              Top Artists
+            </CardTitle>
+            <CardDescription>Most popular artists by monthly listeners</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {analytics?.topArtists && analytics.topArtists.length > 0 ? (
+              <div className="space-y-3">
+                {analytics.topArtists.map((artist, index) => {
+                  const maxListeners = analytics.topArtists[0]?.monthlyListeners || 1;
+                  const percentage = (artist.monthlyListeners / maxListeners) * 100;
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-muted-foreground w-5">{index + 1}.</span>
+                          <span className="font-medium truncate">{artist.name}</span>
+                          <span className="text-muted-foreground text-xs">{artist.trackCount} tracks</span>
+                        </div>
+                        <span className="text-muted-foreground ml-2 whitespace-nowrap">{artist.monthlyListeners.toLocaleString()} listeners</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${percentage}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-sm">No artist data yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
