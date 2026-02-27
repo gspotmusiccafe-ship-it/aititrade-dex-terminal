@@ -48,7 +48,7 @@ export function AppSidebar() {
             </div>
             <div>
               <h1 className="font-bold text-lg leading-tight">AITIFY</h1>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Music</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Music Radio</p>
             </div>
           </div>
         </Link>

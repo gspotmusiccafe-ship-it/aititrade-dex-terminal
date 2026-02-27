@@ -164,7 +164,7 @@ export default function MembershipPage() {
         <div className="relative px-6 py-12 text-center">
           <Badge variant="secondary" className="mb-4">
             <Crown className="h-3 w-3 mr-1 text-yellow-500" />
-            AITIFY Membership
+            AITIFY MUSIC RADIO Membership
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-membership-title">
             Choose Your Plan
@@ -291,7 +291,7 @@ export default function MembershipPage() {
           <h3 className="font-semibold mb-2">Have questions?</h3>
           <p className="text-sm text-muted-foreground">
             All paid plans include a 7-day free trial. Cancel anytime.
-            Artists keep more of their earnings through AITIFY's fair revenue sharing model.
+            Artists keep more of their earnings through AITIFY MUSIC RADIO's fair revenue sharing model.
           </p>
         </div>
       </div>

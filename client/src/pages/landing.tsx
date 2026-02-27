@@ -156,7 +156,7 @@ function HeroPlayer() {
                 {current?.title || "Select a track"}
               </p>
               <p className="text-xs text-muted-foreground truncate" data-testid="text-hero-track-artist">
-                {current?.artist?.name || "AITIFY Music"}
+                {current?.artist?.name || "AITIFY MUSIC RADIO"}
               </p>
             </div>
             {current?.genre && (
@@ -326,7 +326,7 @@ export default function LandingPage() {
               <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
                 <Music2 className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-xl">AITIFY</span>
+              <span className="font-bold text-xl">AITIFY MUSIC RADIO</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
@@ -417,7 +417,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Why Choose AITIFY?
+              Why Choose AITIFY MUSIC RADIO?
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               We're building a new music experience that puts artists and listeners first
@@ -530,13 +530,13 @@ export default function LandingPage() {
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Music2 className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="font-bold">AITIFY MUSIC</span>
+              <span className="font-bold">AITIFY MUSIC RADIO</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Get music first. Support artists directly.
             </p>
             <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} AITIFY. All rights reserved.
+              &copy; {new Date().getFullYear()} AITIFY MUSIC RADIO. All rights reserved.
             </p>
           </div>
         </div>

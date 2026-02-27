@@ -1,10 +1,10 @@
-# AITIFY MUSIC
+# AITIFY MUSIC RADIO
 
 A Spotify-like music streaming platform with exclusive early access for premium members. Artists can upload their music and set pre-release dates, giving premium subscribers access to new releases 2 weeks before they go public.
 
 ## Overview
 
-AITIFY MUSIC is a full-stack music streaming application built with:
+AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Frontend**: React + TypeScript with Vite, Tailwind CSS, shadcn/ui components
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM

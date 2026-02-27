@@ -394,7 +394,7 @@ function ArtistOnboarding() {
             <Mic2 className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-2xl font-bold mb-2" data-testid="text-onboarding-title">
-            Become an Artist on AITIFY
+            Become an Artist on AITIFY MUSIC RADIO
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
             Choose your artist plan to start uploading music, building your fanbase, and earning from your art.
