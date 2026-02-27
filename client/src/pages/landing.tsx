@@ -1,8 +1,241 @@
-import { Music2, Play, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useQuery } from "@tanstack/react-query";
+
+interface TrackData {
+  id: string;
+  title: string;
+  audioUrl: string;
+  coverImage: string | null;
+  genre: string | null;
+  artist: { name: string; profileImage: string | null } | null;
+}
+
+function formatTime(seconds: number) {
+  if (!seconds || isNaN(seconds)) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function HeroPlayer() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(0.7);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [wantAutoPlay, setWantAutoPlay] = useState(false);
+
+  const { data: tracks } = useQuery<TrackData[]>({
+    queryKey: ["/api/tracks/featured"],
+  });
+
+  const playlist = tracks?.filter((t) => t.audioUrl) || [];
+  const current = playlist[currentIndex];
+
+  useEffect(() => {
+    if (tracks && currentIndex >= playlist.length && playlist.length > 0) {
+      setCurrentIndex(0);
+    }
+  }, [tracks, playlist.length, currentIndex]);
+
+  const play = useCallback(() => {
+    if (!audioRef.current || !current) return;
+    audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+  }, [current]);
+
+  const pause = useCallback(() => {
+    audioRef.current?.pause();
+    setIsPlaying(false);
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    if (isPlaying) pause();
+    else play();
+  }, [isPlaying, play, pause]);
+
+  const skipTo = useCallback((index: number, autoPlay = false) => {
+    if (!playlist.length) return;
+    const next = ((index % playlist.length) + playlist.length) % playlist.length;
+    setCurrentIndex(next);
+    setIsLoaded(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setWantAutoPlay(autoPlay || isPlaying);
+  }, [playlist.length, isPlaying]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !current) return;
+    audio.src = current.audioUrl;
+    audio.volume = isMuted ? 0 : volume;
+    audio.load();
+  }, [currentIndex, current?.audioUrl]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = isMuted ? 0 : volume;
+  }, [volume, isMuted]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => setCurrentTime(audio.currentTime);
+    const onMeta = () => { setDuration(audio.duration); setIsLoaded(true); };
+    const onCanPlay = () => {
+      setIsLoaded(true);
+      if (wantAutoPlay) {
+        audio.play().then(() => { setIsPlaying(true); setWantAutoPlay(false); }).catch(() => setWantAutoPlay(false));
+      }
+    };
+    const onEnded = () => skipTo(currentIndex + 1, true);
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("canplay", onCanPlay);
+    audio.addEventListener("ended", onEnded);
+    return () => {
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("canplay", onCanPlay);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [currentIndex, skipTo, wantAutoPlay]);
+
+  const seek = (val: number[]) => {
+    if (!audioRef.current) return;
+    audioRef.current.currentTime = val[0];
+    setCurrentTime(val[0]);
+  };
+
+  const coverSrc = current?.coverImage || current?.artist?.profileImage || null;
+
+  return (
+    <div className="relative aspect-square max-w-lg mx-auto">
+      <audio ref={audioRef} preload="metadata" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl" />
+
+      <div className="relative h-full rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 overflow-hidden flex flex-col">
+        <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black/20">
+          {coverSrc ? (
+            <img
+              src={coverSrc}
+              alt={current?.title || "Album cover"}
+              className={`w-full h-full object-cover transition-transform duration-700 ${isPlaying ? "scale-105" : "scale-100"}`}
+              data-testid="img-hero-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <Disc3 className={`h-24 w-24 text-primary/40 ${isPlaying ? "animate-spin" : ""}`} style={{ animationDuration: "3s" }} />
+              <span className="text-xs text-muted-foreground">
+                {playlist.length ? "No artwork" : "Loading tracks..."}
+              </span>
+            </div>
+          )}
+          {coverSrc && isPlaying && (
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          )}
+
+          <div className="absolute top-3 right-3 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-xs font-medium shadow-lg">
+            2 Weeks Early
+          </div>
+        </div>
+
+        <div className="p-4 bg-card/95 backdrop-blur-sm border-t border-border/30 space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold truncate" data-testid="text-hero-track-title">
+                {current?.title || "Select a track"}
+              </p>
+              <p className="text-xs text-muted-foreground truncate" data-testid="text-hero-track-artist">
+                {current?.artist?.name || "AITIFY Music"}
+              </p>
+            </div>
+            {current?.genre && (
+              <Badge variant="secondary" className="text-[10px] flex-shrink-0">
+                {current.genre}
+              </Badge>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Slider
+              value={[currentTime]}
+              max={duration || 100}
+              step={0.5}
+              onValueChange={seek}
+              className="cursor-pointer"
+              data-testid="slider-hero-seek"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>{formatTime(currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="p-1.5 rounded-full hover:bg-muted/50 transition-colors"
+                data-testid="button-hero-mute"
+              >
+                {isMuted ? <VolumeX className="h-3.5 w-3.5 text-muted-foreground" /> : <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />}
+              </button>
+              <Slider
+                value={[isMuted ? 0 : volume * 100]}
+                max={100}
+                step={1}
+                onValueChange={(v) => { setVolume(v[0] / 100); if (isMuted) setIsMuted(false); }}
+                className="w-16 cursor-pointer"
+                data-testid="slider-hero-volume"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => skipTo(currentIndex - 1)}
+                disabled={!playlist.length}
+                className="p-2 rounded-full hover:bg-muted/50 transition-colors disabled:opacity-30"
+                data-testid="button-hero-prev"
+              >
+                <SkipBack className="h-4 w-4" />
+              </button>
+              <button
+                onClick={togglePlay}
+                disabled={!playlist.length}
+                className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-30 shadow-lg"
+                data-testid="button-hero-play"
+              >
+                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+              </button>
+              <button
+                onClick={() => skipTo(currentIndex + 1)}
+                disabled={!playlist.length}
+                className="p-2 rounded-full hover:bg-muted/50 transition-colors disabled:opacity-30"
+                data-testid="button-hero-next"
+              >
+                <SkipForward className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="text-[10px] text-muted-foreground w-16 text-right">
+              {playlist.length > 0 && `${currentIndex + 1} / ${playlist.length}`}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const features = [
   {
@@ -146,8 +379,8 @@ export default function LandingPage() {
               <div className="flex flex-wrap gap-4">
                 <Button size="lg" asChild data-testid="button-hero-cta">
                   <a href="/api/login">
-                    <Play className="h-5 w-5 mr-2" />
-                    Start Listening Free
+                    <Headphones className="h-5 w-5 mr-2" />
+                    Join Free & Listen
                   </a>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
@@ -174,38 +407,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="aspect-square max-w-lg mx-auto relative">
-                {/* Decorative background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl" />
-                
-                {/* Main visual - Vinyl record effect */}
-                <div className="relative aspect-square rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 p-8 overflow-hidden">
-                  {/* Vinyl disc */}
-                  <div className="absolute inset-8 rounded-full bg-gradient-to-br from-zinc-900 to-zinc-800 animate-spin-slow">
-                    <div className="absolute inset-0 rounded-full border-4 border-zinc-700/50" />
-                    <div className="absolute inset-[40%] rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center">
-                      <div className="w-4 h-4 rounded-full bg-black/50" />
-                    </div>
-                    {/* Grooves */}
-                    {[20, 30, 40, 50, 60, 70].map((percent) => (
-                      <div
-                        key={percent}
-                        className="absolute rounded-full border border-zinc-600/20"
-                        style={{
-                          inset: `${percent / 2.5}%`,
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Early access badge */}
-                  <div className="absolute top-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-xs font-medium shadow-lg">
-                    2 Weeks Early
-                  </div>
-                </div>
-              </div>
-            </div>
+            <HeroPlayer />
           </div>
         </div>
       </section>
