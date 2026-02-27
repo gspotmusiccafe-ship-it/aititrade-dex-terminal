@@ -76,6 +76,7 @@ export interface IStorage {
   updateMembership(id: string, data: Partial<InsertMembership>): Promise<Membership | undefined>;
   
   // Videos
+  getVideo(videoId: string): Promise<Video | undefined>;
   getArtistVideos(artistId: string): Promise<Video[]>;
   createVideo(video: InsertVideo): Promise<Video>;
   
@@ -359,6 +360,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Videos
+  async getVideo(videoId: string): Promise<Video | undefined> {
+    const [video] = await db.select().from(videos).where(eq(videos.id, videoId));
+    return video;
+  }
+
   async getArtistVideos(artistId: string): Promise<Video[]> {
     return db.select().from(videos).where(eq(videos.artistId, artistId)).orderBy(desc(videos.createdAt));
   }

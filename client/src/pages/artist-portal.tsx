@@ -44,7 +44,34 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { usePlayer } from "@/lib/player-context";
-import type { Artist, Track, Album, TrackWithArtist } from "@shared/schema";
+import type { Artist, Track, Album, TrackWithArtist, Video as VideoType } from "@shared/schema";
+
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function YouTubeEmbed({ videoUrl, title }: { videoUrl: string; title: string }) {
+  const videoId = extractYouTubeId(videoUrl);
+  if (!videoId) return <div className="text-sm text-muted-foreground">Invalid video URL</div>;
+  return (
+    <iframe
+      src={`https://www.youtube.com/embed/${videoId}`}
+      title={title}
+      className="w-full aspect-video rounded-lg"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+      allowFullScreen
+      data-testid={`video-embed-${videoId}`}
+    />
+  );
+}
 
 function UploadTrackDialog({ artistId }: { artistId: string }) {
   const [open, setOpen] = useState(false);
@@ -758,9 +785,166 @@ function EditProfileDialog({ artist }: { artist: Artist }) {
   );
 }
 
+function AddVideoDialog({ artistId }: { artistId: string }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [isPrerelease, setIsPrerelease] = useState(false);
+  const { toast } = useToast();
+
+  const videoId = extractYouTubeId(youtubeUrl);
+
+  const addVideoMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return apiRequest("POST", "/api/videos", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", artistId, "videos"] });
+      toast({ title: "Video added!", description: "Your music video is now live." });
+      setOpen(false);
+      setTitle("");
+      setDescription("");
+      setYoutubeUrl("");
+      setIsPrerelease(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to add video", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!videoId) {
+      toast({ title: "Invalid YouTube URL", description: "Please enter a valid YouTube video link.", variant: "destructive" });
+      return;
+    }
+    addVideoMutation.mutate({
+      artistId,
+      title,
+      description: description || null,
+      videoUrl: youtubeUrl.trim(),
+      thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`,
+      duration: 0,
+      isPrerelease,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" data-testid="button-add-video">
+          <Plus className="h-4 w-4 mr-1" />
+          Add Video
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[550px]">
+        <DialogHeader>
+          <DialogTitle>Add Music Video</DialogTitle>
+          <DialogDescription>
+            Paste a YouTube link to embed your music video
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="videoTitle">Video Title</Label>
+            <Input
+              id="videoTitle"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. BABY LETS RIDE (Official Video)"
+              required
+              data-testid="input-video-title"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="youtubeUrl">YouTube URL</Label>
+            <Input
+              id="youtubeUrl"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              required
+              data-testid="input-video-url"
+            />
+            {youtubeUrl && !videoId && (
+              <p className="text-xs text-destructive">Enter a valid YouTube URL</p>
+            )}
+          </div>
+          {videoId && (
+            <div className="rounded-lg overflow-hidden border border-border">
+              <img
+                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                alt="Video thumbnail"
+                className="w-full aspect-video object-cover"
+                data-testid="img-video-preview"
+              />
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="videoDescription">Description (optional)</Label>
+            <Textarea
+              id="videoDescription"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="About this video..."
+              rows={3}
+              data-testid="input-video-description"
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="videoPrerelease">Pre-release (Premium only)</Label>
+            <Switch
+              id="videoPrerelease"
+              checked={isPrerelease}
+              onCheckedChange={setIsPrerelease}
+              data-testid="switch-video-prerelease"
+            />
+          </div>
+          <DialogFooter>
+            <Button type="submit" disabled={addVideoMutation.isPending || !videoId} data-testid="button-submit-video">
+              {addVideoMutation.isPending ? "Adding..." : "Add Video"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DeleteVideoButton({ videoId, artistId }: { videoId: string; artistId: string }) {
+  const { toast } = useToast();
+  const deleteMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", `/api/videos/${videoId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", artistId, "videos"] });
+      toast({ title: "Video deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete video", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+      onClick={() => deleteMutation.mutate()}
+      disabled={deleteMutation.isPending}
+      data-testid={`button-delete-video-${videoId}`}
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  );
+}
+
 function ArtistDashboard({ artist }: { artist: Artist }) {
   const { data: tracks, isLoading: loadingTracks } = useQuery<Track[]>({
     queryKey: ["/api/artist", artist.id, "tracks"],
+  });
+  const { data: videos, isLoading: loadingVideos } = useQuery<VideoType[]>({
+    queryKey: ["/api/artists", artist.id, "videos"],
   });
   const { toast } = useToast();
   const { playTrack } = usePlayer();
@@ -860,7 +1044,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               Analytics
             </TabsTrigger>
           </TabsList>
-          <UploadTrackDialog artistId={artist.id} />
+          <div className="flex items-center gap-2">
+            <AddVideoDialog artistId={artist.id} />
+            <UploadTrackDialog artistId={artist.id} />
+          </div>
         </div>
 
         <TabsContent value="tracks">
@@ -935,11 +1122,49 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
         </TabsContent>
 
         <TabsContent value="videos">
-          <div className="text-center py-12 text-muted-foreground">
-            <Video className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p>Video uploads coming soon</p>
-            <p className="text-sm mt-1">You'll be able to upload music videos and exclusive content</p>
-          </div>
+          {loadingVideos ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <Skeleton key={i} className="aspect-video rounded-lg" />
+              ))}
+            </div>
+          ) : videos && videos.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2">
+              {videos.map((video) => (
+                <Card key={video.id} className="overflow-hidden" data-testid={`card-video-${video.id}`}>
+                  <YouTubeEmbed videoUrl={video.videoUrl} title={video.title} />
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="font-semibold truncate" data-testid={`text-video-title-${video.id}`}>{video.title}</h4>
+                        {video.description && (
+                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{video.description}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          {video.isPrerelease && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Star className="h-3 w-3 mr-1" />
+                              Pre-release
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {video.viewCount || 0} views
+                          </span>
+                        </div>
+                      </div>
+                      <DeleteVideoButton videoId={video.id} artistId={artist.id} />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Video className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>No videos yet</p>
+              <p className="text-sm mt-1">Add your first YouTube music video</p>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="analytics">

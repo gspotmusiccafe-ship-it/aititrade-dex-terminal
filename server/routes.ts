@@ -736,6 +736,26 @@ export async function registerRoutes(
     }
   });
 
+  // Delete own video (artists only)
+  app.delete("/api/videos/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "Not an artist" });
+      }
+      const video = await storage.getVideo(req.params.id);
+      if (!video || video.artistId !== artist.id) {
+        return res.status(404).json({ message: "Video not found" });
+      }
+      await storage.deleteVideo(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting video:", error);
+      res.status(500).json({ message: "Failed to delete video" });
+    }
+  });
+
   // ============ Admin Routes ============
 
   // Admin middleware

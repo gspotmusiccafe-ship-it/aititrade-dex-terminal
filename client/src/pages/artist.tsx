@@ -2,12 +2,25 @@ import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "wouter";
 import { Play, Shuffle, CheckCircle2, Users, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrackCard } from "@/components/track-card";
 import { AlbumCard } from "@/components/album-card";
 import { usePlayer } from "@/lib/player-context";
-import type { Artist, TrackWithArtist, AlbumWithArtist } from "@shared/schema";
+import type { Artist, TrackWithArtist, AlbumWithArtist, Video } from "@shared/schema";
+
+function extractYouTubeId(url: string): string | null {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  return null;
+}
 
 export default function ArtistPage() {
   const [, params] = useRoute("/artist/:id");
@@ -26,6 +39,11 @@ export default function ArtistPage() {
 
   const { data: albums, isLoading: loadingAlbums } = useQuery<AlbumWithArtist[]>({
     queryKey: ["/api/artists", artistId, "albums"],
+    enabled: !!artistId,
+  });
+
+  const { data: videos } = useQuery<Video[]>({
+    queryKey: ["/api/artists", artistId, "videos"],
     enabled: !!artistId,
   });
 
@@ -181,6 +199,36 @@ export default function ArtistPage() {
             {albums.map((album) => (
               <AlbumCard key={album.id} album={album} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Music Videos */}
+      {videos && videos.length > 0 && (
+        <div className="px-6 pb-8">
+          <h2 className="text-xl font-bold mb-4">Music Videos</h2>
+          <div className="grid gap-6 md:grid-cols-2">
+            {videos.map((video) => {
+              const ytId = extractYouTubeId(video.videoUrl);
+              if (!ytId) return null;
+              return (
+                <Card key={video.id} className="overflow-hidden" data-testid={`card-artist-video-${video.id}`}>
+                  <iframe
+                    src={`https://www.youtube.com/embed/${ytId}`}
+                    title={video.title}
+                    className="w-full aspect-video"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold" data-testid={`text-video-title-${video.id}`}>{video.title}</h4>
+                    {video.description && (
+                      <p className="text-sm text-muted-foreground mt-1">{video.description}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}
