@@ -33,6 +33,7 @@ function HeroPlayer() {
   const [isMuted, setIsMuted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [wantAutoPlay, setWantAutoPlay] = useState(false);
+  const [playError, setPlayError] = useState<string | null>(null);
 
   const { data: tracks } = useQuery<TrackData[]>({
     queryKey: ["/api/tracks/featured"],
@@ -48,8 +49,27 @@ function HeroPlayer() {
   }, [tracks, playlist.length, currentIndex]);
 
   const play = useCallback(() => {
-    if (!audioRef.current || !current) return;
-    audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+    const audio = audioRef.current;
+    if (!audio || !current) return;
+    setPlayError(null);
+    if (!audio.src || audio.src === window.location.href) {
+      audio.src = current.audioUrl;
+      audio.load();
+    }
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise
+        .then(() => setIsPlaying(true))
+        .catch((err: Error) => {
+          console.error("Audio play failed:", err.message);
+          if (err.name === "NotAllowedError") {
+            setPlayError("Tap play again — your browser blocked autoplay");
+          } else {
+            setPlayError("Playback failed — try another track");
+          }
+          setIsPlaying(false);
+        });
+    }
   }, [current]);
 
   const pause = useCallback(() => {
@@ -65,6 +85,7 @@ function HeroPlayer() {
   const skipTo = useCallback((index: number, autoPlay = false) => {
     if (!playlist.length) return;
     const next = ((index % playlist.length) + playlist.length) % playlist.length;
+    setPlayError(null);
     setCurrentIndex(next);
     setIsLoaded(false);
     setCurrentTime(0);
@@ -94,7 +115,11 @@ function HeroPlayer() {
     const onCanPlay = () => {
       setIsLoaded(true);
       if (wantAutoPlay) {
-        audio.play().then(() => { setIsPlaying(true); setWantAutoPlay(false); }).catch(() => setWantAutoPlay(false));
+        const p = audio.play();
+        if (p !== undefined) {
+          p.then(() => { setIsPlaying(true); setWantAutoPlay(false); })
+            .catch(() => { setWantAutoPlay(false); setIsPlaying(false); });
+        }
       }
     };
     const onEnded = () => skipTo(currentIndex + 1, true);
@@ -167,6 +192,9 @@ function HeroPlayer() {
               <p className="text-xs text-muted-foreground truncate" data-testid="text-hero-track-artist">
                 {current?.artist?.name || "AITIFY MUSIC RADIO"}
               </p>
+              {playError && (
+                <p className="text-xs text-destructive mt-0.5" data-testid="text-play-error">{playError}</p>
+              )}
             </div>
             {current?.genre && (
               <Badge variant="secondary" className="text-[10px] flex-shrink-0">

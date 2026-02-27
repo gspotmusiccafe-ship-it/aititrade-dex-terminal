@@ -80,7 +80,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         if (prev.repeat === "one") {
           if (audioRef.current) {
             audioRef.current.currentTime = 0;
-            audioRef.current.play();
+            const p = audioRef.current.play();
+            if (p !== undefined) {
+              p.catch((err) => {
+                console.error("Audio repeat play failed:", err.message);
+                setState(s => ({ ...s, isPlaying: false }));
+              });
+            }
           }
           return prev;
         }
@@ -92,8 +98,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           if (audioRef.current && nextT) {
             playCountedRef.current = null;
             audioRef.current.src = nextT.audioUrl;
-            audioRef.current.play();
-            reportPlay(nextT.id);
+            const p = audioRef.current.play();
+            if (p !== undefined) {
+              p.then(() => reportPlay(nextT.id))
+                .catch((err) => {
+                  console.error("Audio play failed:", err.message);
+                  setState(s => ({ ...s, isPlaying: false }));
+                });
+            }
           }
           return {
             ...prev,
@@ -108,8 +120,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           if (audioRef.current && firstTrack) {
             playCountedRef.current = null;
             audioRef.current.src = firstTrack.audioUrl;
-            audioRef.current.play();
-            reportPlay(firstTrack.id);
+            const p = audioRef.current.play();
+            if (p !== undefined) {
+              p.then(() => reportPlay(firstTrack.id))
+                .catch((err) => {
+                  console.error("Audio play failed:", err.message);
+                  setState(s => ({ ...s, isPlaying: false }));
+                });
+            }
           }
           return {
             ...prev,
@@ -140,8 +158,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (audioRef.current) {
       playCountedRef.current = null;
       audioRef.current.src = track.audioUrl;
-      audioRef.current.play();
-      reportPlay(track.id);
+      const p = audioRef.current.play();
+      if (p !== undefined) {
+        p.then(() => {
+          reportPlay(track.id);
+        }).catch((err) => {
+          console.error("Audio play failed:", err.message);
+          setState(prev => ({ ...prev, isPlaying: false }));
+        });
+      }
       setState(prev => ({
         ...prev,
         currentTrack: track,
@@ -157,10 +182,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (audioRef.current && state.currentTrack) {
       if (state.isPlaying) {
         audioRef.current.pause();
+        setState(prev => ({ ...prev, isPlaying: false }));
       } else {
-        audioRef.current.play();
+        const p = audioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => {
+            setState(prev => ({ ...prev, isPlaying: true }));
+          }).catch((err) => {
+            console.error("Audio play failed:", err.message);
+            setState(prev => ({ ...prev, isPlaying: false }));
+          });
+        }
       }
-      setState(prev => ({ ...prev, isPlaying: !prev.isPlaying }));
     }
   }, [state.isPlaying, state.currentTrack]);
 
@@ -173,8 +206,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         if (audioRef.current && nextT) {
           playCountedRef.current = null;
           audioRef.current.src = nextT.audioUrl;
-          audioRef.current.play();
-          reportPlay(nextT.id);
+          const p = audioRef.current.play();
+          if (p !== undefined) {
+            p.then(() => reportPlay(nextT.id))
+              .catch((err) => {
+                console.error("Audio play failed:", err.message);
+                setState(s => ({ ...s, isPlaying: false }));
+              });
+          }
         }
         return {
           ...prev,
@@ -189,8 +228,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         if (audioRef.current && firstTrack) {
           playCountedRef.current = null;
           audioRef.current.src = firstTrack.audioUrl;
-          audioRef.current.play();
-          reportPlay(firstTrack.id);
+          const p = audioRef.current.play();
+          if (p !== undefined) {
+            p.then(() => reportPlay(firstTrack.id))
+              .catch((err) => {
+                console.error("Audio play failed:", err.message);
+                setState(s => ({ ...s, isPlaying: false }));
+              });
+          }
         }
         return {
           ...prev,
@@ -219,8 +264,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (audioRef.current && prevT) {
         playCountedRef.current = null;
         audioRef.current.src = prevT.audioUrl;
-        audioRef.current.play();
-        reportPlay(prevT.id);
+        const p = audioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => reportPlay(prevT.id))
+            .catch((err) => {
+              console.error("Audio play failed:", err.message);
+              setState(s => ({ ...s, isPlaying: false }));
+            });
+        }
         setState(prev => ({
           ...prev,
           currentTrack: prevT,
