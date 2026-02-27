@@ -108,6 +108,8 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - `DELETE /api/admin/tracks/:id` - Remove track (moderation)
 - `DELETE /api/admin/videos/:id` - Remove video (moderation)
 - `GET /api/admin/memberships` - All memberships
+- `GET /api/admin/spotify/search?q=query` - Search Spotify for tracks/artists/albums
+- `GET /api/admin/spotify/track/:trackId` - Get full Spotify track details (stream count, album, artists)
 
 ## Theme
 
