@@ -15,6 +15,7 @@ import {
   Play,
   Star,
   Heart,
+  ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -46,6 +47,8 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
   const [genre, setGenre] = useState("");
   const [isPrerelease, setIsPrerelease] = useState(false);
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
   const [fileName, setFileName] = useState("");
   const { toast } = useToast();
@@ -61,6 +64,15 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
         setAudioDuration(Math.round(audio.duration));
         URL.revokeObjectURL(audio.src);
       };
+    }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      const url = URL.createObjectURL(file);
+      setCoverPreview(url);
     }
   };
 
@@ -84,6 +96,8 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
       setTitle("");
       setGenre("");
       setAudioFile(null);
+      setCoverFile(null);
+      setCoverPreview(null);
       setFileName("");
       setAudioDuration(0);
       toast({ title: "Track uploaded!", description: "Your track is now available." });
@@ -101,6 +115,9 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
     }
     const formData = new FormData();
     formData.append("audioFile", audioFile);
+    if (coverFile) {
+      formData.append("coverImage", coverFile);
+    }
     formData.append("title", title);
     formData.append("genre", genre);
     formData.append("duration", String(audioDuration || 180));
@@ -116,7 +133,7 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
           Upload Track
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Upload New Track</DialogTitle>
           <DialogDescription>
@@ -124,37 +141,63 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="audioFile">Audio File</Label>
-            <div
-              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors"
-              onClick={() => document.getElementById("audioFileInput")?.click()}
-            >
-              <input
-                id="audioFileInput"
-                type="file"
-                accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a,.webm"
-                onChange={handleFileChange}
-                className="hidden"
-                data-testid="input-audio-file"
-              />
-              {fileName ? (
-                <div className="space-y-1">
-                  <Music className="h-8 w-8 mx-auto text-primary" />
-                  <p className="text-sm font-medium truncate">{fileName}</p>
-                  {audioDuration > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Duration: {Math.floor(audioDuration / 60)}:{(audioDuration % 60).toString().padStart(2, '0')}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">Click to select audio file</p>
-                  <p className="text-xs text-muted-foreground">MP3, WAV, OGG, FLAC, AAC (max 50MB)</p>
-                </div>
-              )}
+          <div className="grid grid-cols-[120px_1fr] gap-4">
+            <div className="space-y-2">
+              <Label>Cover Art</Label>
+              <div
+                className="w-[120px] h-[120px] border-2 border-dashed border-border rounded-lg overflow-hidden cursor-pointer hover:border-primary/50 transition-colors flex items-center justify-center bg-muted/30"
+                onClick={() => document.getElementById("coverImageInput")?.click()}
+              >
+                <input
+                  id="coverImageInput"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+                  onChange={handleCoverChange}
+                  className="hidden"
+                  data-testid="input-cover-image"
+                />
+                {coverPreview ? (
+                  <img src={coverPreview} alt="Cover preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center p-2">
+                    <ImagePlus className="h-8 w-8 mx-auto text-muted-foreground mb-1" />
+                    <p className="text-[10px] text-muted-foreground">Add artwork</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="audioFile">Audio File</Label>
+              <div
+                className="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 transition-colors h-[120px] flex flex-col items-center justify-center"
+                onClick={() => document.getElementById("audioFileInput")?.click()}
+              >
+                <input
+                  id="audioFileInput"
+                  type="file"
+                  accept="audio/*,.mp3,.wav,.ogg,.flac,.aac,.m4a,.webm"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  data-testid="input-audio-file"
+                />
+                {fileName ? (
+                  <div className="space-y-1">
+                    <Music className="h-6 w-6 mx-auto text-primary" />
+                    <p className="text-xs font-medium truncate max-w-[180px]">{fileName}</p>
+                    {audioDuration > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {Math.floor(audioDuration / 60)}:{(audioDuration % 60).toString().padStart(2, '0')}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Click to select audio</p>
+                    <p className="text-[10px] text-muted-foreground">MP3, WAV, FLAC (max 50MB)</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <div className="space-y-2">
@@ -182,7 +225,7 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
             <div className="space-y-0.5">
               <Label>Pre-release</Label>
               <p className="text-xs text-muted-foreground">
-                Only Premium members can access for 2 weeks
+                Only paid members can preview before release
               </p>
             </div>
             <Switch
@@ -449,15 +492,22 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               {tracks.map((track) => (
                 <Card key={track.id} className="hover-elevate">
                   <CardContent className="p-4 flex items-center gap-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                    <div
+                      className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0 cursor-pointer"
                       onClick={() => handlePlay(track)}
-                      className="w-12 h-12 rounded bg-gradient-to-br from-primary/20 to-accent/20"
                       data-testid={`button-play-track-${track.id}`}
                     >
-                      <Play className="h-6 w-6 text-primary" />
-                    </Button>
+                      {track.coverImage ? (
+                        <img src={track.coverImage} alt={track.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                          <Music className="h-6 w-6 text-primary" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Play className="h-5 w-5 text-white" />
+                      </div>
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium truncate">{track.title}</p>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1 } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/lib/player-context";
@@ -168,7 +168,37 @@ export function MusicPlayer() {
           </div>
         </div>
 
-        <div className="hidden md:flex items-center gap-2 flex-1 justify-end max-w-[200px]">
+        <div className="hidden md:flex items-center gap-2 flex-1 justify-end max-w-[250px]">
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Download MP3"
+            onClick={async () => {
+              if (!currentTrack) return;
+              try {
+                const res = await fetch(`/api/tracks/${currentTrack.id}/download`, { credentials: "include" });
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({ message: "Download failed" }));
+                  toast({ title: "Download unavailable", description: err.message, variant: "destructive" });
+                  return;
+                }
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${currentTrack.title}.mp3`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch {
+                toast({ title: "Download failed", variant: "destructive" });
+              }
+            }}
+            data-testid="button-download-current"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

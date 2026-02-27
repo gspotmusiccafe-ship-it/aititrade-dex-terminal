@@ -65,6 +65,8 @@ export const memberships = pgTable("memberships", {
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date"),
   isActive: boolean("is_active").default(true),
+  downloadsUsed: integer("downloads_used").default(0),
+  previewsUsed: integer("previews_used").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

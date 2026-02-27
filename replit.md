@@ -27,9 +27,11 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - View play counts and engagement
 
 ### Membership Tiers
-- **Free**: Stream public releases, create playlists
-- **Premium**: 2-week early access to releases, lossless audio, offline downloads
-- **Artist Pro**: All Premium features + unlimited uploads, analytics
+- **Free**: Stream all previously released music, create up to 10 playlists
+- **Silver ($1.99/mo)**: No downloads, 5 pre-release previews/month, unlimited released music
+- **Bronze ($3.99/mo)**: 10 MP3 downloads, 20 previews/month, unlimited released music
+- **Gold ($6.99/mo)**: Unlimited downloads, unlimited previews, lossless audio, unlimited released music
+- **Artist Pro ($19.99/mo)**: All Gold features + unlimited uploads, analytics
 
 ### Admin Portal
 - **Dashboard**: Platform analytics (total users, artists, tracks, plays, revenue)
@@ -47,7 +49,7 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 │   │   ├── pages/         # Route pages
 │   │   ├── hooks/         # Custom React hooks
 │   │   └── lib/           # Utilities and context
-├── uploads/                # Uploaded audio files (served via /uploads/:filename)
+├── uploads/                # Uploaded audio + cover image files (served via /uploads/:filename)
 ├── server/                 # Express backend
 │   ├── routes.ts          # API endpoints (includes multer file upload + protected audio serving)
 │   ├── storage.ts         # Database operations

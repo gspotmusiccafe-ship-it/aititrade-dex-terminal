@@ -1,8 +1,11 @@
-import { Crown, Check, Star, Zap, Headphones, Download, Music } from "lucide-react";
+import { Crown, Check, Star, Zap, Headphones, Download, Music, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 const plans = [
   {
@@ -12,99 +15,156 @@ const plans = [
     period: "forever",
     description: "Great for casual listening",
     features: [
-      { text: "Stream all public releases", included: true },
+      { text: "Stream all previously released music", included: true },
       { text: "Create up to 10 playlists", included: true },
       { text: "Standard audio quality", included: true },
-      { text: "2-week early access", included: false },
-      { text: "Lossless audio", included: false },
-      { text: "Offline downloads", included: false },
+      { text: "Pre-release previews", included: false },
+      { text: "MP3 downloads", included: false },
     ],
     popular: false,
     cta: "Current Plan",
+    color: "text-muted-foreground",
   },
   {
-    id: "premium",
-    name: "Premium",
-    price: "$9.99",
+    id: "silver",
+    name: "Silver",
+    price: "$1.99",
     period: "/month",
-    description: "Get music before everyone else",
+    description: "Preview new music before release",
     features: [
-      { text: "Everything in Free", included: true },
-      { text: "2-week early access to releases", included: true },
-      { text: "Exclusive pre-release content", included: true },
-      { text: "Lossless audio quality", included: true },
-      { text: "Unlimited offline downloads", included: true },
-      { text: "No advertisements", included: true },
-    ],
-    popular: true,
-    cta: "Upgrade to Premium",
-  },
-  {
-    id: "artist",
-    name: "Artist Pro",
-    price: "$19.99",
-    period: "/month",
-    description: "For music creators",
-    features: [
-      { text: "Everything in Premium", included: true },
-      { text: "Upload unlimited tracks", included: true },
-      { text: "Upload music videos", included: true },
-      { text: "Analytics dashboard", included: true },
-      { text: "Scheduled releases", included: true },
-      { text: "Fan engagement tools", included: true },
+      { text: "Unlimited previously released music", included: true },
+      { text: "5 pre-release previews per month", included: true },
+      { text: "Standard audio quality", included: true },
+      { text: "Create unlimited playlists", included: true },
+      { text: "MP3 downloads", included: false },
     ],
     popular: false,
-    cta: "Start Creating",
+    cta: "Get Silver",
+    color: "text-gray-400",
+  },
+  {
+    id: "bronze",
+    name: "Bronze",
+    price: "$3.99",
+    period: "/month",
+    description: "Download and preview your favorites",
+    features: [
+      { text: "Unlimited previously released music", included: true },
+      { text: "20 pre-release previews per month", included: true },
+      { text: "10 MP3 downloads per month", included: true },
+      { text: "Create unlimited playlists", included: true },
+      { text: "High quality audio", included: true },
+    ],
+    popular: true,
+    cta: "Get Bronze",
+    color: "text-amber-600",
+  },
+  {
+    id: "gold",
+    name: "Gold",
+    price: "$6.99",
+    period: "/month",
+    description: "Unlimited everything — the full experience",
+    features: [
+      { text: "Unlimited previously released music", included: true },
+      { text: "Unlimited pre-release previews", included: true },
+      { text: "Unlimited MP3 downloads", included: true },
+      { text: "Lossless audio quality", included: true },
+      { text: "Create unlimited playlists", included: true },
+      { text: "No advertisements", included: true },
+    ],
+    popular: false,
+    cta: "Get Gold",
+    color: "text-yellow-500",
   },
 ];
 
 const benefits = [
   {
     icon: Star,
-    title: "Exclusive Early Access",
-    description: "Listen to new releases 2 weeks before they hit other streaming platforms",
+    title: "Early Access Previews",
+    description: "Preview pre-release tracks before they drop for everyone else",
   },
   {
     icon: Headphones,
     title: "Premium Sound",
-    description: "Experience music in lossless quality with crystal clear audio",
+    description: "Gold members enjoy lossless quality with crystal clear audio",
   },
   {
     icon: Download,
-    title: "Offline Mode",
-    description: "Download your favorites and listen anywhere, even without internet",
+    title: "MP3 Downloads",
+    description: "Download tracks and listen offline — Bronze gets 10/mo, Gold gets unlimited",
   },
   {
     icon: Zap,
-    title: "Ad-Free Experience",
-    description: "No interruptions, just pure music from start to finish",
+    title: "Unlimited Released Music",
+    description: "All tiers get unlimited access to previously released tracks",
   },
 ];
 
 export default function MembershipPage() {
   const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
+
+  const { data: membership } = useQuery<{ tier: string; isActive: boolean; downloadsUsed?: number; previewsUsed?: number }>({
+    queryKey: ["/api/user/membership"],
+    enabled: isAuthenticated,
+  });
+
+  const upgradeMutation = useMutation({
+    mutationFn: async (tier: string) => {
+      return apiRequest("POST", "/api/user/membership/upgrade", { tier });
+    },
+    onSuccess: (_data, tier) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
+      toast({ title: "Membership upgraded!", description: `You are now a ${tier.charAt(0).toUpperCase() + tier.slice(1)} member.` });
+    },
+    onError: () => {
+      toast({ title: "Upgrade failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/user/membership/cancel");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
+      toast({ title: "Membership cancelled", description: "You are now on the Free plan." });
+    },
+  });
+
+  const currentTier = membership?.tier || "free";
+
+  const tierRank: Record<string, number> = { free: 0, silver: 1, bronze: 2, gold: 3, artist: 4 };
+  const isCurrentOrLower = (planId: string) => tierRank[planId] <= tierRank[currentTier];
 
   return (
     <div className="min-h-full pb-28">
-      {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-primary/5 to-transparent" />
         <div className="relative px-6 py-12 text-center">
           <Badge variant="secondary" className="mb-4">
             <Crown className="h-3 w-3 mr-1 text-yellow-500" />
-            AITIFY Premium
+            AITIFY Membership
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4">
-            Get Music First with Premium
+          <h1 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-membership-title">
+            Choose Your Plan
           </h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Unlock exclusive early access to pre-release music, lossless audio quality, 
-            and offline downloads. Support artists while enjoying the best listening experience.
+            From previews to unlimited downloads — pick the tier that matches your vibe.
+            All plans include unlimited access to released music.
           </p>
+          {isAuthenticated && currentTier !== "free" && (
+            <div className="mt-4">
+              <Badge variant="default" className="text-sm px-3 py-1" data-testid="badge-current-tier">
+                Current Plan: {currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}
+              </Badge>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Benefits Grid */}
       <div className="px-6 py-8">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           {benefits.map((benefit, index) => (
@@ -118,8 +178,7 @@ export default function MembershipPage() {
           ))}
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.id}
@@ -134,10 +193,11 @@ export default function MembershipPage() {
                 </div>
               )}
               <CardHeader className={plan.popular ? "pt-10" : ""}>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className={`flex items-center gap-2 ${plan.color}`}>
                   {plan.name}
-                  {plan.id === "premium" && <Crown className="h-4 w-4 text-yellow-500" />}
-                  {plan.id === "artist" && <Music className="h-4 w-4 text-primary" />}
+                  {plan.id === "gold" && <Crown className="h-4 w-4 text-yellow-500" />}
+                  {plan.id === "bronze" && <Crown className="h-4 w-4 text-amber-600" />}
+                  {plan.id === "silver" && <Crown className="h-4 w-4 text-gray-400" />}
                 </CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="pt-2">
@@ -166,31 +226,53 @@ export default function MembershipPage() {
                   ))}
                 </ul>
               </CardContent>
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  variant={plan.popular ? "default" : "outline"}
-                  disabled={plan.id === "free"}
-                  asChild={plan.id !== "free"}
-                >
-                  {plan.id === "free" ? (
-                    <span>Current Plan</span>
-                  ) : isAuthenticated ? (
-                    <a href="#">{plan.cta}</a>
-                  ) : (
+              <CardFooter className="flex flex-col gap-2">
+                {currentTier === plan.id ? (
+                  <>
+                    <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
+                      Current Plan
+                    </Button>
+                    {plan.id !== "free" && (
+                      <Button
+                        className="w-full"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => cancelMutation.mutate()}
+                        disabled={cancelMutation.isPending}
+                        data-testid="button-cancel-membership"
+                      >
+                        Cancel Plan
+                      </Button>
+                    )}
+                  </>
+                ) : isCurrentOrLower(plan.id) ? (
+                  <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
+                    {plan.id === "free" ? "Free Plan" : "Current or Lower"}
+                  </Button>
+                ) : isAuthenticated ? (
+                  <Button
+                    className="w-full"
+                    variant={plan.popular ? "default" : "outline"}
+                    onClick={() => upgradeMutation.mutate(plan.id)}
+                    disabled={upgradeMutation.isPending}
+                    data-testid={`button-plan-${plan.id}`}
+                  >
+                    {upgradeMutation.isPending ? "Upgrading..." : plan.cta}
+                  </Button>
+                ) : (
+                  <Button className="w-full" variant={plan.popular ? "default" : "outline"} asChild data-testid={`button-plan-${plan.id}`}>
                     <a href="/api/login">{plan.cta}</a>
-                  )}
-                </Button>
+                  </Button>
+                )}
               </CardFooter>
             </Card>
           ))}
         </div>
 
-        {/* FAQ or Additional Info */}
         <div className="text-center mt-12 max-w-2xl mx-auto">
           <h3 className="font-semibold mb-2">Have questions?</h3>
           <p className="text-sm text-muted-foreground">
-            All Premium plans include a 7-day free trial. Cancel anytime.
+            All paid plans include a 7-day free trial. Cancel anytime.
             Artists keep more of their earnings through AITIFY's fair revenue sharing model.
           </p>
         </div>

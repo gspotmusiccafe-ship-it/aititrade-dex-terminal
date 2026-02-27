@@ -481,8 +481,11 @@ export class DatabaseStorage implements IStorage {
     const [artistCount] = await db.select({ count: count() }).from(artists);
     const [trackCount] = await db.select({ count: count() }).from(tracks);
     const [playSum] = await db.select({ sum: sql<number>`COALESCE(SUM(play_count), 0)` }).from(tracks);
-    const [premiumCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "premium"), eq(memberships.isActive, true)));
+    const [silverCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "silver"), eq(memberships.isActive, true)));
+    const [bronzeCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "bronze"), eq(memberships.isActive, true)));
+    const [goldCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "gold"), eq(memberships.isActive, true)));
     const [artistProCount] = await db.select({ count: count() }).from(memberships).where(and(eq(memberships.tier, "artist"), eq(memberships.isActive, true)));
+    const paidMemberCount = (silverCount?.count || 0) + (bronzeCount?.count || 0) + (goldCount?.count || 0);
     const [albumCount] = await db.select({ count: count() }).from(albums);
     const [videoCount] = await db.select({ count: count() }).from(videos);
     const [playlistCount] = await db.select({ count: count() }).from(playlists);
@@ -506,7 +509,9 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(artists.monthlyListeners))
       .limit(5);
 
-    const premiumRevenue = (premiumCount?.count || 0) * 9.99;
+    const silverRevenue = (silverCount?.count || 0) * 1.99;
+    const bronzeRevenue = (bronzeCount?.count || 0) * 3.99;
+    const goldRevenue = (goldCount?.count || 0) * 6.99;
     const artistProRevenue = (artistProCount?.count || 0) * 19.99;
 
     return {
@@ -514,12 +519,12 @@ export class DatabaseStorage implements IStorage {
       totalArtists: artistCount?.count || 0,
       totalTracks: trackCount?.count || 0,
       totalPlays: Number(playSum?.sum) || 0,
-      premiumMembers: premiumCount?.count || 0,
+      premiumMembers: paidMemberCount,
       artistProMembers: artistProCount?.count || 0,
       totalAlbums: albumCount?.count || 0,
       totalVideos: videoCount?.count || 0,
       totalPlaylists: playlistCount?.count || 0,
-      estimatedRevenue: Math.round((premiumRevenue + artistProRevenue) * 100) / 100,
+      estimatedRevenue: Math.round((silverRevenue + bronzeRevenue + goldRevenue + artistProRevenue) * 100) / 100,
       topTracks: topTracksData.map(t => ({ title: t.title, artistName: t.artistName, playCount: t.playCount || 0 })),
       topArtists: topArtistsData.map(a => ({ name: a.name, monthlyListeners: a.monthlyListeners || 0, trackCount: a.trackCount })),
     };

@@ -16,7 +16,7 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const audioStorage = multer.diskStorage({
+const fileStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadsDir),
   filename: (_req, file, cb) => {
     const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(file.originalname)}`;
@@ -25,17 +25,27 @@ const audioStorage = multer.diskStorage({
 });
 
 const upload = multer({
-  storage: audioStorage,
+  storage: fileStorage,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    const allowed = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac", "audio/aac", "audio/mp4", "audio/x-m4a", "audio/webm"];
-    if (allowed.includes(file.mimetype) || file.originalname.match(/\.(mp3|wav|ogg|flac|aac|m4a|webm)$/i)) {
+    const allowedAudio = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/ogg", "audio/flac", "audio/aac", "audio/mp4", "audio/x-m4a", "audio/webm"];
+    const allowedImage = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    if (allowedAudio.includes(file.mimetype) || allowedImage.includes(file.mimetype) ||
+        file.originalname.match(/\.(mp3|wav|ogg|flac|aac|m4a|webm|jpg|jpeg|png|webp|gif)$/i)) {
       cb(null, true);
     } else {
-      cb(new Error("Only audio files are allowed"));
+      cb(new Error("Only audio and image files are allowed"));
     }
   },
 });
+
+const MEMBERSHIP_LIMITS: Record<string, { downloads: number; previews: number }> = {
+  free: { downloads: 0, previews: 0 },
+  silver: { downloads: 0, previews: 5 },
+  bronze: { downloads: 10, previews: 20 },
+  gold: { downloads: -1, previews: -1 },
+  artist: { downloads: -1, previews: -1 },
+};
 
 export async function registerRoutes(
   httpServer: Server,
@@ -61,6 +71,11 @@ export async function registerRoutes(
         ".aac": "audio/aac",
         ".m4a": "audio/mp4",
         ".webm": "audio/webm",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
       };
       res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
       res.set("Content-Disposition", "inline");
@@ -95,8 +110,8 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const membership = await storage.getUserMembership(userId);
       
-      // Only premium/artist tier members can access prerelease tracks
-      if (!membership || (membership.tier !== "premium" && membership.tier !== "artist")) {
+      // Only active paid tier members can access prerelease tracks
+      if (!membership || membership.tier === "free" || !membership.isActive) {
         return res.json([]); // Return empty for free tier users
       }
       
@@ -236,7 +251,10 @@ export async function registerRoutes(
   });
 
   // Upload track (artists only)
-  app.post("/api/tracks", isAuthenticated, upload.single("audioFile"), async (req: any, res) => {
+  app.post("/api/tracks", isAuthenticated, upload.fields([
+    { name: "audioFile", maxCount: 1 },
+    { name: "coverImage", maxCount: 1 },
+  ]), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const artist = await storage.getArtistByUserId(userId);
@@ -245,17 +263,23 @@ export async function registerRoutes(
         return res.status(403).json({ message: "You must be an artist to upload tracks" });
       }
 
-      if (!req.file) {
+      const audioFile = req.files?.audioFile?.[0];
+      const coverFile = req.files?.coverImage?.[0];
+
+      if (!audioFile) {
+        if (coverFile) fs.unlink(path.join(uploadsDir, coverFile.filename), () => {});
         return res.status(400).json({ message: "Audio file is required" });
       }
 
       const title = (req.body.title || "").trim();
       if (!title || title.length > 200) {
-        fs.unlink(path.join(uploadsDir, req.file.filename), () => {});
+        fs.unlink(path.join(uploadsDir, audioFile.filename), () => {});
+        if (coverFile) fs.unlink(path.join(uploadsDir, coverFile.filename), () => {});
         return res.status(400).json({ message: "Track title is required (max 200 characters)" });
       }
 
-      const audioUrl = `/uploads/${req.file.filename}`;
+      const audioUrl = `/uploads/${audioFile.filename}`;
+      const coverImage = coverFile ? `/uploads/${coverFile.filename}` : null;
       const duration = parseInt(req.body.duration);
 
       const trackData = {
@@ -265,7 +289,7 @@ export async function registerRoutes(
         duration: isNaN(duration) || duration < 1 ? 180 : duration,
         isPrerelease: req.body.isPrerelease === "true",
         audioUrl,
-        coverImage: null,
+        coverImage,
         albumId: null,
         releaseDate: null,
       };
@@ -275,8 +299,11 @@ export async function registerRoutes(
       res.status(201).json(track);
     } catch (error) {
       console.error("Error creating track:", error);
-      if (req.file) {
-        fs.unlink(path.join(uploadsDir, req.file.filename), () => {});
+      if (req.files?.audioFile?.[0]) {
+        fs.unlink(path.join(uploadsDir, req.files.audioFile[0].filename), () => {});
+      }
+      if (req.files?.coverImage?.[0]) {
+        fs.unlink(path.join(uploadsDir, req.files.coverImage[0].filename), () => {});
       }
       res.status(500).json({ message: "Failed to create track" });
     }
@@ -482,15 +509,13 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const { tier } = req.body;
       
-      if (!["premium", "artist"].includes(tier)) {
+      if (!["silver", "bronze", "gold", "artist"].includes(tier)) {
         return res.status(400).json({ message: "Invalid tier" });
       }
       
-      // Check for existing membership
       const existing = await storage.getUserMembership(userId);
       if (existing) {
-        // In production, this would update via Stripe webhook
-        await storage.updateMembership(existing.id, { tier });
+        await storage.updateMembership(existing.id, { tier, downloadsUsed: 0, previewsUsed: 0 });
         res.json({ success: true, tier });
       } else {
         const membership = await storage.createMembership({
@@ -531,6 +556,94 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error incrementing play count:", error);
       res.status(500).json({ message: "Failed to update play count" });
+    }
+  });
+
+  // Preview track (membership gated)
+  app.post("/api/tracks/:id/preview", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const membership = await storage.getUserMembership(userId);
+      const tier = (membership?.isActive !== false ? membership?.tier : "free") || "free";
+      const limits = MEMBERSHIP_LIMITS[tier] || MEMBERSHIP_LIMITS.free;
+
+      if (limits.previews === 0) {
+        return res.status(403).json({ message: "Previews require a Silver membership or higher" });
+      }
+
+      if (limits.previews > 0) {
+        const used = membership?.previewsUsed || 0;
+        if (used >= limits.previews) {
+          return res.status(403).json({ message: `You've used all ${limits.previews} previews this month. Upgrade for more.` });
+        }
+        if (membership) {
+          await storage.updateMembership(membership.id, { previewsUsed: used + 1 });
+        }
+      }
+
+      res.json({ success: true, previewsUsed: (membership?.previewsUsed || 0) + 1, previewsLimit: limits.previews });
+    } catch (error) {
+      console.error("Error recording preview:", error);
+      res.status(500).json({ message: "Failed to record preview" });
+    }
+  });
+
+  // Download track (membership gated)
+  app.get("/api/tracks/:id/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const track = await storage.getTrack(req.params.id);
+      if (!track) {
+        return res.status(404).json({ message: "Track not found" });
+      }
+
+      const membership = await storage.getUserMembership(userId);
+      const tier = (membership?.isActive !== false ? membership?.tier : "free") || "free";
+      const limits = MEMBERSHIP_LIMITS[tier] || MEMBERSHIP_LIMITS.free;
+
+      if (limits.downloads === 0) {
+        return res.status(403).json({ message: "Downloads require a Bronze membership or higher" });
+      }
+
+      if (limits.downloads > 0) {
+        const used = membership?.downloadsUsed || 0;
+        if (used >= limits.downloads) {
+          return res.status(403).json({ message: `You've used all ${limits.downloads} downloads this month. Upgrade for more.` });
+        }
+        if (membership) {
+          await storage.updateMembership(membership.id, { downloadsUsed: used + 1 });
+        }
+      }
+
+      const audioUrl = track.audioUrl;
+      if (!audioUrl || audioUrl === "/demo-audio.mp3") {
+        return res.status(404).json({ message: "No downloadable audio file available" });
+      }
+
+      const filename = path.basename(audioUrl);
+      const filePath = path.join(uploadsDir, filename);
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "Audio file not found on server" });
+      }
+
+      const ext = path.extname(filename).toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".ogg": "audio/ogg",
+        ".flac": "audio/flac",
+        ".aac": "audio/aac",
+        ".m4a": "audio/mp4",
+        ".webm": "audio/webm",
+      };
+
+      const safeTitle = track.title.replace(/[^a-zA-Z0-9\s-_]/g, "").trim() || "track";
+      res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
+      res.set("Content-Disposition", `attachment; filename="${safeTitle}${ext}"`);
+      res.sendFile(filePath);
+    } catch (error) {
+      console.error("Error downloading track:", error);
+      res.status(500).json({ message: "Failed to download track" });
     }
   });
 

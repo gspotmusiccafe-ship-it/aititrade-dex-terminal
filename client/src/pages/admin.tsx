@@ -93,7 +93,7 @@ function AnalyticsDashboard() {
         <StatCard title="Total Artists" value={analytics?.totalArtists || 0} icon={UserCheck} />
         <StatCard title="Total Tracks" value={analytics?.totalTracks || 0} icon={Music} />
         <StatCard title="Total Plays" value={analytics?.totalPlays?.toLocaleString() || "0"} icon={TrendingUp} />
-        <StatCard title="Premium Members" value={analytics?.premiumMembers || 0} icon={Crown} description="$9.99/month" />
+        <StatCard title="Paid Members" value={analytics?.premiumMembers || 0} icon={Crown} description="Silver/Bronze/Gold" />
         <StatCard title="Artist Pro" value={analytics?.artistProMembers || 0} icon={Crown} description="$19.99/month" />
         <StatCard title="Est. Monthly Revenue" value={`$${(analytics?.estimatedRevenue || 0).toFixed(2)}`} icon={DollarSign} />
         <StatCard title="Total Playlists" value={analytics?.totalPlaylists || 0} icon={ListMusic} />
@@ -698,9 +698,14 @@ function MembershipsTab() {
           </div>
           <Badge variant={
             membership.tier === "artist" ? "default" :
-            membership.tier === "premium" ? "secondary" : "outline"
+            membership.tier === "gold" ? "default" :
+            membership.tier === "bronze" ? "secondary" :
+            membership.tier === "silver" ? "secondary" : "outline"
           }>
-            {membership.tier === "artist" ? "Artist Pro" : membership.tier}
+            {membership.tier === "artist" ? "Artist Pro" :
+             membership.tier === "gold" ? "Gold" :
+             membership.tier === "bronze" ? "Bronze" :
+             membership.tier === "silver" ? "Silver" : membership.tier}
           </Badge>
           <Badge variant={membership.isActive ? "default" : "destructive"}>
             {membership.isActive ? "Active" : "Inactive"}

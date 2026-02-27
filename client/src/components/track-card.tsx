@@ -1,7 +1,9 @@
-import { Play, Pause, Clock, MoreHorizontal, Star } from "lucide-react";
+import { Play, Pause, Clock, Download, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePlayer } from "@/lib/player-context";
+import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 
 interface TrackCardProps {
@@ -20,6 +22,8 @@ function formatDuration(seconds: number): string {
 
 export function TrackCard({ track, index, queue, showArtist = true, showCover = true }: TrackCardProps) {
   const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
+  const { isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const isCurrentTrack = currentTrack?.id === track.id;
 
   const handlePlay = () => {
@@ -30,6 +34,34 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
     }
   };
 
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAuthenticated) {
+      toast({ title: "Sign in required", description: "Log in to download tracks.", variant: "destructive" });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/tracks/${track.id}/download`, { credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Download failed" }));
+        toast({ title: "Download unavailable", description: err.message, variant: "destructive" });
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${track.title}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: "Download started", description: `${track.title} is downloading.` });
+    } catch {
+      toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
+    }
+  };
+
   return (
     <div
       className={`group flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer ${
@@ -37,7 +69,6 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
       }`}
       data-testid={`track-card-${track.id}`}
     >
-      {/* Track Number or Cover */}
       {showCover && track.coverImage ? (
         <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0">
           <img src={track.coverImage} alt={track.title} className="w-full h-full object-cover" />
@@ -78,7 +109,6 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
         </div>
       )}
 
-      {/* Track Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className={`font-medium text-sm truncate ${isCurrentTrack ? "text-primary" : ""}`}>
@@ -96,25 +126,24 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
         )}
       </div>
 
-      {/* Play Count */}
       <div className="hidden md:block text-xs text-muted-foreground min-w-[80px] text-right">
         {track.playCount?.toLocaleString() || 0} plays
       </div>
 
-      {/* Duration */}
       <div className="flex items-center gap-1 text-xs text-muted-foreground">
         <Clock className="h-3 w-3" />
         {formatDuration(track.duration)}
       </div>
 
-      {/* More Options */}
       <Button
         size="icon"
         variant="ghost"
         className="opacity-0 group-hover:opacity-100 transition-opacity"
-        data-testid={`button-track-options-${track.id}`}
+        onClick={handleDownload}
+        title="Download MP3"
+        data-testid={`button-download-track-${track.id}`}
       >
-        <MoreHorizontal className="h-4 w-4" />
+        <Download className="h-4 w-4" />
       </Button>
     </div>
   );

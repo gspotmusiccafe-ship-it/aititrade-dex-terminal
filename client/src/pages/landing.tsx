@@ -27,34 +27,43 @@ const membershipTiers = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["Stream public releases", "Create playlists", "Follow artists", "Basic audio quality"],
+    features: ["Stream all released music", "Create up to 10 playlists", "Follow artists", "Standard audio quality"],
     highlight: false,
   },
   {
-    name: "Premium",
-    price: "$9.99",
+    name: "Silver",
+    price: "$1.99",
     period: "/month",
     features: [
-      "Everything in Free",
-      "2-week early access to releases",
-      "Exclusive pre-release content",
-      "Lossless audio quality",
-      "Offline downloads",
-      "No ads",
+      "Unlimited released music",
+      "5 pre-release previews/month",
+      "Create unlimited playlists",
+      "Standard audio quality",
+    ],
+    highlight: false,
+  },
+  {
+    name: "Bronze",
+    price: "$3.99",
+    period: "/month",
+    features: [
+      "Unlimited released music",
+      "20 pre-release previews/month",
+      "10 MP3 downloads/month",
+      "High quality audio",
     ],
     highlight: true,
   },
   {
-    name: "Artist Pro",
-    price: "$19.99",
+    name: "Gold",
+    price: "$6.99",
     period: "/month",
     features: [
-      "Everything in Premium",
-      "Upload unlimited tracks",
-      "Upload music videos",
-      "Analytics dashboard",
-      "Scheduled releases",
-      "Direct fan engagement",
+      "Unlimited released music",
+      "Unlimited pre-release previews",
+      "Unlimited MP3 downloads",
+      "Lossless audio quality",
+      "No ads",
     ],
     highlight: false,
   },
@@ -130,7 +139,7 @@ export default function LandingPage() {
                 </Button>
                 <Button size="lg" variant="outline" asChild>
                   <a href="#pricing">
-                    View Premium Plans
+                    View Plans
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </a>
                 </Button>
@@ -228,13 +237,13 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {membershipTiers.map((tier, index) => (
               <Card
                 key={index}
                 className={`relative overflow-hidden ${
                   tier.highlight
-                    ? "border-primary bg-primary/5 scale-105"
+                    ? "border-primary bg-primary/5"
                     : "bg-card/50 border-border/50"
                 }`}
                 data-testid={`pricing-tier-${tier.name.toLowerCase()}`}
