@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -716,6 +717,376 @@ function MembershipsTab() {
   );
 }
 
+interface SpotifySearchResult {
+  query: string;
+  tracks: { id: string; name: string; streamCount: number; duration: number; contentRating: string }[];
+  artists: { id: string; name: string }[];
+  albums: { id: string; name: string; type: string; releaseDate: string }[];
+  topResults: { type: string; id: string; name: string }[];
+}
+
+interface SpotifyTrackDetail {
+  id: string;
+  name: string;
+  streamCount: number;
+  duration: number;
+  contentRating: string;
+  trackNumber: number;
+  album: {
+    id: string;
+    name: string;
+    type: string;
+    releaseDate: string;
+    tracks: { id: string; trackNumber: number }[];
+  };
+  artists: { id: string; name: string }[];
+}
+
+function formatDuration(ms: number) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function formatStreamCount(count: number) {
+  if (count >= 1_000_000_000) return `${(count / 1_000_000_000).toFixed(2)}B`;
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(2)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+  return count.toLocaleString();
+}
+
+function SpotifyLookupTab() {
+  const { toast } = useToast();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SpotifySearchResult | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<SpotifyTrackDetail | null>(null);
+  const [loadingTrack, setLoadingTrack] = useState<string | null>(null);
+  const [trackIdInput, setTrackIdInput] = useState("");
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    setSearchResults(null);
+    setSelectedTrack(null);
+    try {
+      const res = await fetch(`/api/admin/spotify/search?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      setSearchResults(data);
+    } catch {
+      toast({ title: "Search failed", description: "Could not reach Spotify API", variant: "destructive" });
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const loadTrackDetails = async (trackId: string) => {
+    setLoadingTrack(trackId);
+    try {
+      const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load track");
+      const data = await res.json();
+      setSelectedTrack(data);
+    } catch {
+      toast({ title: "Failed to load track details", variant: "destructive" });
+    } finally {
+      setLoadingTrack(null);
+    }
+  };
+
+  const handleTrackIdLookup = async () => {
+    const id = trackIdInput.trim();
+    if (!id) return;
+    await loadTrackDetails(id);
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <SiSpotify className="h-5 w-5 text-[#1DB954]" />
+            Spotify Track Lookup
+          </CardTitle>
+          <CardDescription>
+            Search Spotify or enter a Track ID to pull in track data, stream counts, and metadata
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by artist, track name, or album..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                className="pl-10"
+                data-testid="input-spotify-search"
+              />
+            </div>
+            <Button onClick={handleSearch} disabled={searching || !searchQuery.trim()} data-testid="button-spotify-search">
+              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+              <span className="ml-2">Search</span>
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">OR</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Enter Spotify Track ID (e.g., 6LxSe8YmdPxy095Ux6znaQ)"
+                value={trackIdInput}
+                onChange={(e) => setTrackIdInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleTrackIdLookup()}
+                className="pl-10"
+                data-testid="input-spotify-track-id"
+              />
+            </div>
+            <Button onClick={handleTrackIdLookup} disabled={!!loadingTrack || !trackIdInput.trim()} variant="secondary" data-testid="button-spotify-track-lookup">
+              {loadingTrack ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+              <span className="ml-2">Lookup</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {selectedTrack && (
+        <Card className="border-[#1DB954]/30 bg-[#1DB954]/5">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <SiSpotify className="h-5 w-5 text-[#1DB954]" />
+              Track Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Track Name</p>
+                  <p className="text-lg font-bold" data-testid="text-spotify-track-name">{selectedTrack.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Artist(s)</p>
+                  <p className="font-medium" data-testid="text-spotify-track-artists">
+                    {selectedTrack.artists?.map((a) => a.name).join(", ") || "Unknown"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Spotify Track ID</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm bg-muted px-2 py-1 rounded font-mono" data-testid="text-spotify-track-id">{selectedTrack.id}</code>
+                    <a
+                      href={`https://open.spotify.com/track/${selectedTrack.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#1DB954] hover:underline text-sm flex items-center gap-1"
+                    >
+                      Open on Spotify <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Track URL</p>
+                  <a
+                    href={`https://open.spotify.com/track/${selectedTrack.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline break-all"
+                    data-testid="link-spotify-track-url"
+                  >
+                    https://open.spotify.com/track/{selectedTrack.id}
+                  </a>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Stream Count</p>
+                  <p className="text-2xl font-bold text-[#1DB954]" data-testid="text-spotify-stream-count">
+                    {selectedTrack.streamCount > 0 ? selectedTrack.streamCount.toLocaleString() : "N/A"}
+                  </p>
+                  {selectedTrack.streamCount > 0 && (
+                    <p className="text-sm text-muted-foreground">{formatStreamCount(selectedTrack.streamCount)} streams</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Duration</p>
+                  <p className="font-medium flex items-center gap-1" data-testid="text-spotify-duration">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    {formatDuration(selectedTrack.duration)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Content Rating</p>
+                  <Badge variant={selectedTrack.contentRating === "explicit" ? "destructive" : "secondary"} data-testid="badge-spotify-content-rating">
+                    {selectedTrack.contentRating === "explicit" ? "Explicit" : "Clean"}
+                  </Badge>
+                </div>
+                {selectedTrack.album && (
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Album</p>
+                    <p className="font-medium" data-testid="text-spotify-album">{selectedTrack.album.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Released: {selectedTrack.album.releaseDate} • Track #{selectedTrack.trackNumber} of {selectedTrack.album.tracks?.length || "?"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {searching && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-[#1DB954]" />
+          <span className="ml-3 text-muted-foreground">Searching Spotify...</span>
+        </div>
+      )}
+
+      {searchResults && (
+        <div className="space-y-4">
+          {searchResults.tracks && searchResults.tracks.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Music className="h-5 w-5 text-primary" />
+                  Tracks ({searchResults.tracks.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  {searchResults.tracks.map((track) => (
+                    <div
+                      key={track.id}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                      onClick={() => loadTrackDetails(track.id)}
+                      data-testid={`spotify-track-result-${track.id}`}
+                    >
+                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                        {loadingTrack === track.id ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-[#1DB954]" />
+                        ) : (
+                          <Music className="h-5 w-5 text-muted-foreground group-hover:text-[#1DB954] transition-colors" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{track.name}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>{formatDuration(track.duration)}</span>
+                          {track.contentRating === "explicit" && (
+                            <Badge variant="outline" className="text-xs py-0 h-4">E</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <code className="text-xs text-muted-foreground font-mono">{track.id}</code>
+                      </div>
+                      <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {searchResults.artists && searchResults.artists.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Artists ({searchResults.artists.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {searchResults.artists.map((artist) => (
+                    <div key={artist.id} className="flex items-center gap-3 p-3 rounded-lg border" data-testid={`spotify-artist-result-${artist.id}`}>
+                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                        <Radio className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{artist.name}</p>
+                        <code className="text-xs text-muted-foreground font-mono">{artist.id}</code>
+                      </div>
+                      <a
+                        href={`https://open.spotify.com/artist/${artist.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#1DB954] hover:text-[#1DB954]/80"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {searchResults.albums && searchResults.albums.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Disc3 className="h-5 w-5 text-primary" />
+                  Albums ({searchResults.albums.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {searchResults.albums.map((album) => (
+                    <div key={album.id} className="flex items-center gap-3 p-3 rounded-lg border" data-testid={`spotify-album-result-${album.id}`}>
+                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                        <Disc3 className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{album.name}</p>
+                        <p className="text-xs text-muted-foreground">{album.releaseDate} • {album.type}</p>
+                      </div>
+                      <a
+                        href={`https://open.spotify.com/album/${album.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#1DB954] hover:text-[#1DB954]/80"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {searchResults.tracks?.length === 0 && searchResults.artists?.length === 0 && searchResults.albums?.length === 0 && (
+            <div className="text-center py-12 text-muted-foreground">
+              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No results found for "{searchQuery}"</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {!searchResults && !searching && !selectedTrack && (
+        <div className="text-center py-12 text-muted-foreground">
+          <SiSpotify className="h-12 w-12 mx-auto mb-4 text-[#1DB954]/30" />
+          <p className="text-lg font-medium mb-1">Search Spotify</p>
+          <p className="text-sm">Enter an artist name, track title, or Spotify Track ID to look up track data</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { data: adminCheck, isLoading: checkingAdmin } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -753,7 +1124,7 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard">
               <BarChart3 className="h-4 w-4 mr-2" />
               Dashboard
@@ -773,6 +1144,10 @@ export default function AdminPage() {
             <TabsTrigger value="memberships" data-testid="tab-memberships">
               <Crown className="h-4 w-4 mr-2" />
               Memberships
+            </TabsTrigger>
+            <TabsTrigger value="spotify" data-testid="tab-spotify">
+              <SiSpotify className="h-4 w-4 mr-2 text-[#1DB954]" />
+              Spotify
             </TabsTrigger>
           </TabsList>
 
@@ -794,6 +1169,10 @@ export default function AdminPage() {
 
           <TabsContent value="memberships">
             <MembershipsTab />
+          </TabsContent>
+
+          <TabsContent value="spotify">
+            <SpotifyLookupTab />
           </TabsContent>
         </Tabs>
       </div>

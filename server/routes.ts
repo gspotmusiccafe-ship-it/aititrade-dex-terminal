@@ -764,5 +764,65 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/spotify/search", isAdmin, async (req: any, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== "string" || q.trim().length === 0) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      const rapidApiKey = process.env.RAPIDAPI_KEY;
+      if (!rapidApiKey) {
+        return res.status(500).json({ message: "RapidAPI key not configured" });
+      }
+      const response = await fetch(
+        `https://spotify-statistics-and-stream-count.p.rapidapi.com/search?q=${encodeURIComponent(q.trim())}`,
+        {
+          headers: {
+            "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com",
+            "x-rapidapi-key": rapidApiKey,
+          },
+        }
+      );
+      if (!response.ok) {
+        return res.status(response.status).json({ message: "Spotify API request failed" });
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error searching Spotify:", error);
+      res.status(500).json({ message: "Failed to search Spotify" });
+    }
+  });
+
+  app.get("/api/admin/spotify/track/:trackId", isAdmin, async (req: any, res) => {
+    try {
+      const { trackId } = req.params;
+      if (!trackId || typeof trackId !== "string") {
+        return res.status(400).json({ message: "Track ID is required" });
+      }
+      const rapidApiKey = process.env.RAPIDAPI_KEY;
+      if (!rapidApiKey) {
+        return res.status(500).json({ message: "RapidAPI key not configured" });
+      }
+      const response = await fetch(
+        `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${encodeURIComponent(trackId)}`,
+        {
+          headers: {
+            "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com",
+            "x-rapidapi-key": rapidApiKey,
+          },
+        }
+      );
+      if (!response.ok) {
+        return res.status(response.status).json({ message: "Spotify API request failed" });
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching Spotify track:", error);
+      res.status(500).json({ message: "Failed to fetch Spotify track" });
+    }
+  });
+
   return httpServer;
 }
