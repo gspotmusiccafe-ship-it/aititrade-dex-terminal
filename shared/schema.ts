@@ -107,6 +107,20 @@ export const recentlyPlayed = pgTable("recently_played", {
   playedAt: timestamp("played_at").defaultNow(),
 });
 
+export const jamSessions = pgTable("jam_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: varchar("name").notNull(),
+  spotifyUri: text("spotify_uri").notNull(),
+  spotifyName: text("spotify_name"),
+  spotifyType: varchar("spotify_type").default("track"),
+  scheduledTime: varchar("scheduled_time").notNull(),
+  daysOfWeek: text("days_of_week").notNull().default("0,1,2,3,4,5,6"),
+  isActive: boolean("is_active").default(true),
+  lastTriggered: timestamp("last_triggered"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const artistsRelations = relations(artists, ({ many }) => ({
   tracks: many(tracks),
@@ -147,6 +161,7 @@ export const insertPlaylistSchema = createInsertSchema(playlists).omit({ id: tru
 export const insertPlaylistTrackSchema = createInsertSchema(playlistTracks).omit({ id: true, addedAt: true });
 export const insertLikedTrackSchema = createInsertSchema(likedTracks).omit({ id: true, likedAt: true });
 export const insertFollowedArtistSchema = createInsertSchema(followedArtists).omit({ id: true, followedAt: true });
+export const insertJamSessionSchema = createInsertSchema(jamSessions).omit({ id: true, createdAt: true, lastTriggered: true });
 
 // Types
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
@@ -164,6 +179,8 @@ export type Playlist = typeof playlists.$inferSelect;
 export type PlaylistTrack = typeof playlistTracks.$inferSelect;
 export type LikedTrack = typeof likedTracks.$inferSelect;
 export type FollowedArtist = typeof followedArtists.$inferSelect;
+export type InsertJamSession = z.infer<typeof insertJamSessionSchema>;
+export type JamSession = typeof jamSessions.$inferSelect;
 
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };

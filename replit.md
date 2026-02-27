@@ -18,6 +18,7 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - Like tracks and follow artists
 - Search for tracks, albums, and artists
 - Premium membership for early access to pre-release content
+- **AITIFY Music Radio**: Connect Spotify Premium and schedule automated jam sessions
 
 ### For Artists
 - Artist Portal to manage profile and content
@@ -110,6 +111,19 @@ AITIFY MUSIC is a full-stack music streaming application built with:
 - `GET /api/admin/memberships` - All memberships
 - `GET /api/admin/spotify/search?q=query` - Search Spotify for tracks/artists/albums
 - `GET /api/admin/spotify/track/:trackId` - Get full Spotify track details (stream count, album, artists)
+
+### Spotify Integration (authenticated)
+- `GET /api/spotify/me` - Spotify profile and Premium status
+- `GET /api/spotify/player` - Current playback state
+- `GET /api/spotify/devices` - Available Spotify devices
+- `POST /api/spotify/play` - Start playback (uri, deviceId)
+- `PUT /api/spotify/pause` - Pause playback
+- `GET /api/spotify/search?q=query` - Search Spotify catalog
+- `GET /api/jam-sessions` - User's scheduled jam sessions
+- `POST /api/jam-sessions` - Create jam session
+- `PATCH /api/jam-sessions/:id/toggle` - Toggle active/inactive
+- `DELETE /api/jam-sessions/:id` - Delete jam session
+- `POST /api/jam-sessions/:id/play-now` - Trigger immediate playback
 
 ## Theme
 

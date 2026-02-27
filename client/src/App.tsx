@@ -20,6 +20,7 @@ import ArtistPortalPage from "@/pages/artist-portal";
 import LikedSongsPage from "@/pages/liked-songs";
 import ArtistPage from "@/pages/artist";
 import AdminPage from "@/pages/admin";
+import RadioPage from "@/pages/radio";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -95,6 +96,7 @@ function AuthenticatedLayout() {
               <Route path="/liked" component={LikedSongsPage} />
               <Route path="/artist/:id" component={ArtistPage} />
               <Route path="/admin" component={AdminPage} />
+              <Route path="/radio" component={RadioPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

@@ -7,8 +7,9 @@ import express from "express";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, insertJamSessionSchema } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
+import { getUncachableSpotifyClient } from "./spotify";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -763,6 +764,209 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to fetch tracks" });
     }
   });
+
+  // === Spotify Playback & Jam Sessions ===
+
+  app.get("/api/spotify/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const spotify = await getUncachableSpotifyClient();
+      const profile = await spotify.currentUser.profile();
+      res.json({
+        connected: true,
+        name: profile.display_name,
+        email: profile.email,
+        product: profile.product,
+        isPremium: profile.product === "premium",
+        image: profile.images?.[0]?.url,
+      });
+    } catch (error: any) {
+      res.json({ connected: false, error: error.message });
+    }
+  });
+
+  app.get("/api/spotify/player", isAuthenticated, async (req: any, res) => {
+    try {
+      const spotify = await getUncachableSpotifyClient();
+      const state = await spotify.player.getPlaybackState();
+      res.json(state || { is_playing: false });
+    } catch (error) {
+      res.json({ is_playing: false });
+    }
+  });
+
+  app.get("/api/spotify/devices", isAuthenticated, async (req: any, res) => {
+    try {
+      const spotify = await getUncachableSpotifyClient();
+      const devices = await spotify.player.getAvailableDevices();
+      res.json(devices);
+    } catch (error) {
+      res.json({ devices: [] });
+    }
+  });
+
+  app.post("/api/spotify/play", isAuthenticated, async (req: any, res) => {
+    try {
+      const { uri, deviceId } = req.body;
+      const spotify = await getUncachableSpotifyClient();
+      const options: any = {};
+      if (deviceId) options.device_id = deviceId;
+      if (uri) {
+        if (uri.includes(":track:")) {
+          options.uris = [uri];
+        } else {
+          options.context_uri = uri;
+        }
+      }
+      await spotify.player.startResumePlayback(deviceId || "", options.context_uri, options.uris);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Spotify play error:", error);
+      res.status(400).json({ message: error.message || "Failed to start playback" });
+    }
+  });
+
+  app.put("/api/spotify/pause", isAuthenticated, async (req: any, res) => {
+    try {
+      const spotify = await getUncachableSpotifyClient();
+      await spotify.player.pausePlayback("");
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to pause" });
+    }
+  });
+
+  app.get("/api/spotify/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const { q, type } = req.query;
+      if (!q) return res.status(400).json({ message: "Query required" });
+      const spotify = await getUncachableSpotifyClient();
+      const searchTypes = (type as string || "track,playlist,album").split(",") as any[];
+      const results = await spotify.search(q as string, searchTypes, undefined, 10);
+      res.json(results);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || "Search failed" });
+    }
+  });
+
+  // Jam Sessions CRUD
+  app.get("/api/jam-sessions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const sessions = await db.select().from(jamSessions).where(eq(jamSessions.userId, userId)).orderBy(jamSessions.createdAt);
+      res.json(sessions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch jam sessions" });
+    }
+  });
+
+  app.post("/api/jam-sessions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name, spotifyUri, spotifyName, spotifyType, scheduledTime, daysOfWeek } = req.body;
+      if (!name || !spotifyUri || !scheduledTime) {
+        return res.status(400).json({ message: "Name, Spotify URI, and scheduled time are required" });
+      }
+      const [session] = await db.insert(jamSessions).values({
+        userId,
+        name: name.trim(),
+        spotifyUri,
+        spotifyName: spotifyName || null,
+        spotifyType: spotifyType || "track",
+        scheduledTime,
+        daysOfWeek: daysOfWeek || "0,1,2,3,4,5,6",
+        isActive: true,
+      }).returning();
+      res.json(session);
+    } catch (error) {
+      console.error("Error creating jam session:", error);
+      res.status(500).json({ message: "Failed to create jam session" });
+    }
+  });
+
+  app.patch("/api/jam-sessions/:id/toggle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const session = await db.select().from(jamSessions).where(and(eq(jamSessions.id, req.params.id), eq(jamSessions.userId, userId)));
+      if (!session.length) return res.status(404).json({ message: "Session not found" });
+      const [updated] = await db.update(jamSessions).set({ isActive: !session[0].isActive }).where(eq(jamSessions.id, req.params.id)).returning();
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to toggle session" });
+    }
+  });
+
+  app.delete("/api/jam-sessions/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const session = await db.select().from(jamSessions).where(and(eq(jamSessions.id, req.params.id), eq(jamSessions.userId, userId)));
+      if (!session.length) return res.status(404).json({ message: "Session not found" });
+      await db.delete(jamSessions).where(eq(jamSessions.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete session" });
+    }
+  });
+
+  app.post("/api/jam-sessions/:id/play-now", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const session = await db.select().from(jamSessions).where(and(eq(jamSessions.id, req.params.id), eq(jamSessions.userId, userId)));
+      if (!session.length) return res.status(404).json({ message: "Session not found" });
+      const spotify = await getUncachableSpotifyClient();
+      const uri = session[0].spotifyUri;
+      if (uri.includes(":track:")) {
+        await spotify.player.startResumePlayback("", undefined, [uri]);
+      } else {
+        await spotify.player.startResumePlayback("", uri);
+      }
+      await db.update(jamSessions).set({ lastTriggered: new Date() }).where(eq(jamSessions.id, req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Jam session play error:", error);
+      res.status(400).json({ message: error.message || "Failed to start playback. Make sure Spotify is open on a device." });
+    }
+  });
+
+  // Jam Session Scheduler - checks every minute
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const currentHour = now.getHours().toString().padStart(2, "0");
+      const currentMinute = now.getMinutes().toString().padStart(2, "0");
+      const currentTime = `${currentHour}:${currentMinute}`;
+      const currentDay = now.getDay().toString();
+
+      const activeSessions = await db.select().from(jamSessions).where(eq(jamSessions.isActive, true));
+
+      for (const session of activeSessions) {
+        if (session.scheduledTime !== currentTime) continue;
+        const days = session.daysOfWeek.split(",");
+        if (!days.includes(currentDay)) continue;
+
+        const lastTriggered = session.lastTriggered;
+        if (lastTriggered) {
+          const diffMs = now.getTime() - new Date(lastTriggered).getTime();
+          if (diffMs < 120000) continue;
+        }
+
+        try {
+          const spotify = await getUncachableSpotifyClient();
+          const uri = session.spotifyUri;
+          if (uri.includes(":track:")) {
+            await spotify.player.startResumePlayback("", undefined, [uri]);
+          } else {
+            await spotify.player.startResumePlayback("", uri);
+          }
+          await db.update(jamSessions).set({ lastTriggered: new Date() }).where(eq(jamSessions.id, session.id));
+          console.log(`[Scheduler] Started jam session: ${session.name} at ${currentTime}`);
+        } catch (err: any) {
+          console.log(`[Scheduler] Failed to start ${session.name}: ${err.message}`);
+        }
+      }
+    } catch (error) {
+      // Silent fail for scheduler
+    }
+  }, 60000);
 
   app.get("/api/admin/spotify/search", isAdmin, async (req: any, res) => {
     try {
