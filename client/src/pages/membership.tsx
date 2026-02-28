@@ -375,8 +375,7 @@ export default function MembershipPage() {
 
   const currentTier = membership?.tier || "free";
 
-  const tierRank: Record<string, number> = { free: 0, silver: 1, bronze: 2, gold: 3, artist: 4 };
-  const isCurrentOrLower = (planId: string) => tierRank[planId] <= tierRank[currentTier];
+  const isCurrent = (planId: string) => planId === currentTier;
 
   return (
     <div className="min-h-full pb-28">
@@ -466,7 +465,7 @@ export default function MembershipPage() {
                 </ul>
               </CardContent>
               <CardFooter className="flex flex-col gap-2">
-                {currentTier === plan.id ? (
+                {isCurrent(plan.id) ? (
                   <>
                     <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
                       Current Plan
@@ -484,9 +483,9 @@ export default function MembershipPage() {
                       </Button>
                     )}
                   </>
-                ) : isCurrentOrLower(plan.id) ? (
+                ) : plan.id === "free" ? (
                   <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
-                    {plan.id === "free" ? "Free Plan" : "Current or Lower"}
+                    Free Plan
                   </Button>
                 ) : isAuthenticated ? (
                   <Button
