@@ -733,7 +733,7 @@ interface SpotifySearchResult {
 interface SpotifyTrackDetail {
   id: string;
   name: string;
-  streamCount: number;
+  streamCount: number | null;
   duration: number;
   contentRating: string;
   trackNumber: number;
@@ -915,10 +915,15 @@ function SpotifyLookupTab() {
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Stream Count</p>
                   <p className="text-2xl font-bold text-[#1DB954]" data-testid="text-spotify-stream-count">
-                    {selectedTrack.streamCount > 0 ? selectedTrack.streamCount.toLocaleString() : "N/A"}
+                    {selectedTrack.streamCount != null && selectedTrack.streamCount >= 0
+                      ? selectedTrack.streamCount.toLocaleString()
+                      : "Not Available"}
                   </p>
-                  {selectedTrack.streamCount > 0 && (
+                  {selectedTrack.streamCount != null && selectedTrack.streamCount > 0 && (
                     <p className="text-sm text-muted-foreground">{formatStreamCount(selectedTrack.streamCount)} streams</p>
+                  )}
+                  {selectedTrack.streamCount === 0 && (
+                    <p className="text-sm text-muted-foreground">No streams recorded yet</p>
                   )}
                 </div>
                 <div>
