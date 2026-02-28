@@ -1,14 +1,25 @@
 // Spotify Integration - Replit Connector
 import { SpotifyApi } from "@spotify/web-api-ts-sdk";
 
-let cachedCredentials: { accessToken: string; clientId: string; refreshToken: string; expiresIn: number; expiresAt: number } | null = null;
+let connectionSettings: any;
+
+function extractCredentials(cs: any) {
+  const refreshToken = cs?.settings?.oauth?.credentials?.refresh_token;
+  const accessToken = cs?.settings?.access_token || cs?.settings?.oauth?.credentials?.access_token;
+  const clientId = cs?.settings?.oauth?.credentials?.client_id;
+  const expiresIn = cs?.settings?.oauth?.credentials?.expires_in;
+  return { accessToken, clientId, refreshToken, expiresIn };
+}
 
 async function getAccessToken() {
-  if (cachedCredentials && cachedCredentials.expiresAt > Date.now()) {
-    return cachedCredentials;
+  if (connectionSettings && connectionSettings.settings?.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
+    const cached = extractCredentials(connectionSettings);
+    if (cached.accessToken && cached.clientId && cached.refreshToken) {
+      return cached;
+    }
   }
 
-  cachedCredentials = null;
+  connectionSettings = null;
 
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
@@ -21,7 +32,7 @@ async function getAccessToken() {
     throw new Error('X-Replit-Token not found for repl/depl');
   }
 
-  const res = await fetch(
+  connectionSettings = await fetch(
     'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=spotify',
     {
       headers: {
@@ -29,47 +40,33 @@ async function getAccessToken() {
         'X-Replit-Token': xReplitToken
       }
     }
-  );
-  const data = await res.json();
-  const connectionSettings = data.items?.[0];
+  ).then(res => res.json()).then(data => data.items?.[0]);
 
-  const refreshToken = connectionSettings?.settings?.oauth?.credentials?.refresh_token;
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
-  const clientId = connectionSettings?.settings?.oauth?.credentials?.client_id;
-  const expiresIn = connectionSettings?.settings?.oauth?.credentials?.expires_in || 3600;
+  const creds = extractCredentials(connectionSettings);
 
-  if (!connectionSettings || !accessToken || !clientId || !refreshToken) {
+  if (!connectionSettings || !creds.accessToken || !creds.clientId || !creds.refreshToken) {
+    connectionSettings = null;
     throw new Error('Spotify not connected');
   }
 
-  const expiresAt = connectionSettings?.settings?.expires_at
-    ? new Date(connectionSettings.settings.expires_at).getTime()
-    : Date.now() + (expiresIn * 1000) - 60000;
-
-  cachedCredentials = { accessToken, clientId, refreshToken, expiresIn, expiresAt };
-  return cachedCredentials;
+  return creds;
 }
 
 export function clearSpotifyCache() {
-  cachedCredentials = null;
+  connectionSettings = null;
 }
 
 // WARNING: Never cache this client.
 // Access tokens expire, so a new client must be created each time.
 export async function getUncachableSpotifyClient() {
-  try {
-    const { accessToken, clientId, refreshToken, expiresIn } = await getAccessToken();
+  const { accessToken, clientId, refreshToken, expiresIn } = await getAccessToken();
 
-    const spotify = SpotifyApi.withAccessToken(clientId, {
-      access_token: accessToken,
-      token_type: "Bearer",
-      expires_in: expiresIn || 3600,
-      refresh_token: refreshToken,
-    });
+  const spotify = SpotifyApi.withAccessToken(clientId, {
+    access_token: accessToken,
+    token_type: "Bearer",
+    expires_in: expiresIn || 3600,
+    refresh_token: refreshToken,
+  });
 
-    return spotify;
-  } catch (error) {
-    cachedCredentials = null;
-    throw error;
-  }
+  return spotify;
 }
