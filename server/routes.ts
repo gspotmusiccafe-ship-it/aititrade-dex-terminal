@@ -9,7 +9,7 @@ import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
-import { getUncachableSpotifyClient } from "./spotify";
+import { getUncachableSpotifyClient, clearSpotifyCache } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder } from "./paypal";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1078,7 +1078,21 @@ export async function registerRoutes(
         image: profile.images?.[0]?.url,
       });
     } catch (error: any) {
-      res.json({ connected: false, error: error.message });
+      clearSpotifyCache();
+      try {
+        const spotify = await getUncachableSpotifyClient();
+        const profile = await spotify.currentUser.profile();
+        res.json({
+          connected: true,
+          name: profile.display_name,
+          email: profile.email,
+          product: profile.product,
+          isPremium: profile.product === "premium",
+          image: profile.images?.[0]?.url,
+        });
+      } catch (retryError: any) {
+        res.json({ connected: false, error: retryError.message });
+      }
     }
   });
 
@@ -1431,7 +1445,10 @@ export async function registerRoutes(
         }
       );
       if (!response.ok) {
-        return res.status(response.status).json({ message: "Spotify API request failed" });
+        const statusMsg = response.status === 429
+          ? "Rate limit exceeded. Please wait a moment and try again."
+          : "Spotify API request failed";
+        return res.status(response.status).json({ message: statusMsg });
       }
       const data = await response.json();
       const isLatin = (text: string) => /^[\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\u2000-\u206F\u2190-\u21FF\u2200-\u22FF\u0300-\u036F\u0080-\u00FF]+$/.test(text);
@@ -1465,7 +1482,10 @@ export async function registerRoutes(
         }
       );
       if (!response.ok) {
-        return res.status(response.status).json({ message: "Spotify API request failed" });
+        const statusMsg = response.status === 429
+          ? "Rate limit exceeded. Please wait a moment and try again."
+          : "Spotify API request failed";
+        return res.status(response.status).json({ message: statusMsg });
       }
       const data = await response.json();
       res.json(data);
