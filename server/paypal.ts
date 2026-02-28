@@ -18,16 +18,15 @@ if (!PAYPAL_CLIENT_ID) {
 if (!PAYPAL_CLIENT_SECRET) {
   throw new Error("Missing PAYPAL_CLIENT_SECRET");
 }
+const useProductionPaypal = process.env.PAYPAL_ENVIRONMENT === "production";
+
 const client = new Client({
   clientCredentialsAuthCredentials: {
     oAuthClientId: PAYPAL_CLIENT_ID,
     oAuthClientSecret: PAYPAL_CLIENT_SECRET,
   },
   timeout: 0,
-  environment:
-    process.env.NODE_ENV === "production"
-      ? Environment.Production
-      : Environment.Sandbox,
+  environment: useProductionPaypal ? Environment.Production : Environment.Sandbox,
   logging: {
     logLevel: LogLevel.Error,
     logRequest: { logBody: false },
@@ -133,7 +132,7 @@ export async function verifyPaypalOrder(orderId: string, expectedTier: string): 
 export async function loadPaypalDefault(req: Request, res: Response) {
   try {
     const clientToken = await getClientToken();
-    res.json({ clientToken });
+    res.json({ clientToken, sandbox: !useProductionPaypal });
   } catch (error) {
     console.error("Failed to get PayPal client token:", error);
     res.status(500).json({ error: "Failed to initialize PayPal" });

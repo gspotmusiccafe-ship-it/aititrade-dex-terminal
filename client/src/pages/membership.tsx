@@ -171,7 +171,7 @@ function PayPalCheckoutDialog({
     try {
       const setupRes = await fetch("/setup", { credentials: "include" });
       if (!setupRes.ok) throw new Error("Failed to initialize PayPal");
-      const { clientToken } = await setupRes.json();
+      const { clientToken, sandbox } = await setupRes.json();
 
       const loadScript = () =>
         new Promise<void>((resolve, reject) => {
@@ -180,10 +180,9 @@ function PayPalCheckoutDialog({
             return;
           }
           const script = document.createElement("script");
-          const isProd = window.location.hostname.includes(".replit.app") || window.location.hostname.includes(".repl.co");
-          script.src = isProd
-            ? "https://www.paypal.com/web-sdk/v6/core"
-            : "https://www.sandbox.paypal.com/web-sdk/v6/core";
+          script.src = sandbox
+            ? "https://www.sandbox.paypal.com/web-sdk/v6/core"
+            : "https://www.paypal.com/web-sdk/v6/core";
           script.async = true;
           script.onload = () => resolve();
           script.onerror = () => reject(new Error("Failed to load PayPal SDK"));
