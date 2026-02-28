@@ -768,17 +768,41 @@ function SpotifyLookupTab() {
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrackDetail | null>(null);
   const [loadingTrack, setLoadingTrack] = useState<string | null>(null);
   const [trackIdInput, setTrackIdInput] = useState("");
+  const [trackStreamCounts, setTrackStreamCounts] = useState<Record<string, number | null>>({});
+  const [loadingStreamCounts, setLoadingStreamCounts] = useState(false);
+
+  const fetchStreamCountForTrack = async (trackId: string): Promise<{ id: string; count: number | null }> => {
+    try {
+      const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
+      if (!res.ok) return { id: trackId, count: null };
+      const data = await res.json();
+      return { id: trackId, count: data.streamCount ?? null };
+    } catch {
+      return { id: trackId, count: null };
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setSearching(true);
     setSearchResults(null);
     setSelectedTrack(null);
+    setTrackStreamCounts({});
     try {
       const res = await fetch(`/api/admin/spotify/search?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: "include" });
       if (!res.ok) throw new Error("Search failed");
       const data = await res.json();
       setSearchResults(data);
+
+      if (data.tracks && data.tracks.length > 0) {
+        setLoadingStreamCounts(true);
+        const trackIds = data.tracks.map((t: any) => t.id);
+        const results = await Promise.all(trackIds.map(fetchStreamCountForTrack));
+        const counts: Record<string, number | null> = {};
+        results.forEach((r) => { counts[r.id] = r.count; });
+        setTrackStreamCounts(counts);
+        setLoadingStreamCounts(false);
+      }
     } catch {
       toast({ title: "Search failed", description: "Could not reach Spotify API", variant: "destructive" });
     } finally {
@@ -793,6 +817,9 @@ function SpotifyLookupTab() {
       if (!res.ok) throw new Error("Failed to load track");
       const data = await res.json();
       setSelectedTrack(data);
+      if (data.streamCount != null) {
+        setTrackStreamCounts((prev) => ({ ...prev, [trackId]: data.streamCount }));
+      }
     } catch {
       toast({ title: "Failed to load track details", variant: "destructive" });
     } finally {
@@ -969,6 +996,12 @@ function SpotifyLookupTab() {
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Music className="h-5 w-5 text-primary" />
                   Tracks ({searchResults.tracks.length})
+                  {loadingStreamCounts && (
+                    <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground ml-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading stream counts...
+                    </span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -996,7 +1029,18 @@ function SpotifyLookupTab() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right min-w-[100px]">
+                        {trackStreamCounts[track.id] != null && trackStreamCounts[track.id]! > 0 ? (
+                          <p className="text-sm font-semibold text-[#1DB954]" data-testid={`text-stream-count-${track.id}`}>
+                            {formatStreamCount(trackStreamCounts[track.id]!)}
+                          </p>
+                        ) : loadingStreamCounts ? (
+                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
+                        ) : trackStreamCounts[track.id] === 0 ? (
+                          <p className="text-xs text-muted-foreground">0 streams</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">—</p>
+                        )}
                         <code className="text-xs text-muted-foreground font-mono">{track.id}</code>
                       </div>
                       <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
