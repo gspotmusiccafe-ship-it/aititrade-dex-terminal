@@ -26,7 +26,7 @@ const mainNavItems = [
 
 const yourMusicItems = [
   { title: "Liked Songs", url: "/liked", icon: Heart },
-  { title: "Create Playlist", url: "/playlist/new", icon: Plus },
+  { title: "Create Playlist", url: "/library", icon: Plus },
 ];
 
 export function AppSidebar() {
@@ -37,6 +37,26 @@ export function AppSidebar() {
     queryKey: ["/api/admin/check"],
     enabled: isAuthenticated,
   });
+
+  const { data: membership } = useQuery<{ tier: string } | null>({
+    queryKey: ["/api/user/membership"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: artistProfile } = useQuery<{ id: string } | null>({
+    queryKey: ["/api/user/artist-profile"],
+    enabled: isAuthenticated,
+  });
+
+  const planLabel = membership?.tier
+    ? membership.tier.charAt(0).toUpperCase() + membership.tier.slice(1) + " Plan"
+    : "Free Plan";
+
+  const roleLabel = adminCheck?.isAdmin
+    ? "Admin"
+    : artistProfile?.id
+    ? "Artist"
+    : "Fan";
 
   return (
     <Sidebar className="border-r-0">
@@ -152,7 +172,7 @@ export function AppSidebar() {
               <p className="text-sm font-medium truncate" data-testid="text-user-name">
                 {user.firstName ? `${user.firstName} ${user.lastName || ""}` : user.email}
               </p>
-              <p className="text-xs text-muted-foreground truncate">Free Plan</p>
+              <p className="text-xs text-muted-foreground truncate">{roleLabel} · {planLabel}</p>
             </div>
             <Button
               variant="ghost"

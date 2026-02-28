@@ -92,6 +92,11 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - `POST /api/tracks` - Upload new track (multipart/form-data with audioFile)
 - `PATCH /api/tracks/:id` - Update own track (title, genre, prerelease)
 - `DELETE /api/tracks/:id` - Delete own track (artist only)
+- `GET /api/playlists/:id` - Get playlist details
+- `GET /api/playlists/:id/tracks` - Get playlist tracks
+- `POST /api/playlists/:id/tracks` - Add track to playlist
+- `DELETE /api/playlists/:id/tracks/:trackId` - Remove track from playlist
+- `GET /api/user/followed-artists/:artistId/check` - Check if following artist
 - `POST /api/tracks/:id/play` - Increment play count
 - `GET /api/playlists` - User's playlists
 - `GET /api/user/liked-tracks` - Liked songs

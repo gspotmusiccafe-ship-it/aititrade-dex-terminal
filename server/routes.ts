@@ -456,6 +456,83 @@ export async function registerRoutes(
     }
   });
 
+  // Get playlist details
+  app.get("/api/playlists/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      if (!playlist.isPublic && playlist.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      res.json(playlist);
+    } catch (error) {
+      console.error("Error fetching playlist:", error);
+      res.status(500).json({ message: "Failed to fetch playlist" });
+    }
+  });
+
+  // Get playlist tracks
+  app.get("/api/playlists/:id/tracks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist) {
+        return res.status(404).json({ message: "Playlist not found" });
+      }
+      if (!playlist.isPublic && playlist.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      const tracks = await storage.getPlaylistTracks(req.params.id);
+      res.json(tracks);
+    } catch (error) {
+      console.error("Error fetching playlist tracks:", error);
+      res.status(500).json({ message: "Failed to fetch playlist tracks" });
+    }
+  });
+
+  // Add track to playlist
+  app.post("/api/playlists/:id/tracks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId } = req.body;
+      if (!trackId || typeof trackId !== "string") {
+        return res.status(400).json({ message: "trackId is required" });
+      }
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist || playlist.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      const track = await storage.getTrack(trackId);
+      if (!track) {
+        return res.status(404).json({ message: "Track not found" });
+      }
+      await storage.addTrackToPlaylist(req.params.id, trackId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error adding track to playlist:", error);
+      res.status(500).json({ message: "Failed to add track" });
+    }
+  });
+
+  // Remove track from playlist
+  app.delete("/api/playlists/:id/tracks/:trackId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const playlist = await storage.getPlaylist(req.params.id);
+      if (!playlist || playlist.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      await storage.removeTrackFromPlaylist(req.params.id, req.params.trackId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing track from playlist:", error);
+      res.status(500).json({ message: "Failed to remove track" });
+    }
+  });
+
   // Liked tracks
   app.get("/api/user/liked-tracks", isAuthenticated, async (req: any, res) => {
     try {

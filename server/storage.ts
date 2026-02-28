@@ -58,6 +58,9 @@ export interface IStorage {
   getPlaylist(id: string): Promise<Playlist | undefined>;
   getUserPlaylists(userId: string): Promise<Playlist[]>;
   createPlaylist(playlist: InsertPlaylist): Promise<Playlist>;
+  getPlaylistTracks(playlistId: string): Promise<TrackWithArtist[]>;
+  addTrackToPlaylist(playlistId: string, trackId: string): Promise<void>;
+  removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void>;
   
   // User interactions
   likeTrack(userId: string, trackId: string): Promise<void>;
@@ -279,6 +282,35 @@ export class DatabaseStorage implements IStorage {
   async createPlaylist(playlist: InsertPlaylist): Promise<Playlist> {
     const [newPlaylist] = await db.insert(playlists).values(playlist).returning();
     return newPlaylist;
+  }
+
+  async getPlaylistTracks(playlistId: string): Promise<TrackWithArtist[]> {
+    const result = await db
+      .select()
+      .from(playlistTracks)
+      .innerJoin(tracks, eq(playlistTracks.trackId, tracks.id))
+      .innerJoin(artists, eq(tracks.artistId, artists.id))
+      .where(eq(playlistTracks.playlistId, playlistId))
+      .orderBy(playlistTracks.position);
+    return result.map(r => ({ ...r.tracks, artist: r.artists }));
+  }
+
+  async addTrackToPlaylist(playlistId: string, trackId: string): Promise<void> {
+    const [maxPos] = await db
+      .select({ max: sql<number>`coalesce(max(${playlistTracks.position}), -1)` })
+      .from(playlistTracks)
+      .where(eq(playlistTracks.playlistId, playlistId));
+    await db.insert(playlistTracks).values({
+      playlistId,
+      trackId,
+      position: (maxPos?.max ?? -1) + 1,
+    });
+  }
+
+  async removeTrackFromPlaylist(playlistId: string, trackId: string): Promise<void> {
+    await db
+      .delete(playlistTracks)
+      .where(and(eq(playlistTracks.playlistId, playlistId), eq(playlistTracks.trackId, trackId)));
   }
 
   // User interactions
