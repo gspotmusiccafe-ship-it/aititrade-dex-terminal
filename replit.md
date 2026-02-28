@@ -9,6 +9,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
 - **Authentication**: Replit Auth (OpenID Connect)
+- **Payments**: PayPal Web SDK (sandbox in dev, production in deployed app)
 
 ## Key Features
 

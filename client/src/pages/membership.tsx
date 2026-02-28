@@ -1,4 +1,5 @@
-import { Crown, Check, Star, Zap, Headphones, Download, Music, Eye, Sparkles } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Crown, Check, Star, Zap, Headphones, Download, Loader2, ShieldCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,6 +7,27 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+const TIER_PRICES: Record<string, string> = {
+  silver: "1.99",
+  bronze: "3.99",
+  gold: "6.99",
+  artist: "19.99",
+};
+
+const TIER_NAMES: Record<string, string> = {
+  silver: "Silver",
+  bronze: "Bronze",
+  gold: "Gold",
+  artist: "Artist Pro",
+};
 
 const plans = [
   {
@@ -120,9 +142,201 @@ const benefits = [
   },
 ];
 
+function PayPalCheckoutDialog({
+  open,
+  onOpenChange,
+  tier,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  tier: string;
+  onSuccess: (tier: string, orderId: string) => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const paypalInitialized = useRef(false);
+  const buttonContainerRef = useRef<HTMLDivElement>(null);
+  const clickHandlerRef = useRef<((e: Event) => void) | null>(null);
+
+  const amount = TIER_PRICES[tier] || "0";
+  const tierName = TIER_NAMES[tier] || tier;
+
+  const initPayPal = useCallback(async () => {
+    if (!open || paypalInitialized.current) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const setupRes = await fetch("/setup", { credentials: "include" });
+      if (!setupRes.ok) throw new Error("Failed to initialize PayPal");
+      const { clientToken } = await setupRes.json();
+
+      const loadScript = () =>
+        new Promise<void>((resolve, reject) => {
+          if ((window as any).paypal) {
+            resolve();
+            return;
+          }
+          const script = document.createElement("script");
+          const isProd = window.location.hostname.includes(".replit.app") || window.location.hostname.includes(".repl.co");
+          script.src = isProd
+            ? "https://www.paypal.com/web-sdk/v6/core"
+            : "https://www.sandbox.paypal.com/web-sdk/v6/core";
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load PayPal SDK"));
+          document.body.appendChild(script);
+        });
+
+      await loadScript();
+
+      const sdkInstance = await (window as any).paypal.createInstance({
+        clientToken,
+        components: ["paypal-payments"],
+      });
+
+      const paypalCheckout = sdkInstance.createPayPalOneTimePaymentSession({
+        onApprove: async (data: any) => {
+          try {
+            const captureRes = await fetch(`/order/${data.orderId}/capture`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+            });
+            if (!captureRes.ok) throw new Error("Capture failed");
+            const captureData = await captureRes.json();
+
+            if (captureData.status === "COMPLETED") {
+              onSuccess(tier, data.orderId);
+            } else {
+              setError("Payment was not completed. Please try again.");
+            }
+          } catch {
+            setError("Failed to process payment. Please try again.");
+          }
+        },
+        onCancel: () => {
+          setError("Payment was cancelled.");
+        },
+        onError: (err: any) => {
+          console.error("PayPal error:", err);
+          setError("A payment error occurred. Please try again.");
+        },
+      });
+
+      const container = buttonContainerRef.current;
+      if (container) {
+        container.innerHTML = "";
+        const btn = document.createElement("paypal-button");
+        btn.id = `paypal-btn-${tier}`;
+        btn.setAttribute("data-testid", "button-paypal-checkout");
+        container.appendChild(btn);
+
+        const clickHandler = async () => {
+          try {
+            const orderRes = await fetch("/order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ tier }),
+            });
+            if (!orderRes.ok) throw new Error("Failed to create order");
+            const orderData = await orderRes.json();
+
+            await paypalCheckout.start(
+              { paymentFlow: "auto" },
+              Promise.resolve({ orderId: orderData.id })
+            );
+          } catch (e) {
+            console.error("PayPal checkout error:", e);
+            setError("Failed to start checkout. Please try again.");
+          }
+        };
+
+        clickHandlerRef.current = clickHandler;
+        btn.addEventListener("click", clickHandler);
+      }
+
+      paypalInitialized.current = true;
+      setLoading(false);
+    } catch (e: any) {
+      console.error("PayPal init error:", e);
+      setError(e.message || "Failed to initialize payment system");
+      setLoading(false);
+    }
+  }, [open, tier, onSuccess]);
+
+  useEffect(() => {
+    if (open) {
+      paypalInitialized.current = false;
+      const timer = setTimeout(initPayPal, 300);
+      return () => {
+        clearTimeout(timer);
+        const container = buttonContainerRef.current;
+        if (container && clickHandlerRef.current) {
+          const btn = container.querySelector("paypal-button");
+          if (btn) btn.removeEventListener("click", clickHandlerRef.current);
+          clickHandlerRef.current = null;
+        }
+      };
+    }
+  }, [open, initPayPal]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            Upgrade to {tierName}
+          </DialogTitle>
+          <DialogDescription>
+            Complete your payment of ${amount}/month via PayPal to activate your {tierName} membership.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="rounded-lg border p-4 bg-muted/30">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-semibold">{tierName} Membership</p>
+                <p className="text-sm text-muted-foreground">Monthly subscription</p>
+              </div>
+              <p className="text-2xl font-bold">${amount}</p>
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
+              <X className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-3 text-muted-foreground">Loading PayPal...</span>
+            </div>
+          )}
+
+          <div ref={buttonContainerRef} className={loading ? "hidden" : "flex justify-center"} />
+
+          <p className="text-xs text-muted-foreground text-center">
+            Secured by PayPal. You can cancel anytime from your account settings.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function MembershipPage() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
+  const [checkoutTier, setCheckoutTier] = useState<string | null>(null);
 
   const { data: membership } = useQuery<{ tier: string; isActive: boolean; downloadsUsed?: number; previewsUsed?: number }>({
     queryKey: ["/api/user/membership"],
@@ -130,15 +344,19 @@ export default function MembershipPage() {
   });
 
   const upgradeMutation = useMutation({
-    mutationFn: async (tier: string) => {
-      return apiRequest("POST", "/api/user/membership/upgrade", { tier });
+    mutationFn: async ({ tier, paypalOrderId }: { tier: string; paypalOrderId: string }) => {
+      return apiRequest("POST", "/api/user/membership/upgrade", { tier, paypalOrderId });
     },
-    onSuccess: (_data, tier) => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      toast({ title: "Membership upgraded!", description: `You are now a ${tier.charAt(0).toUpperCase() + tier.slice(1)} member.` });
+      setCheckoutTier(null);
+      toast({
+        title: "Membership activated!",
+        description: `You are now a ${TIER_NAMES[variables.tier]} member. Enjoy your new benefits!`,
+      });
     },
     onError: () => {
-      toast({ title: "Upgrade failed", description: "Please try again.", variant: "destructive" });
+      toast({ title: "Activation failed", description: "Payment was received but activation failed. Please contact support.", variant: "destructive" });
     },
   });
 
@@ -151,6 +369,10 @@ export default function MembershipPage() {
       toast({ title: "Membership cancelled", description: "You are now on the Free plan." });
     },
   });
+
+  const handlePaymentSuccess = (tier: string, orderId: string) => {
+    upgradeMutation.mutate({ tier, paypalOrderId: orderId });
+  };
 
   const currentTier = membership?.tier || "free";
 
@@ -176,7 +398,7 @@ export default function MembershipPage() {
           {isAuthenticated && currentTier !== "free" && (
             <div className="mt-4">
               <Badge variant="default" className="text-sm px-3 py-1" data-testid="badge-current-tier">
-                Current Plan: {currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}
+                Current Plan: {TIER_NAMES[currentTier] || currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}
               </Badge>
             </div>
           )}
@@ -271,11 +493,10 @@ export default function MembershipPage() {
                   <Button
                     className="w-full"
                     variant={plan.popular ? "default" : "outline"}
-                    onClick={() => upgradeMutation.mutate(plan.id)}
-                    disabled={upgradeMutation.isPending}
+                    onClick={() => setCheckoutTier(plan.id)}
                     data-testid={`button-plan-${plan.id}`}
                   >
-                    {upgradeMutation.isPending ? "Upgrading..." : plan.cta}
+                    {plan.cta}
                   </Button>
                 ) : (
                   <Button className="w-full" variant={plan.popular ? "default" : "outline"} asChild data-testid={`button-plan-${plan.id}`}>
@@ -295,6 +516,15 @@ export default function MembershipPage() {
           </p>
         </div>
       </div>
+
+      {checkoutTier && (
+        <PayPalCheckoutDialog
+          open={!!checkoutTier}
+          onOpenChange={(open) => { if (!open) setCheckoutTier(null); }}
+          tier={checkoutTier}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }

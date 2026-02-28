@@ -10,6 +10,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getUncachableSpotifyClient } from "./spotify";
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder } from "./paypal";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -644,14 +645,37 @@ export async function registerRoutes(
     }
   });
 
-  // Upgrade membership (simplified - would integrate with Stripe in production)
+  // PayPal integration routes (required by PayPal Web SDK)
+  app.get("/setup", async (req, res) => {
+    await loadPaypalDefault(req, res);
+  });
+
+  app.post("/order", isAuthenticated, async (req: any, res) => {
+    await createPaypalOrder(req, res);
+  });
+
+  app.post("/order/:orderID/capture", isAuthenticated, async (req: any, res) => {
+    await capturePaypalOrder(req, res);
+  });
+
+  // Upgrade membership after PayPal payment is verified server-side
   app.post("/api/user/membership/upgrade", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { tier } = req.body;
+      const { tier, paypalOrderId } = req.body;
       
       if (!["silver", "bronze", "gold", "artist"].includes(tier)) {
         return res.status(400).json({ message: "Invalid tier" });
+      }
+
+      if (!paypalOrderId) {
+        return res.status(400).json({ message: "Payment required. Please complete PayPal checkout." });
+      }
+
+      const verification = await verifyPaypalOrder(paypalOrderId, tier);
+      if (!verification.valid) {
+        console.error("PayPal verification failed:", verification.error);
+        return res.status(400).json({ message: "Payment verification failed: " + (verification.error || "Unknown error") });
       }
       
       const existing = await storage.getUserMembership(userId);
