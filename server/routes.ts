@@ -1139,7 +1139,7 @@ export async function registerRoutes(
       if (!q) return res.status(400).json({ message: "Query required" });
       const spotify = await getUncachableSpotifyClient();
       const searchTypes = (type as string || "track,playlist,album").split(",") as any[];
-      const results = await spotify.search(q as string, searchTypes, undefined, 10);
+      const results = await spotify.search(q as string, searchTypes, "US", 10);
       res.json(results);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Search failed" });
@@ -1434,6 +1434,10 @@ export async function registerRoutes(
         return res.status(response.status).json({ message: "Spotify API request failed" });
       }
       const data = await response.json();
+      const isLatin = (text: string) => /^[\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\u2000-\u206F\u2190-\u21FF\u2200-\u22FF\u0300-\u036F\u0080-\u00FF]+$/.test(text);
+      if (data.tracks) data.tracks = data.tracks.filter((t: any) => isLatin(t.name));
+      if (data.artists) data.artists = data.artists.filter((a: any) => isLatin(a.name));
+      if (data.albums) data.albums = data.albums.filter((a: any) => isLatin(a.name));
       res.json(data);
     } catch (error) {
       console.error("Error searching Spotify:", error);
