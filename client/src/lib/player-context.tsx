@@ -21,6 +21,9 @@ interface PlayerContextType extends PlayerState {
   setVolume: (volume: number) => void;
   seekTo: (time: number) => void;
   addToQueue: (track: TrackWithArtist) => void;
+  removeFromQueue: (index: number) => void;
+  clearQueue: () => void;
+  playFromQueue: (index: number) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
 }
@@ -301,6 +304,49 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, queue: [...prev.queue, track] }));
   }, []);
 
+  const removeFromQueue = useCallback((index: number) => {
+    setState(prev => {
+      if (index === prev.queueIndex) return prev;
+      const newQueue = [...prev.queue];
+      newQueue.splice(index, 1);
+      let newIndex = prev.queueIndex;
+      if (index < prev.queueIndex) {
+        newIndex = Math.max(0, prev.queueIndex - 1);
+      }
+      return { ...prev, queue: newQueue, queueIndex: Math.min(newIndex, newQueue.length - 1) };
+    });
+  }, []);
+
+  const clearQueue = useCallback(() => {
+    setState(prev => {
+      const currentTrack = prev.currentTrack;
+      if (currentTrack) {
+        return { ...prev, queue: [currentTrack], queueIndex: 0 };
+      }
+      return { ...prev, queue: [], queueIndex: 0 };
+    });
+  }, []);
+
+  const playFromQueue = useCallback((index: number) => {
+    setState(prev => {
+      const track = prev.queue[index];
+      if (track && audioRef.current) {
+        playCountedRef.current = null;
+        audioRef.current.src = track.audioUrl;
+        const p = audioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => reportPlay(track.id))
+            .catch((err) => {
+              console.error("Audio play failed:", err.message);
+              setState(s => ({ ...s, isPlaying: false }));
+            });
+        }
+        return { ...prev, currentTrack: track, queueIndex: index, isPlaying: true, progress: 0 };
+      }
+      return prev;
+    });
+  }, [reportPlay]);
+
   const toggleShuffle = useCallback(() => {
     setState(prev => ({ ...prev, shuffle: !prev.shuffle }));
   }, []);
@@ -324,6 +370,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         setVolume,
         seekTo,
         addToQueue,
+        removeFromQueue,
+        clearQueue,
+        playFromQueue,
         toggleShuffle,
         toggleRepeat,
       }}

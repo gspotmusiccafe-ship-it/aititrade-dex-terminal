@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Play, Pause, Clock, ShoppingCart, Star, Heart, ListPlus } from "lucide-react";
+import { Play, Pause, Clock, ShoppingCart, Star, Heart, ListPlus, ListEnd } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,7 @@ function formatDuration(seconds: number): string {
 }
 
 export function TrackCard({ track, index, queue, showArtist = true, showCover = true }: TrackCardProps) {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayer();
+  const { currentTrack, isPlaying, playTrack, togglePlay, addToQueue } = usePlayer();
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const isCurrentTrack = currentTrack?.id === track.id;
@@ -91,6 +91,12 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
       return;
     }
     likeMutation.mutate();
+  };
+
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    addToQueue(track);
+    toast({ title: "Added to queue", description: `"${track.title}" added to end of queue` });
   };
 
   const handleBuySong = (e: React.MouseEvent) => {
@@ -181,6 +187,17 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
         data-testid={`button-like-track-${track.id}`}
       >
         <Heart className={`h-4 w-4 ${isLiked?.liked ? "fill-primary" : ""}`} />
+      </Button>
+
+      <Button
+        size="icon"
+        variant="ghost"
+        className="opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={handleAddToQueue}
+        title="Add to Queue"
+        data-testid={`button-add-to-queue-${track.id}`}
+      >
+        <ListEnd className="h-4 w-4" />
       </Button>
 
       <Popover open={playlistOpen} onOpenChange={(open) => {
