@@ -339,6 +339,110 @@ export default function RadioPage() {
   };
 
   const spotifyConnected = profile?.connected === true;
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetryConnection = async () => {
+    setRetrying(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["/api/spotify/me"] });
+      await queryClient.refetchQueries({ queryKey: ["/api/spotify/me"] });
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-full flex items-center justify-center pb-28">
+        <div className="text-center">
+          <div className="h-20 w-20 rounded-full bg-[#1DB954]/20 flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <SiSpotify className="h-10 w-10 text-[#1DB954]" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Connecting to Spotify...</h2>
+          <p className="text-muted-foreground text-sm">Checking your connection status</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!spotifyConnected) {
+    return (
+      <div className="min-h-full pb-28 px-6 py-8">
+        <div className="max-w-lg mx-auto mt-12">
+          <div className="text-center mb-10">
+            <div className="h-24 w-24 rounded-full bg-[#1DB954] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#1DB954]/20">
+              <SiSpotify className="h-12 w-12 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold mb-2" data-testid="text-radio-title">AITIFY Music Radio</h1>
+            <p className="text-muted-foreground">Home of AI Music — Powered by Spotify</p>
+          </div>
+
+          <Card className="border-[#1DB954]/20 bg-card/50 backdrop-blur">
+            <CardContent className="p-8 text-center">
+              <h2 className="text-xl font-semibold mb-3">Connect Your Spotify Account</h2>
+              <p className="text-muted-foreground text-sm mb-6 leading-relaxed">
+                Link your Spotify Premium account to unlock automated jam sessions,
+                scheduled playback, and engagement tracking across all your listening sessions.
+              </p>
+
+              <div className="space-y-3 mb-8 text-left">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1DB954]/5">
+                  <div className="h-8 w-8 rounded-full bg-[#1DB954]/20 flex items-center justify-center flex-shrink-0">
+                    <Zap className="h-4 w-4 text-[#1DB954]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Scheduled Jam Sessions</p>
+                    <p className="text-xs text-muted-foreground">Auto-play your favorite music at set times</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1DB954]/5">
+                  <div className="h-8 w-8 rounded-full bg-[#1DB954]/20 flex items-center justify-center flex-shrink-0">
+                    <BarChart3 className="h-4 w-4 text-[#1DB954]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Engagement Tracking</p>
+                    <p className="text-xs text-muted-foreground">Track plays, saves, shares across sessions</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1DB954]/5">
+                  <div className="h-8 w-8 rounded-full bg-[#1DB954]/20 flex items-center justify-center flex-shrink-0">
+                    <Users className="h-4 w-4 text-[#1DB954]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">Listener Analytics</p>
+                    <p className="text-xs text-muted-foreground">See who's tuning in to your sessions</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleRetryConnection}
+                disabled={retrying}
+                className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 text-white font-semibold py-6 text-base rounded-full"
+                data-testid="button-connect-spotify"
+              >
+                {retrying ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <SiSpotify className="h-5 w-5 mr-2" />
+                    Connect with Spotify
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-muted-foreground mt-4">
+                Requires a Spotify Premium account for playback features
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full pb-28 px-6 py-8">
@@ -351,50 +455,24 @@ export default function RadioPage() {
           </div>
         </div>
 
-        {profileLoading ? (
-          <Card className="mb-6">
-            <CardContent className="p-4 flex items-center gap-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="h-4 w-32 mb-2" />
-                <Skeleton className="h-3 w-48" />
-              </div>
-            </CardContent>
-          </Card>
-        ) : !spotifyConnected ? (
-          <Card className="mb-6 border-yellow-500/30 bg-yellow-500/5">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                <SiSpotify className="h-6 w-6 text-yellow-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-yellow-500">Spotify Not Connected</p>
-                <p className="text-sm text-muted-foreground">
-                  Spotify playback features are unavailable. Your jam sessions and engagement data are still accessible below.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
         <Card className="mb-6 border-[#1DB954]/30 bg-[#1DB954]/5">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-[#1DB954] flex items-center justify-center overflow-hidden">
-              {profile.image ? (
+              {profile?.image ? (
                 <img src={profile.image} alt="" className="h-12 w-12 rounded-full object-cover" />
               ) : (
                 <SiSpotify className="h-6 w-6 text-white" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium" data-testid="text-spotify-user-name">{profile.name}</p>
-              <p className="text-sm text-muted-foreground">{profile.email}</p>
+              <p className="font-medium" data-testid="text-spotify-user-name">{profile?.name}</p>
+              <p className="text-sm text-muted-foreground">{profile?.email}</p>
             </div>
-            <Badge className={profile.isPremium ? "bg-[#1DB954] text-white" : "bg-muted"} data-testid="badge-spotify-premium">
-              {profile.isPremium ? "Premium" : profile.product || "Free"}
+            <Badge className={profile?.isPremium ? "bg-[#1DB954] text-white" : "bg-muted"} data-testid="badge-spotify-premium">
+              {profile?.isPremium ? "Premium" : profile?.product || "Free"}
             </Badge>
           </CardContent>
         </Card>
-        )}
 
         {spotifyConnected && !profile?.isPremium && (
           <Card className="mb-6 border-yellow-500/30 bg-yellow-500/5">
@@ -425,7 +503,7 @@ export default function RadioPage() {
                 <Zap className="h-5 w-5 text-[#1DB954]" />
                 Scheduled Jam Sessions
               </h2>
-              <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90" disabled={!spotifyConnected} data-testid="button-create-jam-session">
+              <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90" data-testid="button-create-jam-session">
                 <Plus className="h-4 w-4 mr-2" />
                 New Jam Session
               </Button>
@@ -482,7 +560,7 @@ export default function RadioPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => playNowMutation.mutate(session)}
-                            disabled={playNowMutation.isPending || !spotifyConnected}
+                            disabled={playNowMutation.isPending}
                             data-testid={`button-play-now-${session.id}`}
                           >
                             <Play className="h-5 w-5" />
@@ -522,7 +600,7 @@ export default function RadioPage() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Create a scheduled jam session to automatically start your favorite music at a set time every day
                   </p>
-                  <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90" disabled={!spotifyConnected}>
+                  <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Your First Jam Session
                   </Button>
