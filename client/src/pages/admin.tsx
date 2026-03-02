@@ -38,7 +38,7 @@ interface Analytics {
   totalTracks: number;
   totalPlays: number;
   premiumMembers: number;
-  artistProMembers: number;
+  goldMembers: number;
   totalAlbums: number;
   totalVideos: number;
   totalPlaylists: number;
@@ -95,7 +95,7 @@ function AnalyticsDashboard() {
         <StatCard title="Total Tracks" value={analytics?.totalTracks || 0} icon={Music} />
         <StatCard title="Total Plays" value={analytics?.totalPlays?.toLocaleString() || "0"} icon={TrendingUp} />
         <StatCard title="Paid Members" value={analytics?.premiumMembers || 0} icon={Crown} description="Silver/Bronze/Gold" />
-        <StatCard title="Artist Pro" value={analytics?.artistProMembers || 0} icon={Crown} description="$19.99/month" />
+        <StatCard title="Gold (Artist Pro)" value={analytics?.goldMembers || 0} icon={Crown} description="$6.99/month" />
         <StatCard title="Est. Monthly Revenue" value={`$${(analytics?.estimatedRevenue || 0).toFixed(2)}`} icon={DollarSign} />
         <StatCard title="Total Playlists" value={analytics?.totalPlaylists || 0} icon={ListMusic} />
       </div>
@@ -827,13 +827,11 @@ function MembershipsTab() {
             <p className="text-sm text-muted-foreground truncate">{membership.user?.email}</p>
           </div>
           <Badge variant={
-            membership.tier === "artist" ? "default" :
             membership.tier === "gold" ? "default" :
             membership.tier === "bronze" ? "secondary" :
             membership.tier === "silver" ? "secondary" : "outline"
           }>
-            {membership.tier === "artist" ? "Artist Pro" :
-             membership.tier === "gold" ? "Gold" :
+            {membership.tier === "gold" ? "Gold (Artist Pro)" :
              membership.tier === "bronze" ? "Bronze" :
              membership.tier === "silver" ? "Silver" : membership.tier}
           </Badge>

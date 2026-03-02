@@ -4,9 +4,11 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import express from "express";
+import { spawn } from "child_process";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getUncachableSpotifyClient, clearSpotifyCache } from "./spotify";
@@ -232,7 +234,7 @@ export async function registerRoutes(
     }
   });
 
-  // Create artist profile (requires Gold or Artist Pro membership)
+  // Create artist profile (requires Gold membership)
   app.post("/api/artists", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -243,7 +245,7 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Artist profile already exists" });
       }
 
-      // Require Gold or Artist Pro membership
+      // Require Gold membership
       const membership = await storage.getUserMembership(userId);
       if (!membership || !membership.isActive || membership.tier !== "gold") {
         return res.status(403).json({ message: "Artist profile requires a Gold ($6.99/mo) subscription" });
@@ -988,6 +990,174 @@ export async function registerRoutes(
       console.error("Error fetching mastering requests:", error);
       res.status(500).json({ message: "Failed to fetch mastering requests" });
     }
+  });
+
+  // ============ AI Lyrics Generator ============
+
+  app.post("/api/generate-lyrics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "Artist profile required" });
+      }
+      const { prompt, genre, mood, style } = req.body;
+      if (!prompt) {
+        return res.status(400).json({ message: "Prompt is required" });
+      }
+
+      const systemPrompt = `You are a professional songwriter and lyricist. Generate complete, creative, radio-ready song lyrics based on the user's description. 
+
+Format the output as a structured song with clearly labeled sections:
+- [Verse 1], [Verse 2], etc.
+- [Chorus]
+- [Pre-Chorus] (optional)
+- [Bridge] (optional)
+- [Outro] (optional)
+
+Make the lyrics emotionally engaging, with strong hooks and memorable phrases. Use rhyme schemes and rhythm that fit the genre.${genre ? `\nGenre: ${genre}` : ""}${mood ? `\nMood: ${mood}` : ""}${style ? `\nStyle reference: ${style}` : ""}`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        max_completion_tokens: 2048,
+        temperature: 0.9,
+      });
+
+      const lyrics = response.choices[0]?.message?.content || "";
+      res.json({ lyrics });
+    } catch (error) {
+      console.error("Error generating lyrics:", error);
+      res.status(500).json({ message: "Failed to generate lyrics" });
+    }
+  });
+
+  // ============ Audio Mastering ============
+
+  const masteredDir = path.join(process.cwd(), "uploads", "mastered");
+  if (!fs.existsSync(masteredDir)) {
+    fs.mkdirSync(masteredDir, { recursive: true });
+  }
+
+  app.post("/api/master-track/:trackId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "Artist profile required" });
+      }
+
+      const track = await storage.getTrack(req.params.trackId);
+      if (!track || track.artistId !== artist.id) {
+        return res.status(403).json({ message: "You can only master your own tracks" });
+      }
+
+      const inputPath = path.join(process.cwd(), track.audioUrl.replace(/^\//, ""));
+      if (!fs.existsSync(inputPath)) {
+        return res.status(404).json({ message: "Audio file not found" });
+      }
+
+      const outputFilename = `mastered-${Date.now()}-${path.basename(track.audioUrl, path.extname(track.audioUrl))}.wav`;
+      const outputPath = path.join(masteredDir, outputFilename);
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const sendEvent = (data: any) => {
+        res.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      sendEvent({ status: "queued", message: "Track queued for mastering..." });
+
+      sendEvent({ status: "processing", message: "Analyzing audio levels...", progress: 10 });
+
+      const ffmpegArgs = [
+        "-i", inputPath,
+        "-af", [
+          "highpass=f=30",
+          "lowpass=f=18000",
+          "acompressor=threshold=-18dB:ratio=3:attack=5:release=50:makeup=2dB",
+          "acompressor=threshold=-12dB:ratio=4:attack=2:release=30:makeup=1dB",
+          "equalizer=f=60:t=q:w=1.5:g=2",
+          "equalizer=f=200:t=q:w=2:g=-1",
+          "equalizer=f=3000:t=q:w=1.5:g=1.5",
+          "equalizer=f=8000:t=q:w=2:g=2",
+          "equalizer=f=12000:t=q:w=1.5:g=1",
+          "alimiter=limit=0.95:level=false",
+          "loudnorm=I=-14:TP=-1:LRA=11:print_format=json",
+        ].join(","),
+        "-ar", "44100",
+        "-sample_fmt", "s16",
+        "-y",
+        outputPath,
+      ];
+
+      sendEvent({ status: "processing", message: "Applying mastering chain (EQ, compression, limiting)...", progress: 30 });
+
+      await new Promise<void>((resolve, reject) => {
+        const ffmpeg = spawn("ffmpeg", ffmpegArgs);
+        let stderrData = "";
+
+        ffmpeg.stderr.on("data", (data: Buffer) => {
+          stderrData += data.toString();
+        });
+
+        ffmpeg.on("close", (code: number) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`ffmpeg exited with code ${code}: ${stderrData.slice(-500)}`));
+          }
+        });
+
+        ffmpeg.on("error", reject);
+      });
+
+      sendEvent({ status: "processing", message: "Normalizing loudness to -14 LUFS (streaming standard)...", progress: 70 });
+
+      sendEvent({ status: "processing", message: "Rendering final mastered file...", progress: 90 });
+
+      const masteredUrl = `/uploads/mastered/${outputFilename}`;
+
+      const masteringReq = await storage.createMasteringRequest({
+        artistId: artist.id,
+        userId,
+        trackId: track.id,
+        notes: "Auto-mastered via AITIFY mastering engine",
+        status: "completed",
+      });
+
+      sendEvent({
+        status: "completed",
+        message: "Mastering complete! Your track is now radio-ready.",
+        progress: 100,
+        masteredUrl,
+        requestId: masteringReq.id,
+      });
+
+      res.end();
+    } catch (error) {
+      console.error("Error mastering track:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Failed to master track" });
+      } else {
+        res.write(`data: ${JSON.stringify({ status: "error", message: "Mastering failed. Please try again." })}\n\n`);
+        res.end();
+      }
+    }
+  });
+
+  app.get("/uploads/mastered/:filename", isAuthenticated, (req: any, res) => {
+    const filePath = path.join(masteredDir, req.params.filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ message: "File not found" });
+    }
+    res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
+    res.sendFile(filePath);
   });
 
   // ============ Admin Routes ============

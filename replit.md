@@ -28,6 +28,8 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Upload tracks with genre and metadata
 - Set tracks as pre-release (Premium members only)
 - View play counts and engagement
+- **AI Lyrics Generator**: Enter a prompt/mood/genre/style → OpenAI generates complete structured song lyrics (verse, chorus, bridge). Edit and submit for beat production.
+- **Audio Mastering Engine**: Select a track → ffmpeg mastering chain processes it (high-pass filter, multi-band compression, EQ, limiting, loudness normalization to -14 LUFS) → download radio-ready mastered file
 
 ### Membership Tiers
 - **Free**: Listen to released music, follow artists

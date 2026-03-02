@@ -29,6 +29,7 @@ import {
   FileText,
   Headphones,
   Wand2,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1293,33 +1294,57 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
 
 function LyricsTab({ artistId }: { artistId: string }) {
   const { toast } = useToast();
-  const [showDialog, setShowDialog] = useState(false);
-  const [title, setTitle] = useState("");
-  const [lyrics, setLyrics] = useState("");
+  const [prompt, setPrompt] = useState("");
   const [genre, setGenre] = useState("");
-  const [notes, setNotes] = useState("");
+  const [mood, setMood] = useState("");
+  const [style, setStyle] = useState("");
+  const [generatedLyrics, setGeneratedLyrics] = useState("");
+  const [songTitle, setSongTitle] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/lyrics-requests"],
   });
 
-  const createMutation = useMutation({
+  const generateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/generate-lyrics", { prompt, genre, mood, style });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setGeneratedLyrics(data.lyrics);
+      setIsGenerating(false);
+      toast({ title: "Lyrics generated!", description: "Review your lyrics below. Edit them and submit when ready." });
+    },
+    onError: () => {
+      setIsGenerating(false);
+      toast({ title: "Failed to generate lyrics", variant: "destructive" });
+    },
+  });
+
+  const submitMutation = useMutation({
     mutationFn: async (data: { title: string; lyrics: string; genre?: string; notes?: string }) => {
       return apiRequest("POST", "/api/lyrics-requests", data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/lyrics-requests"] });
-      setShowDialog(false);
-      setTitle("");
-      setLyrics("");
+      setGeneratedLyrics("");
+      setSongTitle("");
+      setPrompt("");
       setGenre("");
-      setNotes("");
-      toast({ title: "Lyrics submitted", description: "Your lyrics have been sent to admin for beat production, mastering, and distribution." });
+      setMood("");
+      setStyle("");
+      toast({ title: "Lyrics submitted!", description: "Your lyrics have been sent to admin for beat production, mastering, and distribution." });
     },
     onError: () => {
       toast({ title: "Failed to submit lyrics", variant: "destructive" });
     },
   });
+
+  const handleGenerate = () => {
+    setIsGenerating(true);
+    generateMutation.mutate();
+  };
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -1333,25 +1358,124 @@ function LyricsTab({ artistId }: { artistId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Song Lyrics</h3>
-          <p className="text-sm text-muted-foreground">Submit your lyrics to admin for beat production, mastering, and distribution</p>
-        </div>
-        <Button onClick={() => setShowDialog(true)} className="bg-primary hover:bg-primary/90" data-testid="button-submit-lyrics">
-          <FileText className="h-4 w-4 mr-2" />
-          Submit Lyrics
-        </Button>
+      <div>
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-primary" />
+          AI Song Lyrics Generator
+        </h3>
+        <p className="text-sm text-muted-foreground">Describe your song idea and AI will generate complete lyrics. Edit, then submit for beat production.</p>
       </div>
 
-      {isLoading ? (
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <Label>Describe your song *</Label>
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="e.g. A love song about missing someone on a rainy night, with a catchy chorus about finding your way back..."
+              className="mt-1.5 min-h-[100px]"
+              data-testid="input-lyrics-prompt"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label>Genre</Label>
+              <Input
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                placeholder="e.g. R&B, Hip-Hop..."
+                className="mt-1.5"
+                data-testid="input-lyrics-genre"
+              />
+            </div>
+            <div>
+              <Label>Mood</Label>
+              <Input
+                value={mood}
+                onChange={(e) => setMood(e.target.value)}
+                placeholder="e.g. Melancholic, Upbeat..."
+                className="mt-1.5"
+                data-testid="input-lyrics-mood"
+              />
+            </div>
+            <div>
+              <Label>Style Reference</Label>
+              <Input
+                value={style}
+                onChange={(e) => setStyle(e.target.value)}
+                placeholder="e.g. Like Drake, Adele..."
+                className="mt-1.5"
+                data-testid="input-lyrics-style"
+              />
+            </div>
+          </div>
+          <Button
+            onClick={handleGenerate}
+            disabled={isGenerating || !prompt.trim()}
+            data-testid="button-generate-lyrics"
+          >
+            {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+            {isGenerating ? "Generating..." : "Generate Lyrics"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {generatedLyrics && (
+        <Card className="border-primary/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Generated Lyrics
+            </CardTitle>
+            <CardDescription>Review and edit your lyrics, then submit for beat production</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Song Title *</Label>
+              <Input
+                value={songTitle}
+                onChange={(e) => setSongTitle(e.target.value)}
+                placeholder="Give your song a title..."
+                className="mt-1.5"
+                data-testid="input-lyrics-title"
+              />
+            </div>
+            <div>
+              <Label>Lyrics (editable)</Label>
+              <Textarea
+                value={generatedLyrics}
+                onChange={(e) => setGeneratedLyrics(e.target.value)}
+                className="mt-1.5 min-h-[300px] font-mono text-sm"
+                data-testid="input-lyrics-content"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => submitMutation.mutate({
+                  title: songTitle,
+                  lyrics: generatedLyrics,
+                  genre: genre || undefined,
+                  notes: `Prompt: ${prompt}${mood ? ` | Mood: ${mood}` : ""}${style ? ` | Style: ${style}` : ""}`,
+                })}
+                disabled={submitMutation.isPending || !songTitle.trim() || !generatedLyrics.trim()}
+                data-testid="button-submit-lyrics"
+              >
+                {submitMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                Submit for Beat Production
+              </Button>
+              <Button variant="outline" onClick={handleGenerate} disabled={isGenerating} data-testid="button-regenerate-lyrics">
+                <Wand2 className="h-4 w-4 mr-2" />
+                Regenerate
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoading && requests && requests.length > 0 && (
         <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : requests && requests.length > 0 ? (
-        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Previous Submissions</h4>
           {requests.map((req: any) => (
             <Card key={req.id}>
               <CardContent className="p-4 flex items-center gap-4">
@@ -1361,7 +1485,6 @@ function LyricsTab({ artistId }: { artistId: string }) {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{req.title}</p>
                   {req.genre && <p className="text-sm text-muted-foreground">Genre: {req.genre}</p>}
-                  {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
                   {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
                   <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
                 </div>
@@ -1370,106 +1493,78 @@ function LyricsTab({ artistId }: { artistId: string }) {
             </Card>
           ))}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="h-12 w-12 mx-auto mb-3 text-primary/30" />
-            <p className="font-medium mb-1">No lyrics submissions yet</p>
-            <p className="text-sm text-muted-foreground">Submit your lyrics for beat production and distribution</p>
-          </CardContent>
-        </Card>
       )}
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Submit Lyrics</DialogTitle>
-            <DialogDescription>Send your lyrics to the admin team for beat production, mastering, and distribution to streaming platforms.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Song Title *</Label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter the song title"
-                className="mt-1.5"
-                data-testid="input-lyrics-title"
-              />
-            </div>
-            <div>
-              <Label>Genre</Label>
-              <Input
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                placeholder="e.g. Hip-Hop, R&B, Pop, Electronic..."
-                className="mt-1.5"
-                data-testid="input-lyrics-genre"
-              />
-            </div>
-            <div>
-              <Label>Lyrics *</Label>
-              <Textarea
-                value={lyrics}
-                onChange={(e) => setLyrics(e.target.value)}
-                placeholder="Paste or type your song lyrics here..."
-                className="mt-1.5 min-h-[200px] font-mono text-sm"
-                data-testid="input-lyrics-content"
-              />
-            </div>
-            <div>
-              <Label>Notes for Producer (optional)</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any instructions for the beat, tempo, mood, references..."
-                className="mt-1.5"
-                data-testid="input-lyrics-notes"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
-            <Button
-              onClick={() => createMutation.mutate({ title, lyrics, genre: genre || undefined, notes: notes || undefined })}
-              disabled={createMutation.isPending || !title.trim() || !lyrics.trim()}
-              data-testid="button-confirm-submit-lyrics"
-            >
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit Lyrics
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
 function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] }) {
   const { toast } = useToast();
-  const [showDialog, setShowDialog] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
-  const [notes, setNotes] = useState("");
+  const [masteringStatus, setMasteringStatus] = useState<string>("");
+  const [masteringProgress, setMasteringProgress] = useState(0);
+  const [isMastering, setIsMastering] = useState(false);
+  const [masteredUrl, setMasteredUrl] = useState<string>("");
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/mastering-requests"],
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data: { trackId: string; notes?: string }) => {
-      return apiRequest("POST", "/api/mastering-requests", data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/mastering-requests"] });
-      setShowDialog(false);
-      setSelectedTrackId("");
-      setNotes("");
-      toast({ title: "Mastering request submitted", description: "Your track has been sent to admin for mastering." });
-    },
-    onError: () => {
-      toast({ title: "Failed to submit request", variant: "destructive" });
-    },
-  });
+  const handleMasterTrack = async () => {
+    if (!selectedTrackId) return;
+    setIsMastering(true);
+    setMasteringStatus("Starting mastering engine...");
+    setMasteringProgress(0);
+    setMasteredUrl("");
+
+    try {
+      const response = await fetch(`/api/master-track/${selectedTrackId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Mastering failed");
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+            setMasteringStatus(event.message || "");
+            if (event.progress) setMasteringProgress(event.progress);
+            if (event.status === "completed") {
+              setMasteredUrl(event.masteredUrl);
+              setIsMastering(false);
+              queryClient.invalidateQueries({ queryKey: ["/api/mastering-requests"] });
+              toast({ title: "Mastering complete!", description: "Your track is now radio-ready. Download it below." });
+            }
+            if (event.status === "error") {
+              setIsMastering(false);
+              toast({ title: "Mastering failed", description: event.message, variant: "destructive" });
+            }
+          } catch {}
+        }
+      }
+    } catch (error: any) {
+      setIsMastering(false);
+      setMasteringStatus("");
+      toast({ title: "Mastering failed", description: error.message, variant: "destructive" });
+    }
+  };
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -1481,27 +1576,94 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
     }
   };
 
+  const selectedTrack = tracks.find(t => t.id === selectedTrackId);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Audio Mastering</h3>
-          <p className="text-sm text-muted-foreground">Send your tracks to admin for professional mastering</p>
-        </div>
-        <Button onClick={() => setShowDialog(true)} className="bg-primary hover:bg-primary/90" disabled={tracks.length === 0} data-testid="button-request-mastering">
-          <Headphones className="h-4 w-4 mr-2" />
-          Request Mastering
-        </Button>
+      <div>
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Headphones className="h-5 w-5 text-primary" />
+          Audio Mastering Engine
+        </h3>
+        <p className="text-sm text-muted-foreground">Master your tracks to radio-ready quality. EQ, compression, limiting, and loudness normalization to -14 LUFS.</p>
       </div>
 
-      {isLoading ? (
+      <Card>
+        <CardContent className="p-6 space-y-4">
+          <div>
+            <Label>Select Track to Master *</Label>
+            <select
+              className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md text-sm"
+              value={selectedTrackId}
+              onChange={(e) => { setSelectedTrackId(e.target.value); setMasteredUrl(""); setMasteringStatus(""); }}
+              disabled={isMastering}
+              data-testid="select-mastering-track"
+            >
+              <option value="">Select a track</option>
+              {tracks.map(t => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
+          </div>
+
+          {selectedTrack && (
+            <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-3">
+              <Disc3 className="h-8 w-8 text-primary flex-shrink-0" />
+              <div>
+                <p className="font-medium">{selectedTrack.title}</p>
+                <p className="text-sm text-muted-foreground">{selectedTrack.genre || "Unknown genre"} · {Math.floor((selectedTrack.duration || 0) / 60)}:{String((selectedTrack.duration || 0) % 60).padStart(2, "0")}</p>
+              </div>
+            </div>
+          )}
+
+          <Button
+            onClick={handleMasterTrack}
+            disabled={isMastering || !selectedTrackId || tracks.length === 0}
+            data-testid="button-master-track"
+          >
+            {isMastering ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Headphones className="h-4 w-4 mr-2" />}
+            {isMastering ? "Mastering..." : "Master This Track"}
+          </Button>
+
+          {isMastering && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <p className="text-sm font-medium">{masteringStatus}</p>
+              </div>
+              <div className="w-full bg-muted rounded-full h-2">
+                <div
+                  className="bg-primary h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${masteringProgress}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground text-right">{masteringProgress}%</p>
+            </div>
+          )}
+
+          {masteredUrl && (
+            <Card className="border-green-500/30 bg-green-500/5">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <p className="font-medium text-green-400">Mastering Complete!</p>
+                </div>
+                <p className="text-sm text-muted-foreground">Your track has been mastered to radio-ready quality at -14 LUFS (streaming standard).</p>
+                <Button asChild variant="outline" data-testid="button-download-mastered">
+                  <a href={masteredUrl} download>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Mastered Track
+                  </a>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </CardContent>
+      </Card>
+
+      {!isLoading && requests && requests.length > 0 && (
         <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : requests && requests.length > 0 ? (
-        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Mastering History</h4>
           {requests.map((req: any) => {
             const track = tracks.find(t => t.id === req.trackId);
             return (
@@ -1513,7 +1675,6 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{track ? track.title : "Track"}</p>
                     {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
-                    {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
                     <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
                   </div>
                   {statusBadge(req.status)}
@@ -1522,61 +1683,7 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
             );
           })}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Headphones className="h-12 w-12 mx-auto mb-3 text-primary/30" />
-            <p className="font-medium mb-1">No mastering requests yet</p>
-            <p className="text-sm text-muted-foreground">{tracks.length === 0 ? "Upload a track first, then request mastering" : "Send your tracks for professional mastering"}</p>
-          </CardContent>
-        </Card>
       )}
-
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Mastering</DialogTitle>
-            <DialogDescription>Select a track to send to admin for professional audio mastering.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <Label>Track *</Label>
-              <select
-                className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md text-sm"
-                value={selectedTrackId}
-                onChange={(e) => setSelectedTrackId(e.target.value)}
-                data-testid="select-mastering-track"
-              >
-                <option value="">Select a track</option>
-                {tracks.map(t => (
-                  <option key={t.id} value={t.id}>{t.title}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <Label>Notes (optional)</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any specific mastering instructions, reference tracks, loudness preferences..."
-                className="mt-1.5"
-                data-testid="input-mastering-notes"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
-            <Button
-              onClick={() => createMutation.mutate({ trackId: selectedTrackId, notes: notes || undefined })}
-              disabled={createMutation.isPending || !selectedTrackId}
-              data-testid="button-confirm-mastering"
-            >
-              {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit Request
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

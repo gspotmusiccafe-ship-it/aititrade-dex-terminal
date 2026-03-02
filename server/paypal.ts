@@ -7,7 +7,6 @@ const TIER_PRICES: Record<string, string> = {
   silver: "1.99",
   bronze: "3.99",
   gold: "6.99",
-  artist: "19.99",
 };
 
 const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
