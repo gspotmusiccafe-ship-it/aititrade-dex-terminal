@@ -338,40 +338,7 @@ export default function RadioPage() {
     toast({ title: `${ACTION_LABELS[action]?.label || action} recorded` });
   };
 
-  if (profileLoading) {
-    return (
-      <div className="min-h-full pb-28 px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-3 mb-8">
-            <Skeleton className="h-8 w-8" />
-            <Skeleton className="h-8 w-64" />
-          </div>
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  if (!profile?.connected) {
-    return (
-      <div className="min-h-full pb-28 px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-4">
-              <SiSpotify className="h-16 w-16 mx-auto text-[#1DB954]" />
-              <h2 className="text-2xl font-bold">Connect Spotify</h2>
-              <p className="text-muted-foreground max-w-md">
-                Connect your Spotify Premium account to access AITIFY Music Radio and schedule automated jam sessions.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {profile?.error || "Spotify is not connected. Please contact an administrator."}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const spotifyConnected = profile?.connected === true;
 
   return (
     <div className="min-h-full pb-28 px-6 py-8">
@@ -384,6 +351,31 @@ export default function RadioPage() {
           </div>
         </div>
 
+        {profileLoading ? (
+          <Card className="mb-6">
+            <CardContent className="p-4 flex items-center gap-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex-1">
+                <Skeleton className="h-4 w-32 mb-2" />
+                <Skeleton className="h-3 w-48" />
+              </div>
+            </CardContent>
+          </Card>
+        ) : !spotifyConnected ? (
+          <Card className="mb-6 border-yellow-500/30 bg-yellow-500/5">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                <SiSpotify className="h-6 w-6 text-yellow-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-yellow-500">Spotify Not Connected</p>
+                <p className="text-sm text-muted-foreground">
+                  Spotify playback features are unavailable. Your jam sessions and engagement data are still accessible below.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
         <Card className="mb-6 border-[#1DB954]/30 bg-[#1DB954]/5">
           <CardContent className="p-4 flex items-center gap-4">
             <div className="h-12 w-12 rounded-full bg-[#1DB954] flex items-center justify-center overflow-hidden">
@@ -402,8 +394,9 @@ export default function RadioPage() {
             </Badge>
           </CardContent>
         </Card>
+        )}
 
-        {!profile.isPremium && (
+        {spotifyConnected && !profile?.isPremium && (
           <Card className="mb-6 border-yellow-500/30 bg-yellow-500/5">
             <CardContent className="p-4 text-center">
               <p className="text-yellow-600 font-medium">Spotify Premium Required</p>
@@ -432,7 +425,7 @@ export default function RadioPage() {
                 <Zap className="h-5 w-5 text-[#1DB954]" />
                 Scheduled Jam Sessions
               </h2>
-              <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90" data-testid="button-create-jam-session">
+              <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90" disabled={!spotifyConnected} data-testid="button-create-jam-session">
                 <Plus className="h-4 w-4 mr-2" />
                 New Jam Session
               </Button>
@@ -489,7 +482,7 @@ export default function RadioPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => playNowMutation.mutate(session)}
-                            disabled={playNowMutation.isPending}
+                            disabled={playNowMutation.isPending || !spotifyConnected}
                             data-testid={`button-play-now-${session.id}`}
                           >
                             <Play className="h-5 w-5" />
@@ -529,7 +522,7 @@ export default function RadioPage() {
                   <p className="text-sm text-muted-foreground mb-4">
                     Create a scheduled jam session to automatically start your favorite music at a set time every day
                   </p>
-                  <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90">
+                  <Button onClick={() => { resetForm(); setShowCreate(true); }} className="bg-[#1DB954] hover:bg-[#1DB954]/90" disabled={!spotifyConnected}>
                     <Plus className="h-4 w-4 mr-2" />
                     Create Your First Jam Session
                   </Button>

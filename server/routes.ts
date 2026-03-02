@@ -1066,31 +1066,30 @@ export async function registerRoutes(
   // === Spotify Playback & Jam Sessions ===
 
   app.get("/api/spotify/me", isAuthenticated, async (req: any, res) => {
-    try {
+    const tryGetProfile = async () => {
       const spotify = await getUncachableSpotifyClient();
       const profile = await spotify.currentUser.profile();
-      res.json({
+      return {
         connected: true,
         name: profile.display_name,
         email: profile.email,
         product: profile.product,
         isPremium: profile.product === "premium",
         image: profile.images?.[0]?.url,
-      });
+      };
+    };
+
+    try {
+      const result = await tryGetProfile();
+      res.json(result);
     } catch (error: any) {
+      console.error("Spotify first attempt failed:", error.message);
       clearSpotifyCache();
       try {
-        const spotify = await getUncachableSpotifyClient();
-        const profile = await spotify.currentUser.profile();
-        res.json({
-          connected: true,
-          name: profile.display_name,
-          email: profile.email,
-          product: profile.product,
-          isPremium: profile.product === "premium",
-          image: profile.images?.[0]?.url,
-        });
+        const result = await tryGetProfile();
+        res.json(result);
       } catch (retryError: any) {
+        console.error("Spotify retry also failed:", retryError.message);
         res.json({ connected: false, error: retryError.message });
       }
     }
