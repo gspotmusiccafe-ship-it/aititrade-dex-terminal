@@ -43,7 +43,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 ### Admin Portal
 - **Dashboard**: Platform analytics (total users, artists, tracks, plays, revenue)
 - **User Management**: View, suspend/unsuspend, make admin, delete users
-- **Artist Management**: View all artists, approve/reject applications
+- **Artist Management**: View all artists, approve/reject applications, create artist profiles (bypass membership)
 - **Content Moderation**: Remove tracks/videos + Download tracks for distribution
 - **Distribution**: Review and manage artist distribution requests
 - **Membership Management**: View all subscriptions

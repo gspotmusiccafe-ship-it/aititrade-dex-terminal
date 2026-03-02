@@ -944,6 +944,26 @@ export async function registerRoutes(
     }
   });
 
+  // Admin create artist (bypass membership check)
+  app.post("/api/admin/artists/create", isAdmin, async (req: any, res) => {
+    try {
+      const { userId, name, bio } = req.body;
+      if (!userId || !name) {
+        return res.status(400).json({ message: "userId and name are required" });
+      }
+      const existing = await storage.getArtistByUserId(userId);
+      if (existing) {
+        return res.status(400).json({ message: "This user already has an artist profile" });
+      }
+      const validated = insertArtistSchema.parse({ userId, name, bio: bio || "" });
+      const artist = await storage.createArtist(validated);
+      res.status(201).json(artist);
+    } catch (error) {
+      console.error("Error creating artist (admin bypass):", error);
+      res.status(500).json({ message: "Failed to create artist profile" });
+    }
+  });
+
   // Get all users
   app.get("/api/admin/users", isAdmin, async (req: any, res) => {
     try {

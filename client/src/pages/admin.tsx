@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -334,6 +335,10 @@ function ArtistsTab() {
   const [rejectDialog, setRejectDialog] = useState<Artist | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<Artist | null>(null);
+  const [createDialog, setCreateDialog] = useState(false);
+  const [createUserId, setCreateUserId] = useState("");
+  const [createName, setCreateName] = useState("");
+  const [createBio, setCreateBio] = useState("");
   
   const { data: artists, isLoading } = useQuery<Artist[]>({
     queryKey: ["/api/admin/artists"],
@@ -341,6 +346,28 @@ function ArtistsTab() {
 
   const { data: pendingArtists } = useQuery<Artist[]>({
     queryKey: ["/api/admin/artists/pending"],
+  });
+
+  const { data: allUsers } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+  });
+
+  const createArtistMutation = useMutation({
+    mutationFn: async (data: { userId: string; name: string; bio: string }) => {
+      return apiRequest("POST", "/api/admin/artists/create", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists/pending"] });
+      setCreateDialog(false);
+      setCreateUserId("");
+      setCreateName("");
+      setCreateBio("");
+      toast({ title: "Artist profile created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: error?.message || "Failed to create artist profile", variant: "destructive" });
+    },
   });
 
   const approveMutation = useMutation({
@@ -456,7 +483,17 @@ function ArtistsTab() {
         </div>
       )}
 
-      <h3 className="text-lg font-semibold mb-3">All Artists</h3>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold">All Artists</h3>
+        <Button
+          size="sm"
+          onClick={() => setCreateDialog(true)}
+          data-testid="button-create-artist"
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          Create Artist
+        </Button>
+      </div>
       <div className="space-y-2">
         {artists?.map((artist) => (
           <div key={artist.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`artist-row-${artist.id}`}>
@@ -548,6 +585,69 @@ function ArtistsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={createDialog} onOpenChange={() => setCreateDialog(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Artist Profile</DialogTitle>
+            <DialogDescription>
+              Create an artist profile for any user without requiring a Gold membership.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Select User</label>
+              <Select value={createUserId} onValueChange={(val) => {
+                setCreateUserId(val);
+                const user = allUsers?.find(u => u.id === val);
+                if (user && !createName) {
+                  setCreateName(`${user.firstName || ""} ${user.lastName || ""}`.trim());
+                }
+              }}>
+                <SelectTrigger data-testid="select-create-artist-user">
+                  <SelectValue placeholder="Choose a user..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allUsers?.filter(u => !artists?.some(a => a.userId === u.id)).map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.firstName} {user.lastName} ({user.email || user.id})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Artist Name</label>
+              <Input
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="Artist or stage name"
+                data-testid="input-create-artist-name"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-1 block">Bio (optional)</label>
+              <Textarea
+                value={createBio}
+                onChange={(e) => setCreateBio(e.target.value)}
+                placeholder="Short bio..."
+                data-testid="input-create-artist-bio"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => createArtistMutation.mutate({ userId: createUserId, name: createName, bio: createBio })}
+              disabled={!createUserId || !createName || createArtistMutation.isPending}
+              data-testid="button-submit-create-artist"
+            >
+              {createArtistMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+              Create Artist
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
