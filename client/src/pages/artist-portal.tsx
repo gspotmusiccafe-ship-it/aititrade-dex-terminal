@@ -21,6 +21,11 @@ import {
   ArrowRight,
   Mic2,
   Sparkles,
+  Send,
+  Loader2,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -282,7 +287,7 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
 
 function ArtistOnboarding() {
   const [step, setStep] = useState<"plan" | "profile">("plan");
-  const [selectedPlan, setSelectedPlan] = useState<"gold" | "artist" | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<"gold" | null>(null);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -361,40 +366,22 @@ function ArtistOnboarding() {
   const artistPlans = [
     {
       id: "gold" as const,
-      name: "Gold Artist",
+      name: "Gold",
       price: "$6.99",
       period: "/month",
       icon: Crown,
       color: "text-yellow-500",
       borderColor: "border-yellow-500/50",
       bgColor: "bg-yellow-500/10",
-      features: [
-        "Upload tracks with cover artwork",
-        "Artist profile & bio page",
-        "Play count analytics",
-        "Unlimited released music streaming",
-        "Unlimited pre-release previews",
-        "Unlimited MP3 downloads",
-      ],
-    },
-    {
-      id: "artist" as const,
-      name: "Artist Pro",
-      price: "$19.99",
-      period: "/month",
-      icon: Sparkles,
-      color: "text-primary",
-      borderColor: "border-primary",
-      bgColor: "bg-primary/10",
       popular: true,
       features: [
-        "Everything in Gold Artist",
         "Unlimited track uploads",
-        "Upload music videos",
+        "Upload music videos (MP3/YouTube)",
+        "Artist profile & bio page",
+        "Marketing & promotions tools",
+        "Music distribution services",
         "Advanced analytics dashboard",
-        "Scheduled releases",
-        "Fan engagement tools",
-        "Priority artist support",
+        "Lossless audio quality",
       ],
     },
   ];
@@ -1043,6 +1030,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               <BarChart3 className="h-4 w-4 mr-1" />
               Analytics
             </TabsTrigger>
+            <TabsTrigger value="distribution">
+              <Send className="h-4 w-4 mr-1" />
+              Distribution
+            </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <AddVideoDialog artistId={artist.id} />
@@ -1272,7 +1263,148 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="distribution">
+          <DistributionTab artistId={artist.id} tracks={tracks || []} />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function DistributionTab({ artistId, tracks }: { artistId: string; tracks: Track[] }) {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
+  const [message, setMessage] = useState("");
+
+  const { data: requests, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/distribution-requests"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { trackId?: string; message?: string }) => {
+      return apiRequest("POST", "/api/distribution-requests", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/distribution-requests"] });
+      setShowDialog(false);
+      setSelectedTrackId("");
+      setMessage("");
+      toast({ title: "Distribution request submitted", description: "Your request has been sent to the admin for review." });
+    },
+    onError: () => {
+      toast({ title: "Failed to submit request", variant: "destructive" });
+    },
+  });
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case "approved": return <Badge variant="secondary" className="bg-green-500/20 text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>;
+      case "rejected": return <Badge variant="secondary" className="bg-red-500/20 text-red-600"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Music Distribution</h3>
+          <p className="text-sm text-muted-foreground">Request distribution of your tracks to streaming platforms</p>
+        </div>
+        <Button onClick={() => setShowDialog(true)} className="bg-primary hover:bg-primary/90" data-testid="button-distribute-music">
+          <Send className="h-4 w-4 mr-2" />
+          Distribute My Music
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : requests && requests.length > 0 ? (
+        <div className="space-y-2">
+          {requests.map((req: any) => {
+            const track = tracks.find(t => t.id === req.trackId);
+            return (
+              <Card key={req.id}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Send className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">
+                      {track ? track.title : req.trackId ? "Track" : "All Tracks"}
+                    </p>
+                    {req.message && <p className="text-sm text-muted-foreground truncate">{req.message}</p>}
+                    {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
+                    <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {statusBadge(req.status)}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Send className="h-12 w-12 mx-auto mb-3 text-primary/30" />
+            <p className="font-medium mb-1">No distribution requests yet</p>
+            <p className="text-sm text-muted-foreground">Submit a request to distribute your music to streaming platforms</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Distribute My Music</DialogTitle>
+            <DialogDescription>Submit a distribution request to the admin. Select a specific track or request distribution for all your music.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Track (optional)</Label>
+              <select
+                className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md text-sm"
+                value={selectedTrackId}
+                onChange={(e) => setSelectedTrackId(e.target.value)}
+                data-testid="select-distribution-track"
+              >
+                <option value="">All tracks</option>
+                {tracks.map(t => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Message to Admin (optional)</Label>
+              <Textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Any notes about your distribution request..."
+                className="mt-1.5"
+                data-testid="input-distribution-message"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => createMutation.mutate({ trackId: selectedTrackId || undefined, message: message || undefined })}
+              disabled={createMutation.isPending}
+              data-testid="button-submit-distribution"
+            >
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

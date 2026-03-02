@@ -10,6 +10,7 @@ import {
   followedArtists,
   recentlyPlayed,
   users,
+  distributionRequests,
   type Artist,
   type InsertArtist,
   type Album,
@@ -25,6 +26,8 @@ import {
   type TrackWithArtist,
   type AlbumWithArtist,
   type User,
+  type DistributionRequest,
+  type InsertDistributionRequest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
@@ -98,6 +101,13 @@ export interface IStorage {
   deleteTrack(trackId: string): Promise<void>;
   deleteVideo(videoId: string): Promise<void>;
   getAllMemberships(): Promise<(Membership & { user?: User })[]>;
+  // Distribution Requests
+  createDistributionRequest(request: InsertDistributionRequest): Promise<DistributionRequest>;
+  getDistributionRequestsByUser(userId: string): Promise<DistributionRequest[]>;
+  getAllDistributionRequests(): Promise<DistributionRequest[]>;
+  getPendingDistributionRequests(): Promise<DistributionRequest[]>;
+  updateDistributionRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<DistributionRequest | undefined>;
+  
   getAnalytics(): Promise<{
     totalUsers: number;
     totalArtists: number;
@@ -575,6 +585,28 @@ export class DatabaseStorage implements IStorage {
       topTracks: topTracksData.map(t => ({ title: t.title, artistName: t.artistName, playCount: t.playCount || 0 })),
       topArtists: topArtistsData.map(a => ({ name: a.name, monthlyListeners: a.monthlyListeners || 0, trackCount: a.trackCount })),
     };
+  }
+
+  async createDistributionRequest(request: InsertDistributionRequest): Promise<DistributionRequest> {
+    const [result] = await db.insert(distributionRequests).values(request).returning();
+    return result;
+  }
+
+  async getDistributionRequestsByUser(userId: string): Promise<DistributionRequest[]> {
+    return db.select().from(distributionRequests).where(eq(distributionRequests.userId, userId)).orderBy(desc(distributionRequests.createdAt));
+  }
+
+  async getAllDistributionRequests(): Promise<DistributionRequest[]> {
+    return db.select().from(distributionRequests).orderBy(desc(distributionRequests.createdAt));
+  }
+
+  async getPendingDistributionRequests(): Promise<DistributionRequest[]> {
+    return db.select().from(distributionRequests).where(eq(distributionRequests.status, "pending")).orderBy(desc(distributionRequests.createdAt));
+  }
+
+  async updateDistributionRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<DistributionRequest | undefined> {
+    const [result] = await db.update(distributionRequests).set(data).where(eq(distributionRequests.id, id)).returning();
+    return result;
   }
 }
 

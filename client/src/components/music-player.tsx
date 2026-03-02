@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, Download } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { usePlayer } from "@/lib/player-context";
@@ -172,32 +172,13 @@ export function MusicPlayer() {
           <Button
             variant="ghost"
             size="icon"
-            title="Download MP3"
-            onClick={async () => {
-              if (!currentTrack) return;
-              try {
-                const res = await fetch(`/api/tracks/${currentTrack.id}/download`, { credentials: "include" });
-                if (!res.ok) {
-                  const err = await res.json().catch(() => ({ message: "Download failed" }));
-                  toast({ title: "Download unavailable", description: err.message, variant: "destructive" });
-                  return;
-                }
-                const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = `${currentTrack.title}.mp3`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-              } catch {
-                toast({ title: "Download failed", variant: "destructive" });
-              }
+            title="Buy Song"
+            onClick={() => {
+              toast({ title: "Store coming soon", description: "The music store will be available shortly." });
             }}
-            data-testid="button-download-current"
+            data-testid="button-buy-current"
           >
-            <Download className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"

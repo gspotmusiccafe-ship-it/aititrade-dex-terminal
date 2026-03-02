@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -615,6 +615,36 @@ function ContentTab() {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/tracks/${track.id}/download`, { credentials: "include" });
+                    if (!res.ok) {
+                      const err = await res.json().catch(() => ({ message: "Download failed" }));
+                      toast({ title: "Download unavailable", description: err.message, variant: "destructive" });
+                      return;
+                    }
+                    const blob = await res.blob();
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `${track.title}.mp3`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    toast({ title: "Download started" });
+                  } catch {
+                    toast({ title: "Download failed", variant: "destructive" });
+                  }
+                }}
+                data-testid={`button-download-track-${track.id}`}
+              >
+                <Download className="h-4 w-4 mr-1" />
+                Download
+              </Button>
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setDeleteConfirm(track)}
@@ -758,6 +788,160 @@ function formatStreamCount(count: number) {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(2)}M`;
   if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
   return count.toLocaleString();
+}
+
+function DistributionTab() {
+  const { toast } = useToast();
+  const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+
+  const { data: requests, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/distribution-requests"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, status, adminNotes }: { id: string; status: string; adminNotes?: string }) => {
+      return apiRequest("PATCH", `/api/admin/distribution-requests/${id}`, { status, adminNotes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/distribution-requests"] });
+      setNotesDialogReq(null);
+      setAdminNotes("");
+      toast({ title: "Distribution request updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update request", variant: "destructive" });
+    },
+  });
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600">Pending</Badge>;
+      case "approved": return <Badge variant="secondary" className="bg-green-500/20 text-green-600">Approved</Badge>;
+      case "rejected": return <Badge variant="secondary" className="bg-red-500/20 text-red-600">Rejected</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+            <Skeleton className="h-12 w-12 rounded" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const pendingCount = requests?.filter(r => r.status === "pending").length || 0;
+
+  return (
+    <>
+      {pendingCount > 0 && (
+        <Card className="mb-4 border-yellow-500/30 bg-yellow-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Send className="h-5 w-5 text-yellow-500" />
+            <p className="font-medium text-yellow-600">{pendingCount} pending distribution request{pendingCount > 1 ? "s" : ""}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {requests?.map((req) => (
+          <div key={req.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`distribution-request-${req.id}`}>
+            <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Send className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Artist: {req.userId}</span>
+                {statusBadge(req.status)}
+              </div>
+              {req.trackId && <p className="text-sm text-muted-foreground">Track ID: {req.trackId}</p>}
+              {req.message && <p className="text-sm text-muted-foreground">{req.message}</p>}
+              {req.adminNotes && <p className="text-sm text-blue-400">Notes: {req.adminNotes}</p>}
+              <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {req.status === "pending" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setNotesDialogReq(req); setAdminNotes(""); }}
+                    data-testid={`button-notes-${req.id}`}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1" />
+                    Notes
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-green-600 text-white"
+                    onClick={() => updateMutation.mutate({ id: req.id, status: "approved" })}
+                    data-testid={`button-approve-distribution-${req.id}`}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => updateMutation.mutate({ id: req.id, status: "rejected" })}
+                    data-testid={`button-reject-distribution-${req.id}`}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Reject
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+        {(!requests || requests.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Send className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No distribution requests</p>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={!!notesDialogReq} onOpenChange={() => setNotesDialogReq(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Admin Notes</DialogTitle>
+            <DialogDescription>Add notes to this distribution request before approving or rejecting.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            placeholder="Notes for the artist..."
+            data-testid="input-admin-notes"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setNotesDialogReq(null)}>Cancel</Button>
+            <Button
+              className="bg-green-600 text-white"
+              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "approved", adminNotes })}
+            >
+              Approve with Notes
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "rejected", adminNotes })}
+            >
+              Reject with Notes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 function SpotifyLookupTab() {
@@ -1196,7 +1380,7 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard">
               <BarChart3 className="h-4 w-4 mr-2" />
               Dashboard
@@ -1212,6 +1396,10 @@ export default function AdminPage() {
             <TabsTrigger value="content" data-testid="tab-content">
               <Music className="h-4 w-4 mr-2" />
               Content
+            </TabsTrigger>
+            <TabsTrigger value="distribution" data-testid="tab-distribution">
+              <Send className="h-4 w-4 mr-2" />
+              Distribution
             </TabsTrigger>
             <TabsTrigger value="memberships" data-testid="tab-memberships">
               <Crown className="h-4 w-4 mr-2" />
@@ -1237,6 +1425,10 @@ export default function AdminPage() {
 
           <TabsContent value="content">
             <ContentTab />
+          </TabsContent>
+
+          <TabsContent value="distribution">
+            <DistributionTab />
           </TabsContent>
 
           <TabsContent value="memberships">

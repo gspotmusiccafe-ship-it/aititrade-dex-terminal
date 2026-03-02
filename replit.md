@@ -28,18 +28,24 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - View play counts and engagement
 
 ### Membership Tiers
-- **Free**: Stream all previously released music, create up to 10 playlists
-- **Silver ($1.99/mo)**: No downloads, 5 pre-release previews/month, unlimited released music
-- **Bronze ($3.99/mo)**: 10 MP3 downloads, 20 previews/month, unlimited released music
-- **Gold ($6.99/mo)**: Unlimited downloads, unlimited previews, lossless audio, unlimited released music
-- **Artist Pro ($19.99/mo)**: All Gold features + unlimited uploads, analytics, fan engagement tools
-- **Artist Onboarding**: Users must subscribe to Gold ($6.99) or Artist Pro ($19.99) before creating an artist profile. The Artist Portal shows a plan selection step before profile creation.
+- **Free**: Listen to released music, follow artists
+- **Silver ($1.99/mo)**: Released music, follow artists, create playlists
+- **Bronze ($3.99/mo)**: Released + pre-release music, playlists, videos
+- **Gold ($6.99/mo)**: Artist Pro — uploads, MP3/YouTube, marketing, promotions, distribution, analytics, lossless audio
+- **Artist Onboarding**: Users must subscribe to Gold ($6.99) before creating an artist profile.
+- **Buy Song**: Download button replaced with "Buy Song" button for users (store link coming soon). Admin retains download in Content tab for distribution uploads.
+
+### Distribution System
+- Artists can submit "Distribute My Music" requests from the Artist Portal's Distribution tab
+- Admin reviews distribution requests in the Admin Portal's Distribution tab (approve/reject with notes)
+- Database table: `distributionRequests` (artistId, userId, trackId, status, message, adminNotes)
 
 ### Admin Portal
 - **Dashboard**: Platform analytics (total users, artists, tracks, plays, revenue)
 - **User Management**: View, suspend/unsuspend, make admin, delete users
 - **Artist Management**: View all artists, approve/reject applications
-- **Content Moderation**: Remove tracks/videos that violate guidelines
+- **Content Moderation**: Remove tracks/videos + Download tracks for distribution
+- **Distribution**: Review and manage artist distribution requests
 - **Membership Management**: View all subscriptions
 
 ## Project Structure

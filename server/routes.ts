@@ -42,10 +42,9 @@ const upload = multer({
 
 const MEMBERSHIP_LIMITS: Record<string, { downloads: number; previews: number }> = {
   free: { downloads: 0, previews: 0 },
-  silver: { downloads: 0, previews: 5 },
-  bronze: { downloads: 10, previews: 20 },
+  silver: { downloads: 0, previews: 0 },
+  bronze: { downloads: 0, previews: -1 },
   gold: { downloads: -1, previews: -1 },
-  artist: { downloads: -1, previews: -1 },
 };
 
 export async function registerRoutes(
@@ -246,8 +245,8 @@ export async function registerRoutes(
 
       // Require Gold or Artist Pro membership
       const membership = await storage.getUserMembership(userId);
-      if (!membership || !membership.isActive || !["gold", "artist"].includes(membership.tier)) {
-        return res.status(403).json({ message: "Artist profile requires a Gold ($6.99/mo) or Artist Pro ($19.99/mo) subscription" });
+      if (!membership || !membership.isActive || membership.tier !== "gold") {
+        return res.status(403).json({ message: "Artist profile requires a Gold ($6.99/mo) subscription" });
       }
 
       const validated = insertArtistSchema.parse({ ...req.body, userId });
@@ -664,7 +663,7 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const { tier, paypalOrderId } = req.body;
       
-      if (!["silver", "bronze", "gold", "artist"].includes(tier)) {
+      if (!["silver", "bronze", "gold"].includes(tier)) {
         return res.status(400).json({ message: "Invalid tier" });
       }
 
@@ -762,21 +761,26 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Track not found" });
       }
 
-      const membership = await storage.getUserMembership(userId);
-      const tier = (membership?.isActive !== false ? membership?.tier : "free") || "free";
-      const limits = MEMBERSHIP_LIMITS[tier] || MEMBERSHIP_LIMITS.free;
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.isAdmin === true;
 
-      if (limits.downloads === 0) {
-        return res.status(403).json({ message: "Downloads require a Bronze membership or higher" });
-      }
+      if (!isAdmin) {
+        const membership = await storage.getUserMembership(userId);
+        const tier = (membership?.isActive !== false ? membership?.tier : "free") || "free";
+        const limits = MEMBERSHIP_LIMITS[tier] || MEMBERSHIP_LIMITS.free;
 
-      if (limits.downloads > 0) {
-        const used = membership?.downloadsUsed || 0;
-        if (used >= limits.downloads) {
-          return res.status(403).json({ message: `You've used all ${limits.downloads} downloads this month. Upgrade for more.` });
+        if (limits.downloads === 0) {
+          return res.status(403).json({ message: "Downloads require a Gold membership" });
         }
-        if (membership) {
-          await storage.updateMembership(membership.id, { downloadsUsed: used + 1 });
+
+        if (limits.downloads > 0) {
+          const used = membership?.downloadsUsed || 0;
+          if (used >= limits.downloads) {
+            return res.status(403).json({ message: `You've used all ${limits.downloads} downloads this month. Upgrade for more.` });
+          }
+          if (membership) {
+            await storage.updateMembership(membership.id, { downloadsUsed: used + 1 });
+          }
         }
       }
 
@@ -866,6 +870,41 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error deleting video:", error);
       res.status(500).json({ message: "Failed to delete video" });
+    }
+  });
+
+  // ============ Distribution Request Routes ============
+
+  app.post("/api/distribution-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "Artist profile required" });
+      }
+      const { trackId, message } = req.body;
+      const request = await storage.createDistributionRequest({
+        artistId: artist.id,
+        userId,
+        trackId: trackId || null,
+        message: message || null,
+        status: "pending",
+      });
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating distribution request:", error);
+      res.status(500).json({ message: "Failed to create distribution request" });
+    }
+  });
+
+  app.get("/api/distribution-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requests = await storage.getDistributionRequestsByUser(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching distribution requests:", error);
+      res.status(500).json({ message: "Failed to fetch distribution requests" });
     }
   });
 
@@ -1423,6 +1462,33 @@ export async function registerRoutes(
       // Silent fail for scheduler
     }
   }, 60000);
+
+  app.get("/api/admin/distribution-requests", isAdmin, async (req: any, res) => {
+    try {
+      const requests = await storage.getAllDistributionRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching distribution requests:", error);
+      res.status(500).json({ message: "Failed to fetch distribution requests" });
+    }
+  });
+
+  app.patch("/api/admin/distribution-requests/:id", isAdmin, async (req: any, res) => {
+    try {
+      const { status, adminNotes } = req.body;
+      if (!status || !["approved", "rejected", "pending"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be approved, rejected, or pending." });
+      }
+      const request = await storage.updateDistributionRequest(req.params.id, { status, adminNotes });
+      if (!request) {
+        return res.status(404).json({ message: "Distribution request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error updating distribution request:", error);
+      res.status(500).json({ message: "Failed to update distribution request" });
+    }
+  });
 
   app.get("/api/admin/spotify/search", isAdmin, async (req: any, res) => {
     try {

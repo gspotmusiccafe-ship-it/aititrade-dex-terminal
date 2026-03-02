@@ -145,6 +145,17 @@ export const jamSessionListeners = pgTable("jam_session_listeners", {
   leftAt: timestamp("left_at"),
 });
 
+export const distributionRequests = pgTable("distribution_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  trackId: varchar("track_id"),
+  status: varchar("status").default("pending"),
+  message: text("message"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const artistsRelations = relations(artists, ({ many }) => ({
   tracks: many(tracks),
@@ -188,6 +199,7 @@ export const insertFollowedArtistSchema = createInsertSchema(followedArtists).om
 export const insertJamSessionSchema = createInsertSchema(jamSessions).omit({ id: true, createdAt: true, lastTriggered: true });
 export const insertJamSessionEngagementSchema = createInsertSchema(jamSessionEngagement).omit({ id: true, createdAt: true });
 export const insertJamSessionListenerSchema = createInsertSchema(jamSessionListeners).omit({ id: true, joinedAt: true, leftAt: true });
+export const insertDistributionRequestSchema = createInsertSchema(distributionRequests).omit({ id: true, createdAt: true });
 
 // Types
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
@@ -211,6 +223,8 @@ export type InsertJamSessionEngagement = z.infer<typeof insertJamSessionEngageme
 export type JamSessionEngagement = typeof jamSessionEngagement.$inferSelect;
 export type InsertJamSessionListener = z.infer<typeof insertJamSessionListenerSchema>;
 export type JamSessionListener = typeof jamSessionListeners.$inferSelect;
+export type InsertDistributionRequest = z.infer<typeof insertDistributionRequestSchema>;
+export type DistributionRequest = typeof distributionRequests.$inferSelect;
 
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };

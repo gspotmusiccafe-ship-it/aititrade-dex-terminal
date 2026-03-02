@@ -1,4 +1,4 @@
-import { Play, Pause, Clock, Download, Star, Heart } from "lucide-react";
+import { Play, Pause, Clock, ShoppingCart, Star, Heart } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,32 +66,9 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
     likeMutation.mutate();
   };
 
-  const handleDownload = async (e: React.MouseEvent) => {
+  const handleBuySong = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!isAuthenticated) {
-      toast({ title: "Sign in required", description: "Log in to download tracks.", variant: "destructive" });
-      return;
-    }
-    try {
-      const res = await fetch(`/api/tracks/${track.id}/download`, { credentials: "include" });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Download failed" }));
-        toast({ title: "Download unavailable", description: err.message, variant: "destructive" });
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${track.title}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      toast({ title: "Download started", description: `${track.title} is downloading.` });
-    } catch {
-      toast({ title: "Download failed", description: "Please try again.", variant: "destructive" });
-    }
+    toast({ title: "Store coming soon", description: "The music store will be available shortly." });
   };
 
   return (
@@ -183,11 +160,11 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
         size="icon"
         variant="ghost"
         className="opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={handleDownload}
-        title="Download MP3"
-        data-testid={`button-download-track-${track.id}`}
+        onClick={handleBuySong}
+        title="Buy Song"
+        data-testid={`button-buy-track-${track.id}`}
       >
-        <Download className="h-4 w-4" />
+        <ShoppingCart className="h-4 w-4" />
       </Button>
     </div>
   );
