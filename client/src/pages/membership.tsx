@@ -67,7 +67,7 @@ const plans = [
     name: "Bronze",
     price: "$3.99",
     period: "/month",
-    description: "Full access including pre-releases and videos",
+    description: "Full access — AI pre-releases, playlists, and videos",
     features: [
       { text: "Listen to released music", included: true },
       { text: "Pre-release music access", included: true },
@@ -103,8 +103,8 @@ const plans = [
 const benefits = [
   {
     icon: Star,
-    title: "Early Access Previews",
-    description: "Bronze and Gold members get exclusive access to pre-release tracks",
+    title: "2 Weeks Before Major Platforms",
+    description: "Bronze and Gold members hear new AI music before Spotify, Amazon Music, Deezer, YouTube & Anghami",
   },
   {
     icon: Headphones,

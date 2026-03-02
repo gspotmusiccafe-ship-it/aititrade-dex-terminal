@@ -84,7 +84,7 @@ export default function HomePage() {
           <h1 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-greeting">
             {getGreeting()}{user?.firstName ? `, ${user.firstName}` : ""}
           </h1>
-          <p className="text-muted-foreground">Discover new music and exclusive early releases</p>
+          <p className="text-muted-foreground">Discover new AI music 2 weeks before Spotify, Amazon Music, Deezer, YouTube & Anghami</p>
         </div>
       </div>
 

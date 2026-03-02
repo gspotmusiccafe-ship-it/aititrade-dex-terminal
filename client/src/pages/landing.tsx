@@ -277,18 +277,18 @@ function HeroPlayer() {
 const features = [
   {
     icon: Clock,
-    title: "2 Weeks Early Access",
-    description: "Members get exclusive access to pre-release music 2 weeks before it hits other platforms",
+    title: "2 Weeks Before Everyone",
+    description: "Discover new AI music 2 weeks before it drops on Spotify, Amazon Music, Deezer, YouTube, and Anghami",
   },
   {
     icon: Headphones,
-    title: "High-Quality Streaming",
-    description: "Crystal clear audio with lossless quality streaming for the best listening experience",
+    title: "All-AI Music Catalog",
+    description: "A curated catalog of AI-generated music across every genre — discover the future of sound",
   },
   {
     icon: Users,
-    title: "Support Artists Directly",
-    description: "Artists earn more per stream while you enjoy exclusive content and early releases",
+    title: "Support AI Artists",
+    description: "AI artists earn more per stream while you enjoy exclusive content and early releases",
   },
 ];
 
@@ -385,19 +385,19 @@ export default function LandingPage() {
             <div className="space-y-8">
               <Badge variant="secondary" className="text-xs">
                 <Star className="h-3 w-3 mr-1 text-yellow-500" />
-                New: Early Access Memberships
+                The All-AI Music Platform
               </Badge>
               
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-                Get Music{" "}
-                <span className="text-primary">First</span>
+                Discover New{" "}
+                <span className="text-primary">AI Music</span>
                 <br />
-                Before Anyone Else
+                2 Weeks Early
               </h1>
               
               <p className="text-lg text-muted-foreground max-w-xl">
-                Stream exclusive pre-release music 2 weeks before it hits Spotify. 
-                Support your favorite artists directly while enjoying early access to their latest releases.
+                The world's first all-AI music platform. Hear new AI-generated tracks 2 weeks before they hit 
+                Spotify, Amazon Music, Deezer, YouTube, and Anghami. Support AI artists directly.
               </p>
 
               <div className="flex flex-wrap gap-4">
@@ -472,7 +472,7 @@ export default function LandingPage() {
               Simple, Transparent Pricing
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
-              Choose the plan that works for you. Upgrade anytime for early access.
+              Choose the plan that works for you. Upgrade anytime for early access to new AI music.
             </p>
           </div>
 
@@ -531,11 +531,11 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <Crown className="h-12 w-12 text-primary mx-auto mb-6" />
           <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            Are You an Artist?
+            Are You an AI Music Artist?
           </h2>
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Upload your music and videos, set pre-release dates, and let your fans hear your work 
-            2 weeks before anyone else. Build anticipation and reward your most dedicated listeners.
+            Upload your AI-generated music, set pre-release dates, and let fans hear it 
+            2 weeks before Spotify, Amazon Music, Deezer, YouTube, and Anghami. Build your audience first on AITIFY.
           </p>
           <Button size="lg" asChild>
             <a href="/api/login">

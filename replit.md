@@ -1,6 +1,6 @@
 # AITIFY MUSIC RADIO
 
-A Spotify-like music streaming platform with exclusive early access for premium members. Artists can upload their music and set pre-release dates, giving premium subscribers access to new releases 2 weeks before they go public.
+The world's first all-AI music streaming platform. AI artists upload their music and set pre-release dates, giving premium subscribers access to new AI-generated releases 2 weeks before they hit Spotify, Amazon Music, Deezer, YouTube, and Anghami.
 
 ## Overview
 
