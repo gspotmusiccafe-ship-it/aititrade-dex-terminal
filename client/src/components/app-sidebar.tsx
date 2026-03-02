@@ -176,11 +176,13 @@ export function AppSidebar() {
             </div>
             <Button
               variant="ghost"
-              size="icon"
+              size="sm"
               onClick={() => logout()}
+              className="flex-shrink-0 text-muted-foreground hover:text-destructive"
               data-testid="button-logout"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-4 w-4 mr-1" />
+              <span className="text-xs">Logout</span>
             </Button>
           </div>
         ) : (

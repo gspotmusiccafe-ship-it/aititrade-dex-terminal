@@ -1,7 +1,13 @@
-import { Play, Pause, Clock, ShoppingCart, Star, Heart } from "lucide-react";
+import { useState } from "react";
+import { Play, Pause, Clock, ShoppingCart, Star, Heart, ListPlus } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -27,11 +33,17 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const isCurrentTrack = currentTrack?.id === track.id;
+  const [playlistOpen, setPlaylistOpen] = useState(false);
 
   const { data: isLiked } = useQuery<{ liked: boolean }>({
     queryKey: ["/api/user/liked-tracks", track.id, "check"],
     queryFn: () => fetch(`/api/user/liked-tracks/${track.id}/check`, { credentials: "include" }).then(r => r.json()),
     enabled: isAuthenticated,
+  });
+
+  const { data: playlists } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/playlists"],
+    enabled: isAuthenticated && playlistOpen,
   });
 
   const likeMutation = useMutation({
@@ -45,6 +57,21 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks", track.id, "check"] });
+    },
+  });
+
+  const addToPlaylistMutation = useMutation({
+    mutationFn: async (playlistId: string) => {
+      await apiRequest("POST", `/api/playlists/${playlistId}/tracks`, { trackId: track.id });
+    },
+    onSuccess: (_data, playlistId) => {
+      const playlist = playlists?.find(p => p.id === playlistId);
+      toast({ title: "Added to playlist", description: `"${track.title}" added to ${playlist?.name || "playlist"}` });
+      queryClient.invalidateQueries({ queryKey: ["/api/playlists", playlistId, "tracks"] });
+      setPlaylistOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Already in playlist", description: "This track is already in the selected playlist.", variant: "destructive" });
     },
   });
 
@@ -155,6 +182,50 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
       >
         <Heart className={`h-4 w-4 ${isLiked?.liked ? "fill-primary" : ""}`} />
       </Button>
+
+      <Popover open={playlistOpen} onOpenChange={(open) => {
+        if (open && !isAuthenticated) {
+          toast({ title: "Sign in required", description: "Log in to add tracks to playlists.", variant: "destructive" });
+          return;
+        }
+        setPlaylistOpen(open);
+      }}>
+        <PopoverTrigger asChild>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+            title="Add to Playlist"
+            data-testid={`button-add-to-playlist-${track.id}`}
+          >
+            <ListPlus className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
+          <p className="text-sm font-medium px-2 py-1 mb-1">Add to Playlist</p>
+          {playlists && playlists.length > 0 ? (
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {playlists.map((pl) => (
+                <button
+                  key={pl.id}
+                  className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent flex items-center gap-2"
+                  onClick={() => addToPlaylistMutation.mutate(pl.id)}
+                  disabled={addToPlaylistMutation.isPending}
+                  data-testid={`button-playlist-option-${pl.id}`}
+                >
+                  <ListPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="truncate">{pl.name}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground px-2 py-2">
+              No playlists yet. Create one in your Library.
+            </p>
+          )}
+        </PopoverContent>
+      </Popover>
 
       <Button
         size="icon"

@@ -416,26 +416,38 @@ export default function RadioPage() {
               </div>
 
               <Button
+                onClick={() => {
+                  window.open("https://accounts.spotify.com/login", "_blank", "noopener,noreferrer");
+                }}
+                className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 text-white font-semibold text-base rounded-full mb-3 h-12"
+                data-testid="button-open-spotify-login"
+              >
+                <SiSpotify className="h-5 w-5 mr-2" />
+                Log in to Spotify
+              </Button>
+
+              <Button
                 onClick={handleRetryConnection}
                 disabled={retrying}
-                className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 text-white font-semibold py-6 text-base rounded-full"
+                variant="outline"
+                className="w-full border-[#1DB954]/30 text-[#1DB954] hover:bg-[#1DB954]/10 rounded-full h-11"
                 data-testid="button-connect-spotify"
               >
                 {retrying ? (
                   <>
                     <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    Connecting...
+                    Checking connection...
                   </>
                 ) : (
                   <>
-                    <SiSpotify className="h-5 w-5 mr-2" />
-                    Connect with Spotify
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Check Connection Status
                   </>
                 )}
               </Button>
 
               <p className="text-xs text-muted-foreground mt-4">
-                Requires a Spotify Premium account for playback features
+                Log in to Spotify first, then check connection status. Requires Spotify Premium for playback.
               </p>
             </CardContent>
           </Card>
