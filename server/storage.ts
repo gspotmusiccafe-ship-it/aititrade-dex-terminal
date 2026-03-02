@@ -11,6 +11,8 @@ import {
   recentlyPlayed,
   users,
   distributionRequests,
+  lyricsRequests,
+  masteringRequests,
   type Artist,
   type InsertArtist,
   type Album,
@@ -28,6 +30,10 @@ import {
   type User,
   type DistributionRequest,
   type InsertDistributionRequest,
+  type LyricsRequest,
+  type InsertLyricsRequest,
+  type MasteringRequest,
+  type InsertMasteringRequest,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
@@ -107,6 +113,16 @@ export interface IStorage {
   getAllDistributionRequests(): Promise<DistributionRequest[]>;
   getPendingDistributionRequests(): Promise<DistributionRequest[]>;
   updateDistributionRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<DistributionRequest | undefined>;
+  // Lyrics Requests
+  createLyricsRequest(request: InsertLyricsRequest): Promise<LyricsRequest>;
+  getLyricsRequestsByUser(userId: string): Promise<LyricsRequest[]>;
+  getAllLyricsRequests(): Promise<LyricsRequest[]>;
+  updateLyricsRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<LyricsRequest | undefined>;
+  // Mastering Requests
+  createMasteringRequest(request: InsertMasteringRequest): Promise<MasteringRequest>;
+  getMasteringRequestsByUser(userId: string): Promise<MasteringRequest[]>;
+  getAllMasteringRequests(): Promise<MasteringRequest[]>;
+  updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<MasteringRequest | undefined>;
   
   getAnalytics(): Promise<{
     totalUsers: number;
@@ -606,6 +622,42 @@ export class DatabaseStorage implements IStorage {
 
   async updateDistributionRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<DistributionRequest | undefined> {
     const [result] = await db.update(distributionRequests).set(data).where(eq(distributionRequests.id, id)).returning();
+    return result;
+  }
+
+  async createLyricsRequest(request: InsertLyricsRequest): Promise<LyricsRequest> {
+    const [result] = await db.insert(lyricsRequests).values(request).returning();
+    return result;
+  }
+
+  async getLyricsRequestsByUser(userId: string): Promise<LyricsRequest[]> {
+    return db.select().from(lyricsRequests).where(eq(lyricsRequests.userId, userId)).orderBy(desc(lyricsRequests.createdAt));
+  }
+
+  async getAllLyricsRequests(): Promise<LyricsRequest[]> {
+    return db.select().from(lyricsRequests).orderBy(desc(lyricsRequests.createdAt));
+  }
+
+  async updateLyricsRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<LyricsRequest | undefined> {
+    const [result] = await db.update(lyricsRequests).set(data).where(eq(lyricsRequests.id, id)).returning();
+    return result;
+  }
+
+  async createMasteringRequest(request: InsertMasteringRequest): Promise<MasteringRequest> {
+    const [result] = await db.insert(masteringRequests).values(request).returning();
+    return result;
+  }
+
+  async getMasteringRequestsByUser(userId: string): Promise<MasteringRequest[]> {
+    return db.select().from(masteringRequests).where(eq(masteringRequests.userId, userId)).orderBy(desc(masteringRequests.createdAt));
+  }
+
+  async getAllMasteringRequests(): Promise<MasteringRequest[]> {
+    return db.select().from(masteringRequests).orderBy(desc(masteringRequests.createdAt));
+  }
+
+  async updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<MasteringRequest | undefined> {
+    const [result] = await db.update(masteringRequests).set(data).where(eq(masteringRequests.id, id)).returning();
     return result;
   }
 }

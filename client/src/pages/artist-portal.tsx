@@ -26,6 +26,9 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  FileText,
+  Headphones,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1030,6 +1033,14 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               <BarChart3 className="h-4 w-4 mr-1" />
               Analytics
             </TabsTrigger>
+            <TabsTrigger value="lyrics">
+              <FileText className="h-4 w-4 mr-1" />
+              Lyrics
+            </TabsTrigger>
+            <TabsTrigger value="mastering">
+              <Headphones className="h-4 w-4 mr-1" />
+              Mastering
+            </TabsTrigger>
             <TabsTrigger value="distribution">
               <Send className="h-4 w-4 mr-1" />
               Distribution
@@ -1264,10 +1275,308 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
           )}
         </TabsContent>
 
+        <TabsContent value="lyrics">
+          <LyricsTab artistId={artist.id} />
+        </TabsContent>
+
+        <TabsContent value="mastering">
+          <MasteringTab artistId={artist.id} tracks={tracks || []} />
+        </TabsContent>
+
         <TabsContent value="distribution">
           <DistributionTab artistId={artist.id} tracks={tracks || []} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function LyricsTab({ artistId }: { artistId: string }) {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [title, setTitle] = useState("");
+  const [lyrics, setLyrics] = useState("");
+  const [genre, setGenre] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const { data: requests, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/lyrics-requests"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { title: string; lyrics: string; genre?: string; notes?: string }) => {
+      return apiRequest("POST", "/api/lyrics-requests", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lyrics-requests"] });
+      setShowDialog(false);
+      setTitle("");
+      setLyrics("");
+      setGenre("");
+      setNotes("");
+      toast({ title: "Lyrics submitted", description: "Your lyrics have been sent to admin for beat production, mastering, and distribution." });
+    },
+    onError: () => {
+      toast({ title: "Failed to submit lyrics", variant: "destructive" });
+    },
+  });
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case "in_production": return <Badge variant="secondary" className="bg-blue-500/20 text-blue-600"><Wand2 className="h-3 w-3 mr-1" />In Production</Badge>;
+      case "completed": return <Badge variant="secondary" className="bg-green-500/20 text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
+      case "rejected": return <Badge variant="secondary" className="bg-red-500/20 text-red-600"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Song Lyrics</h3>
+          <p className="text-sm text-muted-foreground">Submit your lyrics to admin for beat production, mastering, and distribution</p>
+        </div>
+        <Button onClick={() => setShowDialog(true)} className="bg-primary hover:bg-primary/90" data-testid="button-submit-lyrics">
+          <FileText className="h-4 w-4 mr-2" />
+          Submit Lyrics
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : requests && requests.length > 0 ? (
+        <div className="space-y-2">
+          {requests.map((req: any) => (
+            <Card key={req.id}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{req.title}</p>
+                  {req.genre && <p className="text-sm text-muted-foreground">Genre: {req.genre}</p>}
+                  {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
+                  {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
+                  <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
+                </div>
+                {statusBadge(req.status)}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <FileText className="h-12 w-12 mx-auto mb-3 text-primary/30" />
+            <p className="font-medium mb-1">No lyrics submissions yet</p>
+            <p className="text-sm text-muted-foreground">Submit your lyrics for beat production and distribution</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Submit Lyrics</DialogTitle>
+            <DialogDescription>Send your lyrics to the admin team for beat production, mastering, and distribution to streaming platforms.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Song Title *</Label>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter the song title"
+                className="mt-1.5"
+                data-testid="input-lyrics-title"
+              />
+            </div>
+            <div>
+              <Label>Genre</Label>
+              <Input
+                value={genre}
+                onChange={(e) => setGenre(e.target.value)}
+                placeholder="e.g. Hip-Hop, R&B, Pop, Electronic..."
+                className="mt-1.5"
+                data-testid="input-lyrics-genre"
+              />
+            </div>
+            <div>
+              <Label>Lyrics *</Label>
+              <Textarea
+                value={lyrics}
+                onChange={(e) => setLyrics(e.target.value)}
+                placeholder="Paste or type your song lyrics here..."
+                className="mt-1.5 min-h-[200px] font-mono text-sm"
+                data-testid="input-lyrics-content"
+              />
+            </div>
+            <div>
+              <Label>Notes for Producer (optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any instructions for the beat, tempo, mood, references..."
+                className="mt-1.5"
+                data-testid="input-lyrics-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => createMutation.mutate({ title, lyrics, genre: genre || undefined, notes: notes || undefined })}
+              disabled={createMutation.isPending || !title.trim() || !lyrics.trim()}
+              data-testid="button-confirm-submit-lyrics"
+            >
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Submit Lyrics
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] }) {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string>("");
+  const [notes, setNotes] = useState("");
+
+  const { data: requests, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/mastering-requests"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: { trackId: string; notes?: string }) => {
+      return apiRequest("POST", "/api/mastering-requests", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mastering-requests"] });
+      setShowDialog(false);
+      setSelectedTrackId("");
+      setNotes("");
+      toast({ title: "Mastering request submitted", description: "Your track has been sent to admin for mastering." });
+    },
+    onError: () => {
+      toast({ title: "Failed to submit request", variant: "destructive" });
+    },
+  });
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case "in_progress": return <Badge variant="secondary" className="bg-blue-500/20 text-blue-600"><Headphones className="h-3 w-3 mr-1" />In Progress</Badge>;
+      case "completed": return <Badge variant="secondary" className="bg-green-500/20 text-green-600"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
+      case "rejected": return <Badge variant="secondary" className="bg-red-500/20 text-red-600"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Audio Mastering</h3>
+          <p className="text-sm text-muted-foreground">Send your tracks to admin for professional mastering</p>
+        </div>
+        <Button onClick={() => setShowDialog(true)} className="bg-primary hover:bg-primary/90" disabled={tracks.length === 0} data-testid="button-request-mastering">
+          <Headphones className="h-4 w-4 mr-2" />
+          Request Mastering
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 w-full rounded-lg" />
+          ))}
+        </div>
+      ) : requests && requests.length > 0 ? (
+        <div className="space-y-2">
+          {requests.map((req: any) => {
+            const track = tracks.find(t => t.id === req.trackId);
+            return (
+              <Card key={req.id}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Headphones className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{track ? track.title : "Track"}</p>
+                    {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
+                    {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
+                    <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  {statusBadge(req.status)}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Headphones className="h-12 w-12 mx-auto mb-3 text-primary/30" />
+            <p className="font-medium mb-1">No mastering requests yet</p>
+            <p className="text-sm text-muted-foreground">{tracks.length === 0 ? "Upload a track first, then request mastering" : "Send your tracks for professional mastering"}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Request Mastering</DialogTitle>
+            <DialogDescription>Select a track to send to admin for professional audio mastering.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Track *</Label>
+              <select
+                className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md text-sm"
+                value={selectedTrackId}
+                onChange={(e) => setSelectedTrackId(e.target.value)}
+                data-testid="select-mastering-track"
+              >
+                <option value="">Select a track</option>
+                {tracks.map(t => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>Notes (optional)</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Any specific mastering instructions, reference tracks, loudness preferences..."
+                className="mt-1.5"
+                data-testid="input-mastering-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button
+              onClick={() => createMutation.mutate({ trackId: selectedTrackId, notes: notes || undefined })}
+              disabled={createMutation.isPending || !selectedTrackId}
+              data-testid="button-confirm-mastering"
+            >
+              {createMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Submit Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -47,6 +47,8 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **User Management**: View, suspend/unsuspend, make admin, delete users
 - **Artist Management**: View all artists, approve/reject applications, create artist profiles (bypass membership)
 - **Content Moderation**: Remove tracks/videos + Download tracks for distribution
+- **Lyrics**: Review artist lyrics submissions, set status (pending → in production → completed/rejected), view full lyrics, add admin notes
+- **Mastering**: Review artist mastering requests, set status (pending → in progress → completed/rejected), add admin notes
 - **Distribution**: Review and manage artist distribution requests
 - **Membership Management**: View all subscriptions
 
@@ -84,6 +86,9 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **jamSessions**: Scheduled Spotify playback sessions
 - **jamSessionEngagement**: Engagement tracking (play, save, share, like, skip actions per session)
 - **jamSessionListeners**: Tracks which accounts joined/left each jam session
+- **distributionRequests**: Artist distribution requests (artistId, userId, trackId, status, message, adminNotes)
+- **lyricsRequests**: Artist lyrics submissions for beat production (artistId, userId, title, lyrics, genre, notes, status, adminNotes)
+- **masteringRequests**: Artist mastering requests (artistId, userId, trackId, notes, status, adminNotes)
 
 ## API Endpoints
 

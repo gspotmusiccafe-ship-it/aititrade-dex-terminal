@@ -908,6 +908,88 @@ export async function registerRoutes(
     }
   });
 
+  // ============ Lyrics Requests ============
+
+  app.post("/api/lyrics-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "Artist profile required" });
+      }
+      const { title, lyrics, genre, notes } = req.body;
+      if (!title || !lyrics) {
+        return res.status(400).json({ message: "Title and lyrics are required" });
+      }
+      const request = await storage.createLyricsRequest({
+        artistId: artist.id,
+        userId,
+        title,
+        lyrics,
+        genre: genre || null,
+        notes: notes || null,
+        status: "pending",
+      });
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating lyrics request:", error);
+      res.status(500).json({ message: "Failed to create lyrics request" });
+    }
+  });
+
+  app.get("/api/lyrics-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requests = await storage.getLyricsRequestsByUser(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching lyrics requests:", error);
+      res.status(500).json({ message: "Failed to fetch lyrics requests" });
+    }
+  });
+
+  // ============ Mastering Requests ============
+
+  app.post("/api/mastering-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const artist = await storage.getArtistByUserId(userId);
+      if (!artist) {
+        return res.status(403).json({ message: "Artist profile required" });
+      }
+      const { trackId, notes } = req.body;
+      if (!trackId) {
+        return res.status(400).json({ message: "Track is required" });
+      }
+      const track = await storage.getTrack(trackId);
+      if (!track || track.artistId !== artist.id) {
+        return res.status(403).json({ message: "You can only submit mastering requests for your own tracks" });
+      }
+      const request = await storage.createMasteringRequest({
+        artistId: artist.id,
+        userId,
+        trackId,
+        notes: notes || null,
+        status: "pending",
+      });
+      res.json(request);
+    } catch (error) {
+      console.error("Error creating mastering request:", error);
+      res.status(500).json({ message: "Failed to create mastering request" });
+    }
+  });
+
+  app.get("/api/mastering-requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requests = await storage.getMasteringRequestsByUser(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching mastering requests:", error);
+      res.status(500).json({ message: "Failed to fetch mastering requests" });
+    }
+  });
+
   // ============ Admin Routes ============
 
   // Admin middleware
@@ -1507,6 +1589,62 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error updating distribution request:", error);
       res.status(500).json({ message: "Failed to update distribution request" });
+    }
+  });
+
+  // Admin Lyrics Requests
+  app.get("/api/admin/lyrics-requests", isAdmin, async (req: any, res) => {
+    try {
+      const requests = await storage.getAllLyricsRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching lyrics requests:", error);
+      res.status(500).json({ message: "Failed to fetch lyrics requests" });
+    }
+  });
+
+  app.patch("/api/admin/lyrics-requests/:id", isAdmin, async (req: any, res) => {
+    try {
+      const { status, adminNotes } = req.body;
+      if (!status || !["approved", "rejected", "pending", "in_production", "completed"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const request = await storage.updateLyricsRequest(req.params.id, { status, adminNotes });
+      if (!request) {
+        return res.status(404).json({ message: "Lyrics request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error updating lyrics request:", error);
+      res.status(500).json({ message: "Failed to update lyrics request" });
+    }
+  });
+
+  // Admin Mastering Requests
+  app.get("/api/admin/mastering-requests", isAdmin, async (req: any, res) => {
+    try {
+      const requests = await storage.getAllMasteringRequests();
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching mastering requests:", error);
+      res.status(500).json({ message: "Failed to fetch mastering requests" });
+    }
+  });
+
+  app.patch("/api/admin/mastering-requests/:id", isAdmin, async (req: any, res) => {
+    try {
+      const { status, adminNotes } = req.body;
+      if (!status || !["approved", "rejected", "pending", "in_progress", "completed"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      const request = await storage.updateMasteringRequest(req.params.id, { status, adminNotes });
+      if (!request) {
+        return res.status(404).json({ message: "Mastering request not found" });
+      }
+      res.json(request);
+    } catch (error) {
+      console.error("Error updating mastering request:", error);
+      res.status(500).json({ message: "Failed to update mastering request" });
     }
   });
 

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -890,6 +890,375 @@ function formatStreamCount(count: number) {
   return count.toLocaleString();
 }
 
+function AdminLyricsTab() {
+  const { toast } = useToast();
+  const [viewReq, setViewReq] = useState<any>(null);
+  const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+
+  const { data: requests, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/lyrics-requests"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, status, adminNotes }: { id: string; status: string; adminNotes?: string }) => {
+      return apiRequest("PATCH", `/api/admin/lyrics-requests/${id}`, { status, adminNotes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/lyrics-requests"] });
+      setNotesDialogReq(null);
+      setAdminNotes("");
+      toast({ title: "Lyrics request updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update request", variant: "destructive" });
+    },
+  });
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600">Pending</Badge>;
+      case "in_production": return <Badge variant="secondary" className="bg-blue-500/20 text-blue-600">In Production</Badge>;
+      case "completed": return <Badge variant="secondary" className="bg-green-500/20 text-green-600">Completed</Badge>;
+      case "rejected": return <Badge variant="secondary" className="bg-red-500/20 text-red-600">Rejected</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+            <Skeleton className="h-12 w-12 rounded" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const pendingCount = requests?.filter(r => r.status === "pending").length || 0;
+
+  return (
+    <>
+      {pendingCount > 0 && (
+        <Card className="mb-4 border-yellow-500/30 bg-yellow-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <FileText className="h-5 w-5 text-yellow-500" />
+            <p className="font-medium text-yellow-600">{pendingCount} pending lyrics submission{pendingCount > 1 ? "s" : ""}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {requests?.map((req) => (
+          <div key={req.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`lyrics-request-${req.id}`}>
+            <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">{req.title}</span>
+                {statusBadge(req.status)}
+              </div>
+              {req.genre && <p className="text-sm text-muted-foreground">Genre: {req.genre}</p>}
+              <p className="text-sm text-muted-foreground">Artist: {req.artistId}</p>
+              {req.notes && <p className="text-sm text-muted-foreground truncate">Notes: {req.notes}</p>}
+              {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
+              <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setViewReq(req)}
+                data-testid={`button-view-lyrics-${req.id}`}
+              >
+                <Eye className="h-4 w-4 mr-1" />
+                View
+              </Button>
+              {req.status === "pending" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setNotesDialogReq(req); setAdminNotes(""); }}
+                    data-testid={`button-notes-lyrics-${req.id}`}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1" />
+                    Notes
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 text-white"
+                    onClick={() => updateMutation.mutate({ id: req.id, status: "in_production" })}
+                    data-testid={`button-produce-lyrics-${req.id}`}
+                  >
+                    <Wand2 className="h-4 w-4 mr-1" />
+                    Start Production
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => updateMutation.mutate({ id: req.id, status: "rejected" })}
+                    data-testid={`button-reject-lyrics-${req.id}`}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Reject
+                  </Button>
+                </>
+              )}
+              {req.status === "in_production" && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 text-white"
+                  onClick={() => updateMutation.mutate({ id: req.id, status: "completed" })}
+                  data-testid={`button-complete-lyrics-${req.id}`}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Mark Complete
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+        {(!requests || requests.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No lyrics submissions</p>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={!!viewReq} onOpenChange={() => setViewReq(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewReq?.title}</DialogTitle>
+            <DialogDescription>
+              {viewReq?.genre && `Genre: ${viewReq.genre} • `}
+              Submitted {viewReq?.createdAt && new Date(viewReq.createdAt).toLocaleDateString()}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <h4 className="text-sm font-medium mb-2">Lyrics</h4>
+              <div className="bg-muted/50 rounded-lg p-4 whitespace-pre-wrap font-mono text-sm max-h-[400px] overflow-y-auto">
+                {viewReq?.lyrics}
+              </div>
+            </div>
+            {viewReq?.notes && (
+              <div>
+                <h4 className="text-sm font-medium mb-1">Artist Notes</h4>
+                <p className="text-sm text-muted-foreground">{viewReq.notes}</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!notesDialogReq} onOpenChange={() => setNotesDialogReq(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Admin Notes</DialogTitle>
+            <DialogDescription>Add notes for &quot;{notesDialogReq?.title}&quot; before updating status.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            placeholder="Notes for the artist..."
+            data-testid="input-admin-lyrics-notes"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setNotesDialogReq(null)}>Cancel</Button>
+            <Button
+              className="bg-blue-600 text-white"
+              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "in_production", adminNotes })}
+            >
+              Start Production
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "rejected", adminNotes })}
+            >
+              Reject
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function AdminMasteringTab() {
+  const { toast } = useToast();
+  const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
+  const [adminNotes, setAdminNotes] = useState("");
+
+  const { data: requests, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/mastering-requests"],
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, status, adminNotes }: { id: string; status: string; adminNotes?: string }) => {
+      return apiRequest("PATCH", `/api/admin/mastering-requests/${id}`, { status, adminNotes });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mastering-requests"] });
+      setNotesDialogReq(null);
+      setAdminNotes("");
+      toast({ title: "Mastering request updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update request", variant: "destructive" });
+    },
+  });
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case "pending": return <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600">Pending</Badge>;
+      case "in_progress": return <Badge variant="secondary" className="bg-blue-500/20 text-blue-600">In Progress</Badge>;
+      case "completed": return <Badge variant="secondary" className="bg-green-500/20 text-green-600">Completed</Badge>;
+      case "rejected": return <Badge variant="secondary" className="bg-red-500/20 text-red-600">Rejected</Badge>;
+      default: return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+            <Skeleton className="h-12 w-12 rounded" />
+            <div className="flex-1">
+              <Skeleton className="h-4 w-32 mb-2" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const pendingCount = requests?.filter(r => r.status === "pending").length || 0;
+
+  return (
+    <>
+      {pendingCount > 0 && (
+        <Card className="mb-4 border-yellow-500/30 bg-yellow-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Headphones className="h-5 w-5 text-yellow-500" />
+            <p className="font-medium text-yellow-600">{pendingCount} pending mastering request{pendingCount > 1 ? "s" : ""}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="space-y-2">
+        {requests?.map((req) => (
+          <div key={req.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`mastering-request-${req.id}`}>
+            <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Headphones className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">Track: {req.trackId}</span>
+                {statusBadge(req.status)}
+              </div>
+              <p className="text-sm text-muted-foreground">Artist: {req.artistId}</p>
+              {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
+              {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
+              <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleString()}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {req.status === "pending" && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setNotesDialogReq(req); setAdminNotes(""); }}
+                    data-testid={`button-notes-mastering-${req.id}`}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-1" />
+                    Notes
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 text-white"
+                    onClick={() => updateMutation.mutate({ id: req.id, status: "in_progress" })}
+                    data-testid={`button-start-mastering-${req.id}`}
+                  >
+                    <Headphones className="h-4 w-4 mr-1" />
+                    Start Mastering
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => updateMutation.mutate({ id: req.id, status: "rejected" })}
+                    data-testid={`button-reject-mastering-${req.id}`}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Reject
+                  </Button>
+                </>
+              )}
+              {req.status === "in_progress" && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 text-white"
+                  onClick={() => updateMutation.mutate({ id: req.id, status: "completed" })}
+                  data-testid={`button-complete-mastering-${req.id}`}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" />
+                  Mark Complete
+                </Button>
+              )}
+            </div>
+          </div>
+        ))}
+        {(!requests || requests.length === 0) && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Headphones className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No mastering requests</p>
+          </div>
+        )}
+      </div>
+
+      <Dialog open={!!notesDialogReq} onOpenChange={() => setNotesDialogReq(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Admin Notes</DialogTitle>
+            <DialogDescription>Add notes for this mastering request before updating status.</DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            placeholder="Notes for the artist..."
+            data-testid="input-admin-mastering-notes"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setNotesDialogReq(null)}>Cancel</Button>
+            <Button
+              className="bg-blue-600 text-white"
+              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "in_progress", adminNotes })}
+            >
+              Start Mastering
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "rejected", adminNotes })}
+            >
+              Reject
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 function DistributionTab() {
   const { toast } = useToast();
   const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
@@ -1555,6 +1924,14 @@ export default function AdminPage() {
               <Music className="h-4 w-4 mr-2" />
               Content
             </TabsTrigger>
+            <TabsTrigger value="lyrics" data-testid="tab-lyrics">
+              <FileText className="h-4 w-4 mr-2" />
+              Lyrics
+            </TabsTrigger>
+            <TabsTrigger value="mastering" data-testid="tab-mastering">
+              <Headphones className="h-4 w-4 mr-2" />
+              Mastering
+            </TabsTrigger>
             <TabsTrigger value="distribution" data-testid="tab-distribution">
               <Send className="h-4 w-4 mr-2" />
               Distribution
@@ -1583,6 +1960,14 @@ export default function AdminPage() {
 
           <TabsContent value="content">
             <ContentTab />
+          </TabsContent>
+
+          <TabsContent value="lyrics">
+            <AdminLyricsTab />
+          </TabsContent>
+
+          <TabsContent value="mastering">
+            <AdminMasteringTab />
           </TabsContent>
 
           <TabsContent value="distribution">
