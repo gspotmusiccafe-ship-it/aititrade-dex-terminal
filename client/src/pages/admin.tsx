@@ -1055,15 +1055,32 @@ function SpotifyLookupTab() {
   const [trackStreamCounts, setTrackStreamCounts] = useState<Record<string, number | null>>({});
   const [loadingStreamCounts, setLoadingStreamCounts] = useState(false);
 
-  const fetchStreamCountForTrack = async (trackId: string): Promise<{ id: string; count: number | null }> => {
-    try {
-      const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
-      if (!res.ok) return { id: trackId, count: null };
-      const data = await res.json();
-      return { id: trackId, count: data.streamCount ?? null };
-    } catch {
-      return { id: trackId, count: null };
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const fetchStreamCountForTrack = async (trackId: string, retries = 2): Promise<{ id: string; count: number | null }> => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
+        if (res.status === 429) {
+          if (attempt < retries) {
+            await delay(2000 * (attempt + 1));
+            continue;
+          }
+          return { id: trackId, count: null };
+        }
+        if (!res.ok) return { id: trackId, count: null };
+        const data = await res.json();
+        const count = data.streamCount ?? data.playCount ?? data.playcount ?? null;
+        return { id: trackId, count };
+      } catch {
+        if (attempt < retries) {
+          await delay(1000);
+          continue;
+        }
+        return { id: trackId, count: null };
+      }
     }
+    return { id: trackId, count: null };
   };
 
   const handleSearch = async () => {
@@ -1074,41 +1091,82 @@ function SpotifyLookupTab() {
     setTrackStreamCounts({});
     try {
       const res = await fetch(`/api/admin/spotify/search?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Search failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || "Search failed");
+      }
       const data = await res.json();
       setSearchResults(data);
 
       if (data.tracks && data.tracks.length > 0) {
-        setLoadingStreamCounts(true);
-        const trackIds = data.tracks.map((t: any) => t.id);
-        const results = await Promise.all(trackIds.map(fetchStreamCountForTrack));
         const counts: Record<string, number | null> = {};
-        results.forEach((r) => { counts[r.id] = r.count; });
+        data.tracks.forEach((t: any) => {
+          if (t.streamCount != null && t.streamCount > 0) {
+            counts[t.id] = t.streamCount;
+          } else if (t.playCount != null && t.playCount > 0) {
+            counts[t.id] = t.playCount;
+          } else if (t.playcount != null && t.playcount > 0) {
+            counts[t.id] = t.playcount;
+          }
+        });
         setTrackStreamCounts(counts);
-        setLoadingStreamCounts(false);
+
+        const missingIds = data.tracks
+          .filter((t: any) => counts[t.id] == null)
+          .map((t: any) => t.id);
+
+        if (missingIds.length > 0) {
+          setLoadingStreamCounts(true);
+          for (const trackId of missingIds) {
+            const result = await fetchStreamCountForTrack(trackId);
+            if (result.count != null) {
+              setTrackStreamCounts((prev) => ({ ...prev, [result.id]: result.count }));
+            }
+            await delay(500);
+          }
+          setLoadingStreamCounts(false);
+        }
       }
-    } catch {
-      toast({ title: "Search failed", description: "Could not reach Spotify API", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Search failed", description: err?.message || "Could not reach Spotify API", variant: "destructive" });
     } finally {
       setSearching(false);
     }
   };
 
-  const loadTrackDetails = async (trackId: string) => {
+  const loadTrackDetails = async (trackId: string, retries = 2) => {
     setLoadingTrack(trackId);
-    try {
-      const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to load track");
-      const data = await res.json();
-      setSelectedTrack(data);
-      if (data.streamCount != null) {
-        setTrackStreamCounts((prev) => ({ ...prev, [trackId]: data.streamCount }));
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
+        if (res.status === 429) {
+          if (attempt < retries) {
+            toast({ title: "Rate limited, retrying...", description: `Waiting ${2 * (attempt + 1)} seconds` });
+            await delay(2000 * (attempt + 1));
+            continue;
+          }
+          toast({ title: "Rate limited by Spotify API", description: "Please wait a moment and try again.", variant: "destructive" });
+          setLoadingTrack(null);
+          return;
+        }
+        if (!res.ok) throw new Error("Failed to load track");
+        const data = await res.json();
+        const streamCount = data.streamCount ?? data.playCount ?? data.playcount ?? null;
+        setSelectedTrack({ ...data, streamCount });
+        if (streamCount != null) {
+          setTrackStreamCounts((prev) => ({ ...prev, [trackId]: streamCount }));
+        }
+        setLoadingTrack(null);
+        return;
+      } catch {
+        if (attempt < retries) {
+          await delay(1000);
+          continue;
+        }
+        toast({ title: "Failed to load track details", description: "The Spotify API may be temporarily unavailable. Try again in a moment.", variant: "destructive" });
       }
-    } catch {
-      toast({ title: "Failed to load track details", variant: "destructive" });
-    } finally {
-      setLoadingTrack(null);
     }
+    setLoadingTrack(null);
   };
 
   const handleTrackIdLookup = async () => {

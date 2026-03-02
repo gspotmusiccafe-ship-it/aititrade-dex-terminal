@@ -1537,9 +1537,16 @@ export async function registerRoutes(
       }
       const data = await response.json();
       const isLatin = (text: string) => /^[\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\u2000-\u206F\u2190-\u21FF\u2200-\u22FF\u0300-\u036F\u0080-\u00FF]+$/.test(text);
-      if (data.tracks) data.tracks = data.tracks.filter((t: any) => isLatin(t.name));
+      if (data.tracks) {
+        data.tracks = data.tracks.filter((t: any) => isLatin(t.name));
+        data.tracks.forEach((t: any) => {
+          if (t.playCount !== undefined && t.streamCount === undefined) t.streamCount = t.playCount;
+          if (t.playcount !== undefined && t.streamCount === undefined) t.streamCount = t.playcount;
+        });
+      }
       if (data.artists) data.artists = data.artists.filter((a: any) => isLatin(a.name));
       if (data.albums) data.albums = data.albums.filter((a: any) => isLatin(a.name));
+      console.log(`Spotify search results: ${data.tracks?.length || 0} tracks, sample keys:`, data.tracks?.[0] ? Object.keys(data.tracks[0]) : "none");
       res.json(data);
     } catch (error) {
       console.error("Error searching Spotify:", error);
@@ -1567,12 +1574,21 @@ export async function registerRoutes(
         }
       );
       if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        console.error(`Spotify track API error (${response.status}):`, errorBody);
         const statusMsg = response.status === 429
           ? "Rate limit exceeded. Please wait a moment and try again."
-          : "Spotify API request failed";
+          : `Spotify API request failed (${response.status})`;
         return res.status(response.status).json({ message: statusMsg });
       }
       const data = await response.json();
+      console.log(`Spotify track ${trackId} response keys:`, Object.keys(data));
+      if (data.playCount !== undefined && data.streamCount === undefined) {
+        data.streamCount = data.playCount;
+      }
+      if (data.playcount !== undefined && data.streamCount === undefined) {
+        data.streamCount = data.playcount;
+      }
       res.json(data);
     } catch (error) {
       console.error("Error fetching Spotify track:", error);
