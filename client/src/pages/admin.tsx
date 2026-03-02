@@ -850,14 +850,6 @@ function MembershipsTab() {
   );
 }
 
-interface SpotifySearchResult {
-  query: string;
-  tracks: { id: string; name: string; streamCount: number; duration: number; contentRating: string }[];
-  artists: { id: string; name: string }[];
-  albums: { id: string; name: string; type: string; releaseDate: string }[];
-  topResults: { type: string; id: string; name: string }[];
-}
-
 interface SpotifyTrackDetail {
   id: string;
   name: string;
@@ -865,13 +857,15 @@ interface SpotifyTrackDetail {
   duration: number;
   contentRating: string;
   trackNumber: number;
+  releaseDate: string | null;
+  coverArt: string | null;
   album: {
     id: string;
     name: string;
     type: string;
     releaseDate: string;
-    tracks: { id: string; trackNumber: number }[];
-  };
+    cover?: { url: string }[];
+  } | null;
   artists: { id: string; name: string }[];
 }
 
@@ -1413,133 +1407,39 @@ function DistributionTab() {
 
 function SpotifyLookupTab() {
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SpotifySearchResult | null>(null);
-  const [searching, setSearching] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrackDetail | null>(null);
-  const [loadingTrack, setLoadingTrack] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [trackIdInput, setTrackIdInput] = useState("");
-  const [trackStreamCounts, setTrackStreamCounts] = useState<Record<string, number | null>>({});
-  const [loadingStreamCounts, setLoadingStreamCounts] = useState(false);
+  const [urlInput, setUrlInput] = useState("");
 
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const fetchStreamCountForTrack = async (trackId: string, retries = 2): Promise<{ id: string; count: number | null }> => {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
-        if (res.status === 429) {
-          if (attempt < retries) {
-            await delay(2000 * (attempt + 1));
-            continue;
-          }
-          return { id: trackId, count: null };
-        }
-        if (!res.ok) return { id: trackId, count: null };
-        const data = await res.json();
-        const count = data.streamCount ?? data.playCount ?? data.playcount ?? null;
-        return { id: trackId, count };
-      } catch {
-        if (attempt < retries) {
-          await delay(1000);
-          continue;
-        }
-        return { id: trackId, count: null };
-      }
-    }
-    return { id: trackId, count: null };
+  const extractTrackId = (input: string): string => {
+    const trimmed = input.trim();
+    const urlMatch = trimmed.match(/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/);
+    if (urlMatch) return urlMatch[1];
+    const uriMatch = trimmed.match(/spotify:track:([a-zA-Z0-9]+)/);
+    if (uriMatch) return uriMatch[1];
+    if (/^[a-zA-Z0-9]{22}$/.test(trimmed)) return trimmed;
+    return trimmed;
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    setSearching(true);
-    setSearchResults(null);
+  const lookupTrack = async (rawInput: string) => {
+    const trackId = extractTrackId(rawInput);
+    if (!trackId) return;
+    setLoading(true);
     setSelectedTrack(null);
-    setTrackStreamCounts({});
     try {
-      const res = await fetch(`/api/admin/spotify/search?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: "include" });
+      const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message || "Search failed");
+        throw new Error(errData?.message || `Lookup failed (${res.status})`);
       }
       const data = await res.json();
-      setSearchResults(data);
-
-      if (data.tracks && data.tracks.length > 0) {
-        const counts: Record<string, number | null> = {};
-        data.tracks.forEach((t: any) => {
-          if (t.streamCount != null && t.streamCount > 0) {
-            counts[t.id] = t.streamCount;
-          } else if (t.playCount != null && t.playCount > 0) {
-            counts[t.id] = t.playCount;
-          } else if (t.playcount != null && t.playcount > 0) {
-            counts[t.id] = t.playcount;
-          }
-        });
-        setTrackStreamCounts(counts);
-
-        const missingIds = data.tracks
-          .filter((t: any) => counts[t.id] == null)
-          .map((t: any) => t.id);
-
-        if (missingIds.length > 0) {
-          setLoadingStreamCounts(true);
-          for (const trackId of missingIds) {
-            const result = await fetchStreamCountForTrack(trackId);
-            if (result.count != null) {
-              setTrackStreamCounts((prev) => ({ ...prev, [result.id]: result.count }));
-            }
-            await delay(500);
-          }
-          setLoadingStreamCounts(false);
-        }
-      }
+      setSelectedTrack(data);
     } catch (err: any) {
-      toast({ title: "Search failed", description: err?.message || "Could not reach Spotify API", variant: "destructive" });
+      toast({ title: "Lookup failed", description: err?.message || "Could not reach Spotify API", variant: "destructive" });
     } finally {
-      setSearching(false);
+      setLoading(false);
     }
-  };
-
-  const loadTrackDetails = async (trackId: string, retries = 2) => {
-    setLoadingTrack(trackId);
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const res = await fetch(`/api/admin/spotify/track/${encodeURIComponent(trackId)}`, { credentials: "include" });
-        if (res.status === 429) {
-          if (attempt < retries) {
-            toast({ title: "Rate limited, retrying...", description: `Waiting ${2 * (attempt + 1)} seconds` });
-            await delay(2000 * (attempt + 1));
-            continue;
-          }
-          toast({ title: "Rate limited by Spotify API", description: "Please wait a moment and try again.", variant: "destructive" });
-          setLoadingTrack(null);
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to load track");
-        const data = await res.json();
-        const streamCount = data.streamCount ?? data.playCount ?? data.playcount ?? null;
-        setSelectedTrack({ ...data, streamCount });
-        if (streamCount != null) {
-          setTrackStreamCounts((prev) => ({ ...prev, [trackId]: streamCount }));
-        }
-        setLoadingTrack(null);
-        return;
-      } catch {
-        if (attempt < retries) {
-          await delay(1000);
-          continue;
-        }
-        toast({ title: "Failed to load track details", description: "The Spotify API may be temporarily unavailable. Try again in a moment.", variant: "destructive" });
-      }
-    }
-    setLoadingTrack(null);
-  };
-
-  const handleTrackIdLookup = async () => {
-    const id = trackIdInput.trim();
-    if (!id) return;
-    await loadTrackDetails(id);
   };
 
   return (
@@ -1548,56 +1448,45 @@ function SpotifyLookupTab() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <SiSpotify className="h-5 w-5 text-[#1DB954]" />
-            Spotify Track Lookup
+            Spotify Stream Counter
           </CardTitle>
           <CardDescription>
-            Search Spotify or enter a Track ID to pull in track data, stream counts, and metadata
+            Enter a Spotify Track ID or URL to get stream counts, metadata, and track details
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by artist, track name, or album..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                className="pl-10"
-                data-testid="input-spotify-search"
-              />
+          <div>
+            <Label className="text-sm font-medium">Spotify Track ID or URL</Label>
+            <div className="flex gap-2 mt-1.5">
+              <div className="relative flex-1">
+                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Track ID, URL, or URI (e.g., 2x8evxqUlF0eRabbW2JBJd)"
+                  value={trackIdInput}
+                  onChange={(e) => setTrackIdInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && lookupTrack(trackIdInput)}
+                  className="pl-10"
+                  data-testid="input-spotify-track-id"
+                />
+              </div>
+              <Button onClick={() => lookupTrack(trackIdInput)} disabled={loading || !trackIdInput.trim()} data-testid="button-spotify-track-lookup">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                <span className="ml-2">Lookup</span>
+              </Button>
             </div>
-            <Button onClick={handleSearch} disabled={searching || !searchQuery.trim()} data-testid="button-spotify-search">
-              {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              <span className="ml-2">Search</span>
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">OR</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Enter Spotify Track ID (e.g., 6LxSe8YmdPxy095Ux6znaQ)"
-                value={trackIdInput}
-                onChange={(e) => setTrackIdInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleTrackIdLookup()}
-                className="pl-10"
-                data-testid="input-spotify-track-id"
-              />
-            </div>
-            <Button onClick={handleTrackIdLookup} disabled={!!loadingTrack || !trackIdInput.trim()} variant="secondary" data-testid="button-spotify-track-lookup">
-              {loadingTrack ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
-              <span className="ml-2">Lookup</span>
-            </Button>
+            <p className="text-xs text-muted-foreground mt-1">
+              Accepts: Track ID (2x8evxqUlF0eRabbW2JBJd), URL (https://open.spotify.com/track/...), or URI (spotify:track:...)
+            </p>
           </div>
         </CardContent>
       </Card>
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-[#1DB954]" />
+          <span className="ml-3 text-muted-foreground">Fetching track data...</span>
+        </div>
+      )}
 
       {selectedTrack && (
         <Card className="border-[#1DB954]/30 bg-[#1DB954]/5">
@@ -1608,15 +1497,18 @@ function SpotifyLookupTab() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-3">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                {selectedTrack.coverArt && (
+                  <img src={selectedTrack.coverArt} alt={selectedTrack.name} className="w-32 h-32 rounded-lg object-cover" />
+                )}
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Track Name</p>
-                  <p className="text-lg font-bold" data-testid="text-spotify-track-name">{selectedTrack.name}</p>
+                  <p className="text-xl font-bold" data-testid="text-spotify-track-name">{selectedTrack.name}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Artist(s)</p>
-                  <p className="font-medium" data-testid="text-spotify-track-artists">
+                  <p className="font-medium text-lg" data-testid="text-spotify-track-artists">
                     {selectedTrack.artists?.map((a) => a.name).join(", ") || "Unknown"}
                   </p>
                 </div>
@@ -1624,42 +1516,31 @@ function SpotifyLookupTab() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Spotify Track ID</p>
                   <div className="flex items-center gap-2">
                     <code className="text-sm bg-muted px-2 py-1 rounded font-mono" data-testid="text-spotify-track-id">{selectedTrack.id}</code>
-                    <a
-                      href={`https://open.spotify.com/track/${selectedTrack.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[#1DB954] hover:underline text-sm flex items-center gap-1"
-                    >
-                      Open on Spotify <ExternalLink className="h-3 w-3" />
-                    </a>
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Track URL</p>
                   <a
                     href={`https://open.spotify.com/track/${selectedTrack.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline break-all"
+                    className="inline-flex items-center gap-2 text-[#1DB954] hover:underline font-medium"
                     data-testid="link-spotify-track-url"
                   >
-                    https://open.spotify.com/track/{selectedTrack.id}
+                    <ExternalLink className="h-4 w-4" />
+                    Open on Spotify
                   </a>
                 </div>
               </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Stream Count</p>
-                  <p className="text-2xl font-bold text-[#1DB954]" data-testid="text-spotify-stream-count">
+              <div className="space-y-4">
+                <div className="rounded-lg bg-background/50 p-4 border">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Streams</p>
+                  <p className="text-3xl font-bold text-[#1DB954]" data-testid="text-spotify-stream-count">
                     {selectedTrack.streamCount != null && selectedTrack.streamCount >= 0
                       ? selectedTrack.streamCount.toLocaleString()
                       : "Not Available"}
                   </p>
                   {selectedTrack.streamCount != null && selectedTrack.streamCount > 0 && (
-                    <p className="text-sm text-muted-foreground">{formatStreamCount(selectedTrack.streamCount)} streams</p>
-                  )}
-                  {selectedTrack.streamCount === 0 && (
-                    <p className="text-sm text-muted-foreground">No streams recorded yet</p>
+                    <p className="text-sm text-muted-foreground mt-1">{formatStreamCount(selectedTrack.streamCount)} streams</p>
                   )}
                 </div>
                 <div>
@@ -1679,9 +1560,9 @@ function SpotifyLookupTab() {
                   <div>
                     <p className="text-xs text-muted-foreground uppercase tracking-wider">Album</p>
                     <p className="font-medium" data-testid="text-spotify-album">{selectedTrack.album.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Released: {selectedTrack.album.releaseDate} • Track #{selectedTrack.trackNumber} of {selectedTrack.album.tracks?.length || "?"}
-                    </p>
+                    {selectedTrack.album.releaseDate && (
+                      <p className="text-xs text-muted-foreground">Released: {selectedTrack.album.releaseDate}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1690,160 +1571,11 @@ function SpotifyLookupTab() {
         </Card>
       )}
 
-      {searching && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-[#1DB954]" />
-          <span className="ml-3 text-muted-foreground">Searching Spotify...</span>
-        </div>
-      )}
-
-      {searchResults && (
-        <div className="space-y-4">
-          {searchResults.tracks && searchResults.tracks.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Music className="h-5 w-5 text-primary" />
-                  Tracks ({searchResults.tracks.length})
-                  {loadingStreamCounts && (
-                    <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground ml-2">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Loading stream counts...
-                    </span>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  {searchResults.tracks.map((track) => (
-                    <div
-                      key={track.id}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
-                      onClick={() => loadTrackDetails(track.id)}
-                      data-testid={`spotify-track-result-${track.id}`}
-                    >
-                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                        {loadingTrack === track.id ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-[#1DB954]" />
-                        ) : (
-                          <Music className="h-5 w-5 text-muted-foreground group-hover:text-[#1DB954] transition-colors" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{track.name}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>{formatDuration(track.duration)}</span>
-                          {track.contentRating === "explicit" && (
-                            <Badge variant="outline" className="text-xs py-0 h-4">E</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right min-w-[100px]">
-                        {trackStreamCounts[track.id] != null && trackStreamCounts[track.id]! > 0 ? (
-                          <p className="text-sm font-semibold text-[#1DB954]" data-testid={`text-stream-count-${track.id}`}>
-                            {formatStreamCount(trackStreamCounts[track.id]!)}
-                          </p>
-                        ) : loadingStreamCounts ? (
-                          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground inline-block" />
-                        ) : trackStreamCounts[track.id] === 0 ? (
-                          <p className="text-xs text-muted-foreground">0 streams</p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">—</p>
-                        )}
-                        <code className="text-xs text-muted-foreground font-mono">{track.id}</code>
-                      </div>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {searchResults.artists && searchResults.artists.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Users className="h-5 w-5 text-primary" />
-                  Artists ({searchResults.artists.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {searchResults.artists.map((artist) => (
-                    <div key={artist.id} className="flex items-center gap-3 p-3 rounded-lg border" data-testid={`spotify-artist-result-${artist.id}`}>
-                      <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                        <Radio className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{artist.name}</p>
-                        <code className="text-xs text-muted-foreground font-mono">{artist.id}</code>
-                      </div>
-                      <a
-                        href={`https://open.spotify.com/artist/${artist.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#1DB954] hover:text-[#1DB954]/80"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {searchResults.albums && searchResults.albums.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Disc3 className="h-5 w-5 text-primary" />
-                  Albums ({searchResults.albums.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-2 md:grid-cols-2">
-                  {searchResults.albums.map((album) => (
-                    <div key={album.id} className="flex items-center gap-3 p-3 rounded-lg border" data-testid={`spotify-album-result-${album.id}`}>
-                      <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                        <Disc3 className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{album.name}</p>
-                        <p className="text-xs text-muted-foreground">{album.releaseDate} • {album.type}</p>
-                      </div>
-                      <a
-                        href={`https://open.spotify.com/album/${album.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#1DB954] hover:text-[#1DB954]/80"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {searchResults.tracks?.length === 0 && searchResults.artists?.length === 0 && searchResults.albums?.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No results found for "{searchQuery}"</p>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!searchResults && !searching && !selectedTrack && (
+      {!selectedTrack && !loading && (
         <div className="text-center py-12 text-muted-foreground">
           <SiSpotify className="h-12 w-12 mx-auto mb-4 text-[#1DB954]/30" />
-          <p className="text-lg font-medium mb-1">Search Spotify</p>
-          <p className="text-sm">Enter an artist name, track title, or Spotify Track ID to look up track data</p>
+          <p className="text-lg font-medium mb-1">Spotify Stream Counter</p>
+          <p className="text-sm">Paste a Spotify Track ID, URL, or URI above to get stream counts and track details</p>
         </div>
       )}
     </div>

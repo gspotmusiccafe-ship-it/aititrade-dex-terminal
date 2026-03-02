@@ -1818,50 +1818,6 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/api/admin/spotify/search", isAdmin, async (req: any, res) => {
-    try {
-      const { q } = req.query;
-      if (!q || typeof q !== "string" || q.trim().length === 0) {
-        return res.status(400).json({ message: "Search query is required" });
-      }
-      const rapidApiKey = process.env.RAPIDAPI_KEY;
-      if (!rapidApiKey) {
-        return res.status(500).json({ message: "RapidAPI key not configured" });
-      }
-      const response = await fetch(
-        `https://spotify-statistics-and-stream-count.p.rapidapi.com/search?q=${encodeURIComponent(q.trim())}`,
-        {
-          headers: {
-            "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com",
-            "x-rapidapi-key": rapidApiKey,
-          },
-        }
-      );
-      if (!response.ok) {
-        const statusMsg = response.status === 429
-          ? "Rate limit exceeded. Please wait a moment and try again."
-          : "Spotify API request failed";
-        return res.status(response.status).json({ message: statusMsg });
-      }
-      const data = await response.json();
-      const isLatin = (text: string) => /^[\x00-\x7F\u00C0-\u024F\u1E00-\u1EFF\u2000-\u206F\u2190-\u21FF\u2200-\u22FF\u0300-\u036F\u0080-\u00FF]+$/.test(text);
-      if (data.tracks) {
-        data.tracks = data.tracks.filter((t: any) => isLatin(t.name));
-        data.tracks.forEach((t: any) => {
-          if (t.playCount !== undefined && t.streamCount === undefined) t.streamCount = t.playCount;
-          if (t.playcount !== undefined && t.streamCount === undefined) t.streamCount = t.playcount;
-        });
-      }
-      if (data.artists) data.artists = data.artists.filter((a: any) => isLatin(a.name));
-      if (data.albums) data.albums = data.albums.filter((a: any) => isLatin(a.name));
-      console.log(`Spotify search results: ${data.tracks?.length || 0} tracks, sample keys:`, data.tracks?.[0] ? Object.keys(data.tracks[0]) : "none");
-      res.json(data);
-    } catch (error) {
-      console.error("Error searching Spotify:", error);
-      res.status(500).json({ message: "Failed to search Spotify" });
-    }
-  });
-
   app.get("/api/admin/spotify/track/:trackId", isAdmin, async (req: any, res) => {
     try {
       const { trackId } = req.params;
@@ -1873,7 +1829,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(500).json({ message: "RapidAPI key not configured" });
       }
       const response = await fetch(
-        `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${encodeURIComponent(trackId)}`,
+        `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${encodeURIComponent(trackId.trim())}`,
         {
           headers: {
             "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com",
@@ -1884,20 +1840,26 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
         console.error(`Spotify track API error (${response.status}):`, errorBody);
-        const statusMsg = response.status === 429
-          ? "Rate limit exceeded. Please wait a moment and try again."
-          : `Spotify API request failed (${response.status})`;
-        return res.status(response.status).json({ message: statusMsg });
+        if (response.status === 429) {
+          return res.status(429).json({ message: "Daily API quota exceeded. Try again tomorrow or upgrade the RapidAPI plan." });
+        }
+        return res.status(response.status).json({ message: `Spotify API request failed (${response.status})` });
       }
       const data = await response.json();
-      console.log(`Spotify track ${trackId} response keys:`, Object.keys(data));
-      if (data.playCount !== undefined && data.streamCount === undefined) {
-        data.streamCount = data.playCount;
-      }
-      if (data.playcount !== undefined && data.streamCount === undefined) {
-        data.streamCount = data.playcount;
-      }
-      res.json(data);
+      const streamCount = data.playCount ?? data.playcount ?? data.streamCount ?? null;
+      const result = {
+        id: data.id || trackId,
+        name: data.name || data.title || "Unknown",
+        artists: data.artists || [],
+        album: data.album || null,
+        duration: data.duration || data.duration_ms || 0,
+        contentRating: data.contentRating || data.explicit ? "explicit" : "clean",
+        streamCount: streamCount,
+        trackNumber: data.trackNumber || data.track_number || 1,
+        releaseDate: data.album?.releaseDate || data.releaseDate || null,
+        coverArt: data.album?.cover?.[0]?.url || data.coverArt?.sources?.[0]?.url || null,
+      };
+      res.json(result);
     } catch (error) {
       console.error("Error fetching Spotify track:", error);
       res.status(500).json({ message: "Failed to fetch Spotify track" });
