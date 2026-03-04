@@ -1671,8 +1671,8 @@ export default function AdminPage() {
               Memberships
             </TabsTrigger>
             <TabsTrigger value="spotify" data-testid="tab-spotify">
-              <SiSpotify className="h-4 w-4 mr-2 text-[#1DB954]" />
-              Spotify
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Stream Counter
             </TabsTrigger>
           </TabsList>
 

@@ -179,13 +179,14 @@ function HeroPlayer() {
           )}
 
           <div className="absolute top-3 right-3 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-xs font-medium shadow-lg">
-            2 Weeks Early
+            LIVE
           </div>
         </div>
 
         <div className="p-4 bg-card/95 backdrop-blur-sm border-t border-border/30 space-y-3">
           <div className="flex items-center gap-3">
             <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold text-primary/80 uppercase tracking-wider" data-testid="text-hero-radio-label">97.7 THE FLAME</p>
               <p className="text-sm font-semibold truncate" data-testid="text-hero-track-title">
                 {current?.title || "Select a track"}
               </p>
@@ -297,7 +298,7 @@ const membershipTiers = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["Listen to released music", "Follow artists"],
+    features: ["Listen on AITIFY MUSIC RADIO 97.7 THE FLAME", "No login required"],
     highlight: false,
   },
   {
@@ -378,60 +379,58 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8">
+      {/* Hero Section — AITIFY MUSIC RADIO 97.7 THE FLAME */}
+      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <Badge variant="secondary" className="text-xs">
-                <Star className="h-3 w-3 mr-1 text-yellow-500" />
-                The All-AI Music Platform
-              </Badge>
-              
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-                Discover New{" "}
-                <span className="text-primary">AI Music</span>
-                <br />
-                2 Weeks Early
-              </h1>
-              
-              <p className="text-lg text-muted-foreground max-w-xl">
-                The world's first all-AI music platform. Hear new AI-generated tracks 2 weeks before they hit 
-                Spotify, Amazon Music, Deezer, YouTube, and Anghami. Support AI artists directly.
-              </p>
+          <div className="text-center mb-8">
+            <Badge variant="secondary" className="text-xs mb-4 inline-flex">
+              <Star className="h-3 w-3 mr-1 text-yellow-500" />
+              The All-AI Music Platform
+            </Badge>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-3" data-testid="text-radio-hero-title">
+              AITIFY MUSIC RADIO{" "}
+              <span className="text-primary">97.7 THE FLAME</span>
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              The world's first all-AI music radio. Tune in free — hear AI-generated music 2 weeks before 
+              Spotify, Amazon Music, Deezer, YouTube, and Anghami.
+            </p>
+          </div>
 
-              <div className="flex flex-wrap gap-4">
-                <Button size="lg" asChild data-testid="button-hero-cta">
-                  <a href="/api/login">
-                    <Headphones className="h-5 w-5 mr-2" />
-                    Tune In
-                  </a>
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <a href="#pricing">
-                    View Plans
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </a>
-                </Button>
-              </div>
+          <div className="max-w-lg mx-auto mb-8">
+            <HeroPlayer />
+          </div>
 
-              <div className="flex items-center gap-6 pt-4">
-                <div className="flex -space-x-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div
-                      key={i}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border-2 border-background"
-                    />
-                  ))}
-                </div>
-                <div className="text-sm">
-                  <span className="font-semibold">10,000+</span>
-                  <span className="text-muted-foreground"> music lovers already joined</span>
-                </div>
-              </div>
+          <div className="text-center space-y-4">
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Button size="lg" variant="outline" asChild>
+                <a href="#pricing">
+                  Upgrade for Full Access
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </a>
+              </Button>
+              <Button size="lg" asChild data-testid="button-hero-cta">
+                <a href="/api/login">
+                  <Headphones className="h-5 w-5 mr-2" />
+                  Log In for More
+                </a>
+              </Button>
             </div>
 
-            <HeroPlayer />
+            <div className="flex items-center gap-6 justify-center pt-2">
+              <div className="flex -space-x-2">
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border-2 border-background"
+                  />
+                ))}
+              </div>
+              <div className="text-sm">
+                <span className="font-semibold">10,000+</span>
+                <span className="text-muted-foreground"> music lovers tuned in</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>

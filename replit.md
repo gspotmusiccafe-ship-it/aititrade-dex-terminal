@@ -23,6 +23,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Premium membership for early access to pre-release content
 - **Buy Song**: Button on track cards and music player (links to https://payhip.com/aitifymusicstore)
 - **Free account**: Listen-only — no services, no playlists, just music
+- **Free users stay on landing page only** — the landing page IS the radio. No login, no inside access, just tune in to 97.7 THE FLAME
 
 ### For Artists
 - Artist Portal to manage profile and content
