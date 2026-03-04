@@ -11,7 +11,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
-import { getUncachableSpotifyClient, clearSpotifyCache } from "./spotify";
+import { getSpotifyClientForUser, getSpotifyProfile, getSpotifyAuthUrl, exchangeSpotifyCode, disconnectSpotify, clearSpotifyCache } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder } from "./paypal";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1440,41 +1440,59 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  // === Spotify Playback & Jam Sessions ===
+  // === Spotify OAuth & Playback ===
+
+  app.get("/api/spotify/auth", isAuthenticated, (req: any, res) => {
+    const authUrl = getSpotifyAuthUrl(req);
+    res.redirect(authUrl);
+  });
+
+  app.get("/api/spotify/callback", isAuthenticated, async (req: any, res) => {
+    try {
+      const { code, error } = req.query;
+      if (error) {
+        return res.redirect("/radio?spotify_error=" + encodeURIComponent(error as string));
+      }
+      if (!code) {
+        return res.redirect("/radio?spotify_error=no_code");
+      }
+      const userId = req.user.claims.sub;
+      const result = await exchangeSpotifyCode(code as string, userId, req);
+      if (!result.success) {
+        return res.redirect("/radio?spotify_error=" + encodeURIComponent(result.error || "unknown"));
+      }
+      res.redirect("/radio?spotify_connected=true");
+    } catch (error: any) {
+      console.error("Spotify callback error:", error);
+      res.redirect("/radio?spotify_error=" + encodeURIComponent(error.message));
+    }
+  });
+
+  app.post("/api/spotify/disconnect", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await disconnectSpotify(userId);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 
   app.get("/api/spotify/me", isAuthenticated, async (req: any, res) => {
-    const tryGetProfile = async () => {
-      const spotify = await getUncachableSpotifyClient();
-      const profile = await spotify.currentUser.profile();
-      return {
-        connected: true,
-        name: profile.display_name,
-        email: profile.email,
-        product: profile.product,
-        isPremium: profile.product === "premium",
-        image: profile.images?.[0]?.url,
-      };
-    };
-
     try {
-      const result = await tryGetProfile();
-      res.json(result);
+      const userId = req.user.claims.sub;
+      const profile = await getSpotifyProfile(userId);
+      res.json(profile);
     } catch (error: any) {
-      console.error("Spotify first attempt failed:", error.message);
-      clearSpotifyCache();
-      try {
-        const result = await tryGetProfile();
-        res.json(result);
-      } catch (retryError: any) {
-        console.error("Spotify retry also failed:", retryError.message);
-        res.json({ connected: false, error: retryError.message });
-      }
+      console.error("Spotify profile error:", error.message);
+      res.json({ connected: false, error: error.message });
     }
   });
 
   app.get("/api/spotify/player", isAuthenticated, async (req: any, res) => {
     try {
-      const spotify = await getUncachableSpotifyClient();
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
       const state = await spotify.player.getPlaybackState();
       res.json(state || { is_playing: false });
     } catch (error) {
@@ -1484,7 +1502,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.get("/api/spotify/devices", isAuthenticated, async (req: any, res) => {
     try {
-      const spotify = await getUncachableSpotifyClient();
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
       const devices = await spotify.player.getAvailableDevices();
       res.json(devices);
     } catch (error) {
@@ -1495,7 +1514,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.post("/api/spotify/play", isAuthenticated, async (req: any, res) => {
     try {
       const { uri, deviceId } = req.body;
-      const spotify = await getUncachableSpotifyClient();
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
       const options: any = {};
       if (deviceId) options.device_id = deviceId;
       if (uri) {
@@ -1515,7 +1535,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.put("/api/spotify/pause", isAuthenticated, async (req: any, res) => {
     try {
-      const spotify = await getUncachableSpotifyClient();
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
       await spotify.player.pausePlayback("");
       res.json({ success: true });
     } catch (error: any) {
@@ -1527,7 +1548,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     try {
       const { q, type } = req.query;
       if (!q) return res.status(400).json({ message: "Query required" });
-      const spotify = await getUncachableSpotifyClient();
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
       const searchTypes = (type as string || "track,playlist,album").split(",") as any[];
       const results = await spotify.search(q as string, searchTypes, "US", 10);
       res.json(results);
@@ -1631,7 +1653,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const userId = req.user.claims.sub;
       const session = await db.select().from(jamSessions).where(and(eq(jamSessions.id, req.params.id), eq(jamSessions.userId, userId)));
       if (!session.length) return res.status(404).json({ message: "Session not found" });
-      const spotify = await getUncachableSpotifyClient();
+      const spotify = await getSpotifyClientForUser(userId);
       const uri = session[0].spotifyUri;
       if (uri.includes(":track:")) {
         await spotify.player.startResumePlayback("", undefined, [uri]);
@@ -1783,7 +1805,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         }
 
         try {
-          const spotify = await getUncachableSpotifyClient();
+          const spotify = await getSpotifyClientForUser(session.userId);
           const uri = session.spotifyUri;
           if (uri.includes(":track:")) {
             await spotify.player.startResumePlayback("", undefined, [uri]);

@@ -241,29 +241,18 @@ export default function RadioPage() {
               <SiSpotify className="h-16 w-16 mx-auto text-[#1DB954]" />
               <h2 className="text-2xl font-bold" data-testid="text-spotify-connect-title">Spotify Radio</h2>
               <p className="text-muted-foreground max-w-md">
-                Schedule automated Spotify jam sessions and control playback directly from AITIFY Music Radio.
+                Connect your Spotify account to schedule automated jam sessions and control playback directly from AITIFY Music Radio.
               </p>
-              <Card className="max-w-md mx-auto border-yellow-500/30 bg-yellow-500/5">
-                <CardContent className="p-4 text-sm text-left space-y-2">
-                  <p className="font-medium text-yellow-500">Spotify Connection Required</p>
-                  <p className="text-muted-foreground">
-                    The Spotify integration needs to be connected by the platform administrator through the Replit dashboard. Once connected, you'll be able to:
-                  </p>
-                  <ul className="text-muted-foreground list-disc list-inside space-y-1">
-                    <li>Search and play Spotify tracks</li>
-                    <li>Schedule automated jam sessions</li>
-                    <li>Control playback on your devices</li>
-                  </ul>
-                </CardContent>
-              </Card>
               <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                data-testid="button-retry-spotify"
+                size="lg"
+                className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold px-8"
+                onClick={() => { window.location.href = "/api/spotify/auth"; }}
+                data-testid="button-connect-spotify"
               >
-                <RadioIcon className="h-4 w-4 mr-2" />
-                Retry Connection
+                <SiSpotify className="h-5 w-5 mr-2" />
+                Sign In with Spotify
               </Button>
+              <p className="text-xs text-muted-foreground">Requires a Spotify Premium account for playback features</p>
             </div>
           </div>
         </div>

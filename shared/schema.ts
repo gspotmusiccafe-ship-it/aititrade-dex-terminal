@@ -180,6 +180,20 @@ export const masteringRequests = pgTable("mastering_requests", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const spotifyTokens = pgTable("spotify_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  spotifyUserId: varchar("spotify_user_id"),
+  spotifyDisplayName: varchar("spotify_display_name"),
+  spotifyEmail: varchar("spotify_email"),
+  spotifyProduct: varchar("spotify_product"),
+  spotifyImage: text("spotify_image"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const artistsRelations = relations(artists, ({ many }) => ({
   tracks: many(tracks),
