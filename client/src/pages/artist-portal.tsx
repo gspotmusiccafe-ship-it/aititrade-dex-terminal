@@ -1501,70 +1501,43 @@ function LyricsTab({ artistId }: { artistId: string }) {
 function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] }) {
   const { toast } = useToast();
   const [selectedTrackId, setSelectedTrackId] = useState<string>("");
-  const [masteringStatus, setMasteringStatus] = useState<string>("");
-  const [masteringProgress, setMasteringProgress] = useState(0);
-  const [isMastering, setIsMastering] = useState(false);
-  const [masteredUrl, setMasteredUrl] = useState<string>("");
+  const [notes, setNotes] = useState("");
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/mastering-requests"],
   });
 
-  const handleMasterTrack = async () => {
-    if (!selectedTrackId) return;
-    setIsMastering(true);
-    setMasteringStatus("Starting mastering engine...");
-    setMasteringProgress(0);
-    setMasteredUrl("");
-
-    try {
-      const response = await fetch(`/api/master-track/${selectedTrackId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/mastering-requests", {
+        artistId,
+        trackId: selectedTrackId,
+        notes: notes.trim() || undefined,
       });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mastering-requests"] });
+      setSelectedTrackId("");
+      setNotes("");
+      toast({ title: "Mastering request submitted!", description: "Our team will process your track and update the status." });
+    },
+    onError: () => {
+      toast({ title: "Failed to submit", description: "Please try again", variant: "destructive" });
+    },
+  });
 
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Mastering failed");
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response stream");
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            setMasteringStatus(event.message || "");
-            if (event.progress) setMasteringProgress(event.progress);
-            if (event.status === "completed") {
-              setMasteredUrl(event.masteredUrl);
-              setIsMastering(false);
-              queryClient.invalidateQueries({ queryKey: ["/api/mastering-requests"] });
-              toast({ title: "Mastering complete!", description: "Your track is now radio-ready. Download it below." });
-            }
-            if (event.status === "error") {
-              setIsMastering(false);
-              toast({ title: "Mastering failed", description: event.message, variant: "destructive" });
-            }
-          } catch {}
-        }
-      }
-    } catch (error: any) {
-      setIsMastering(false);
-      setMasteringStatus("");
-      toast({ title: "Mastering failed", description: error.message, variant: "destructive" });
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/mastering-requests/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mastering-requests"] });
+      toast({ title: "Request deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    },
+  });
 
   const statusBadge = (status: string) => {
     switch (status) {
@@ -1583,9 +1556,9 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
       <div>
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Headphones className="h-5 w-5 text-primary" />
-          Audio Mastering Engine
+          Request Mastering
         </h3>
-        <p className="text-sm text-muted-foreground">Master your tracks to radio-ready quality. EQ, compression, limiting, and loudness normalization to -14 LUFS.</p>
+        <p className="text-sm text-muted-foreground">Submit your track for professional mastering. Our team will process it with EQ, compression, limiting, and loudness normalization to -14 LUFS.</p>
       </div>
 
       <Card>
@@ -1595,8 +1568,7 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
             <select
               className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md text-sm"
               value={selectedTrackId}
-              onChange={(e) => { setSelectedTrackId(e.target.value); setMasteredUrl(""); setMasteringStatus(""); }}
-              disabled={isMastering}
+              onChange={(e) => setSelectedTrackId(e.target.value)}
               data-testid="select-mastering-track"
             >
               <option value="">Select a track</option>
@@ -1616,48 +1588,25 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
             </div>
           )}
 
+          <div>
+            <Label>Notes (optional)</Label>
+            <textarea
+              className="w-full mt-1.5 px-3 py-2 bg-background border border-input rounded-md text-sm min-h-[80px]"
+              placeholder="Any special instructions for mastering..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              data-testid="input-mastering-notes"
+            />
+          </div>
+
           <Button
-            onClick={handleMasterTrack}
-            disabled={isMastering || !selectedTrackId || tracks.length === 0}
-            data-testid="button-master-track"
+            onClick={() => submitMutation.mutate()}
+            disabled={submitMutation.isPending || !selectedTrackId || tracks.length === 0}
+            data-testid="button-submit-mastering"
           >
-            {isMastering ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Headphones className="h-4 w-4 mr-2" />}
-            {isMastering ? "Mastering..." : "Master This Track"}
+            {submitMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Headphones className="h-4 w-4 mr-2" />}
+            {submitMutation.isPending ? "Submitting..." : "Submit Mastering Request"}
           </Button>
-
-          {isMastering && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                <p className="text-sm font-medium">{masteringStatus}</p>
-              </div>
-              <div className="w-full bg-muted rounded-full h-2">
-                <div
-                  className="bg-primary h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${masteringProgress}%` }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground text-right">{masteringProgress}%</p>
-            </div>
-          )}
-
-          {masteredUrl && (
-            <Card className="border-green-500/30 bg-green-500/5">
-              <CardContent className="p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <p className="font-medium text-green-400">Mastering Complete!</p>
-                </div>
-                <p className="text-sm text-muted-foreground">Your track has been mastered to radio-ready quality at -14 LUFS (streaming standard).</p>
-                <Button asChild variant="outline" data-testid="button-download-mastered">
-                  <a href={masteredUrl} download>
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Mastered Track
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </CardContent>
       </Card>
 
@@ -1667,7 +1616,7 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
           {requests.map((req: any) => {
             const track = tracks.find(t => t.id === req.trackId);
             return (
-              <Card key={req.id}>
+              <Card key={req.id} data-testid={`mastering-request-${req.id}`}>
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <Headphones className="h-5 w-5 text-primary" />
@@ -1675,9 +1624,24 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{track ? track.title : "Track"}</p>
                     {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
+                    {req.adminNotes && <p className="text-sm text-muted-foreground truncate">Admin: {req.adminNotes}</p>}
                     <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
                   </div>
-                  {statusBadge(req.status)}
+                  <div className="flex items-center gap-2">
+                    {statusBadge(req.status)}
+                    {(req.status === "rejected" || req.status === "completed") && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => deleteMutation.mutate(req.id)}
+                        disabled={deleteMutation.isPending}
+                        data-testid={`button-delete-mastering-${req.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );

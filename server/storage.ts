@@ -120,9 +120,11 @@ export interface IStorage {
   updateLyricsRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<LyricsRequest | undefined>;
   // Mastering Requests
   createMasteringRequest(request: InsertMasteringRequest): Promise<MasteringRequest>;
+  getMasteringRequest(id: string): Promise<MasteringRequest | undefined>;
   getMasteringRequestsByUser(userId: string): Promise<MasteringRequest[]>;
   getAllMasteringRequests(): Promise<MasteringRequest[]>;
   updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<MasteringRequest | undefined>;
+  deleteMasteringRequest(id: string): Promise<void>;
   
   getAnalytics(): Promise<{
     totalUsers: number;
@@ -646,6 +648,11 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async getMasteringRequest(id: string): Promise<MasteringRequest | undefined> {
+    const [result] = await db.select().from(masteringRequests).where(eq(masteringRequests.id, id));
+    return result;
+  }
+
   async getMasteringRequestsByUser(userId: string): Promise<MasteringRequest[]> {
     return db.select().from(masteringRequests).where(eq(masteringRequests.userId, userId)).orderBy(desc(masteringRequests.createdAt));
   }
@@ -657,6 +664,10 @@ export class DatabaseStorage implements IStorage {
   async updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<MasteringRequest | undefined> {
     const [result] = await db.update(masteringRequests).set(data).where(eq(masteringRequests.id, id)).returning();
     return result;
+  }
+
+  async deleteMasteringRequest(id: string): Promise<void> {
+    await db.delete(masteringRequests).where(eq(masteringRequests.id, id));
   }
 }
 

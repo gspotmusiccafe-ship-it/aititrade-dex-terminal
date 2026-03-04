@@ -49,6 +49,13 @@ const MEMBERSHIP_LIMITS: Record<string, { downloads: number; previews: number }>
   gold: { downloads: -1, previews: -1 },
 };
 
+const PAID_TIERS = ["silver", "bronze", "gold"];
+
+async function getUserTier(userId: string): Promise<string> {
+  const membership = await storage.getMembershipByUserId(userId);
+  return membership?.tier || "free";
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -445,10 +452,14 @@ export async function registerRoutes(
     }
   });
 
-  // Create playlist
+  // Create playlist (Silver+ only)
   app.post("/api/playlists", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const tier = await getUserTier(userId);
+      if (!PAID_TIERS.includes(tier)) {
+        return res.status(403).json({ message: "Upgrade to Silver or higher to create playlists" });
+      }
       const validated = insertPlaylistSchema.parse({ ...req.body, userId });
       const playlist = await storage.createPlaylist(validated);
       res.status(201).json(playlist);
@@ -571,6 +582,10 @@ export async function registerRoutes(
   app.post("/api/user/liked-tracks/:trackId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const tier = await getUserTier(userId);
+      if (!PAID_TIERS.includes(tier)) {
+        return res.status(403).json({ message: "Upgrade to Silver or higher to like tracks" });
+      }
       await storage.likeTrack(userId, req.params.trackId);
       res.json({ liked: true });
     } catch (error) {
@@ -615,6 +630,10 @@ export async function registerRoutes(
   app.post("/api/user/followed-artists/:artistId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      const tier = await getUserTier(userId);
+      if (!PAID_TIERS.includes(tier)) {
+        return res.status(403).json({ message: "Upgrade to Silver or higher to follow artists" });
+      }
       await storage.followArtist(userId, req.params.artistId);
       res.json({ followed: true });
     } catch (error) {
@@ -1042,7 +1061,32 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     fs.mkdirSync(masteredDir, { recursive: true });
   }
 
+  app.delete("/api/mastering-requests/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const request = await storage.getMasteringRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      if (request.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      if (request.status !== "rejected" && request.status !== "completed") {
+        return res.status(400).json({ message: "Can only delete rejected or completed requests" });
+      }
+      await storage.deleteMasteringRequest(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting mastering request:", error);
+      res.status(500).json({ message: "Failed to delete request" });
+    }
+  });
+
   app.post("/api/master-track/:trackId", isAuthenticated, async (req: any, res) => {
+    const isAdminCheck = await storage.isUserAdmin(req.user.claims.sub);
+    if (!isAdminCheck) {
+      return res.status(403).json({ message: "Only admins can run the mastering engine" });
+    }
     try {
       const userId = req.user.claims.sub;
       const artist = await storage.getArtistByUserId(userId);
