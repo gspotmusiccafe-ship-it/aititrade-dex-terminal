@@ -1480,6 +1480,257 @@ function DistributionTab() {
   );
 }
 
+function RadioShowsTab() {
+  const { toast } = useToast();
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingShow, setEditingShow] = useState<any>(null);
+  const [formData, setFormData] = useState({ name: "", slot: "morning", spotifyPlaylistUrl: "", description: "", sortOrder: 0 });
+
+  const { data: shows, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/radio-shows"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => apiRequest("POST", "/api/admin/radio-shows", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/radio-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/radio-shows"] });
+      setShowDialog(false);
+      resetForm();
+      toast({ title: "Radio show created" });
+    },
+    onError: () => toast({ title: "Failed to create show", variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, ...data }: any) => apiRequest("PATCH", `/api/admin/radio-shows/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/radio-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/radio-shows"] });
+      setShowDialog(false);
+      setEditingShow(null);
+      resetForm();
+      toast({ title: "Radio show updated" });
+    },
+    onError: () => toast({ title: "Failed to update show", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/admin/radio-shows/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/radio-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/radio-shows"] });
+      toast({ title: "Radio show deleted" });
+    },
+    onError: () => toast({ title: "Failed to delete show", variant: "destructive" }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) =>
+      apiRequest("PATCH", `/api/admin/radio-shows/${id}`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/radio-shows"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/radio-shows"] });
+    },
+  });
+
+  const resetForm = () => setFormData({ name: "", slot: "morning", spotifyPlaylistUrl: "", description: "", sortOrder: 0 });
+
+  const openEdit = (show: any) => {
+    setEditingShow(show);
+    setFormData({
+      name: show.name,
+      slot: show.slot,
+      spotifyPlaylistUrl: show.spotifyPlaylistUrl,
+      description: show.description || "",
+      sortOrder: show.sortOrder || 0,
+    });
+    setShowDialog(true);
+  };
+
+  const openCreate = () => {
+    setEditingShow(null);
+    resetForm();
+    setShowDialog(true);
+  };
+
+  const handleSubmit = () => {
+    if (!formData.name || !formData.slot || !formData.spotifyPlaylistUrl) return;
+    if (editingShow) {
+      updateMutation.mutate({ id: editingShow.id, ...formData });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const slotLabels: Record<string, string> = {
+    morning: "Morning Show (6 AM - 10 AM)",
+    midday: "Mid-Day Vibes (10 AM - 2 PM)",
+    afternoon: "Afternoon Drive (2 PM - 6 PM)",
+    evening: "Evening Sessions (6 PM - 10 PM)",
+    bedtime: "Bedtime Music (10 PM - 6 AM)",
+  };
+
+  if (isLoading) return <Skeleton className="h-48 w-full" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-semibold">Radio Shows</h2>
+          <p className="text-sm text-muted-foreground">Pre-load Spotify playlist URLs for each time slot</p>
+        </div>
+        <Button onClick={openCreate} className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" data-testid="button-add-radio-show">
+          <Plus className="h-4 w-4" />
+          Add Show
+        </Button>
+      </div>
+
+      {shows && shows.length > 0 ? (
+        <div className="space-y-3">
+          {shows.map((show: any) => (
+            <Card key={show.id} className={`${!show.isActive ? "opacity-50" : ""}`} data-testid={`admin-radio-show-${show.id}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-lg bg-[#1DB954]/10 flex items-center justify-center">
+                    <Radio className="h-5 w-5 text-[#1DB954]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{show.name}</p>
+                      <Badge variant="outline" className="text-xs">{slotLabels[show.slot]?.split(" (")[0] || show.slot}</Badge>
+                      {!show.isActive && <Badge variant="secondary">Inactive</Badge>}
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate mt-0.5">{show.spotifyPlaylistUrl}</p>
+                    {show.description && <p className="text-xs text-muted-foreground mt-1">{show.description}</p>}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleMutation.mutate({ id: show.id, isActive: !show.isActive })}
+                      data-testid={`button-toggle-show-${show.id}`}
+                    >
+                      {show.isActive ? "Disable" : "Enable"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => openEdit(show)} data-testid={`button-edit-show-${show.id}`}>
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => deleteMutation.mutate(show.id)}
+                      data-testid={`button-delete-show-${show.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Radio className="h-12 w-12 mx-auto mb-4 text-muted-foreground/30" />
+            <p className="font-medium mb-1">No Radio Shows</p>
+            <p className="text-sm text-muted-foreground mb-4">Add Spotify playlist URLs for Morning, Mid-Day, Afternoon, Evening, and Bedtime shows</p>
+            <Button onClick={openCreate} className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2">
+              <Plus className="h-4 w-4" />
+              Add First Show
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showDialog} onOpenChange={(open) => { if (!open) { setShowDialog(false); setEditingShow(null); resetForm(); } }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingShow ? "Edit Radio Show" : "Add Radio Show"}</DialogTitle>
+            <DialogDescription>
+              {editingShow ? "Update the playlist URL or details" : "Pre-load a Spotify playlist for a time slot"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Show Name</Label>
+              <Input
+                placeholder="e.g., Morning Jazz, Evening R&B..."
+                value={formData.name}
+                onChange={(e) => setFormData(p => ({ ...p, name: e.target.value }))}
+                data-testid="input-show-name"
+              />
+            </div>
+
+            <div>
+              <Label>Time Slot</Label>
+              <Select value={formData.slot} onValueChange={(v) => setFormData(p => ({ ...p, slot: v }))}>
+                <SelectTrigger data-testid="select-show-slot">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(slotLabels).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Spotify Playlist URL</Label>
+              <Input
+                placeholder="https://open.spotify.com/playlist/..."
+                value={formData.spotifyPlaylistUrl}
+                onChange={(e) => setFormData(p => ({ ...p, spotifyPlaylistUrl: e.target.value }))}
+                data-testid="input-show-url"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Paste a Spotify playlist, album, or track URL</p>
+            </div>
+
+            <div>
+              <Label>Description (optional)</Label>
+              <Textarea
+                placeholder="Describe this show..."
+                value={formData.description}
+                onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
+                rows={2}
+                data-testid="input-show-description"
+              />
+            </div>
+
+            <div>
+              <Label>Sort Order</Label>
+              <Input
+                type="number"
+                value={formData.sortOrder}
+                onChange={(e) => setFormData(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))}
+                data-testid="input-show-sort"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Lower numbers appear first</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowDialog(false); setEditingShow(null); resetForm(); }}>Cancel</Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!formData.name || !formData.spotifyPlaylistUrl || createMutation.isPending || updateMutation.isPending}
+              className="bg-[#1DB954] hover:bg-[#1DB954]/90"
+              data-testid="button-save-show"
+            >
+              {(createMutation.isPending || updateMutation.isPending) ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {editingShow ? "Update Show" : "Add Show"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function SpotifyLookupTab() {
   const { toast } = useToast();
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrackDetail | null>(null);
@@ -1712,7 +1963,7 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="flex flex-wrap w-full gap-1">
             <TabsTrigger value="dashboard" data-testid="tab-dashboard">
               <BarChart3 className="h-4 w-4 mr-2" />
               Dashboard
@@ -1740,6 +1991,10 @@ export default function AdminPage() {
             <TabsTrigger value="distribution" data-testid="tab-distribution">
               <Send className="h-4 w-4 mr-2" />
               Distribution
+            </TabsTrigger>
+            <TabsTrigger value="radio-shows" data-testid="tab-radio-shows">
+              <Radio className="h-4 w-4 mr-2" />
+              Radio Shows
             </TabsTrigger>
             <TabsTrigger value="memberships" data-testid="tab-memberships">
               <Crown className="h-4 w-4 mr-2" />
@@ -1777,6 +2032,10 @@ export default function AdminPage() {
 
           <TabsContent value="distribution">
             <DistributionTab />
+          </TabsContent>
+
+          <TabsContent value="radio-shows">
+            <RadioShowsTab />
           </TabsContent>
 
           <TabsContent value="memberships">

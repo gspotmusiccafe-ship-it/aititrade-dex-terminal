@@ -54,6 +54,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Lyrics**: Review artist lyrics submissions, set status (pending → in production → completed/rejected), view full lyrics, add admin notes
 - **Mastering**: Review artist mastering requests, "Master Track" button runs actual ffmpeg engine (downloads from cloud → processes → uploads mastered file → auto-updates status to completed with download URL)
 - **Distribution**: Review and manage artist distribution requests
+- **Radio Shows**: Pre-load Spotify playlist URLs by time slot (Morning, Mid-Day, Afternoon, Evening, Bedtime). Admin can add, edit, enable/disable, and delete shows. Shows appear on the Radio page with embedded Spotify players.
 - **Membership Management**: View all subscriptions
 
 ## Project Structure
@@ -88,6 +89,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **memberships**: User subscription tiers
 - **likedTracks**: User's liked songs
 - **followedArtists**: User's followed artists
+- **radioShows**: Pre-loaded Spotify playlist URLs by time slot (morning, midday, afternoon, evening, bedtime)
 - **jamSessions**: Scheduled Spotify playback sessions
 - **jamSessionEngagement**: Engagement tracking (play, save, share, like, skip actions per session)
 - **jamSessionListeners**: Tracks which accounts joined/left each jam session

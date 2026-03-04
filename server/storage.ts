@@ -10,6 +10,7 @@ import {
   followedArtists,
   recentlyPlayed,
   users,
+  radioShows,
   distributionRequests,
   lyricsRequests,
   masteringRequests,
@@ -28,6 +29,8 @@ import {
   type TrackWithArtist,
   type AlbumWithArtist,
   type User,
+  type RadioShow,
+  type InsertRadioShow,
   type DistributionRequest,
   type InsertDistributionRequest,
   type LyricsRequest,
@@ -107,6 +110,13 @@ export interface IStorage {
   deleteTrack(trackId: string): Promise<void>;
   deleteVideo(videoId: string): Promise<void>;
   getAllMemberships(): Promise<(Membership & { user?: User })[]>;
+  // Radio Shows
+  getRadioShows(): Promise<RadioShow[]>;
+  getActiveRadioShows(): Promise<RadioShow[]>;
+  getRadioShow(id: string): Promise<RadioShow | undefined>;
+  createRadioShow(show: InsertRadioShow): Promise<RadioShow>;
+  updateRadioShow(id: string, data: Partial<InsertRadioShow>): Promise<RadioShow | undefined>;
+  deleteRadioShow(id: string): Promise<void>;
   // Distribution Requests
   createDistributionRequest(request: InsertDistributionRequest): Promise<DistributionRequest>;
   getDistributionRequestsByUser(userId: string): Promise<DistributionRequest[]>;
@@ -673,6 +683,33 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMasteringRequest(id: string): Promise<void> {
     await db.delete(masteringRequests).where(eq(masteringRequests.id, id));
+  }
+
+  async getRadioShows(): Promise<RadioShow[]> {
+    return db.select().from(radioShows).orderBy(radioShows.sortOrder);
+  }
+
+  async getActiveRadioShows(): Promise<RadioShow[]> {
+    return db.select().from(radioShows).where(eq(radioShows.isActive, true)).orderBy(radioShows.sortOrder);
+  }
+
+  async getRadioShow(id: string): Promise<RadioShow | undefined> {
+    const [result] = await db.select().from(radioShows).where(eq(radioShows.id, id));
+    return result;
+  }
+
+  async createRadioShow(show: InsertRadioShow): Promise<RadioShow> {
+    const [result] = await db.insert(radioShows).values(show).returning();
+    return result;
+  }
+
+  async updateRadioShow(id: string, data: Partial<InsertRadioShow>): Promise<RadioShow | undefined> {
+    const [result] = await db.update(radioShows).set({ ...data, updatedAt: new Date() }).where(eq(radioShows.id, id)).returning();
+    return result;
+  }
+
+  async deleteRadioShow(id: string): Promise<void> {
+    await db.delete(radioShows).where(eq(radioShows.id, id));
   }
 }
 

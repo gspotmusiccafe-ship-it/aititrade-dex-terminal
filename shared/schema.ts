@@ -145,6 +145,18 @@ export const jamSessionListeners = pgTable("jam_session_listeners", {
   leftAt: timestamp("left_at"),
 });
 
+export const radioShows = pgTable("radio_shows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  slot: varchar("slot").notNull(),
+  spotifyPlaylistUrl: text("spotify_playlist_url").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const distributionRequests = pgTable("distribution_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   artistId: varchar("artist_id").notNull(),
@@ -235,6 +247,7 @@ export const insertPlaylistSchema = createInsertSchema(playlists).omit({ id: tru
 export const insertPlaylistTrackSchema = createInsertSchema(playlistTracks).omit({ id: true, addedAt: true });
 export const insertLikedTrackSchema = createInsertSchema(likedTracks).omit({ id: true, likedAt: true });
 export const insertFollowedArtistSchema = createInsertSchema(followedArtists).omit({ id: true, followedAt: true });
+export const insertRadioShowSchema = createInsertSchema(radioShows).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertJamSessionSchema = createInsertSchema(jamSessions).omit({ id: true, createdAt: true, lastTriggered: true });
 export const insertJamSessionEngagementSchema = createInsertSchema(jamSessionEngagement).omit({ id: true, createdAt: true });
 export const insertJamSessionListenerSchema = createInsertSchema(jamSessionListeners).omit({ id: true, joinedAt: true, leftAt: true });
@@ -258,6 +271,8 @@ export type Playlist = typeof playlists.$inferSelect;
 export type PlaylistTrack = typeof playlistTracks.$inferSelect;
 export type LikedTrack = typeof likedTracks.$inferSelect;
 export type FollowedArtist = typeof followedArtists.$inferSelect;
+export type InsertRadioShow = z.infer<typeof insertRadioShowSchema>;
+export type RadioShow = typeof radioShows.$inferSelect;
 export type InsertJamSession = z.infer<typeof insertJamSessionSchema>;
 export type JamSession = typeof jamSessions.$inferSelect;
 export type InsertJamSessionEngagement = z.infer<typeof insertJamSessionEngagementSchema>;

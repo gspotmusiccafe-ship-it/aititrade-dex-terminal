@@ -1728,6 +1728,68 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  // Radio Shows - public (active shows for listeners)
+  app.get("/api/radio-shows", async (_req: any, res) => {
+    try {
+      const shows = await storage.getActiveRadioShows();
+      res.json(shows);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Radio Shows - admin management
+  app.get("/api/admin/radio-shows", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const isAdmin = await storage.isUserAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const shows = await storage.getRadioShows();
+      res.json(shows);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post("/api/admin/radio-shows", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const isAdmin = await storage.isUserAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { name, slot, spotifyPlaylistUrl, description, isActive, sortOrder } = req.body;
+      if (!name || !slot || !spotifyPlaylistUrl) return res.status(400).json({ message: "Name, slot, and playlist URL are required" });
+      const show = await storage.createRadioShow({ name, slot, spotifyPlaylistUrl, description, isActive, sortOrder });
+      res.json(show);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/admin/radio-shows/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const isAdmin = await storage.isUserAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const show = await storage.updateRadioShow(req.params.id, req.body);
+      if (!show) return res.status(404).json({ message: "Show not found" });
+      res.json(show);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/admin/radio-shows/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const isAdmin = await storage.isUserAdmin(userId);
+      if (!isAdmin) return res.status(403).json({ message: "Admin access required" });
+      await storage.deleteRadioShow(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // Jam Session Engagement Overview (must be before :id routes)
   app.get("/api/jam-sessions/engagement/overview", isAuthenticated, async (req: any, res) => {
     try {
