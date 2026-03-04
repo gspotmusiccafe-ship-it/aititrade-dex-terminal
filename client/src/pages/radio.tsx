@@ -237,15 +237,33 @@ export default function RadioPage() {
       <div className="min-h-full pb-28 px-6 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center min-h-[60vh]">
-            <div className="text-center space-y-4">
+            <div className="text-center space-y-6">
               <SiSpotify className="h-16 w-16 mx-auto text-[#1DB954]" />
-              <h2 className="text-2xl font-bold">Connect Spotify</h2>
+              <h2 className="text-2xl font-bold" data-testid="text-spotify-connect-title">Spotify Radio</h2>
               <p className="text-muted-foreground max-w-md">
-                Connect your Spotify Premium account to access AITIFY Music Radio and schedule automated jam sessions.
+                Schedule automated Spotify jam sessions and control playback directly from AITIFY Music Radio.
               </p>
-              <p className="text-sm text-muted-foreground">
-                {profile?.error || "Spotify is not connected. Please contact an administrator."}
-              </p>
+              <Card className="max-w-md mx-auto border-yellow-500/30 bg-yellow-500/5">
+                <CardContent className="p-4 text-sm text-left space-y-2">
+                  <p className="font-medium text-yellow-500">Spotify Connection Required</p>
+                  <p className="text-muted-foreground">
+                    The Spotify integration needs to be connected by the platform administrator through the Replit dashboard. Once connected, you'll be able to:
+                  </p>
+                  <ul className="text-muted-foreground list-disc list-inside space-y-1">
+                    <li>Search and play Spotify tracks</li>
+                    <li>Schedule automated jam sessions</li>
+                    <li>Control playback on your devices</li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                data-testid="button-retry-spotify"
+              >
+                <RadioIcon className="h-4 w-4 mr-2" />
+                Retry Connection
+              </Button>
             </div>
           </div>
         </div>
