@@ -52,7 +52,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Artist Management**: View all artists, approve/reject applications, create artist profiles (bypass membership)
 - **Content Moderation**: Remove tracks/videos + Download tracks for distribution
 - **Lyrics**: Review artist lyrics submissions, set status (pending → in production → completed/rejected), view full lyrics, add admin notes
-- **Mastering**: Review artist mastering requests, set status (pending → in progress → completed/rejected), add admin notes
+- **Mastering**: Review artist mastering requests, "Master Track" button runs actual ffmpeg engine (downloads from cloud → processes → uploads mastered file → auto-updates status to completed with download URL)
 - **Distribution**: Review and manage artist distribution requests
 - **Membership Management**: View all subscriptions
 

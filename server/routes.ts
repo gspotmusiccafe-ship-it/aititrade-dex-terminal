@@ -2076,6 +2076,120 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/master-request/:requestId", isAdmin, async (req: any, res) => {
+    try {
+      const masteringReq = await storage.getMasteringRequest(req.params.requestId);
+      if (!masteringReq) {
+        return res.status(404).json({ message: "Mastering request not found" });
+      }
+
+      if (masteringReq.status === "completed") {
+        return res.status(409).json({ message: "This track has already been mastered" });
+      }
+
+      if (masteringReq.status === "in_progress") {
+        return res.status(409).json({ message: "This track is already being processed" });
+      }
+
+      const track = await storage.getTrack(masteringReq.trackId);
+      if (!track) {
+        return res.status(404).json({ message: "Track not found" });
+      }
+
+      await storage.updateMasteringRequest(masteringReq.id, { status: "in_progress" });
+
+      let inputPath: string;
+      let tempCloudFile = false;
+      if (track.audioUrl.startsWith("/cloud/")) {
+        const objectName = track.audioUrl.replace("/cloud/", "");
+        const bucket = objectStorageClient.bucket(BUCKET_ID);
+        const cloudFile = bucket.file(objectName);
+        const [exists] = await cloudFile.exists();
+        if (!exists) {
+          await storage.updateMasteringRequest(masteringReq.id, { status: "rejected", adminNotes: "Audio file not found in storage" });
+          return res.status(404).json({ message: "Audio file not found in storage" });
+        }
+        const tempPath = path.join(uploadsDir, `temp-master-${Date.now()}${path.extname(track.audioUrl)}`);
+        const [contents] = await cloudFile.download();
+        fs.writeFileSync(tempPath, contents);
+        inputPath = tempPath;
+        tempCloudFile = true;
+      } else {
+        inputPath = path.join(process.cwd(), track.audioUrl.replace(/^\//, ""));
+        if (!fs.existsSync(inputPath)) {
+          await storage.updateMasteringRequest(masteringReq.id, { status: "rejected", adminNotes: "Audio file not found on disk" });
+          return res.status(404).json({ message: "Audio file not found" });
+        }
+      }
+
+      const masteringOutputDir = path.join(process.cwd(), "uploads", "mastered");
+      if (!fs.existsSync(masteringOutputDir)) {
+        fs.mkdirSync(masteringOutputDir, { recursive: true });
+      }
+
+      const outputFilename = `mastered-${Date.now()}-${path.basename(track.audioUrl, path.extname(track.audioUrl))}.wav`;
+      const outputPath = path.join(masteringOutputDir, outputFilename);
+
+      const ffmpegArgs = [
+        "-i", inputPath,
+        "-af", [
+          "highpass=f=30",
+          "lowpass=f=18000",
+          "acompressor=threshold=-18dB:ratio=3:attack=5:release=50:makeup=2dB",
+          "acompressor=threshold=-12dB:ratio=4:attack=2:release=30:makeup=1dB",
+          "equalizer=f=60:t=q:w=1.5:g=2",
+          "equalizer=f=200:t=q:w=2:g=-1",
+          "equalizer=f=3000:t=q:w=1.5:g=1.5",
+          "equalizer=f=8000:t=q:w=2:g=2",
+          "equalizer=f=12000:t=q:w=1.5:g=1",
+          "alimiter=limit=0.95:level=false",
+          "loudnorm=I=-14:TP=-1:LRA=11:print_format=json",
+        ].join(","),
+        "-ar", "44100",
+        "-sample_fmt", "s16",
+        "-y",
+        outputPath,
+      ];
+
+      await new Promise<void>((resolve, reject) => {
+        const ffmpeg = spawn("ffmpeg", ffmpegArgs);
+        let stderrData = "";
+        ffmpeg.stderr.on("data", (data: Buffer) => { stderrData += data.toString(); });
+        ffmpeg.on("close", (code: number) => {
+          if (code === 0) resolve();
+          else reject(new Error(`ffmpeg exited with code ${code}: ${stderrData.slice(-500)}`));
+        });
+        ffmpeg.on("error", reject);
+      });
+
+      if (tempCloudFile) {
+        fs.unlink(inputPath, () => {});
+      }
+
+      let masteredUrl: string;
+      try {
+        masteredUrl = await uploadToObjectStorage(outputPath, outputFilename, "audio/wav");
+      } catch {
+        masteredUrl = `/uploads/mastered/${outputFilename}`;
+      }
+
+      const updated = await storage.updateMasteringRequest(masteringReq.id, {
+        status: "completed",
+        masteredUrl,
+        adminNotes: "Mastered via AITIFY mastering engine — radio-ready at -14 LUFS",
+      });
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error running mastering engine:", error);
+      await storage.updateMasteringRequest(req.params.requestId, {
+        status: "rejected",
+        adminNotes: `Mastering failed: ${error.message || "Unknown error"}`,
+      }).catch(() => {});
+      res.status(500).json({ message: "Mastering failed: " + (error.message || "Unknown error") });
+    }
+  });
+
   const spotifyTrackLookupHandler = async (req: any, res: any) => {
     try {
       const { trackId } = req.params;

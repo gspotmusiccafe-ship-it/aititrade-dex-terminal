@@ -124,7 +124,7 @@ export interface IStorage {
   getMasteringRequest(id: string): Promise<MasteringRequest | undefined>;
   getMasteringRequestsByUser(userId: string): Promise<MasteringRequest[]>;
   getAllMasteringRequests(): Promise<MasteringRequest[]>;
-  updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<MasteringRequest | undefined>;
+  updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string; masteredUrl?: string }): Promise<MasteringRequest | undefined>;
   deleteMasteringRequest(id: string): Promise<void>;
   
   getAnalytics(): Promise<{
@@ -666,7 +666,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(masteringRequests).orderBy(desc(masteringRequests.createdAt));
   }
 
-  async updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<MasteringRequest | undefined> {
+  async updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string; masteredUrl?: string }): Promise<MasteringRequest | undefined> {
     const [result] = await db.update(masteringRequests).set(data).where(eq(masteringRequests.id, id)).returning();
     return result;
   }

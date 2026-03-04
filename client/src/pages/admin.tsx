@@ -1090,6 +1090,7 @@ function AdminMasteringTab() {
   const { toast } = useToast();
   const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/mastering-requests"],
@@ -1107,6 +1108,23 @@ function AdminMasteringTab() {
     },
     onError: () => {
       toast({ title: "Failed to update request", variant: "destructive" });
+    },
+  });
+
+  const processMutation = useMutation({
+    mutationFn: async (requestId: string) => {
+      setProcessingId(requestId);
+      return apiRequest("POST", `/api/admin/master-request/${requestId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mastering-requests"] });
+      setProcessingId(null);
+      toast({ title: "Mastering complete!", description: "Track has been mastered and is ready for download." });
+    },
+    onError: (error: Error) => {
+      setProcessingId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mastering-requests"] });
+      toast({ title: "Mastering failed", description: error.message || "Please try again.", variant: "destructive" });
     },
   });
 
@@ -1163,6 +1181,17 @@ function AdminMasteringTab() {
               <p className="text-sm text-muted-foreground">Artist: {req.artistId}</p>
               {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
               {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
+              {req.masteredUrl && (
+                <a
+                  href={req.masteredUrl}
+                  download
+                  className="text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1"
+                  data-testid={`link-mastered-download-${req.id}`}
+                >
+                  <Download className="h-3 w-3" />
+                  Download Mastered File
+                </a>
+              )}
               <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleString()}</p>
             </div>
             <div className="flex items-center gap-2">
@@ -1179,12 +1208,22 @@ function AdminMasteringTab() {
                   </Button>
                   <Button
                     size="sm"
-                    className="bg-blue-600 text-white"
-                    onClick={() => updateMutation.mutate({ id: req.id, status: "in_progress" })}
-                    data-testid={`button-start-mastering-${req.id}`}
+                    className="bg-primary text-primary-foreground"
+                    onClick={() => processMutation.mutate(req.id)}
+                    disabled={processingId === req.id}
+                    data-testid={`button-process-mastering-${req.id}`}
                   >
-                    <Headphones className="h-4 w-4 mr-1" />
-                    Start Mastering
+                    {processingId === req.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-4 w-4 mr-1" />
+                        Master Track
+                      </>
+                    )}
                   </Button>
                   <Button
                     variant="destructive"
@@ -1198,14 +1237,45 @@ function AdminMasteringTab() {
                 </>
               )}
               {req.status === "in_progress" && (
+                <>
+                  {processingId === req.id ? (
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-600 gap-1">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Processing...
+                    </Badge>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateMutation.mutate({ id: req.id, status: "pending" })}
+                      data-testid={`button-reset-mastering-${req.id}`}
+                    >
+                      Reset to Pending
+                    </Button>
+                  )}
+                </>
+              )}
+              {req.status === "rejected" && (
                 <Button
+                  variant="outline"
                   size="sm"
-                  className="bg-green-600 text-white"
-                  onClick={() => updateMutation.mutate({ id: req.id, status: "completed" })}
-                  data-testid={`button-complete-mastering-${req.id}`}
+                  onClick={() => updateMutation.mutate({ id: req.id, status: "pending" })}
+                  data-testid={`button-retry-mastering-${req.id}`}
                 >
-                  <CheckCircle className="h-4 w-4 mr-1" />
-                  Mark Complete
+                  Reset to Pending
+                </Button>
+              )}
+              {req.status === "completed" && req.masteredUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  data-testid={`button-download-mastered-${req.id}`}
+                >
+                  <a href={req.masteredUrl} download>
+                    <Download className="h-4 w-4 mr-1" />
+                    Download
+                  </a>
                 </Button>
               )}
             </div>
@@ -1234,10 +1304,14 @@ function AdminMasteringTab() {
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setNotesDialogReq(null)}>Cancel</Button>
             <Button
-              className="bg-blue-600 text-white"
-              onClick={() => notesDialogReq && updateMutation.mutate({ id: notesDialogReq.id, status: "in_progress", adminNotes })}
+              className="bg-primary text-primary-foreground"
+              onClick={() => {
+                if (notesDialogReq) {
+                  updateMutation.mutate({ id: notesDialogReq.id, status: "in_progress", adminNotes });
+                }
+              }}
             >
-              Start Mastering
+              Save Notes
             </Button>
             <Button
               variant="destructive"
