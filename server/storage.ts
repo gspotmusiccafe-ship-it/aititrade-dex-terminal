@@ -118,6 +118,7 @@ export interface IStorage {
   getLyricsRequestsByUser(userId: string): Promise<LyricsRequest[]>;
   getAllLyricsRequests(): Promise<LyricsRequest[]>;
   updateLyricsRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<LyricsRequest | undefined>;
+  deleteLyricsRequest(id: string): Promise<void>;
   // Mastering Requests
   createMasteringRequest(request: InsertMasteringRequest): Promise<MasteringRequest>;
   getMasteringRequest(id: string): Promise<MasteringRequest | undefined>;
@@ -641,6 +642,10 @@ export class DatabaseStorage implements IStorage {
   async updateLyricsRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<LyricsRequest | undefined> {
     const [result] = await db.update(lyricsRequests).set(data).where(eq(lyricsRequests.id, id)).returning();
     return result;
+  }
+
+  async deleteLyricsRequest(id: string): Promise<void> {
+    await db.delete(lyricsRequests).where(eq(lyricsRequests.id, id));
   }
 
   async createMasteringRequest(request: InsertMasteringRequest): Promise<MasteringRequest> {

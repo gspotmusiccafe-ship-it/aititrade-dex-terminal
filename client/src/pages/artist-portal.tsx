@@ -1341,6 +1341,19 @@ function LyricsTab({ artistId }: { artistId: string }) {
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/lyrics-requests/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/lyrics-requests"] });
+      toast({ title: "Lyrics request deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete", variant: "destructive" });
+    },
+  });
+
   const handleGenerate = () => {
     setIsGenerating(true);
     generateMutation.mutate();
@@ -1488,7 +1501,21 @@ function LyricsTab({ artistId }: { artistId: string }) {
                   {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
                   <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
                 </div>
-                {statusBadge(req.status)}
+                <div className="flex items-center gap-2">
+                  {statusBadge(req.status)}
+                  {(req.status === "rejected" || req.status === "completed") && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteMutation.mutate(req.id)}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-lyrics-${req.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
