@@ -35,11 +35,13 @@ function getRedirectUri(req?: any): string {
 }
 
 export function getSpotifyAuthUrl(req?: any): string {
+  const redirectUri = getRedirectUri(req);
+  console.log("[Spotify] Auth redirect URI:", redirectUri);
   const params = new URLSearchParams({
     response_type: "code",
     client_id: SPOTIFY_CLIENT_ID,
     scope: SPOTIFY_SCOPES,
-    redirect_uri: getRedirectUri(req),
+    redirect_uri: redirectUri,
     show_dialog: "true",
   });
   return `https://accounts.spotify.com/authorize?${params.toString()}`;
