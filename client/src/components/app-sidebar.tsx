@@ -131,8 +131,8 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location === "/radio"}>
                   <Link href="/radio" data-testid="nav-radio">
-                    <Radio className="h-5 w-5 text-primary" />
-                    <span>97.7 The Flame</span>
+                    <Radio className="h-5 w-5 text-[#1DB954]" />
+                    <span>Radio</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
