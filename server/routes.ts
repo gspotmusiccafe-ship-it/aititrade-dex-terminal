@@ -13,10 +13,36 @@ import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVide
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile, getSpotifyAuthUrl, exchangeSpotifyCode, disconnectSpotify, clearSpotifyCache } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder } from "./paypal";
+import { objectStorageClient } from "./replit_integrations/object_storage";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "";
+
+async function uploadToObjectStorage(localFilePath: string, filename: string, contentType: string): Promise<string> {
+  const objectName = `uploads/${filename}`;
+  const bucket = objectStorageClient.bucket(BUCKET_ID);
+  const file = bucket.file(objectName);
+  await file.save(fs.readFileSync(localFilePath), {
+    metadata: { contentType },
+  });
+  fs.unlink(localFilePath, () => {});
+  return `/cloud/${objectName}`;
+}
+
+async function deleteFromObjectStorage(cloudPath: string): Promise<void> {
+  if (!cloudPath.startsWith("/cloud/")) return;
+  const objectName = cloudPath.replace("/cloud/", "");
+  const bucket = objectStorageClient.bucket(BUCKET_ID);
+  const file = bucket.file(objectName);
+  try {
+    await file.delete();
+  } catch (e: any) {
+    console.error("Error deleting from object storage:", e.message);
+  }
 }
 
 const fileStorage = multer.diskStorage({
@@ -91,6 +117,35 @@ export async function registerRoutes(
       res.set("X-Content-Type-Options", "nosniff");
       res.sendFile(filePath);
     } catch (error) {
+      res.status(500).json({ message: "Failed to serve file" });
+    }
+  });
+
+  app.get("/cloud/uploads/:filename", async (req: any, res) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      const objectName = `uploads/${filename}`;
+      const bucket = objectStorageClient.bucket(BUCKET_ID);
+      const file = bucket.file(objectName);
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      const [metadata] = await file.getMetadata();
+      res.set("Content-Type", metadata.contentType || "application/octet-stream");
+      res.set("Content-Disposition", "inline");
+      res.set("X-Content-Type-Options", "nosniff");
+      res.set("Cache-Control", "public, max-age=3600");
+      const stream = file.createReadStream();
+      stream.on("error", (err) => {
+        console.error("Stream error:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ message: "Error streaming file" });
+        }
+      });
+      stream.pipe(res);
+    } catch (error) {
+      console.error("Error serving cloud file:", error);
       res.status(500).json({ message: "Failed to serve file" });
     }
   });
@@ -286,19 +341,24 @@ export async function registerRoutes(
       const profileFile = req.files?.profileImage?.[0];
       const coverFile = req.files?.coverImage?.[0];
 
+      const oldProfileImage = artist.profileImage;
+      const oldCoverImage = artist.coverImage;
+
       if (profileFile) {
-        if (artist.profileImage && artist.profileImage.startsWith("/uploads/")) {
-          const oldFile = path.join(uploadsDir, path.basename(artist.profileImage));
-          fs.unlink(oldFile, () => {});
-        }
-        updates.profileImage = `/uploads/${profileFile.filename}`;
+        const cloudPath = await uploadToObjectStorage(
+          path.join(uploadsDir, profileFile.filename),
+          profileFile.filename,
+          profileFile.mimetype
+        );
+        updates.profileImage = cloudPath;
       }
       if (coverFile) {
-        if (artist.coverImage && artist.coverImage.startsWith("/uploads/")) {
-          const oldFile = path.join(uploadsDir, path.basename(artist.coverImage));
-          fs.unlink(oldFile, () => {});
-        }
-        updates.coverImage = `/uploads/${coverFile.filename}`;
+        const cloudPath = await uploadToObjectStorage(
+          path.join(uploadsDir, coverFile.filename),
+          coverFile.filename,
+          coverFile.mimetype
+        );
+        updates.coverImage = cloudPath;
       }
 
       if (Object.keys(updates).length === 0) {
@@ -306,6 +366,22 @@ export async function registerRoutes(
       }
 
       const updated = await storage.updateArtist(artist.id, updates);
+
+      if (updates.profileImage && oldProfileImage) {
+        if (oldProfileImage.startsWith("/cloud/")) {
+          await deleteFromObjectStorage(oldProfileImage);
+        } else if (oldProfileImage.startsWith("/uploads/")) {
+          fs.unlink(path.join(uploadsDir, path.basename(oldProfileImage)), () => {});
+        }
+      }
+      if (updates.coverImage && oldCoverImage) {
+        if (oldCoverImage.startsWith("/cloud/")) {
+          await deleteFromObjectStorage(oldCoverImage);
+        } else if (oldCoverImage.startsWith("/uploads/")) {
+          fs.unlink(path.join(uploadsDir, path.basename(oldCoverImage)), () => {});
+        }
+      }
+
       res.json(updated);
     } catch (error) {
       console.error("Error updating artist profile:", error);
@@ -341,8 +417,19 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Track title is required (max 200 characters)" });
       }
 
-      const audioUrl = `/uploads/${audioFile.filename}`;
-      const coverImage = coverFile ? `/uploads/${coverFile.filename}` : null;
+      const audioUrl = await uploadToObjectStorage(
+        path.join(uploadsDir, audioFile.filename),
+        audioFile.filename,
+        audioFile.mimetype
+      );
+      let coverImage: string | null = null;
+      if (coverFile) {
+        coverImage = await uploadToObjectStorage(
+          path.join(uploadsDir, coverFile.filename),
+          coverFile.filename,
+          coverFile.mimetype
+        );
+      }
       const duration = parseInt(req.body.duration);
 
       const trackData = {
@@ -363,10 +450,12 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error creating track:", error);
       if (req.files?.audioFile?.[0]) {
-        fs.unlink(path.join(uploadsDir, req.files.audioFile[0].filename), () => {});
+        const f = path.join(uploadsDir, req.files.audioFile[0].filename);
+        if (fs.existsSync(f)) fs.unlink(f, () => {});
       }
       if (req.files?.coverImage?.[0]) {
-        fs.unlink(path.join(uploadsDir, req.files.coverImage[0].filename), () => {});
+        const f = path.join(uploadsDir, req.files.coverImage[0].filename);
+        if (fs.existsSync(f)) fs.unlink(f, () => {});
       }
       res.status(500).json({ message: "Failed to create track" });
     }
@@ -429,9 +518,17 @@ export async function registerRoutes(
         return res.status(403).json({ message: "Cannot delete this track" });
       }
       await storage.deleteTrack(req.params.id);
-      if (track.audioUrl.startsWith("/uploads/")) {
+      if (track.audioUrl.startsWith("/cloud/")) {
+        await deleteFromObjectStorage(track.audioUrl);
+      } else if (track.audioUrl.startsWith("/uploads/")) {
         const filename = track.audioUrl.replace("/uploads/", "");
         fs.unlink(path.join(uploadsDir, filename), () => {});
+      }
+      if (track.coverImage?.startsWith("/cloud/")) {
+        await deleteFromObjectStorage(track.coverImage);
+      } else if (track.coverImage?.startsWith("/uploads/")) {
+        const coverFilename = track.coverImage.replace("/uploads/", "");
+        fs.unlink(path.join(uploadsDir, coverFilename), () => {});
       }
       res.json({ success: true });
     } catch (error) {
@@ -811,11 +908,6 @@ export async function registerRoutes(
       }
 
       const filename = path.basename(audioUrl);
-      const filePath = path.join(uploadsDir, filename);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ message: "Audio file not found on server" });
-      }
-
       const ext = path.extname(filename).toLowerCase();
       const mimeTypes: Record<string, string> = {
         ".mp3": "audio/mpeg",
@@ -826,11 +918,36 @@ export async function registerRoutes(
         ".m4a": "audio/mp4",
         ".webm": "audio/webm",
       };
-
       const safeTitle = track.title.replace(/[^a-zA-Z0-9\s-_]/g, "").trim() || "track";
-      res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
-      res.set("Content-Disposition", `attachment; filename="${safeTitle}${ext}"`);
-      res.sendFile(filePath);
+
+      if (audioUrl.startsWith("/cloud/")) {
+        const objectName = audioUrl.replace("/cloud/", "");
+        const bucket = objectStorageClient.bucket(BUCKET_ID);
+        const file = bucket.file(objectName);
+        const [exists] = await file.exists();
+        if (!exists) {
+          return res.status(404).json({ message: "Audio file not found in storage" });
+        }
+        const [metadata] = await file.getMetadata();
+        res.set("Content-Type", metadata.contentType || mimeTypes[ext] || "application/octet-stream");
+        res.set("Content-Disposition", `attachment; filename="${safeTitle}${ext}"`);
+        const stream = file.createReadStream();
+        stream.on("error", (err) => {
+          console.error("Download stream error:", err);
+          if (!res.headersSent) {
+            res.status(500).json({ message: "Error streaming file" });
+          }
+        });
+        stream.pipe(res);
+      } else {
+        const filePath = path.join(uploadsDir, filename);
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ message: "Audio file not found on server" });
+        }
+        res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
+        res.set("Content-Disposition", `attachment; filename="${safeTitle}${ext}"`);
+        res.sendFile(filePath);
+      }
     } catch (error) {
       console.error("Error downloading track:", error);
       res.status(500).json({ message: "Failed to download track" });
@@ -1121,9 +1238,26 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(403).json({ message: "You can only master your own tracks" });
       }
 
-      const inputPath = path.join(process.cwd(), track.audioUrl.replace(/^\//, ""));
-      if (!fs.existsSync(inputPath)) {
-        return res.status(404).json({ message: "Audio file not found" });
+      let inputPath: string;
+      let tempCloudFile = false;
+      if (track.audioUrl.startsWith("/cloud/")) {
+        const objectName = track.audioUrl.replace("/cloud/", "");
+        const bucket = objectStorageClient.bucket(BUCKET_ID);
+        const cloudFile = bucket.file(objectName);
+        const [exists] = await cloudFile.exists();
+        if (!exists) {
+          return res.status(404).json({ message: "Audio file not found in storage" });
+        }
+        const tempPath = path.join(uploadsDir, `temp-master-${Date.now()}${path.extname(track.audioUrl)}`);
+        const [contents] = await cloudFile.download();
+        fs.writeFileSync(tempPath, contents);
+        inputPath = tempPath;
+        tempCloudFile = true;
+      } else {
+        inputPath = path.join(process.cwd(), track.audioUrl.replace(/^\//, ""));
+        if (!fs.existsSync(inputPath)) {
+          return res.status(404).json({ message: "Audio file not found" });
+        }
       }
 
       const outputFilename = `mastered-${Date.now()}-${path.basename(track.audioUrl, path.extname(track.audioUrl))}.wav`;
@@ -1187,7 +1321,16 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       sendEvent({ status: "processing", message: "Rendering final mastered file...", progress: 90 });
 
-      const masteredUrl = `/uploads/mastered/${outputFilename}`;
+      if (tempCloudFile) {
+        fs.unlink(inputPath, () => {});
+      }
+
+      let masteredUrl: string;
+      try {
+        masteredUrl = await uploadToObjectStorage(outputPath, outputFilename, "audio/wav");
+      } catch {
+        masteredUrl = `/uploads/mastered/${outputFilename}`;
+      }
 
       const masteringReq = await storage.createMasteringRequest({
         artistId: artist.id,
@@ -1217,13 +1360,27 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/uploads/mastered/:filename", isAuthenticated, (req: any, res) => {
+  app.get("/uploads/mastered/:filename", isAuthenticated, async (req: any, res) => {
     const filePath = path.join(masteredDir, req.params.filename);
-    if (!fs.existsSync(filePath)) {
+    if (fs.existsSync(filePath)) {
+      res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
+      return res.sendFile(filePath);
+    }
+    try {
+      const objectName = `uploads/${req.params.filename}`;
+      const bucket = objectStorageClient.bucket(BUCKET_ID);
+      const file = bucket.file(objectName);
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ message: "File not found" });
+      }
+      res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
+      res.set("Content-Type", "audio/wav");
+      const stream = file.createReadStream();
+      stream.pipe(res);
+    } catch {
       return res.status(404).json({ message: "File not found" });
     }
-    res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
-    res.sendFile(filePath);
   });
 
   // ============ Admin Routes ============
@@ -1396,10 +1553,22 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  // Delete track (content moderation)
   app.delete("/api/admin/tracks/:id", isAdmin, async (req: any, res) => {
     try {
+      const track = await storage.getTrack(req.params.id);
       await storage.deleteTrack(req.params.id);
+      if (track?.audioUrl?.startsWith("/cloud/")) {
+        await deleteFromObjectStorage(track.audioUrl);
+      } else if (track?.audioUrl?.startsWith("/uploads/")) {
+        const fn = track.audioUrl.replace("/uploads/", "");
+        fs.unlink(path.join(uploadsDir, fn), () => {});
+      }
+      if (track?.coverImage?.startsWith("/cloud/")) {
+        await deleteFromObjectStorage(track.coverImage);
+      } else if (track?.coverImage?.startsWith("/uploads/")) {
+        const fn = track.coverImage.replace("/uploads/", "");
+        fs.unlink(path.join(uploadsDir, fn), () => {});
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting track:", error);

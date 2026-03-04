@@ -65,9 +65,10 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 │   │   ├── pages/         # Route pages
 │   │   ├── hooks/         # Custom React hooks
 │   │   └── lib/           # Utilities and context
-├── uploads/                # Uploaded audio + cover image files (served via /uploads/:filename)
+├── uploads/                # Temporary upload buffer (multer) — files moved to Object Storage after upload
 ├── server/                 # Express backend
-│   ├── routes.ts          # API endpoints (includes multer file upload + protected audio serving)
+│   ├── routes.ts          # API endpoints (multer upload → Object Storage, cloud serving)
+│   ├── replit_integrations/object_storage/  # Object Storage integration (GCS via Replit sidecar)
 │   ├── storage.ts         # Database operations
 │   ├── db.ts              # Database connection
 │   └── seed.ts            # Demo data seeding
@@ -173,6 +174,16 @@ npm run dev
 ```
 
 This starts both the Express API server and Vite development server.
+
+## File Storage (Object Storage)
+
+All uploaded files (audio tracks, cover images, artist profile/cover images, mastered files) are stored in Replit Object Storage (GCS-backed persistent cloud storage). This ensures files survive deployments and filesystem resets.
+
+- **Upload flow**: multer buffers to local `uploads/` dir → `uploadToObjectStorage()` moves file to cloud → local temp file deleted
+- **Serving**: Cloud files served via `/cloud/uploads/:filename` route; legacy `/uploads/:filename` route serves any remaining local files
+- **Database URLs**: New uploads stored as `/cloud/uploads/<filename>`, legacy files may still reference `/uploads/<filename>`
+- **Bucket**: `DEFAULT_OBJECT_STORAGE_BUCKET_ID` env var
+- **Deletion**: `deleteFromObjectStorage()` cleans up cloud files when tracks/images are deleted
 
 ## Development Notes
 
