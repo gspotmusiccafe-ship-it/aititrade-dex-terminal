@@ -21,7 +21,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Search for tracks, albums, and artists
 - Premium membership for early access to pre-release content
 - **Buy Song**: Button on track cards (store link coming soon)
-- **AITIFY Music Radio**: Connect Spotify Premium and schedule automated jam sessions
+- **Spotify Stream Counter**: Look up verified stream counts for any Spotify track by pasting Track ID, URL, or URI (powered by RapidAPI)
 
 ### For Artists
 - Artist Portal to manage profile and content

@@ -1818,7 +1818,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/api/admin/spotify/track/:trackId", isAdmin, async (req: any, res) => {
+  const spotifyTrackLookupHandler = async (req: any, res: any) => {
     try {
       const { trackId } = req.params;
       if (!trackId || typeof trackId !== "string") {
@@ -1864,7 +1864,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       console.error("Error fetching Spotify track:", error);
       res.status(500).json({ message: "Failed to fetch Spotify track" });
     }
-  });
+  };
+
+  app.get("/api/spotify/track/:trackId", isAuthenticated, spotifyTrackLookupHandler);
+  app.get("/api/admin/spotify/track/:trackId", isAdmin, spotifyTrackLookupHandler);
 
   return httpServer;
 }
