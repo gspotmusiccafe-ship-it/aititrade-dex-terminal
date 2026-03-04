@@ -45,3 +45,9 @@ integrations = ["javascript_log_in_with_replit:2.0.0", "javascript_database:1.0.
 
 [userenv.shared]
 RAPIDAPI_KEY = "a2006db22amsh6d42daded905ac5p1c1331jsneb665639ab9c"
+
+[userenv.production]
+PAYPAL_ENVIRONMENT = "production"
+
+[userenv.development]
+PAYPAL_ENVIRONMENT = "sandbox"
