@@ -101,7 +101,7 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
 
   const handleBuySong = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toast({ title: "Store coming soon", description: "The music store will be available shortly." });
+    window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer");
   };
 
   return (

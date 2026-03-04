@@ -382,7 +382,7 @@ export function MusicPlayer() {
               size="icon"
               title="Buy Song"
               onClick={() => {
-                toast({ title: "Store coming soon", description: "The music store will be available shortly." });
+                window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer");
               }}
               data-testid="button-buy-current"
             >
