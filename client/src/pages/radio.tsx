@@ -97,10 +97,16 @@ export default function RadioPage() {
 
   const { data: profile, isLoading: profileLoading } = useQuery<SpotifyProfile>({
     queryKey: ["/api/spotify/me"],
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
+
+  const isConnected = profile?.connected === true;
 
   const { data: sessions, isLoading: sessionsLoading } = useQuery<JamSession[]>({
     queryKey: ["/api/jam-sessions"],
+    enabled: isConnected,
   });
 
   const createMutation = useMutation({
