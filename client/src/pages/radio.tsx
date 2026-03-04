@@ -454,7 +454,7 @@ export default function RadioPage() {
 
               {searchResults && (
                 <div className="max-h-48 overflow-y-auto space-y-1 border rounded-lg p-2">
-                  {searchResults.tracks?.items?.map((track: SpotifyTrackItem) => (
+                  {searchResults.tracks?.items?.filter(Boolean).map((track: SpotifyTrackItem) => (
                     <div
                       key={track.id}
                       className={`flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-muted/50 transition-colors ${selectedItem?.uri === track.uri ? "bg-[#1DB954]/10 border border-[#1DB954]/30" : ""}`}

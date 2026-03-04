@@ -1656,6 +1656,17 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                   </div>
                   <div className="flex items-center gap-2">
                     {statusBadge(req.status)}
+                    {req.status === "completed" && req.masteredUrl && (
+                      <a
+                        href={req.masteredUrl}
+                        download
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                        data-testid={`button-download-mastered-${req.id}`}
+                        title="Download mastered track"
+                      >
+                        <Download className="h-4 w-4" />
+                      </a>
+                    )}
                     {(req.status === "rejected" || req.status === "completed") && (
                       <Button
                         variant="ghost"

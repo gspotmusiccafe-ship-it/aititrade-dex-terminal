@@ -177,6 +177,7 @@ export const masteringRequests = pgTable("mastering_requests", {
   notes: text("notes"),
   status: varchar("status").default("pending"),
   adminNotes: text("admin_notes"),
+  masteredUrl: text("mastered_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

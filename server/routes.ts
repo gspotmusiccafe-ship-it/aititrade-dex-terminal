@@ -1338,6 +1338,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         trackId: track.id,
         notes: "Auto-mastered via AITIFY mastering engine",
         status: "completed",
+        masteredUrl,
       });
 
       sendEvent({
