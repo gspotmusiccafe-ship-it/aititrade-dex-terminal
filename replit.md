@@ -14,14 +14,15 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 ## Key Features
 
 ### For Listeners
+- **AITIFY MUSIC RADIO 97.7 THE FLAME**: Auto-playing radio that loops all featured tracks when users log in
 - Browse and stream music from various artists
-- Create and manage playlists
+- Create and manage playlists (Silver+ members)
 - Like/unlike tracks and follow artists
 - Add tracks to playlists from track cards or the music player
 - Search for tracks, albums, and artists
 - Premium membership for early access to pre-release content
-- **Buy Song**: Button on track cards (store link coming soon)
-- **Spotify Stream Counter**: Look up verified stream counts for any Spotify track by pasting Track ID, URL, or URI (powered by RapidAPI)
+- **Buy Song**: Button on track cards and music player (links to https://payhip.com/aitifymusicstore)
+- **Free account**: Listen-only — no services, no playlists, just music
 
 ### For Artists
 - Artist Portal to manage profile and content

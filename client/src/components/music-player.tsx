@@ -31,6 +31,7 @@ export function MusicPlayer() {
     repeat,
     queue,
     queueIndex,
+    autoplayBlocked,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -41,6 +42,7 @@ export function MusicPlayer() {
     removeFromQueue,
     clearQueue,
     playFromQueue,
+    resumeAutoplay,
   } = usePlayer();
 
   const { toast } = useToast();
@@ -107,8 +109,34 @@ export function MusicPlayer() {
 
   if (!currentTrack) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border flex items-center justify-center">
-        <p className="text-muted-foreground text-sm">Select a track to start playing</p>
+      <div className="fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border flex items-center justify-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+          <Play className="h-4 w-4 text-primary" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-primary" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
+          <p className="text-xs text-muted-foreground">Tune in — music starts automatically</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (autoplayBlocked) {
+    return (
+      <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/90 to-black/70 backdrop-blur-xl border-t border-white/5 z-50 flex items-center justify-center gap-4 px-4">
+        <div className="text-center">
+          <p className="text-sm font-semibold text-primary" data-testid="text-radio-blocked-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
+          <p className="text-xs text-muted-foreground">{currentTrack.title} — {currentTrack.artist?.name}</p>
+        </div>
+        <Button
+          size="sm"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+          onClick={resumeAutoplay}
+          data-testid="button-tune-in"
+        >
+          <Play className="h-4 w-4" />
+          Tune In
+        </Button>
       </div>
     );
   }
@@ -243,6 +271,7 @@ export function MusicPlayer() {
               )}
             </div>
             <div className="min-w-0">
+              <p className="text-[10px] font-semibold text-primary/80 uppercase tracking-wider" data-testid="text-radio-station-label">97.7 THE FLAME</p>
               <p className="font-medium text-sm truncate" data-testid="text-current-track-title">
                 {currentTrack.title}
               </p>

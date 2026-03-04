@@ -11,6 +11,7 @@ interface PlayerState {
   queueIndex: number;
   shuffle: boolean;
   repeat: "off" | "all" | "one";
+  autoplayBlocked: boolean;
 }
 
 interface PlayerContextType extends PlayerState {
@@ -26,6 +27,7 @@ interface PlayerContextType extends PlayerState {
   playFromQueue: (index: number) => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  resumeAutoplay: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -40,7 +42,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     queue: [],
     queueIndex: 0,
     shuffle: false,
-    repeat: "off",
+    repeat: "all",
+    autoplayBlocked: false,
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -165,9 +168,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (p !== undefined) {
         p.then(() => {
           reportPlay(track.id);
+          setState(prev => ({ ...prev, autoplayBlocked: false }));
         }).catch((err) => {
           console.error("Audio play failed:", err.message);
-          setState(prev => ({ ...prev, isPlaying: false }));
+          const isAutoplayBlock = err.name === "NotAllowedError";
+          setState(prev => ({ ...prev, isPlaying: false, autoplayBlocked: isAutoplayBlock }));
         });
       }
       setState(prev => ({
@@ -175,11 +180,27 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         currentTrack: track,
         isPlaying: true,
         progress: 0,
+        autoplayBlocked: false,
         queue: queue || [track],
         queueIndex: queue ? queue.findIndex(t => t.id === track.id) : 0,
       }));
     }
   }, [reportPlay]);
+
+  const resumeAutoplay = useCallback(() => {
+    if (audioRef.current && state.currentTrack) {
+      const p = audioRef.current.play();
+      if (p !== undefined) {
+        p.then(() => {
+          reportPlay(state.currentTrack!.id);
+          setState(prev => ({ ...prev, isPlaying: true, autoplayBlocked: false }));
+        }).catch((err) => {
+          console.error("Resume autoplay failed:", err.message);
+          setState(prev => ({ ...prev, isPlaying: false }));
+        });
+      }
+    }
+  }, [state.currentTrack, reportPlay]);
 
   const togglePlay = useCallback(() => {
     if (audioRef.current && state.currentTrack) {
@@ -375,6 +396,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         playFromQueue,
         toggleShuffle,
         toggleRepeat,
+        resumeAutoplay,
       }}
     >
       {children}

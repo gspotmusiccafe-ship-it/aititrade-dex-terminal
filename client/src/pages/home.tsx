@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Play, Clock, TrendingUp, Star, Disc3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,11 +45,19 @@ function TrackListSkeleton({ count = 5 }: { count?: number }) {
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { playTrack } = usePlayer();
+  const { playTrack, currentTrack } = usePlayer();
+  const autoPlayedRef = useRef(false);
 
   const { data: featuredTracks, isLoading: loadingTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/featured"],
   });
+
+  useEffect(() => {
+    if (featuredTracks && featuredTracks.length > 0 && !autoPlayedRef.current && !currentTrack) {
+      autoPlayedRef.current = true;
+      playTrack(featuredTracks[0], featuredTracks);
+    }
+  }, [featuredTracks]);
 
   const { data: prereleaseTracks, isLoading: loadingPrerelease } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/prerelease"],

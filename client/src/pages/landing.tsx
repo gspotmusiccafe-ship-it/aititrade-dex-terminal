@@ -297,7 +297,7 @@ const membershipTiers = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["Listen to released music", "Follow artists", "Standard audio quality"],
+    features: ["Listen to released music", "Follow artists"],
     highlight: false,
   },
   {
@@ -404,7 +404,7 @@ export default function LandingPage() {
                 <Button size="lg" asChild data-testid="button-hero-cta">
                   <a href="/api/login">
                     <Headphones className="h-5 w-5 mr-2" />
-                    Join Free & Listen
+                    Tune In
                   </a>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
@@ -510,15 +510,17 @@ export default function LandingPage() {
                     ))}
                   </ul>
 
-                  <Button
-                    className="w-full"
-                    variant={tier.highlight ? "default" : "outline"}
-                    asChild
-                  >
-                    <a href="/api/login">
-                      {tier.name === "Free" ? "Get Started" : "Start Free Trial"}
-                    </a>
-                  </Button>
+                  {tier.name !== "Free" && (
+                    <Button
+                      className="w-full"
+                      variant={tier.highlight ? "default" : "outline"}
+                      asChild
+                    >
+                      <a href="/api/login">
+                        Start Free Trial
+                      </a>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
