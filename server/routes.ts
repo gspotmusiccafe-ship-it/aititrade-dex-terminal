@@ -22,13 +22,17 @@ if (!fs.existsSync(uploadsDir)) {
 
 const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "";
 
+import ffmpegStatic from "ffmpeg-static";
 import { execSync } from "child_process";
-let FFMPEG_PATH = "ffmpeg";
-try {
-  FFMPEG_PATH = execSync("which ffmpeg", { encoding: "utf-8" }).trim() || "ffmpeg";
-} catch {
-  FFMPEG_PATH = "ffmpeg";
+let FFMPEG_PATH = ffmpegStatic || "ffmpeg";
+if (!ffmpegStatic) {
+  try {
+    FFMPEG_PATH = execSync("which ffmpeg", { encoding: "utf-8" }).trim() || "ffmpeg";
+  } catch {
+    FFMPEG_PATH = "ffmpeg";
+  }
 }
+console.log(`[mastering] ffmpeg path: ${FFMPEG_PATH}`);
 
 async function uploadToObjectStorage(localFilePath: string, filename: string, contentType: string): Promise<string> {
   const objectName = `uploads/${filename}`;
