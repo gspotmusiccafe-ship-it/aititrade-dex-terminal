@@ -1953,6 +1953,29 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/jam-sessions/active", isAuthenticated, async (req: any, res) => {
+    try {
+      const sessions = await db.select().from(jamSessions).where(eq(jamSessions.isActive, true)).orderBy(jamSessions.createdAt);
+      const sessionsWithStats = await Promise.all(sessions.map(async (session) => {
+        const listenerCount = await db.select({ total: sql<number>`COUNT(DISTINCT ${jamSessionListeners.userId})` })
+          .from(jamSessionListeners).where(and(eq(jamSessionListeners.sessionId, session.id), sql`${jamSessionListeners.leftAt} IS NULL`));
+        const engagementCount = await db.select({ total: count() })
+          .from(jamSessionEngagement).where(eq(jamSessionEngagement.sessionId, session.id));
+        const owner = await storage.getUser(session.userId);
+        return {
+          ...session,
+          ownerName: owner ? `${owner.firstName || ""} ${owner.lastName || ""}`.trim() || "DJ" : "DJ",
+          activeListeners: Number(listenerCount[0]?.total || 0),
+          totalEngagements: Number(engagementCount[0]?.total || 0),
+        };
+      }));
+      res.json(sessionsWithStats);
+    } catch (error) {
+      console.error("Error fetching active sessions:", error);
+      res.status(500).json({ message: "Failed to fetch active sessions" });
+    }
+  });
+
   // Jam Sessions CRUD
   app.get("/api/jam-sessions", isAuthenticated, async (req: any, res) => {
     try {
@@ -2075,6 +2098,14 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (!action) return res.status(400).json({ message: "Action is required" });
       const validActions = ["play", "save", "share", "skip", "like", "add_to_playlist"];
       if (!validActions.includes(action)) return res.status(400).json({ message: "Invalid action type" });
+
+      const session = await db.select().from(jamSessions).where(eq(jamSessions.id, req.params.id));
+      if (!session.length || !session[0].isActive) return res.status(404).json({ message: "Session not found or inactive" });
+
+      const isListener = await db.select().from(jamSessionListeners)
+        .where(and(eq(jamSessionListeners.sessionId, req.params.id), eq(jamSessionListeners.userId, userId), sql`${jamSessionListeners.leftAt} IS NULL`));
+      const isOwner = session[0].userId === userId;
+      if (!isListener.length && !isOwner) return res.status(403).json({ message: "You must join this session before recording engagement" });
 
       const [engagement] = await db.insert(jamSessionEngagement).values({
         sessionId: req.params.id,
