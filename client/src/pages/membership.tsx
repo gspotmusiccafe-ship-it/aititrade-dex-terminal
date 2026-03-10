@@ -18,7 +18,8 @@ import {
 const TIER_PRICES: Record<string, string> = {
   silver: "1.99",
   bronze: "3.99",
-  gold: "6.99",
+  gold: "49.99",
+  gold_monthly: "9.99",
 };
 
 const TIER_NAMES: Record<string, string> = {
@@ -82,11 +83,12 @@ const plans = [
   {
     id: "gold",
     name: "Gold",
-    price: "$6.99",
-    period: "/month",
+    price: "$49.99",
+    period: " to join",
     description: "Artist Pro — upload, promote, and distribute your music",
     features: [
       { text: "Everything in Bronze", included: true },
+      { text: "$9.99/month to stay active", included: true },
       { text: "Unlimited track uploads", included: true },
       { text: "Upload music videos (MP3/YouTube)", included: true },
       { text: "Marketing & promotions tools", included: true },
@@ -273,7 +275,9 @@ function PayPalCheckoutDialog({
             Upgrade to {tierName}
           </DialogTitle>
           <DialogDescription>
-            Complete your payment of ${amount}/month via PayPal to activate your {tierName} membership.
+            {tier === "gold"
+              ? `Complete your one-time payment of $${amount} via PayPal to join as a Gold (Artist Pro) member. After joining, it's $9.99/month to stay active.`
+              : `Complete your payment of $${amount}/month via PayPal to activate your ${tierName} membership.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -282,7 +286,9 @@ function PayPalCheckoutDialog({
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-semibold">{tierName} Membership</p>
-                <p className="text-sm text-muted-foreground">Monthly subscription</p>
+                <p className="text-sm text-muted-foreground">
+                  {tier === "gold" ? "One-time join fee + $9.99/month" : "Monthly subscription"}
+                </p>
               </div>
               <p className="text-2xl font-bold">${amount}</p>
             </div>

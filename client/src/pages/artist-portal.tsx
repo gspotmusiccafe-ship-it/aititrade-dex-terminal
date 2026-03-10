@@ -372,8 +372,8 @@ function ArtistOnboarding() {
     {
       id: "gold" as const,
       name: "Gold",
-      price: "$6.99",
-      period: "/month",
+      price: "$49.99",
+      period: " to join",
       icon: Crown,
       color: "text-yellow-500",
       borderColor: "border-yellow-500/50",

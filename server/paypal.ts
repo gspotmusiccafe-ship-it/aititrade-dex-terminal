@@ -6,7 +6,8 @@ import { Request, Response } from "express";
 const TIER_PRICES: Record<string, string> = {
   silver: "1.99",
   bronze: "3.99",
-  gold: "6.99",
+  gold: "49.99",
+  gold_monthly: "9.99",
 };
 
 const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
@@ -132,8 +133,32 @@ export async function loadPaypalDefault(req: Request, res: Response) {
   try {
     const clientToken = await getClientToken();
     res.json({ clientToken, sandbox: !useProductionPaypal });
-  } catch (error) {
-    console.error("Failed to get PayPal client token:", error);
-    res.status(500).json({ error: "Failed to initialize PayPal" });
+  } catch (error: any) {
+    console.error(`Failed to get PayPal client token (env=${useProductionPaypal ? "production" : "sandbox"}):`, error?.message || error);
+    res.status(500).json({ error: "Failed to initialize PayPal. Please try again later." });
   }
+}
+
+export { ordersController as __ordersController };
+
+export async function createTipOrder(amount: string, artistName: string) {
+  const collect = {
+    body: {
+      intent: "CAPTURE",
+      purchaseUnits: [{
+        amount: { currencyCode: "USD", value: amount },
+        description: `Tip for ${artistName} on AITIFY`,
+      }],
+    },
+    prefer: "return=minimal",
+  };
+  const { body, ...httpResponse } = await ordersController.createOrder(collect);
+  const jsonResponse = JSON.parse(String(body));
+  return { jsonResponse, statusCode: httpResponse.statusCode };
+}
+
+export async function captureTipOrder(orderID: string) {
+  const { body, ...httpResponse } = await ordersController.captureOrder({ id: orderID, prefer: "return=minimal" });
+  const jsonResponse = JSON.parse(String(body));
+  return { jsonResponse, statusCode: httpResponse.statusCode };
 }

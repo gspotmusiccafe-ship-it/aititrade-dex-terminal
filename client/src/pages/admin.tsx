@@ -96,7 +96,7 @@ function AnalyticsDashboard() {
         <StatCard title="Total Tracks" value={analytics?.totalTracks || 0} icon={Music} />
         <StatCard title="Total Plays" value={analytics?.totalPlays?.toLocaleString() || "0"} icon={TrendingUp} />
         <StatCard title="Paid Members" value={analytics?.premiumMembers || 0} icon={Crown} description="Silver/Bronze/Gold" />
-        <StatCard title="Gold (Artist Pro)" value={analytics?.goldMembers || 0} icon={Crown} description="$6.99/month" />
+        <StatCard title="Gold (Artist Pro)" value={analytics?.goldMembers || 0} icon={Crown} description="$49.99 join + $9.99/mo" />
         <StatCard title="Est. Monthly Revenue" value={`$${(analytics?.estimatedRevenue || 0).toFixed(2)}`} icon={DollarSign} />
         <StatCard title="Total Playlists" value={analytics?.totalPlaylists || 0} icon={ListMusic} />
       </div>

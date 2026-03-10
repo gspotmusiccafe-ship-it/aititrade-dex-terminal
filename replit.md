@@ -39,8 +39,8 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Free**: Listen to released music, follow artists
 - **Silver ($1.99/mo)**: Released music, follow artists, create playlists
 - **Bronze ($3.99/mo)**: Released + pre-release music, playlists, videos
-- **Gold ($6.99/mo)**: Artist Pro — uploads, MP3/YouTube, marketing, promotions, distribution, analytics, lossless audio. Gold IS Artist Pro (no separate tier).
-- Users must subscribe to Gold ($6.99/mo) before creating an artist profile.
+- **Gold ($49.99 to join + $9.99/mo)**: Artist Pro — uploads, MP3/YouTube, marketing, promotions, distribution, analytics, lossless audio. Gold IS Artist Pro (no separate tier).
+- Users must subscribe to Gold ($49.99 one-time join fee) before creating an artist profile. $9.99/month to stay active.
 - **Buy Song**: Download button replaced with "Buy Song" button for users (store link coming soon). Admin retains download in Content tab for distribution uploads.
 
 ### Distribution System

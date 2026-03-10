@@ -12,7 +12,7 @@ import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile, getSpotifyAuthUrl, exchangeSpotifyCode, disconnectSpotify, clearSpotifyCache } from "./spotify";
-import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder } from "./paypal";
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -21,6 +21,14 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID || "";
+
+import { execSync } from "child_process";
+let FFMPEG_PATH = "ffmpeg";
+try {
+  FFMPEG_PATH = execSync("which ffmpeg", { encoding: "utf-8" }).trim() || "ffmpeg";
+} catch {
+  FFMPEG_PATH = "ffmpeg";
+}
 
 async function uploadToObjectStorage(localFilePath: string, filename: string, contentType: string): Promise<string> {
   const objectName = `uploads/${filename}`;
@@ -315,7 +323,7 @@ export async function registerRoutes(
       // Require Gold membership
       const membership = await storage.getUserMembership(userId);
       if (!membership || !membership.isActive || membership.tier !== "gold") {
-        return res.status(403).json({ message: "Artist profile requires a Gold ($6.99/mo) subscription" });
+        return res.status(403).json({ message: "Artist profile requires a Gold ($49.99 to join) subscription" });
       }
 
       const validated = insertArtistSchema.parse({ ...req.body, userId });
@@ -858,32 +866,8 @@ export async function registerRoutes(
       if (!artist) {
         return res.status(404).json({ error: "Artist not found" });
       }
-      const { ordersController } = await import("./paypal").then(m => ({ ordersController: (m as any).__ordersController }));
-      const PayPalSDK = (await import("@paypal/paypal-server-sdk")).default as any;
-      const { Client, Environment, OrdersController: OC } = PayPalSDK;
-      const useProduction = process.env.PAYPAL_ENVIRONMENT === "production";
-      const client = new Client({
-        clientCredentialsAuthCredentials: {
-          oAuthClientId: process.env.PAYPAL_CLIENT_ID!,
-          oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET!,
-        },
-        timeout: 0,
-        environment: useProduction ? Environment.Production : Environment.Sandbox,
-      });
-      const oc = new OC(client);
-      const collect = {
-        body: {
-          intent: "CAPTURE",
-          purchaseUnits: [{
-            amount: { currencyCode: "USD", value: tipAmount.toFixed(2) },
-            description: `Tip for ${artist.name} on AITIFY`,
-          }],
-        },
-        prefer: "return=minimal",
-      };
-      const { body, ...httpResponse } = await oc.createOrder(collect);
-      const jsonResponse = JSON.parse(String(body));
-      res.status(httpResponse.statusCode).json(jsonResponse);
+      const { jsonResponse, statusCode } = await createTipOrder(tipAmount.toFixed(2), artist.name);
+      res.status(statusCode).json(jsonResponse);
     } catch (error) {
       console.error("Failed to create tip order:", error);
       res.status(500).json({ error: "Failed to create tip order" });
@@ -905,20 +889,7 @@ export async function registerRoutes(
       if (existingTip) {
         return res.status(400).json({ error: "Tip already recorded for this order" });
       }
-      const PayPalSDK = (await import("@paypal/paypal-server-sdk")).default as any;
-      const { Client, Environment, OrdersController: OC } = PayPalSDK;
-      const useProduction = process.env.PAYPAL_ENVIRONMENT === "production";
-      const client = new Client({
-        clientCredentialsAuthCredentials: {
-          oAuthClientId: process.env.PAYPAL_CLIENT_ID!,
-          oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET!,
-        },
-        timeout: 0,
-        environment: useProduction ? Environment.Production : Environment.Sandbox,
-      });
-      const oc = new OC(client);
-      const { body, ...httpResponse } = await oc.captureOrder({ id: orderID, prefer: "return=minimal" });
-      const jsonResponse = JSON.parse(String(body));
+      const { jsonResponse, statusCode } = await captureTipOrder(orderID);
       if (jsonResponse.status === "COMPLETED") {
         const capturedAmount = jsonResponse.purchase_units?.[0]?.payments?.captures?.[0]?.amount;
         if (!capturedAmount?.value) {
@@ -932,7 +903,7 @@ export async function registerRoutes(
           paypalOrderId: orderID,
         });
       }
-      res.status(httpResponse.statusCode).json(jsonResponse);
+      res.status(statusCode).json(jsonResponse);
     } catch (error) {
       console.error("Failed to capture tip:", error);
       res.status(500).json({ error: "Failed to capture tip" });
@@ -1408,7 +1379,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       sendEvent({ status: "processing", message: "Applying mastering chain (EQ, compression, limiting)...", progress: 30 });
 
       await new Promise<void>((resolve, reject) => {
-        const ffmpeg = spawn("ffmpeg", ffmpegArgs);
+        const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs);
         let stderrData = "";
 
         ffmpeg.stderr.on("data", (data: Buffer) => {
@@ -2377,7 +2348,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       ];
 
       await new Promise<void>((resolve, reject) => {
-        const ffmpeg = spawn("ffmpeg", ffmpegArgs);
+        const ffmpeg = spawn(FFMPEG_PATH, ffmpegArgs);
         let stderrData = "";
         ffmpeg.stderr.on("data", (data: Buffer) => { stderrData += data.toString(); });
         ffmpeg.on("close", (code: number) => {

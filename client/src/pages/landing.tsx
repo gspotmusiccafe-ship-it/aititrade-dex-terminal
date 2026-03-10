@@ -327,10 +327,11 @@ const membershipTiers = [
   },
   {
     name: "Gold",
-    price: "$6.99",
-    period: "/month",
+    price: "$49.99",
+    period: " to join",
     features: [
       "Everything in Bronze",
+      "$9.99/month to stay active",
       "Unlimited track uploads",
       "MP3/YouTube video uploads",
       "Marketing & promotions",

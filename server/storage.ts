@@ -609,7 +609,7 @@ export class DatabaseStorage implements IStorage {
 
     const silverRevenue = (silverCount?.count || 0) * 1.99;
     const bronzeRevenue = (bronzeCount?.count || 0) * 3.99;
-    const goldRevenue = (goldCount?.count || 0) * 6.99;
+    const goldRevenue = (goldCount?.count || 0) * 9.99;
 
     return {
       totalUsers: userCount?.count || 0,
