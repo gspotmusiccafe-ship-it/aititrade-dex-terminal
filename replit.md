@@ -14,7 +14,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 ## Key Features
 
 ### For Listeners
-- **AITIFY MUSIC RADIO 97.7 THE FLAME**: Auto-playing radio that loops all featured tracks when users log in
+- **AITIFY MUSIC RADIO 97.7 THE FLAME**: Auto-playing radio that loops admin-selected featured tracks when users log in
 - Browse and stream music from various artists
 - Create and manage playlists (Silver+ members)
 - Like/unlike tracks and follow artists
@@ -22,6 +22,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Search for tracks, albums, and artists
 - Premium membership for early access to pre-release content
 - **Buy Song**: Button on track cards and music player (links to https://payhip.com/aitifymusicstore)
+- **Tip Jar**: Send tips to artists via PayPal from artist pages and the music player
 - **Free account**: Listen-only — no services, no playlists, just music
 - **Free users stay on landing page only** — the landing page IS the radio. No login, no inside access, just tune in to 97.7 THE FLAME
 
@@ -30,6 +31,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Upload tracks with genre and metadata
 - Set tracks as pre-release (Premium members only)
 - View play counts and engagement
+- **Tips Dashboard**: View total tips received and tip count in the artist portal Tips tab
 - **AI Lyrics Generator**: Enter a prompt/mood/genre/style → OpenAI generates complete structured song lyrics (verse, chorus, bridge). Edit and submit for beat production.
 - **Audio Mastering Engine**: Select a track → ffmpeg mastering chain processes it (high-pass filter, multi-band compression, EQ, limiting, loudness normalization to -14 LUFS) → download radio-ready mastered file
 
@@ -54,6 +56,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Lyrics**: Review artist lyrics submissions, set status (pending → in production → completed/rejected), view full lyrics, add admin notes
 - **Mastering**: Review artist mastering requests, "Master Track" button runs actual ffmpeg engine (downloads from cloud → processes → uploads mastered file → auto-updates status to completed with download URL)
 - **Distribution**: Review and manage artist distribution requests
+- **97.7 FM Radio Playlist**: Admin selects which tracks play on 97.7 THE FLAME radio. Toggle tracks on/off with checkboxes, no limit on tracks. Tracks marked `isFeatured=true` play on radio; falls back to top-played tracks if none selected.
 - **Radio Shows**: Pre-load Spotify playlist URLs by time slot (Morning, Mid-Day, Afternoon, Evening, Bedtime). Admin can add, edit, enable/disable, and delete shows. Shows appear on the Radio page with embedded Spotify players.
 - **Membership Management**: View all subscriptions
 
@@ -96,6 +99,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **distributionRequests**: Artist distribution requests (artistId, userId, trackId, status, message, adminNotes)
 - **lyricsRequests**: Artist lyrics submissions for beat production (artistId, userId, title, lyrics, genre, notes, status, adminNotes)
 - **masteringRequests**: Artist mastering requests (artistId, userId, trackId, notes, status, adminNotes)
+- **tips**: Artist tips from fans (artistId, userId, amount, message, paypalOrderId)
 
 ## API Endpoints
 

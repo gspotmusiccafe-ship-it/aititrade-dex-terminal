@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, ShoppingCart, ListPlus, ListMusic, X, Trash2 } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, ShoppingCart, ListPlus, ListMusic, X, Trash2, DollarSign } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -8,6 +8,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { TipJarDialog } from "@/components/tip-jar-dialog";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -406,6 +407,17 @@ export function MusicPlayer() {
                 )}
               </PopoverContent>
             </Popover>
+            {currentTrack.artist && (
+              <TipJarDialog
+                artistId={currentTrack.artist.id}
+                artistName={currentTrack.artist.name}
+                trigger={
+                  <Button variant="ghost" size="icon" title="Tip Artist" data-testid="button-tip-player">
+                    <DollarSign className="h-4 w-4" />
+                  </Button>
+                }
+              />
+            )}
             <Button
               variant="ghost"
               size="icon"

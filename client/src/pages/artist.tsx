@@ -1,12 +1,13 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { Play, Shuffle, CheckCircle2, Users, UserPlus, UserCheck } from "lucide-react";
+import { Play, Shuffle, CheckCircle2, Users, UserPlus, UserCheck, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrackCard } from "@/components/track-card";
 import { AlbumCard } from "@/components/album-card";
+import { TipJarDialog } from "@/components/tip-jar-dialog";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -203,6 +204,18 @@ export default function ArtistPage() {
             </>
           )}
         </Button>
+        {artist && (
+          <TipJarDialog
+            artistId={artist.id}
+            artistName={artist.name}
+            trigger={
+              <Button variant="outline" className="rounded-full gap-2" data-testid="button-tip-artist">
+                <DollarSign className="h-4 w-4" />
+                Tip
+              </Button>
+            }
+          />
+        )}
       </div>
 
       {/* Bio */}

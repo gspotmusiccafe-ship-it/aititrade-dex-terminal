@@ -14,6 +14,7 @@ import {
   distributionRequests,
   lyricsRequests,
   masteringRequests,
+  tips,
   type Artist,
   type InsertArtist,
   type Album,
@@ -37,6 +38,8 @@ import {
   type InsertLyricsRequest,
   type MasteringRequest,
   type InsertMasteringRequest,
+  type Tip,
+  type InsertTip,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
@@ -136,6 +139,15 @@ export interface IStorage {
   getAllMasteringRequests(): Promise<MasteringRequest[]>;
   updateMasteringRequest(id: string, data: { status?: string; adminNotes?: string; masteredUrl?: string }): Promise<MasteringRequest | undefined>;
   deleteMasteringRequest(id: string): Promise<void>;
+  // Tips
+  createTip(tip: InsertTip): Promise<Tip>;
+  getArtistTips(artistId: string): Promise<Tip[]>;
+  getArtistTipTotal(artistId: string): Promise<{ total: string; count: number }>;
+  getTipByPaypalOrderId(paypalOrderId: string): Promise<Tip | undefined>;
+  // Radio featured tracks
+  getAllTracksForAdmin(): Promise<TrackWithArtist[]>;
+  getRadioTracks(): Promise<TrackWithArtist[]>;
+  setTrackFeatured(trackId: string, isFeatured: boolean): Promise<void>;
   
   getAnalytics(): Promise<{
     totalUsers: number;
@@ -522,6 +534,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(videos).where(eq(videos.artistId, artistId));
     await db.delete(albums).where(eq(albums.artistId, artistId));
     await db.delete(followedArtists).where(eq(followedArtists.artistId, artistId));
+    await db.delete(tips).where(eq(tips.artistId, artistId));
     await db.delete(artists).where(eq(artists.id, artistId));
   }
 
@@ -710,6 +723,51 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRadioShow(id: string): Promise<void> {
     await db.delete(radioShows).where(eq(radioShows.id, id));
+  }
+
+  async createTip(tip: InsertTip): Promise<Tip> {
+    const [result] = await db.insert(tips).values(tip).returning();
+    return result;
+  }
+
+  async getArtistTips(artistId: string): Promise<Tip[]> {
+    return db.select().from(tips).where(eq(tips.artistId, artistId)).orderBy(desc(tips.createdAt));
+  }
+
+  async getTipByPaypalOrderId(paypalOrderId: string): Promise<Tip | undefined> {
+    const [result] = await db.select().from(tips).where(eq(tips.paypalOrderId, paypalOrderId)).limit(1);
+    return result;
+  }
+
+  async getArtistTipTotal(artistId: string): Promise<{ total: string; count: number }> {
+    const result = await db.select({
+      total: sql<string>`COALESCE(SUM(CAST(${tips.amount} AS NUMERIC)), 0)::text`,
+      count: count(),
+    }).from(tips).where(eq(tips.artistId, artistId));
+    return { total: result[0]?.total || "0", count: Number(result[0]?.count || 0) };
+  }
+
+  async getAllTracksForAdmin(): Promise<TrackWithArtist[]> {
+    const result = await db
+      .select()
+      .from(tracks)
+      .innerJoin(artists, eq(tracks.artistId, artists.id))
+      .orderBy(desc(tracks.playCount));
+    return result.map(r => ({ ...r.tracks, artist: r.artists }));
+  }
+
+  async getRadioTracks(): Promise<TrackWithArtist[]> {
+    const result = await db
+      .select()
+      .from(tracks)
+      .innerJoin(artists, eq(tracks.artistId, artists.id))
+      .where(eq(tracks.isFeatured, true))
+      .orderBy(desc(tracks.playCount));
+    return result.map(r => ({ ...r.tracks, artist: r.artists }));
+  }
+
+  async setTrackFeatured(trackId: string, isFeatured: boolean): Promise<void> {
+    await db.update(tracks).set({ isFeatured }).where(eq(tracks.id, trackId));
   }
 }
 

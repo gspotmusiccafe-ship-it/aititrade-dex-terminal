@@ -30,6 +30,7 @@ import {
   Headphones,
   Wand2,
   Download,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1046,6 +1047,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               <Send className="h-4 w-4 mr-1" />
               Distribution
             </TabsTrigger>
+            <TabsTrigger value="tips">
+              <DollarSign className="h-4 w-4 mr-1" />
+              Tips
+            </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <AddVideoDialog artistId={artist.id} />
@@ -1286,6 +1291,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
 
         <TabsContent value="distribution">
           <DistributionTab artistId={artist.id} tracks={tracks || []} />
+        </TabsContent>
+
+        <TabsContent value="tips">
+          <TipsTab artistId={artist.id} />
         </TabsContent>
       </Tabs>
     </div>
@@ -1870,6 +1879,67 @@ export default function ArtistPortalPage() {
       ) : (
         <ArtistOnboarding />
       )}
+    </div>
+  );
+}
+
+function TipsTab({ artistId }: { artistId: string }) {
+  const { data: tipTotal, isLoading: loadingTotal } = useQuery<{ total: string; count: number }>({
+    queryKey: ["/api/artists", artistId, "tips"],
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+              <DollarSign className="h-6 w-6 text-green-500" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Tips Received</p>
+              {loadingTotal ? (
+                <Skeleton className="h-8 w-24 mt-1" />
+              ) : (
+                <p className="text-2xl font-bold text-green-500" data-testid="text-total-tips">
+                  ${parseFloat(tipTotal?.total || "0").toFixed(2)}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Heart className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Number of Tips</p>
+              {loadingTotal ? (
+                <Skeleton className="h-8 w-16 mt-1" />
+              ) : (
+                <p className="text-2xl font-bold" data-testid="text-tip-count">
+                  {tipTotal?.count || 0}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">About Tips</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Fans can send you tips directly from your artist page or while listening to your music. 
+            Tips are processed securely through PayPal. Your tip button appears on your artist profile 
+            and in the music player when your tracks are playing.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

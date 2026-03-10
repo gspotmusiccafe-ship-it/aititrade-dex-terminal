@@ -41,6 +41,7 @@ export const tracks = pgTable("tracks", {
   isPrerelease: boolean("is_prerelease").default(false),
   releaseDate: timestamp("release_date"),
   genre: varchar("genre"),
+  isFeatured: boolean("is_featured").default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -228,6 +229,16 @@ export const videosRelations = relations(videos, ({ one }) => ({
   artist: one(artists, { fields: [videos.artistId], references: [artists.id] }),
 }));
 
+export const tips = pgTable("tips", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistId: varchar("artist_id").notNull().references(() => artists.id),
+  userId: varchar("user_id").notNull(),
+  amount: varchar("amount").notNull(),
+  message: text("message"),
+  paypalOrderId: varchar("paypal_order_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const playlistsRelations = relations(playlists, ({ many }) => ({
   tracks: many(playlistTracks),
 }));
@@ -254,6 +265,7 @@ export const insertJamSessionListenerSchema = createInsertSchema(jamSessionListe
 export const insertDistributionRequestSchema = createInsertSchema(distributionRequests).omit({ id: true, createdAt: true });
 export const insertLyricsRequestSchema = createInsertSchema(lyricsRequests).omit({ id: true, createdAt: true });
 export const insertMasteringRequestSchema = createInsertSchema(masteringRequests).omit({ id: true, createdAt: true });
+export const insertTipSchema = createInsertSchema(tips).omit({ id: true, createdAt: true });
 
 // Types
 export type InsertArtist = z.infer<typeof insertArtistSchema>;
@@ -285,6 +297,8 @@ export type InsertLyricsRequest = z.infer<typeof insertLyricsRequestSchema>;
 export type LyricsRequest = typeof lyricsRequests.$inferSelect;
 export type InsertMasteringRequest = z.infer<typeof insertMasteringRequestSchema>;
 export type MasteringRequest = typeof masteringRequests.$inferSelect;
+export type InsertTip = z.infer<typeof insertTipSchema>;
+export type Tip = typeof tips.$inferSelect;
 
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };

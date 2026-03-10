@@ -152,11 +152,16 @@ export async function registerRoutes(
 
   // ============ Public Routes ============
 
-  // Featured tracks
+  // Featured tracks (radio playlist - only tracks marked as featured by admin)
   app.get("/api/tracks/featured", async (req, res) => {
     try {
-      const tracks = await storage.getFeaturedTracks(20);
-      res.json(tracks);
+      const radioTracks = await storage.getRadioTracks();
+      if (radioTracks.length > 0) {
+        res.json(radioTracks);
+      } else {
+        const tracks = await storage.getFeaturedTracks(20);
+        res.json(tracks);
+      }
     } catch (error) {
       console.error("Error fetching featured tracks:", error);
       res.status(500).json({ message: "Failed to fetch tracks" });
@@ -827,6 +832,110 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error canceling membership:", error);
       res.status(500).json({ message: "Failed to cancel membership" });
+    }
+  });
+
+  // ============ Tip Jar ============
+
+  app.get("/api/artists/:id/tips", async (req, res) => {
+    try {
+      const tipTotal = await storage.getArtistTipTotal(req.params.id);
+      res.json(tipTotal);
+    } catch (error) {
+      console.error("Error fetching tips:", error);
+      res.status(500).json({ message: "Failed to fetch tips" });
+    }
+  });
+
+  app.post("/api/tips/create-order", isAuthenticated, async (req: any, res) => {
+    try {
+      const { amount, artistId } = req.body;
+      const tipAmount = parseFloat(amount);
+      if (!tipAmount || tipAmount < 1 || tipAmount > 500) {
+        return res.status(400).json({ error: "Tip amount must be between $1 and $500" });
+      }
+      const artist = await storage.getArtist(artistId);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      const { ordersController } = await import("./paypal").then(m => ({ ordersController: (m as any).__ordersController }));
+      const PayPalSDK = (await import("@paypal/paypal-server-sdk")).default as any;
+      const { Client, Environment, OrdersController: OC } = PayPalSDK;
+      const useProduction = process.env.PAYPAL_ENVIRONMENT === "production";
+      const client = new Client({
+        clientCredentialsAuthCredentials: {
+          oAuthClientId: process.env.PAYPAL_CLIENT_ID!,
+          oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET!,
+        },
+        timeout: 0,
+        environment: useProduction ? Environment.Production : Environment.Sandbox,
+      });
+      const oc = new OC(client);
+      const collect = {
+        body: {
+          intent: "CAPTURE",
+          purchaseUnits: [{
+            amount: { currencyCode: "USD", value: tipAmount.toFixed(2) },
+            description: `Tip for ${artist.name} on AITIFY`,
+          }],
+        },
+        prefer: "return=minimal",
+      };
+      const { body, ...httpResponse } = await oc.createOrder(collect);
+      const jsonResponse = JSON.parse(String(body));
+      res.status(httpResponse.statusCode).json(jsonResponse);
+    } catch (error) {
+      console.error("Failed to create tip order:", error);
+      res.status(500).json({ error: "Failed to create tip order" });
+    }
+  });
+
+  app.post("/api/tips/capture", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { orderID, artistId, message } = req.body;
+      if (!orderID || !artistId) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      const artist = await storage.getArtist(artistId);
+      if (!artist) {
+        return res.status(404).json({ error: "Artist not found" });
+      }
+      const existingTip = await storage.getTipByPaypalOrderId(orderID);
+      if (existingTip) {
+        return res.status(400).json({ error: "Tip already recorded for this order" });
+      }
+      const PayPalSDK = (await import("@paypal/paypal-server-sdk")).default as any;
+      const { Client, Environment, OrdersController: OC } = PayPalSDK;
+      const useProduction = process.env.PAYPAL_ENVIRONMENT === "production";
+      const client = new Client({
+        clientCredentialsAuthCredentials: {
+          oAuthClientId: process.env.PAYPAL_CLIENT_ID!,
+          oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET!,
+        },
+        timeout: 0,
+        environment: useProduction ? Environment.Production : Environment.Sandbox,
+      });
+      const oc = new OC(client);
+      const { body, ...httpResponse } = await oc.captureOrder({ id: orderID, prefer: "return=minimal" });
+      const jsonResponse = JSON.parse(String(body));
+      if (jsonResponse.status === "COMPLETED") {
+        const capturedAmount = jsonResponse.purchase_units?.[0]?.payments?.captures?.[0]?.amount;
+        if (!capturedAmount?.value) {
+          return res.status(400).json({ error: "Could not verify payment amount" });
+        }
+        await storage.createTip({
+          artistId,
+          userId,
+          amount: capturedAmount.value,
+          message: message || null,
+          paypalOrderId: orderID,
+        });
+      }
+      res.status(httpResponse.statusCode).json(jsonResponse);
+    } catch (error) {
+      console.error("Failed to capture tip:", error);
+      res.status(500).json({ error: "Failed to capture tip" });
     }
   });
 
@@ -1602,11 +1711,34 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   // Get all tracks for moderation
   app.get("/api/admin/tracks", isAdmin, async (req: any, res) => {
     try {
-      const tracks = await storage.getFeaturedTracks(100);
-      res.json(tracks);
+      const allTracks = await storage.getAllTracksForAdmin();
+      res.json(allTracks);
     } catch (error) {
       console.error("Error fetching tracks:", error);
       res.status(500).json({ message: "Failed to fetch tracks" });
+    }
+  });
+
+  // Toggle track featured status for radio playlist
+  app.patch("/api/admin/tracks/:id/featured", isAdmin, async (req: any, res) => {
+    try {
+      const { isFeatured } = req.body;
+      await storage.setTrackFeatured(req.params.id, !!isFeatured);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error toggling featured:", error);
+      res.status(500).json({ message: "Failed to update track" });
+    }
+  });
+
+  // Get radio playlist tracks (featured tracks)
+  app.get("/api/admin/radio-playlist", isAdmin, async (req: any, res) => {
+    try {
+      const radioTracks = await storage.getRadioTracks();
+      res.json(radioTracks);
+    } catch (error) {
+      console.error("Error fetching radio playlist:", error);
+      res.status(500).json({ message: "Failed to fetch radio playlist" });
     }
   });
 

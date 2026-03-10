@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1492,6 +1492,179 @@ function DistributionTab() {
   );
 }
 
+function RadioPlaylistTab() {
+  const { toast } = useToast();
+  const [search, setSearch] = useState("");
+
+  const { data: allTracks, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/tracks"],
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const { data: radioTracks } = useQuery<any[]>({
+    queryKey: ["/api/admin/radio-playlist"],
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ trackId, isFeatured }: { trackId: string; isFeatured: boolean }) => {
+      return apiRequest("PATCH", `/api/admin/tracks/${trackId}/featured`, { isFeatured });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/radio-playlist"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update", variant: "destructive" });
+    },
+  });
+
+  const filteredTracks = allTracks?.filter((t: any) =>
+    !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.artist?.name?.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const radioCount = radioTracks?.length || 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Flame className="h-5 w-5 text-orange-500" />
+            97.7 THE FLAME - Radio Playlist
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Select which tracks play on the radio. Toggle tracks on/off — no limit on how many you can add.
+          </p>
+        </div>
+        <Badge variant="secondary" className="text-sm" data-testid="badge-radio-count">
+          {radioCount} track{radioCount !== 1 ? "s" : ""} on air
+        </Badge>
+      </div>
+
+      {radioCount > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Flame className="h-4 w-4 text-orange-500" />
+              Currently On Air ({radioCount})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {radioTracks?.map((track: any, index: number) => (
+              <div
+                key={track.id}
+                className="flex items-center gap-3 p-2 rounded-md bg-primary/5 hover:bg-primary/10"
+                data-testid={`radio-track-${track.id}`}
+              >
+                <span className="text-sm text-muted-foreground w-6 text-center">{index + 1}</span>
+                <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
+                  {track.coverImage ? (
+                    <img src={track.coverImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                      <Music className="h-3 w-3 text-primary" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{track.title}</p>
+                  <p className="text-xs text-muted-foreground truncate">{track.artist?.name}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{track.playCount?.toLocaleString() || 0} plays</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => toggleMutation.mutate({ trackId: track.id, isFeatured: false })}
+                  disabled={toggleMutation.isPending}
+                  data-testid={`button-remove-radio-${track.id}`}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">All Tracks</CardTitle>
+          <CardDescription>Toggle tracks to add or remove them from the radio playlist</CardDescription>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tracks or artists..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+              data-testid="input-search-radio-tracks"
+            />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded" />
+              ))}
+            </div>
+          ) : filteredTracks.length > 0 ? (
+            <div className="space-y-1 max-h-[500px] overflow-y-auto">
+              {filteredTracks.map((track: any) => (
+                <div
+                  key={track.id}
+                  className={`flex items-center gap-3 p-2 rounded-md hover:bg-accent/50 cursor-pointer ${
+                    track.isFeatured ? "bg-primary/5 border border-primary/20" : ""
+                  }`}
+                  onClick={() => toggleMutation.mutate({ trackId: track.id, isFeatured: !track.isFeatured })}
+                  data-testid={`track-toggle-${track.id}`}
+                >
+                  <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${
+                    track.isFeatured ? "bg-primary border-primary" : "border-muted-foreground/30"
+                  }`}>
+                    {track.isFeatured && <CheckCircle className="h-3 w-3 text-primary-foreground" />}
+                  </div>
+                  <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
+                    {track.coverImage ? (
+                      <img src={track.coverImage} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                        <Music className="h-3 w-3 text-primary" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{track.title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{track.artist?.name}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{track.genre || "—"}</span>
+                  <span className="text-xs text-muted-foreground">{track.playCount?.toLocaleString() || 0} plays</span>
+                  {track.isFeatured && (
+                    <Badge variant="secondary" className="bg-orange-500/10 text-orange-500 text-xs">
+                      <Flame className="h-3 w-3 mr-0.5" />
+                      On Air
+                    </Badge>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Music className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No tracks found</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function RadioShowsTab() {
   const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
@@ -2005,6 +2178,10 @@ export default function AdminPage() {
                 <Send className="h-4 w-4 mr-1.5" />
                 Distribution
               </TabsTrigger>
+              <TabsTrigger value="radio-playlist" data-testid="tab-radio-playlist" className="whitespace-nowrap">
+                <Flame className="h-4 w-4 mr-1.5 text-orange-500" />
+                97.7 FM
+              </TabsTrigger>
               <TabsTrigger value="radio-shows" data-testid="tab-radio-shows" className="whitespace-nowrap">
                 <Radio className="h-4 w-4 mr-1.5" />
                 Radio
@@ -2046,6 +2223,10 @@ export default function AdminPage() {
 
           <TabsContent value="distribution">
             <DistributionTab />
+          </TabsContent>
+
+          <TabsContent value="radio-playlist">
+            <RadioPlaylistTab />
           </TabsContent>
 
           <TabsContent value="radio-shows">
