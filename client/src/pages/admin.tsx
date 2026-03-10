@@ -889,8 +889,10 @@ function AdminLyricsTab() {
   const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
 
-  const { data: requests, isLoading } = useQuery<any[]>({
+  const { data: requests, isLoading, error: lyricsError } = useQuery<any[]>({
     queryKey: ["/api/admin/lyrics-requests"],
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const updateMutation = useMutation({
@@ -1019,7 +1021,13 @@ function AdminLyricsTab() {
             </div>
           </div>
         ))}
-        {(!requests || requests.length === 0) && (
+        {lyricsError && (
+          <div className="text-center py-8 text-destructive">
+            <p className="font-medium">Failed to load lyrics requests</p>
+            <p className="text-sm mt-1">{(lyricsError as Error).message}</p>
+          </div>
+        )}
+        {!lyricsError && (!requests || requests.length === 0) && (
           <div className="text-center py-12 text-muted-foreground">
             <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p>No lyrics submissions</p>
@@ -1094,6 +1102,8 @@ function AdminMasteringTab() {
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/mastering-requests"],
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const updateMutation = useMutation({
@@ -1333,6 +1343,8 @@ function DistributionTab() {
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/distribution-requests"],
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const updateMutation = useMutation({
