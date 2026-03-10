@@ -1939,23 +1939,23 @@ export default function AdminPage() {
   return (
     <div className="min-h-full pb-28 px-6 py-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <Shield className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold" data-testid="text-admin-title">Admin Portal</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-admin-title">Admin Portal</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <a href="https://suno.com/create/" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" className="gap-2" data-testid="link-suno">
-                <Music className="h-4 w-4" />
-                Suno Music Production
+              <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-suno">
+                <Music className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Suno</span> Production
                 <ExternalLink className="h-3 w-3" />
               </Button>
             </a>
             <a href="https://jumpstr.io" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" className="gap-2" data-testid="link-jumpstr">
-                <Disc3 className="h-4 w-4" />
-                Jumpstr Distribution
+              <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-jumpstr">
+                <Disc3 className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Jumpstr</span> Distribution
                 <ExternalLink className="h-3 w-3" />
               </Button>
             </a>
@@ -1963,48 +1963,50 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="flex flex-wrap w-full gap-1">
-            <TabsTrigger value="dashboard" data-testid="tab-dashboard">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="users" data-testid="tab-users">
-              <Users className="h-4 w-4 mr-2" />
-              Users
-            </TabsTrigger>
-            <TabsTrigger value="artists" data-testid="tab-artists">
-              <Music className="h-4 w-4 mr-2" />
-              Artists
-            </TabsTrigger>
-            <TabsTrigger value="content" data-testid="tab-content">
-              <Music className="h-4 w-4 mr-2" />
-              Content
-            </TabsTrigger>
-            <TabsTrigger value="lyrics" data-testid="tab-lyrics">
-              <FileText className="h-4 w-4 mr-2" />
-              Lyrics
-            </TabsTrigger>
-            <TabsTrigger value="mastering" data-testid="tab-mastering">
-              <Headphones className="h-4 w-4 mr-2" />
-              Mastering
-            </TabsTrigger>
-            <TabsTrigger value="distribution" data-testid="tab-distribution">
-              <Send className="h-4 w-4 mr-2" />
-              Distribution
-            </TabsTrigger>
-            <TabsTrigger value="radio-shows" data-testid="tab-radio-shows">
-              <Radio className="h-4 w-4 mr-2" />
-              Radio Shows
-            </TabsTrigger>
-            <TabsTrigger value="memberships" data-testid="tab-memberships">
-              <Crown className="h-4 w-4 mr-2" />
-              Memberships
-            </TabsTrigger>
-            <TabsTrigger value="spotify" data-testid="tab-spotify">
-              <SiSpotify className="h-4 w-4 mr-2 text-[#1DB954]" />
-              Stream Counter
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-6 px-6 pb-2">
+            <TabsList className="inline-flex w-auto min-w-full gap-1">
+              <TabsTrigger value="dashboard" data-testid="tab-dashboard" className="whitespace-nowrap">
+                <BarChart3 className="h-4 w-4 mr-1.5" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="users" data-testid="tab-users" className="whitespace-nowrap">
+                <Users className="h-4 w-4 mr-1.5" />
+                Users
+              </TabsTrigger>
+              <TabsTrigger value="artists" data-testid="tab-artists" className="whitespace-nowrap">
+                <Music className="h-4 w-4 mr-1.5" />
+                Artists
+              </TabsTrigger>
+              <TabsTrigger value="content" data-testid="tab-content" className="whitespace-nowrap">
+                <Music className="h-4 w-4 mr-1.5" />
+                Content
+              </TabsTrigger>
+              <TabsTrigger value="lyrics" data-testid="tab-lyrics" className="whitespace-nowrap">
+                <FileText className="h-4 w-4 mr-1.5" />
+                Lyrics
+              </TabsTrigger>
+              <TabsTrigger value="mastering" data-testid="tab-mastering" className="whitespace-nowrap">
+                <Headphones className="h-4 w-4 mr-1.5" />
+                Mastering
+              </TabsTrigger>
+              <TabsTrigger value="distribution" data-testid="tab-distribution" className="whitespace-nowrap">
+                <Send className="h-4 w-4 mr-1.5" />
+                Distribution
+              </TabsTrigger>
+              <TabsTrigger value="radio-shows" data-testid="tab-radio-shows" className="whitespace-nowrap">
+                <Radio className="h-4 w-4 mr-1.5" />
+                Radio
+              </TabsTrigger>
+              <TabsTrigger value="memberships" data-testid="tab-memberships" className="whitespace-nowrap">
+                <Crown className="h-4 w-4 mr-1.5" />
+                Members
+              </TabsTrigger>
+              <TabsTrigger value="spotify" data-testid="tab-spotify" className="whitespace-nowrap">
+                <SiSpotify className="h-4 w-4 mr-1.5 text-[#1DB954]" />
+                Streams
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="dashboard">
             <AnalyticsDashboard />
