@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, ShoppingCart, ListPlus, ListMusic, X, Trash2, DollarSign } from "lucide-react";
+import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -111,9 +112,7 @@ export function MusicPlayer() {
   if (!currentTrack) {
     return (
       <div className="fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border flex items-center justify-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-          <Play className="h-4 w-4 text-primary" />
-        </div>
+        <img src={logoImage} alt="AITIFY" className="w-8 h-8 rounded-full object-cover" />
         <div className="text-center">
           <p className="text-sm font-semibold text-primary" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
           <p className="text-xs text-muted-foreground">Tune in — music starts automatically</p>

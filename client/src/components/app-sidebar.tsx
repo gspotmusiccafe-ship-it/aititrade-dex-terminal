@@ -2,6 +2,7 @@ import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settin
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,9 +64,7 @@ export function AppSidebar() {
       <SidebarHeader className="p-4">
         <Link href="/">
           <div className="flex items-center gap-2 cursor-pointer" data-testid="link-logo">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Music2 className="h-6 w-6 text-primary-foreground" />
-            </div>
+            <img src={logoImage} alt="AITIFY Music Radio" className="w-10 h-10 rounded-lg object-cover" />
             <div>
               <h1 className="font-bold text-lg leading-tight">AITIFY</h1>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Music Radio</p>
