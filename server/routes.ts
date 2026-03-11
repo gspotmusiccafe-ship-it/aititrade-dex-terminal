@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile, getSpotifyAuthUrl, exchangeSpotifyCode, disconnectSpotify, clearSpotifyCache } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder } from "./paypal";
@@ -225,6 +225,32 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching top artists:", error);
       res.status(500).json({ message: "Failed to fetch artists" });
+    }
+  });
+
+  app.get("/api/showtown/artists", async (_req, res) => {
+    try {
+      const allArtists = await db.select({
+        id: artists.id,
+        name: artists.name,
+        bio: artists.bio,
+        profileImage: artists.profileImage,
+        coverImage: artists.coverImage,
+        verified: artists.verified,
+        monthlyListeners: artists.monthlyListeners,
+        approvalStatus: artists.approvalStatus,
+        totalStreams: sql<number>`CAST(COALESCE(SUM(${tracks.playCount}), 0) AS INTEGER)`,
+        trackCount: sql<number>`CAST(COUNT(${tracks.id}) AS INTEGER)`,
+      })
+      .from(artists)
+      .leftJoin(tracks, eq(tracks.artistId, artists.id))
+      .where(eq(artists.approvalStatus, "approved"))
+      .groupBy(artists.id)
+      .orderBy(sql`COALESCE(SUM(${tracks.playCount}), 0) DESC`);
+      res.json(allArtists.map(a => ({ ...a, totalStreams: Number(a.totalStreams), trackCount: Number(a.trackCount) })));
+    } catch (error) {
+      console.error("Error fetching showtown artists:", error);
+      res.status(500).json({ message: "Failed to fetch showtown data" });
     }
   });
 

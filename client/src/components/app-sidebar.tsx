@@ -1,4 +1,4 @@
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Flame } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -132,6 +132,14 @@ export function AppSidebar() {
                   <Link href="/radio" data-testid="nav-radio">
                     <Radio className="h-5 w-5 text-[#1DB954]" />
                     <span>Radio</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/showtown"}>
+                  <Link href="/showtown" data-testid="nav-showtown">
+                    <Flame className="h-5 w-5 text-[#d4af37]" />
+                    <span>Showtown</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
