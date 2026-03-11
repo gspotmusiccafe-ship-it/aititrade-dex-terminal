@@ -81,6 +81,57 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setState(prev => ({ ...prev, duration: audio.duration }));
     };
 
+    const advanceQueue = (prev: PlayerState): PlayerState => {
+      const nextIndex = getNextIndex(prev.queueIndex, prev.queue.length, prev.shuffle);
+
+      if (nextIndex < prev.queue.length) {
+        const nextT = prev.queue[nextIndex];
+        if (audioRef.current && nextT) {
+          playCountedRef.current = null;
+          audioRef.current.src = nextT.audioUrl;
+          const p = audioRef.current.play();
+          if (p !== undefined) {
+            p.then(() => reportPlay(nextT.id))
+              .catch((err) => {
+                console.error("Audio play failed:", err.message);
+                setTimeout(() => setState(s => advanceQueue(s)), 500);
+              });
+          }
+        }
+        return {
+          ...prev,
+          currentTrack: nextT,
+          queueIndex: nextIndex,
+          isPlaying: true,
+          progress: 0,
+        };
+      } else if (prev.repeat === "all" && prev.queue.length > 0) {
+        const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
+        const firstTrack = prev.queue[firstIndex];
+        if (audioRef.current && firstTrack) {
+          playCountedRef.current = null;
+          audioRef.current.src = firstTrack.audioUrl;
+          const p = audioRef.current.play();
+          if (p !== undefined) {
+            p.then(() => reportPlay(firstTrack.id))
+              .catch((err) => {
+                console.error("Audio play failed:", err.message);
+                setTimeout(() => setState(s => advanceQueue(s)), 500);
+              });
+          }
+        }
+        return {
+          ...prev,
+          currentTrack: firstTrack,
+          queueIndex: firstIndex,
+          isPlaying: true,
+          progress: 0,
+        };
+      }
+
+      return { ...prev, isPlaying: false };
+    };
+
     const handleEnded = () => {
       setState(prev => {
         if (prev.repeat === "one") {
@@ -97,65 +148,50 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           return prev;
         }
 
-        const nextIndex = getNextIndex(prev.queueIndex, prev.queue.length, prev.shuffle);
-
-        if (nextIndex < prev.queue.length) {
-          const nextT = prev.queue[nextIndex];
-          if (audioRef.current && nextT) {
-            playCountedRef.current = null;
-            audioRef.current.src = nextT.audioUrl;
-            const p = audioRef.current.play();
-            if (p !== undefined) {
-              p.then(() => reportPlay(nextT.id))
-                .catch((err) => {
-                  console.error("Audio play failed:", err.message);
-                  setState(s => ({ ...s, isPlaying: false }));
-                });
-            }
-          }
-          return {
-            ...prev,
-            currentTrack: nextT,
-            queueIndex: nextIndex,
-            isPlaying: true,
-            progress: 0,
-          };
-        } else if (prev.repeat === "all" && prev.queue.length > 0) {
-          const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
-          const firstTrack = prev.queue[firstIndex];
-          if (audioRef.current && firstTrack) {
-            playCountedRef.current = null;
-            audioRef.current.src = firstTrack.audioUrl;
-            const p = audioRef.current.play();
-            if (p !== undefined) {
-              p.then(() => reportPlay(firstTrack.id))
-                .catch((err) => {
-                  console.error("Audio play failed:", err.message);
-                  setState(s => ({ ...s, isPlaying: false }));
-                });
-            }
-          }
-          return {
-            ...prev,
-            currentTrack: firstTrack,
-            queueIndex: firstIndex,
-            isPlaying: true,
-            progress: 0,
-          };
-        }
-
-        return { ...prev, isPlaying: false };
+        return advanceQueue(prev);
       });
+    };
+
+    let errorSkipTimeout: ReturnType<typeof setTimeout> | null = null;
+    const handleError = () => {
+      console.warn("Audio load error — skipping to next track");
+      if (errorSkipTimeout) clearTimeout(errorSkipTimeout);
+      errorSkipTimeout = setTimeout(() => {
+        setState(prev => {
+          if (prev.queue.length <= 1) return { ...prev, isPlaying: false };
+          return advanceQueue(prev);
+        });
+      }, 500);
+    };
+
+    const handleStalled = () => {
+      console.warn("Audio stalled — attempting recovery");
+      if (audioRef.current && audioRef.current.src) {
+        const currentSrc = audioRef.current.src;
+        setTimeout(() => {
+          if (audioRef.current && !audioRef.current.paused && audioRef.current.currentTime === 0) {
+            audioRef.current.src = currentSrc;
+            audioRef.current.play().catch(() => {
+              setState(prev => advanceQueue(prev));
+            });
+          }
+        }, 3000);
+      }
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
+    audio.addEventListener("error", handleError);
+    audio.addEventListener("stalled", handleStalled);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
       audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
       audio.removeEventListener("ended", handleEnded);
+      audio.removeEventListener("error", handleError);
+      audio.removeEventListener("stalled", handleStalled);
+      if (errorSkipTimeout) clearTimeout(errorSkipTimeout);
       audio.pause();
     };
   }, []);
@@ -221,58 +257,60 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.isPlaying, state.currentTrack]);
 
-  const nextTrack = useCallback(() => {
-    setState(prev => {
-      const nextIndex = getNextIndex(prev.queueIndex, prev.queue.length, prev.shuffle);
+  const advanceQueueFn = useCallback((prev: PlayerState): PlayerState => {
+    const nextIndex = getNextIndex(prev.queueIndex, prev.queue.length, prev.shuffle);
 
-      if (nextIndex < prev.queue.length) {
-        const nextT = prev.queue[nextIndex];
-        if (audioRef.current && nextT) {
-          playCountedRef.current = null;
-          audioRef.current.src = nextT.audioUrl;
-          const p = audioRef.current.play();
-          if (p !== undefined) {
-            p.then(() => reportPlay(nextT.id))
-              .catch((err) => {
-                console.error("Audio play failed:", err.message);
-                setState(s => ({ ...s, isPlaying: false }));
-              });
-          }
+    if (nextIndex < prev.queue.length) {
+      const nextT = prev.queue[nextIndex];
+      if (audioRef.current && nextT) {
+        playCountedRef.current = null;
+        audioRef.current.src = nextT.audioUrl;
+        const p = audioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => reportPlay(nextT.id))
+            .catch((err) => {
+              console.error("Audio play failed:", err.message);
+              setTimeout(() => setState(s => advanceQueueFn(s)), 500);
+            });
         }
-        return {
-          ...prev,
-          currentTrack: nextT,
-          queueIndex: nextIndex,
-          isPlaying: true,
-          progress: 0,
-        };
-      } else if (prev.repeat === "all" && prev.queue.length > 0) {
-        const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
-        const firstTrack = prev.queue[firstIndex];
-        if (audioRef.current && firstTrack) {
-          playCountedRef.current = null;
-          audioRef.current.src = firstTrack.audioUrl;
-          const p = audioRef.current.play();
-          if (p !== undefined) {
-            p.then(() => reportPlay(firstTrack.id))
-              .catch((err) => {
-                console.error("Audio play failed:", err.message);
-                setState(s => ({ ...s, isPlaying: false }));
-              });
-          }
-        }
-        return {
-          ...prev,
-          currentTrack: firstTrack,
-          queueIndex: firstIndex,
-          isPlaying: true,
-          progress: 0,
-        };
       }
+      return {
+        ...prev,
+        currentTrack: nextT,
+        queueIndex: nextIndex,
+        isPlaying: true,
+        progress: 0,
+      };
+    } else if (prev.repeat === "all" && prev.queue.length > 0) {
+      const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
+      const firstTrack = prev.queue[firstIndex];
+      if (audioRef.current && firstTrack) {
+        playCountedRef.current = null;
+        audioRef.current.src = firstTrack.audioUrl;
+        const p = audioRef.current.play();
+        if (p !== undefined) {
+          p.then(() => reportPlay(firstTrack.id))
+            .catch((err) => {
+              console.error("Audio play failed:", err.message);
+              setTimeout(() => setState(s => advanceQueueFn(s)), 500);
+            });
+        }
+      }
+      return {
+        ...prev,
+        currentTrack: firstTrack,
+        queueIndex: firstIndex,
+        isPlaying: true,
+        progress: 0,
+      };
+    }
 
-      return { ...prev, isPlaying: false };
-    });
+    return { ...prev, isPlaying: false };
   }, [getNextIndex, reportPlay]);
+
+  const nextTrack = useCallback(() => {
+    setState(prev => advanceQueueFn(prev));
+  }, [advanceQueueFn]);
 
   const prevTrack = useCallback(() => {
     if (state.progress > 3) {
