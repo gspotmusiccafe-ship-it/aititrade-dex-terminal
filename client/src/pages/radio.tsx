@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SiSpotify } from "react-icons/si";
-import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, ExternalLink, Music, Users, Heart, Share2, SkipForward, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye } from "lucide-react";
+import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, ExternalLink, Music, Users, Heart, Share2, SkipForward, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power, Unplug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
@@ -364,8 +367,310 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
   );
 }
 
+function CreateJamSessionForm({ onCreated }: { onCreated: () => void }) {
+  const { toast } = useToast();
+  const [name, setName] = useState("");
+  const [spotifyUri, setSpotifyUri] = useState("");
+  const [spotifyType, setSpotifyType] = useState("playlist");
+  const [scheduledTime, setScheduledTime] = useState("12:00");
+  const [selectedDays, setSelectedDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/jam-sessions", {
+        name: name.trim(),
+        spotifyUri: spotifyUri.trim(),
+        spotifyName: name.trim(),
+        spotifyType,
+        scheduledTime,
+        daysOfWeek: selectedDays.join(","),
+      }),
+    onSuccess: () => {
+      toast({ title: "Jam Session Created", description: `"${name}" is now active` });
+      setName("");
+      setSpotifyUri("");
+      setScheduledTime("12:00");
+      setSelectedDays([0, 1, 2, 3, 4, 5, 6]);
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions/active"] });
+      onCreated();
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const toggleDay = (day: number) => {
+    setSelectedDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
+    );
+  };
+
+  return (
+    <Card className="border-[#1DB954]/30 bg-[#1DB954]/5">
+      <CardContent className="p-4 space-y-4">
+        <h3 className="font-bold text-sm flex items-center gap-2">
+          <Plus className="h-4 w-4 text-[#1DB954]" />
+          Create a Jam Session
+        </h3>
+
+        <div className="grid gap-3">
+          <div>
+            <Label htmlFor="jam-name" className="text-xs">Session Name</Label>
+            <Input
+              id="jam-name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Friday Night Vibes"
+              className="mt-1"
+              data-testid="input-jam-name"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="jam-uri" className="text-xs">Spotify Link or URI</Label>
+            <Input
+              id="jam-uri"
+              value={spotifyUri}
+              onChange={e => setSpotifyUri(e.target.value)}
+              placeholder="https://open.spotify.com/playlist/... or spotify:playlist:..."
+              className="mt-1"
+              data-testid="input-jam-uri"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">Paste a Spotify track, album, or playlist link</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label htmlFor="jam-type" className="text-xs">Content Type</Label>
+              <Select value={spotifyType} onValueChange={setSpotifyType}>
+                <SelectTrigger className="mt-1" data-testid="select-jam-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="playlist">Playlist</SelectItem>
+                  <SelectItem value="album">Album</SelectItem>
+                  <SelectItem value="track">Track</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="jam-time" className="text-xs">Scheduled Time</Label>
+              <Input
+                id="jam-time"
+                type="time"
+                value={scheduledTime}
+                onChange={e => setScheduledTime(e.target.value)}
+                className="mt-1"
+                data-testid="input-jam-time"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Days Active</Label>
+            <div className="flex gap-1 mt-1">
+              {DAY_NAMES.map((day, i) => (
+                <Button
+                  key={i}
+                  type="button"
+                  size="sm"
+                  variant={selectedDays.includes(i) ? "default" : "outline"}
+                  className="h-8 w-10 text-xs p-0"
+                  onClick={() => toggleDay(i)}
+                  data-testid={`button-day-${i}`}
+                >
+                  {day}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <Button
+          className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2"
+          onClick={() => createMutation.mutate()}
+          disabled={!name.trim() || !spotifyUri.trim() || selectedDays.length === 0 || createMutation.isPending}
+          data-testid="button-create-jam"
+        >
+          <Plus className="h-4 w-4" />
+          {createMutation.isPending ? "Creating..." : "Create Jam Session"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MyJamSessions() {
+  const { toast } = useToast();
+
+  const { data: mySessions, isLoading } = useQuery<JamSession[]>({
+    queryKey: ["/api/jam-sessions"],
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("PATCH", `/api/jam-sessions/${id}/toggle`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions/active"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/jam-sessions/${id}`),
+    onSuccess: () => {
+      toast({ title: "Deleted", description: "Jam session removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions/active"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  if (isLoading) return <Skeleton className="h-32 w-full" />;
+  if (!mySessions || mySessions.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-semibold text-muted-foreground">Your Jam Sessions</h3>
+      {mySessions.map(session => {
+        const scheduleDays = session.daysOfWeek ? session.daysOfWeek.split(",").map(d => DAY_NAMES[parseInt(d)]).join(", ") : "Every day";
+        return (
+          <div key={session.id} className="flex items-center gap-3 bg-muted/30 rounded-lg p-3" data-testid={`my-session-${session.id}`}>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{session.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatTime12(session.scheduledTime)} · {scheduleDays}
+              </p>
+            </div>
+            <Badge variant={session.isActive ? "default" : "secondary"} className="text-xs">
+              {session.isActive ? "Active" : "Inactive"}
+            </Badge>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => toggleMutation.mutate(session.id)}
+              disabled={toggleMutation.isPending}
+              data-testid={`button-toggle-${session.id}`}
+            >
+              <Power className={`h-4 w-4 ${session.isActive ? "text-green-400" : "text-muted-foreground"}`} />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              onClick={() => deleteMutation.mutate(session.id)}
+              disabled={deleteMutation.isPending}
+              data-testid={`button-delete-${session.id}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SpotifyConnectionPanel() {
+  const { toast } = useToast();
+  const [showCreate, setShowCreate] = useState(false);
+
+  const { data: spotifyProfile, isLoading: profileLoading } = useQuery<any>({
+    queryKey: ["/api/spotify/me"],
+    retry: false,
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spotify/disconnect"),
+    onSuccess: () => {
+      toast({ title: "Disconnected", description: "Spotify account disconnected" });
+      queryClient.invalidateQueries({ queryKey: ["/api/spotify/me"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const isConnected = spotifyProfile && !spotifyProfile.error && spotifyProfile.display_name;
+
+  if (profileLoading) {
+    return <Skeleton className="h-20 w-full" />;
+  }
+
+  if (!isConnected) {
+    return (
+      <Card className="border-[#1DB954]/30 mb-6">
+        <CardContent className="py-6 text-center">
+          <SiSpotify className="h-12 w-12 mx-auto mb-3 text-[#1DB954]" />
+          <h3 className="font-bold text-lg mb-1">Connect Your Spotify Account</h3>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+            Log in with Spotify to create jam sessions, track engagement, and control playback. 
+            This is required to host sessions and view engagement analytics.
+          </p>
+          <a href="/api/spotify/auth">
+            <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2 text-white" data-testid="button-connect-spotify">
+              <SiSpotify className="h-5 w-5" />
+              Log In with Spotify
+            </Button>
+          </a>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4 mb-6">
+      <Card className="border-[#1DB954]/20 bg-[#1DB954]/5">
+        <CardContent className="py-3 px-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-[#1DB954] flex items-center justify-center">
+                <SiSpotify className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium" data-testid="text-spotify-name">
+                  {spotifyProfile.display_name}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {spotifyProfile.product === "premium" ? "Spotify Premium" : "Spotify Free"} · Connected
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-[#1DB954]/30"
+                onClick={() => setShowCreate(!showCreate)}
+                data-testid="button-toggle-create-jam"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {showCreate ? "Cancel" : "New Jam Session"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 text-muted-foreground"
+                onClick={() => disconnectMutation.mutate()}
+                disabled={disconnectMutation.isPending}
+                data-testid="button-disconnect-spotify"
+              >
+                <Unplug className="h-3.5 w-3.5" />
+                Disconnect
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {showCreate && <CreateJamSessionForm onCreated={() => setShowCreate(false)} />}
+
+      <MyJamSessions />
+    </div>
+  );
+}
+
 export default function RadioPage() {
   const { user } = useAuth();
+
   const { data: shows, isLoading: showsLoading } = useQuery<RadioShow[]>({
     queryKey: ["/api/radio-shows"],
   });
@@ -456,6 +761,17 @@ export default function RadioPage() {
               </span>
             </div>
 
+            {user && <SpotifyConnectionPanel />}
+
+            {!user && (
+              <Card className="mb-6 border-primary/20">
+                <CardContent className="py-6 text-center">
+                  <LogIn className="h-10 w-10 mx-auto mb-3 text-primary/50" />
+                  <p className="text-sm text-muted-foreground">Sign in to connect Spotify and create jam sessions</p>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="mb-6 border-primary/20 bg-primary/5">
               <CardContent className="py-3 px-4">
                 <p className="text-sm">
@@ -477,7 +793,7 @@ export default function RadioPage() {
                   <Headphones className="h-16 w-16 mx-auto mb-4 text-primary/30" />
                   <h2 className="text-xl font-bold mb-2">No Active Jam Sessions</h2>
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    There are no active jam sessions right now. Create one from your Spotify settings to start tracking engagement.
+                    {user ? "Connect your Spotify account above to create your first jam session and start tracking engagement." : "Sign in and connect Spotify to create jam sessions."}
                   </p>
                 </CardContent>
               </Card>

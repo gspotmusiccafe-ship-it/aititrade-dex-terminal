@@ -90,7 +90,7 @@ const MEMBERSHIP_LIMITS: Record<string, { downloads: number; previews: number }>
 const PAID_TIERS = ["silver", "bronze", "gold"];
 
 async function getUserTier(userId: string): Promise<string> {
-  const membership = await storage.getMembershipByUserId(userId);
+  const membership = await storage.getUserMembership(userId);
   return membership?.tier || "free";
 }
 

@@ -71,6 +71,14 @@ export default function ArtistPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/followed-artists"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/followed-artists", artistId, "check"] });
     },
+    onError: (err: Error) => {
+      const msg = err?.message || "";
+      if (msg.includes("Upgrade")) {
+        toast({ title: "Membership Required", description: msg, variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: msg || "Could not follow artist", variant: "destructive" });
+      }
+    },
   });
 
   const handleFollow = () => {

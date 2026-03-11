@@ -92,17 +92,24 @@ export function MusicPlayer() {
     setLikeLoading(true);
     try {
       if (isLiked) {
-        await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "DELETE", credentials: "include" });
+        const res = await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "DELETE", credentials: "include" });
+        if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.message || "Failed"); }
         setIsLiked(false);
         toast({ title: "Removed from liked songs" });
       } else {
-        await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "POST", credentials: "include" });
+        const res = await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "POST", credentials: "include" });
+        if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.message || "Failed"); }
         setIsLiked(true);
         toast({ title: "Added to liked songs" });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks"] });
-    } catch {
-      toast({ title: "Please sign in to like tracks", variant: "destructive" });
+    } catch (err: any) {
+      const msg = err?.message || "";
+      if (msg.includes("Upgrade")) {
+        toast({ title: "Membership Required", description: msg, variant: "destructive" });
+      } else {
+        toast({ title: "Please sign in to like tracks", variant: "destructive" });
+      }
     }
     setLikeLoading(false);
   };

@@ -58,6 +58,14 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
       queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks", track.id, "check"] });
     },
+    onError: (err: Error) => {
+      const msg = err?.message || "";
+      if (msg.includes("Upgrade")) {
+        toast({ title: "Membership Required", description: msg, variant: "destructive" });
+      } else {
+        toast({ title: "Error", description: msg || "Could not save track", variant: "destructive" });
+      }
+    },
   });
 
   const addToPlaylistMutation = useMutation({
