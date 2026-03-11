@@ -82,6 +82,18 @@ function LeadAssetSection({ artists }: { artists: ShowtownArtist[] }) {
           </div>
         </div>
       </div>
+
+      <div className="mt-5 border-t border-[#333] pt-4">
+        <h4 className="text-[#888] text-[11px] uppercase tracking-widest mb-3">Current Rotation:</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-[#e0e0e0]">
+          <div>● I Got What You Need</div>
+          <div>● Body Call</div>
+          <div>● I'm All You Need</div>
+          <div>● Candy Land</div>
+          <div>● Honey Love</div>
+          <div>● What It's Gon Be</div>
+        </div>
+      </div>
     </div>
   );
 }
