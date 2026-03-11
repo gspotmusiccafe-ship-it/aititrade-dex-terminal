@@ -83,6 +83,60 @@ function LeadAssetSection({ artists }: { artists: ShowtownArtist[] }) {
         </div>
       </div>
 
+      <div className="mt-5 border border-[#d4af37] rounded-lg p-5" style={{ backgroundColor: "#111" }}>
+        <h3 className="text-[#d4af37] uppercase tracking-[2px] font-bold text-base mb-4" data-testid="text-power-rankings">
+          BDR Power Rankings
+        </h3>
+        <table className="w-full text-left" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr className="text-[#888] text-[11px] uppercase border-b border-[#333]">
+              <th className="py-2 px-3">Rank</th>
+              <th className="py-2">Track Title</th>
+              <th className="py-2">Velocity (Daily)</th>
+              <th className="py-2">Total Streams</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            <tr className="border-b border-[#222]">
+              <td className="py-3 px-3 text-[#d4af37] font-bold">#1</td>
+              <td className="py-3 font-bold text-white">Body Call</td>
+              <td className="py-3 text-[#4CAF50]">+12% ↑</td>
+              <td className="py-3 text-white" data-testid="power-rank-1-streams">—</td>
+            </tr>
+            <tr className="border-b border-[#222]">
+              <td className="py-3 px-3 text-[#d4af37] font-bold">#2</td>
+              <td className="py-3 font-bold text-white">I Got What You Need</td>
+              <td className="py-3 text-[#4CAF50]">+8% ↑</td>
+              <td className="py-3 text-white" data-testid="power-rank-2-streams">—</td>
+            </tr>
+            <tr className="border-b border-[#222]">
+              <td className="py-3 px-3 text-[#d4af37] font-bold">#3</td>
+              <td className="py-3 font-bold text-white">Honey Love</td>
+              <td className="py-3 text-[#4CAF50]">+5% ↑</td>
+              <td className="py-3 text-white" data-testid="power-rank-3-streams">—</td>
+            </tr>
+            <tr className="border-b border-[#222]">
+              <td className="py-3 px-3 text-[#d4af37] font-bold">#4</td>
+              <td className="py-3 font-bold text-white">I'm All You Need</td>
+              <td className="py-3 text-[#888]">— steady</td>
+              <td className="py-3 text-white" data-testid="power-rank-4-streams">—</td>
+            </tr>
+            <tr className="border-b border-[#222]">
+              <td className="py-3 px-3 text-[#d4af37] font-bold">#5</td>
+              <td className="py-3 font-bold text-white">Candy Land</td>
+              <td className="py-3 text-[#888]">— steady</td>
+              <td className="py-3 text-white" data-testid="power-rank-5-streams">—</td>
+            </tr>
+            <tr>
+              <td className="py-3 px-3 text-[#d4af37] font-bold">#6</td>
+              <td className="py-3 font-bold text-white">What It's Gon Be</td>
+              <td className="py-3 text-[#888]">— steady</td>
+              <td className="py-3 text-white" data-testid="power-rank-6-streams">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <div className="mt-5 border-t border-[#333] pt-4">
         <h4 className="text-[#888] text-[11px] uppercase tracking-widest mb-3">Current Rotation:</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-[#e0e0e0]">
