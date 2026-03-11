@@ -254,6 +254,26 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/showtown/tracks", async (_req, res) => {
+    try {
+      const allTracks = await db.select({
+        id: tracks.id,
+        title: tracks.title,
+        playCount: tracks.playCount,
+        artistId: tracks.artistId,
+        genre: tracks.genre,
+      })
+      .from(tracks)
+      .innerJoin(artists, eq(tracks.artistId, artists.id))
+      .where(eq(artists.approvalStatus, "approved"))
+      .orderBy(desc(tracks.playCount));
+      res.json(allTracks.map(t => ({ ...t, playCount: Number(t.playCount) })));
+    } catch (error) {
+      console.error("Error fetching showtown tracks:", error);
+      res.status(500).json({ message: "Failed to fetch showtown tracks" });
+    }
+  });
+
   // Get single artist
   app.get("/api/artists/:id", async (req, res) => {
     try {

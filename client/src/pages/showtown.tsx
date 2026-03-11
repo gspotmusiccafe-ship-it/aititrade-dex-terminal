@@ -15,6 +15,14 @@ interface ShowtownArtist {
   trackCount: number;
 }
 
+interface ShowtownTrack {
+  id: string;
+  title: string;
+  playCount: number;
+  artistId: string;
+  genre: string | null;
+}
+
 const STREAM_GOAL = 1_000_000;
 
 function formatNumber(num: number): string {
@@ -33,7 +41,24 @@ const GSR_PORTFOLIO = [
   { name: "Gangsta Smooth", subtitle: null, status: "Strategic", isHeadliner: false },
 ];
 
-function LeadAssetSection({ artists }: { artists: ShowtownArtist[] }) {
+const POWER_RANKINGS = [
+  { title: "Body Call", velocity: "+12% ↑", trending: true },
+  { title: "I Got What You Need", velocity: "+8% ↑", trending: true },
+  { title: "Honey Love", velocity: "+5% ↑", trending: true },
+  { title: "I'm All You Need", velocity: "— steady", trending: false },
+  { title: "Candy Land", velocity: "— steady", trending: false },
+  { title: "What It's Gon Be", velocity: "— steady", trending: false },
+];
+
+function matchTrack(title: string, tracks: ShowtownTrack[]): ShowtownTrack | undefined {
+  const normalized = title.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  return tracks.find((t) => {
+    const tNorm = t.title.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+    return tNorm === normalized || tNorm.includes(normalized) || normalized.includes(tNorm);
+  });
+}
+
+function LeadAssetSection({ artists, platformTracks }: { artists: ShowtownArtist[]; platformTracks: ShowtownTrack[] }) {
   const leadArtist = artists.find(
     (a) => a.name.toLowerCase().includes("g. soul") || a.name.toLowerCase().includes("g soul")
   );
@@ -97,42 +122,20 @@ function LeadAssetSection({ artists }: { artists: ShowtownArtist[] }) {
             </tr>
           </thead>
           <tbody className="text-sm">
-            <tr className="border-b border-[#222]">
-              <td className="py-3 px-3 text-[#d4af37] font-bold">#1</td>
-              <td className="py-3 font-bold text-white">Body Call</td>
-              <td className="py-3 text-[#4CAF50]">+12% ↑</td>
-              <td className="py-3 text-white" data-testid="power-rank-1-streams">—</td>
-            </tr>
-            <tr className="border-b border-[#222]">
-              <td className="py-3 px-3 text-[#d4af37] font-bold">#2</td>
-              <td className="py-3 font-bold text-white">I Got What You Need</td>
-              <td className="py-3 text-[#4CAF50]">+8% ↑</td>
-              <td className="py-3 text-white" data-testid="power-rank-2-streams">—</td>
-            </tr>
-            <tr className="border-b border-[#222]">
-              <td className="py-3 px-3 text-[#d4af37] font-bold">#3</td>
-              <td className="py-3 font-bold text-white">Honey Love</td>
-              <td className="py-3 text-[#4CAF50]">+5% ↑</td>
-              <td className="py-3 text-white" data-testid="power-rank-3-streams">—</td>
-            </tr>
-            <tr className="border-b border-[#222]">
-              <td className="py-3 px-3 text-[#d4af37] font-bold">#4</td>
-              <td className="py-3 font-bold text-white">I'm All You Need</td>
-              <td className="py-3 text-[#888]">— steady</td>
-              <td className="py-3 text-white" data-testid="power-rank-4-streams">—</td>
-            </tr>
-            <tr className="border-b border-[#222]">
-              <td className="py-3 px-3 text-[#d4af37] font-bold">#5</td>
-              <td className="py-3 font-bold text-white">Candy Land</td>
-              <td className="py-3 text-[#888]">— steady</td>
-              <td className="py-3 text-white" data-testid="power-rank-5-streams">—</td>
-            </tr>
-            <tr>
-              <td className="py-3 px-3 text-[#d4af37] font-bold">#6</td>
-              <td className="py-3 font-bold text-white">What It's Gon Be</td>
-              <td className="py-3 text-[#888]">— steady</td>
-              <td className="py-3 text-white" data-testid="power-rank-6-streams">—</td>
-            </tr>
+            {POWER_RANKINGS.map((entry, i) => {
+              const matched = matchTrack(entry.title, platformTracks);
+              const isLast = i === POWER_RANKINGS.length - 1;
+              return (
+                <tr key={i} className={isLast ? "" : "border-b border-[#222]"}>
+                  <td className="py-3 px-3 text-[#d4af37] font-bold">#{i + 1}</td>
+                  <td className="py-3 font-bold text-white">{entry.title}</td>
+                  <td className={`py-3 ${entry.trending ? "text-[#4CAF50]" : "text-[#888]"}`}>{entry.velocity}</td>
+                  <td className="py-3 text-white font-bold" data-testid={`power-rank-${i + 1}-streams`}>
+                    {matched ? formatNumber(matched.playCount) : "—"}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -205,6 +208,12 @@ export default function ShowtownPage() {
     refetchOnWindowFocus: true,
   });
 
+  const { data: showtownTracks } = useQuery<ShowtownTrack[]>({
+    queryKey: ["/api/showtown/tracks"],
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
+
   if (isLoading) {
     return (
       <div className="min-h-full pb-28 px-10 py-10" style={{ backgroundColor: "#050505" }}>
@@ -257,7 +266,7 @@ export default function ShowtownPage() {
           </div>
         </div>
 
-        <LeadAssetSection artists={artists} />
+        <LeadAssetSection artists={artists} platformTracks={showtownTracks || []} />
 
         <h3
           className="text-[#e0e0e0] text-base font-normal border-b border-[#333] pb-3 mb-5 uppercase tracking-wider"
