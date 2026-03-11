@@ -1,11 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Music, Users, TrendingUp, Target, Flame, Star, Play } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Music, TrendingUp, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 interface ShowtownArtist {
   id: string;
   name: string;
@@ -19,7 +16,6 @@ interface ShowtownArtist {
 }
 
 const STREAM_GOAL = 1_000_000;
-const BONUS_RATE = 0.001;
 
 function formatNumber(num: number): string {
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
@@ -27,112 +23,113 @@ function formatNumber(num: number): string {
   return num.toLocaleString();
 }
 
-function ArtistCard({ artist, rank }: { artist: ShowtownArtist; rank: number }) {
-  const progress = Math.min((artist.totalStreams / STREAM_GOAL) * 100, 100);
-  const bonus = (artist.totalStreams * BONUS_RATE).toFixed(2);
+const GSR_PORTFOLIO = [
+  { name: "Black Neon Saints", subtitle: "The Rock & Roll Kings", status: "Headliner", isHeadliner: true },
+  { name: "G. Smooth", subtitle: null, status: "Strategic", isHeadliner: false },
+  { name: "J. Marie", subtitle: null, status: "Strategic", isHeadliner: false },
+  { name: "Scarlett Rye", subtitle: null, status: "Strategic", isHeadliner: false },
+  { name: "Country Smooth", subtitle: null, status: "Strategic", isHeadliner: false },
+  { name: "Roselyn Reynolds", subtitle: null, status: "Strategic", isHeadliner: false },
+  { name: "Gangsta Smooth", subtitle: null, status: "Strategic", isHeadliner: false },
+];
+
+function LeadAssetSection({ artists }: { artists: ShowtownArtist[] }) {
+  const leadArtist = artists.find(
+    (a) => a.name.toLowerCase().includes("g. soul") || a.name.toLowerCase().includes("g soul")
+  );
+
+  const totalStreams = leadArtist ? leadArtist.totalStreams : 0;
+  const cycleProgress = ((totalStreams / STREAM_GOAL) * 100).toFixed(1);
+  const isQualifying = totalStreams < STREAM_GOAL;
 
   return (
-    <Card
-      className="overflow-hidden border-[#d4af37]/20 bg-gradient-to-b from-[#1a1a1a] to-[#0f0f0f] hover:border-[#d4af37]/60 transition-all duration-300 hover:-translate-y-1"
-      data-testid={`showtown-artist-${artist.id}`}
+    <div
+      className="border border-[#d4af37] rounded p-5 mb-8"
+      style={{ backgroundColor: "#111" }}
+      data-testid="section-lead-asset"
     >
-      <CardContent className="p-0">
-        <div className="relative h-28 bg-gradient-to-r from-[#d4af37]/20 via-[#0a0a0a] to-[#d4af37]/10 overflow-hidden">
-          {artist.coverImage && (
-            <img
-              src={artist.coverImage}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover opacity-30"
-            />
-          )}
-          <div className="absolute top-3 left-3">
-            <div className="h-8 w-8 rounded-full bg-[#d4af37] flex items-center justify-center text-black font-bold text-sm shadow-lg shadow-[#d4af37]/30">
-              {rank}
-            </div>
-          </div>
-          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#1a1a1a] to-transparent" />
-        </div>
+      <h2
+        className="text-[#d4af37] text-xl font-bold mt-0 mb-1 uppercase tracking-wider"
+        style={{ fontFamily: "'Segoe UI', serif" }}
+      >
+        BDR Lead Asset: G. Soul
+      </h2>
+      <p className="text-[#999] italic text-sm mb-4">
+        Phase 1: The Revival ({leadArtist ? leadArtist.trackCount : 6} Active Tracks)
+      </p>
 
-        <div className="px-4 -mt-8 relative z-10">
-          <div className="flex items-end gap-3">
-            <Link href={`/artist/${artist.id}`}>
-              <Avatar className="h-16 w-16 border-2 border-[#d4af37]/50 shadow-lg cursor-pointer hover:border-[#d4af37] transition-colors">
-                <AvatarImage src={artist.profileImage || undefined} alt={artist.name} />
-                <AvatarFallback className="bg-[#d4af37]/20 text-[#d4af37] text-xl font-bold">
-                  {artist.name[0]}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-            <div className="flex-1 min-w-0 pb-1">
-              <Link href={`/artist/${artist.id}`}>
-                <h3 className="font-bold text-lg truncate text-[#f5f5f5] hover:text-[#d4af37] transition-colors cursor-pointer" data-testid={`text-artist-name-${artist.id}`}>
-                  {artist.name}
-                </h3>
-              </Link>
-              <div className="flex items-center gap-2">
-                {artist.verified && (
-                  <Badge className="bg-[#d4af37]/20 text-[#d4af37] border-[#d4af37]/30 text-[10px]">
-                    <Star className="h-2.5 w-2.5 mr-0.5" /> Verified
-                  </Badge>
-                )}
-                <span className="text-xs text-[#888]">{artist.trackCount} tracks</span>
-              </div>
-            </div>
+      <div className="flex flex-col sm:flex-row gap-6 sm:gap-10">
+        <div className="flex-1 border-l-2 border-[#d4af37] pl-4">
+          <div className="text-[#aaa] text-xs uppercase tracking-wider mb-1">Global Spotify Streams</div>
+          <div className="text-3xl font-bold text-white" data-testid="stat-soul-streams">
+            {formatNumber(totalStreams)}
           </div>
         </div>
-
-        {artist.bio && (
-          <p className="px-4 mt-2 text-xs text-[#888] italic line-clamp-2">{artist.bio}</p>
-        )}
-
-        <div className="mx-4 mt-3 bg-[#222] rounded-lg p-3 border-l-3 border-[#d4af37]" style={{ borderLeft: "3px solid #d4af37" }}>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-[#999] font-mono">In-House Streams</span>
-              <span className="text-[#f5f5f5] font-bold font-mono" data-testid={`stat-streams-${artist.id}`}>
-                {formatNumber(artist.totalStreams)}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#999] font-mono">Aitify Bonus ($0.001)</span>
-              <span className="text-[#d4af37] font-bold font-mono" data-testid={`stat-bonus-${artist.id}`}>
-                ${bonus}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-[#999] font-mono">Target Goal</span>
-              <span className="text-[#f5f5f5] font-mono">{formatNumber(STREAM_GOAL)}</span>
-            </div>
-          </div>
-
-          <div className="mt-3">
-            <div className="flex justify-between text-[10px] text-[#888] mb-1">
-              <span>Progress</span>
-              <span>{progress.toFixed(1)}%</span>
-            </div>
-            <div className="h-2 bg-[#333] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#d4af37] to-[#f0d060] rounded-full transition-all duration-1000"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+        <div className="flex-1 border-l-2 border-[#d4af37] pl-4">
+          <div className="text-[#aaa] text-xs uppercase tracking-wider mb-1">Cycle Progress</div>
+          <div className="text-3xl font-bold text-white" data-testid="stat-cycle-progress">
+            {cycleProgress}%
           </div>
         </div>
-
-        <div className="p-4">
-          <Link href={`/artist/${artist.id}`}>
-            <Button
-              className="w-full bg-[#d4af37] hover:bg-[#f0d060] text-black font-bold gap-2 transition-all"
-              data-testid={`button-view-artist-${artist.id}`}
-            >
-              <Play className="h-4 w-4" />
-              VIEW ARTIST
-            </Button>
-          </Link>
+        <div className="flex-1 border-l-2 border-[#d4af37] pl-4">
+          <div className="text-[#aaa] text-xs uppercase tracking-wider mb-1">Status</div>
+          <div
+            className="text-3xl font-bold"
+            style={{ color: isQualifying ? "#4CAF50" : "#d4af37" }}
+            data-testid="stat-soul-status"
+          >
+            {isQualifying ? "QUALIFYING" : "QUALIFIED"}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
+}
+
+function PortfolioCard({
+  entry,
+  linkedArtist,
+  index,
+}: {
+  entry: (typeof GSR_PORTFOLIO)[0];
+  linkedArtist?: ShowtownArtist;
+  index: number;
+}) {
+  const cardContent = (
+    <div
+      className={`p-4 border rounded transition-all duration-300 hover:opacity-100 hover:border-[#d4af37] cursor-pointer ${
+        entry.isHeadliner
+          ? "border-[#ff3e3e] opacity-100"
+          : "border-[#333] opacity-70"
+      }`}
+      style={{ backgroundColor: "#1a1a1a" }}
+      data-testid={`fund-card-${index}`}
+    >
+      <span
+        className="inline-block text-[10px] uppercase px-2 py-0.5 rounded-sm mb-2 tracking-wider"
+        style={{ backgroundColor: "#333", color: "#ccc" }}
+      >
+        {entry.status}
+      </span>
+      <h4 className="text-white font-bold text-base mb-0">{entry.name}</h4>
+      {entry.subtitle && (
+        <p className="text-[#999] text-xs mt-1">{entry.subtitle}</p>
+      )}
+      {linkedArtist && (
+        <div className="mt-2 flex items-center gap-2 text-[10px] text-[#d4af37]">
+          <TrendingUp className="h-3 w-3" />
+          <span>{formatNumber(linkedArtist.totalStreams)} streams</span>
+          <span>·</span>
+          <span>{linkedArtist.trackCount} tracks</span>
+        </div>
+      )}
+    </div>
+  );
+
+  if (linkedArtist) {
+    return <Link href={`/artist/${linkedArtist.id}`}>{cardContent}</Link>;
+  }
+  return cardContent;
 }
 
 export default function ShowtownPage() {
@@ -142,18 +139,15 @@ export default function ShowtownPage() {
     refetchOnWindowFocus: true,
   });
 
-  const totalStreams = showtownArtists?.reduce((sum, a) => sum + a.totalStreams, 0) || 0;
-  const totalBonus = (totalStreams * BONUS_RATE).toFixed(2);
-  const totalTracks = showtownArtists?.reduce((sum, a) => sum + a.trackCount, 0) || 0;
-
   if (isLoading) {
     return (
-      <div className="min-h-full pb-28 px-6 py-8 bg-[#0a0a0a]">
-        <div className="max-w-6xl mx-auto">
-          <Skeleton className="h-40 w-full rounded-lg mb-8" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-96 w-full rounded-lg" />
+      <div className="min-h-full pb-28 px-10 py-10" style={{ backgroundColor: "#050505" }}>
+        <div className="max-w-5xl mx-auto">
+          <Skeleton className="h-40 w-full rounded mb-10" />
+          <Skeleton className="h-48 w-full rounded mb-8" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 w-full rounded" />
             ))}
           </div>
         </div>
@@ -161,90 +155,134 @@ export default function ShowtownPage() {
     );
   }
 
+  const artists = showtownArtists || [];
+
+  const findLinked = (name: string) =>
+    artists.find((a) => a.name.toLowerCase().includes(name.toLowerCase()));
+
   return (
-    <div className="min-h-full pb-28 px-6 py-8 bg-[#0a0a0a]">
-      <div className="max-w-6xl mx-auto">
-        <div className="border-2 border-[#d4af37] rounded-lg p-6 text-center mb-8 shadow-[0_0_20px_rgba(212,175,55,0.15)] bg-gradient-to-b from-[#d4af37]/5 to-transparent">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Flame className="h-8 w-8 text-[#d4af37]" />
-            <h1
-              className="text-3xl md:text-4xl font-bold text-[#d4af37] tracking-[5px] uppercase"
-              style={{ fontFamily: "'Courier New', Courier, monospace" }}
-              data-testid="text-showtown-title"
-            >
-              Welcome to Showtown
-            </h1>
-            <Flame className="h-8 w-8 text-[#d4af37]" />
-          </div>
-          <p className="text-[#999] text-sm" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
+    <div
+      className="min-h-full pb-28 px-6 sm:px-10 py-10"
+      style={{
+        backgroundColor: "#050505",
+        color: "#e0e0e0",
+        fontFamily: "'Segoe UI', serif",
+      }}
+    >
+      <div className="max-w-5xl mx-auto">
+        <div
+          className="border-2 border-[#d4af37] rounded p-8 text-center mb-10"
+          style={{
+            background: "linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85))",
+          }}
+          data-testid="section-marquee"
+        >
+          <h1
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#d4af37] tracking-[8px] uppercase m-0"
+            data-testid="text-showtown-title"
+          >
+            The Showtown Ledger
+          </h1>
+          <p className="text-[#ccc] mt-3 text-sm sm:text-base">
             A City Built from Sound, Memory, and Imagination
           </p>
-          <p className="text-[#d4af37]/70 text-xs mt-1 uppercase tracking-widest">
-            97.7 THE FLAME · Stage Manager
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 text-center">
-            <Users className="h-5 w-5 text-[#d4af37] mx-auto mb-1" />
-            <p className="text-2xl font-bold text-[#f5f5f5] font-mono" data-testid="stat-total-artists">
-              {showtownArtists?.length || 0}
-            </p>
-            <p className="text-xs text-[#888] uppercase tracking-wider">Artists</p>
-          </div>
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 text-center">
-            <Music className="h-5 w-5 text-[#d4af37] mx-auto mb-1" />
-            <p className="text-2xl font-bold text-[#f5f5f5] font-mono" data-testid="stat-total-tracks">
-              {totalTracks}
-            </p>
-            <p className="text-xs text-[#888] uppercase tracking-wider">Tracks</p>
-          </div>
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 text-center">
-            <TrendingUp className="h-5 w-5 text-[#d4af37] mx-auto mb-1" />
-            <p className="text-2xl font-bold text-[#f5f5f5] font-mono" data-testid="stat-total-streams">
-              {formatNumber(totalStreams)}
-            </p>
-            <p className="text-xs text-[#888] uppercase tracking-wider">Total Streams</p>
-          </div>
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-lg p-4 text-center">
-            <Target className="h-5 w-5 text-[#d4af37] mx-auto mb-1" />
-            <p className="text-2xl font-bold text-[#d4af37] font-mono" data-testid="stat-total-bonus">
-              ${totalBonus}
-            </p>
-            <p className="text-xs text-[#888] uppercase tracking-wider">Platform Bonus</p>
+          <div className="text-[#888] italic text-xs mt-2" data-testid="text-vault-status">
+            GSR Fund: Strategic Release Mode Active
           </div>
         </div>
 
-        <h2
-          className="text-xl font-bold text-[#f5f5f5] mb-4 tracking-wide uppercase"
-          style={{ fontFamily: "'Courier New', Courier, monospace" }}
+        <LeadAssetSection artists={artists} />
+
+        <h3
+          className="text-[#e0e0e0] text-base font-normal border-b border-[#333] pb-3 mb-5 uppercase tracking-wider"
+          data-testid="text-portfolio-heading"
         >
-          Current Production: "The Broadcast"
-        </h2>
+          GSR Fund Portfolio (In the Vault)
+        </h3>
 
-        {showtownArtists && showtownArtists.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {showtownArtists.map((artist, index) => (
-              <ArtistCard key={artist.id} artist={artist} rank={index + 1} />
-            ))}
-          </div>
-        ) : (
-          <Card className="border-[#333] bg-[#1a1a1a]">
-            <CardContent className="py-16 text-center">
-              <Music className="h-16 w-16 mx-auto mb-4 text-[#d4af37]/30" />
-              <h3 className="text-xl font-bold text-[#f5f5f5] mb-2">No Artists on Stage Yet</h3>
-              <p className="text-[#888]">
-                Artists will appear here once approved. The show is just getting started.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {GSR_PORTFOLIO.map((entry, index) => {
+            const nameParts = entry.name.toLowerCase().split(" ");
+            const linkedArtist = artists.find((a) => {
+              const aLower = a.name.toLowerCase();
+              return nameParts.some((part) => part.length > 2 && aLower.includes(part));
+            });
 
-        <div className="mt-8 text-center">
-          <p className="text-xs text-[#666]" style={{ fontFamily: "'Courier New', Courier, monospace" }}>
-            Aitify Bonus Rate: $0.001 per in-house stream · Goal: {formatNumber(STREAM_GOAL)} streams per artist
-          </p>
+            return (
+              <PortfolioCard
+                key={index}
+                entry={entry}
+                linkedArtist={linkedArtist}
+                index={index}
+              />
+            );
+          })}
         </div>
+
+        {artists.length > 0 && (
+          <>
+            <h3
+              className="text-[#e0e0e0] text-base font-normal border-b border-[#333] pb-3 mb-5 mt-10 uppercase tracking-wider"
+              data-testid="text-active-artists-heading"
+            >
+              Active Platform Artists ({artists.length})
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {artists.map((artist) => (
+                <Link key={artist.id} href={`/artist/${artist.id}`}>
+                  <div
+                    className="p-4 border border-[#333] rounded transition-all duration-300 hover:border-[#d4af37] cursor-pointer"
+                    style={{ backgroundColor: "#1a1a1a" }}
+                    data-testid={`showtown-artist-${artist.id}`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      {artist.profileImage ? (
+                        <img
+                          src={artist.profileImage}
+                          alt={artist.name}
+                          className="h-10 w-10 rounded-full object-cover border border-[#d4af37]/40"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-[#d4af37]/20 flex items-center justify-center text-[#d4af37] font-bold text-sm">
+                          {artist.name[0]}
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="text-white font-bold text-sm" data-testid={`text-artist-name-${artist.id}`}>
+                          {artist.name}
+                        </h4>
+                        <span className="text-[#888] text-xs">{artist.trackCount} tracks</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#888]">In-House Streams</span>
+                        <span className="text-white font-bold" data-testid={`stat-streams-${artist.id}`}>
+                          {formatNumber(artist.totalStreams)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-[#888]">Aitify Bonus</span>
+                        <span className="text-[#d4af37] font-bold" data-testid={`stat-bonus-${artist.id}`}>
+                          ${(artist.totalStreams * 0.001).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="mt-2 h-1.5 bg-[#333] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-[#d4af37] to-[#f0d060] rounded-full transition-all duration-1000"
+                          style={{ width: `${Math.min((artist.totalStreams / STREAM_GOAL) * 100, 100)}%` }}
+                        />
+                      </div>
+                      <div className="text-[10px] text-[#666] text-right">
+                        {((artist.totalStreams / STREAM_GOAL) * 100).toFixed(1)}% of {formatNumber(STREAM_GOAL)} goal
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

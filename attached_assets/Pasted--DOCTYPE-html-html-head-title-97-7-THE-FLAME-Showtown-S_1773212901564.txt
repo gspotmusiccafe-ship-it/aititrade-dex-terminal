@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>97.7 THE FLAME | Showtown Stage Manager</title>
+    <style>
+        body { background-color: #050505; color: #e0e0e0; font-family: 'Segoe UI', serif; padding: 40px; }
+        .marquee { border: 2px solid #d4af37; padding: 30px; text-align: center; margin-bottom: 40px; background: linear-gradient(rgba(0,0,0,0.8), rgba(0,0,0,0.8)), url('showtown_bg.jpg'); }
+        h1 { color: #d4af37; letter-spacing: 8px; text-transform: uppercase; margin: 0; font-size: 2.5em; }
+        .vault-status { color: #888; font-style: italic; margin-top: 10px; }
+        
+        /* G. SOUL ACTIVE SECTION */
+        .active-asset { border: 1px solid #d4af37; background: #111; padding: 20px; margin-bottom: 30px; border-radius: 4px; }
+        .stats-grid { display: flex; gap: 40px; margin-top: 15px; }
+        .stat-item { flex: 1; border-left: 2px solid #d4af37; padding-left: 15px; }
+        .stat-value { font-size: 1.8em; font-weight: bold; color: #fff; }
+
+        /* GSR FUND GRID */
+        .fund-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .fund-card { background: #1a1a1a; padding: 15px; border: 1px solid #333; opacity: 0.7; transition: 0.3s; }
+        .fund-card.headline { border-color: #ff3e3e; opacity: 1; } /* Black Neon Saints */
+        .fund-card:hover { opacity: 1; border-color: #d4af37; }
+        .status-tag { font-size: 0.7em; background: #333; padding: 2px 6px; border-radius: 3px; text-transform: uppercase; }
+    </style>
+</head>
+<body>
+
+    <div class="marquee">
+        <h1>The Showtown Ledger</h1>
+        <p>A City Built from Sound, Memory, and Imagination</p>
+        <div class="vault-status">GSR Fund: Strategic Release Mode Active</div>
+    </div>
+
+    <div class="active-asset">
+        <h2 style="color: #d4af37; margin-top: 0;">BDR LEAD ASSET: G. SOUL</h2>
+        <p><i>Phase 1: The Revival (6 Active Tracks)</i></p>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-label">Global Spotify Streams</div>
+                <div class="stat-value" id="soul-streams">FETCHING...</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Cycle Progress</div>
+                <div class="stat-value">0.6%</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Status</div>
+                <div class="stat-value" style="color: #4CAF50;">QUALIFYING</div>
+            </div>
+        </div>
+    </div>
+
+    <h3 style="border-bottom: 1px solid #333; padding-bottom: 10px;">GSR FUND PORTFOLIO (IN THE VAULT)</h3>
+    <div class="fund-grid">
+        <div class="fund-card headline">
+            <span class="status-tag">Headliner</span>
+            <h4>Black Neon Saints</h4>
+            <p style="font-size: 0.8em;">The Rock & Roll Kings</p>
+        </div>
+        <div class="fund-card">
+            <span class="status-tag">Strategic</span>
+            <h4>G. Smooth</h4>
+        </div>
+        <div class="fund-card">
+            <span class="status-tag">Strategic</span>
+            <h4>J. Marie</h4>
+        </div>
+        <div class="fund-card">
+            <span class="status-tag">Strategic</span>
+            <h4>Scarlett Rye</h4>
+        </div>
+        <div class="fund-card">
+            <span class="status-tag">Strategic</span>
+            <h4>Country Smooth</h4>
+        </div>
+        <div class="fund-card">
+            <span class="status-tag">Strategic</span>
+            <h4>Roselyn Reynolds</h4>
+        </div>
+        <div class="fund-card">
+            <span class="status-tag">Strategic</span>
+            <h4>Gangsta Smooth</h4>
+        </div>
+    </div>
+
+    <script>
+        // Agent will replace this with the real Batch Spotify API call
+        // For now, it reflects G. Soul's 6 track IDs being tracked
+        setTimeout(() => {
+            document.getElementById('soul-streams').innerText = '6,402'; 
+        }, 1500);
+    </script>
+
+</body>
+</html>
