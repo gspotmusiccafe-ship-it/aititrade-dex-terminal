@@ -813,6 +813,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/artists/:artistId/followers/count", async (req, res) => {
+    try {
+      const count = await storage.getArtistFollowerCount(req.params.artistId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching follower count:", error);
+      res.status(500).json({ message: "Failed to fetch follower count" });
+    }
+  });
+
   // User membership
   app.get("/api/user/membership", isAuthenticated, async (req: any, res) => {
     try {

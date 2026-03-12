@@ -88,6 +88,7 @@ export interface IStorage {
   unfollowArtist(userId: string, artistId: string): Promise<void>;
   getFollowedArtists(userId: string): Promise<Artist[]>;
   isFollowingArtist(userId: string, artistId: string): Promise<boolean>;
+  getArtistFollowerCount(artistId: string): Promise<number>;
   
   // Memberships
   getUserMembership(userId: string): Promise<Membership | undefined>;
@@ -430,6 +431,14 @@ export class DatabaseStorage implements IStorage {
       .from(followedArtists)
       .where(and(eq(followedArtists.userId, userId), eq(followedArtists.artistId, artistId)));
     return !!result;
+  }
+
+  async getArtistFollowerCount(artistId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(followedArtists)
+      .where(eq(followedArtists.artistId, artistId));
+    return result[0]?.count || 0;
   }
 
   // Memberships

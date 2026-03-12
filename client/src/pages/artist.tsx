@@ -70,6 +70,7 @@ export default function ArtistPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/followed-artists"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/followed-artists", artistId, "check"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/artists", artistId, "followers", "count"] });
     },
     onError: (err: Error) => {
       const msg = err?.message || "";

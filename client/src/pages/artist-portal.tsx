@@ -938,6 +938,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
   const { data: videos, isLoading: loadingVideos } = useQuery<VideoType[]>({
     queryKey: ["/api/artists", artist.id, "videos"],
   });
+  const { data: followerData } = useQuery<{ count: number }>({
+    queryKey: ["/api/artists", artist.id, "followers", "count"],
+    queryFn: () => fetch(`/api/artists/${artist.id}/followers/count`).then(r => r.json()),
+  });
   const { toast } = useToast();
   const { playTrack } = usePlayer();
 
@@ -970,8 +974,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
   const totalPlays = tracks?.reduce((sum, t) => sum + (t.playCount || 0), 0) || 0;
   const topTrack = tracks?.length ? [...tracks].sort((a, b) => (b.playCount || 0) - (a.playCount || 0))[0] : null;
 
+  const followerCount = followerData?.count || 0;
+
   const stats = [
-    { label: "Monthly Listeners", value: artist.monthlyListeners?.toLocaleString() || "0", icon: Users },
+    { label: "Followers", value: followerCount.toLocaleString(), icon: Heart },
     { label: "Total Tracks", value: tracks?.length || 0, icon: Music },
     { label: "Pre-releases", value: tracks?.filter(t => t.isPrerelease).length || 0, icon: Star },
     { label: "Total Plays", value: totalPlays.toLocaleString(), icon: TrendingUp },
