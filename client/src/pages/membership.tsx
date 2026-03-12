@@ -495,7 +495,7 @@ export default function MembershipPage() {
                   <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
                     Free Plan
                   </Button>
-                ) : isAuthenticated ? (
+                ) : (
                   <Button
                     className={`w-full ${plan.popular ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
                     variant={plan.popular ? "default" : "outline"}
@@ -503,15 +503,6 @@ export default function MembershipPage() {
                     data-testid={`button-plan-${plan.id}`}
                   >
                     {plan.cta}
-                  </Button>
-                ) : (
-                  <Button
-                    className={`w-full ${plan.popular ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
-                    variant={plan.popular ? "default" : "outline"}
-                    asChild
-                    data-testid={`button-plan-${plan.id}`}
-                  >
-                    <a href="/api/login">{plan.cta}</a>
                   </Button>
                 )}
               </CardFooter>
