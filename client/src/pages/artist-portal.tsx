@@ -475,17 +475,13 @@ function ArtistOnboarding() {
         <div className="text-center">
           <Button
             size="lg"
-            disabled={!selectedPlan || upgradeMutation.isPending}
-            onClick={() => selectedPlan && upgradeMutation.mutate(selectedPlan)}
+            disabled={!selectedPlan}
+            onClick={() => window.location.href = "/membership"}
             className="min-w-[200px]"
             data-testid="button-subscribe-artist"
           >
-            {upgradeMutation.isPending ? "Processing..." : (
-              <>
-                Subscribe & Continue
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </>
-            )}
+            Subscribe & Continue
+            <ArrowRight className="h-4 w-4 ml-2" />
           </Button>
           <p className="text-xs text-muted-foreground mt-3">
             Cancel anytime. 7-day free trial included.

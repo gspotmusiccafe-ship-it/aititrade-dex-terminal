@@ -36,6 +36,7 @@ class AuthStorage implements IAuthStorage {
       const existingByEmail = await db.select().from(users).where(eq(users.email, userData.email));
       if (existingByEmail.length > 0) {
         const oldId = existingByEmail[0].id;
+        const wasAdmin = existingByEmail[0].isAdmin;
 
         const migrateTables = [
           'artists', 'memberships', 'playlists', 'liked_tracks',
@@ -58,6 +59,7 @@ class AuthStorage implements IAuthStorage {
             firstName: userData.firstName,
             lastName: userData.lastName,
             profileImageUrl: userData.profileImageUrl,
+            isAdmin: wasAdmin,
             updatedAt: new Date(),
           })
           .where(eq(users.id, oldId))

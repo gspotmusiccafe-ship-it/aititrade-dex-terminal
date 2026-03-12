@@ -68,15 +68,19 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/login", (req, res) => {
     const redirectUri = getRedirectUri(req);
-    console.log("[Spotify Auth] Login redirect URI:", redirectUri);
-    const params = new URLSearchParams({
-      response_type: "code",
-      client_id: SPOTIFY_CLIENT_ID,
-      scope: SPOTIFY_SCOPES,
-      redirect_uri: redirectUri,
-      show_dialog: "true",
+    const postLoginRedirect = req.query.redirect as string || "/";
+    (req.session as any).postLoginRedirect = postLoginRedirect;
+    req.session.save(() => {
+      console.log("[Spotify Auth] Login redirect URI:", redirectUri, "post-login:", postLoginRedirect);
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: SPOTIFY_CLIENT_ID,
+        scope: SPOTIFY_SCOPES,
+        redirect_uri: redirectUri,
+        show_dialog: "true",
+      });
+      res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
     });
-    res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
   });
 
   app.get("/api/spotify/callback", async (req, res) => {
@@ -172,12 +176,14 @@ export async function setupAuth(app: Express) {
           console.error("[Spotify Auth] Login error:", err);
           return res.redirect("/?auth_error=login_failed");
         }
+        const postLoginRedirect = (req.session as any).postLoginRedirect || "/";
+        delete (req.session as any).postLoginRedirect;
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error("[Spotify Auth] Session save error:", saveErr);
           }
-          console.log("[Spotify Auth] Login successful for:", profile.display_name, `(${spotifyUserId}), product: ${profile.product}`);
-          return res.redirect("/");
+          console.log("[Spotify Auth] Login successful for:", profile.display_name, `(${spotifyUserId}), product: ${profile.product}, redirect: ${postLoginRedirect}`);
+          return res.redirect(postLoginRedirect);
         });
       });
     } catch (err) {

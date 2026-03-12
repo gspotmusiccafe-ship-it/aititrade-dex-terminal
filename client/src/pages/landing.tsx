@@ -531,7 +531,7 @@ export default function LandingPage() {
                       variant={tier.highlight ? "default" : "outline"}
                       asChild
                     >
-                      <a href="/api/login">
+                      <a href="/api/login?redirect=/membership">
                         Subscribe Now
                       </a>
                     </Button>
