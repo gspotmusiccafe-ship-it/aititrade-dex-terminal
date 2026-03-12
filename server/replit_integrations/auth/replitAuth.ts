@@ -175,8 +175,13 @@ export async function setupAuth(app: Express) {
           console.error("[Spotify Auth] Login error:", err);
           return res.redirect("/?auth_error=login_failed");
         }
-        console.log("[Spotify Auth] Login successful for:", profile.display_name, `(${spotifyUserId}), product: ${profile.product}`);
-        return res.redirect("/");
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error("[Spotify Auth] Session save error:", saveErr);
+          }
+          console.log("[Spotify Auth] Login successful for:", profile.display_name, `(${spotifyUserId}), product: ${profile.product}`);
+          return res.redirect("/");
+        });
       });
     } catch (err) {
       console.error("[Spotify Auth] Callback exception:", err);
