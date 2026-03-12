@@ -64,6 +64,29 @@ app.use((req, res, next) => {
   // Seed database with demo data
   await seedDatabase();
   
+  // One-time migration: reassign gspotmusiccafe data to Spotify account
+  try {
+    const { db } = await import("./db");
+    const { sql } = await import("drizzle-orm");
+    const oldId = "53894940";
+    const newId = "31bohcbsxlhgbxwskjpbai674pta";
+    const [existingOld] = (await db.execute(sql`SELECT id FROM users WHERE id = ${oldId}`)).rows;
+    const [existingNew] = (await db.execute(sql`SELECT id FROM users WHERE id = ${newId}`)).rows;
+    if (existingOld && existingNew) {
+      const [artistCheck] = (await db.execute(sql`SELECT id FROM artists WHERE user_id = ${oldId}`)).rows;
+      if (artistCheck) {
+        const tables = ['artists', 'memberships', 'playlists', 'liked_tracks', 'followed_artists', 'tips', 'lyrics_requests', 'mastering_requests', 'distribution_requests', 'jam_sessions', 'jam_session_engagement', 'jam_session_listeners'];
+        for (const table of tables) {
+          await db.execute(sql.raw(`UPDATE ${table} SET user_id = '${newId}' WHERE user_id = '${oldId}'`));
+        }
+        await db.execute(sql`DELETE FROM spotify_tokens WHERE user_id = ${oldId}`);
+        console.log("[migration] Reassigned all data from old account to Spotify account");
+      }
+    }
+  } catch (e) {
+    console.error("[migration] Non-critical migration error:", e);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
