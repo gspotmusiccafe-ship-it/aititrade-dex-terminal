@@ -527,13 +527,12 @@ export default function LandingPage() {
 
                   {tier.name !== "Free" && (
                     <Button
-                      className={`w-full gap-1.5 ${tier.highlight ? "bg-[#1DB954] hover:bg-[#1DB954]/90 border-0 shadow-lg shadow-[#1DB954]/20" : ""}`}
+                      className={`w-full ${tier.highlight ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
                       variant={tier.highlight ? "default" : "outline"}
                       asChild
                     >
                       <a href="/api/login">
-                        <SiSpotify className="h-4 w-4" />
-                        Sign Up with Spotify
+                        Subscribe Now
                       </a>
                     </Button>
                   )}
