@@ -994,50 +994,57 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
 
   return (
     <div className="space-y-8">
-      {artist.coverImage && (
-        <div className="w-full h-48 rounded-xl overflow-hidden -mb-4">
-          <img src={artist.coverImage} alt={`${artist.name} cover`} className="w-full h-full object-cover" />
-        </div>
-      )}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center overflow-hidden flex-shrink-0">
-          {artist.profileImage ? (
-            <img src={artist.profileImage} alt={artist.name} className="w-full h-full object-cover" />
-          ) : (
-            <span className="text-4xl font-bold text-primary">{artist.name[0]}</span>
-          )}
-        </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-2xl font-bold">{artist.name}</h2>
-            {artist.verified && (
-              <Badge variant="secondary" className="bg-primary/20 text-primary">
-                Verified
-              </Badge>
-            )}
+      <div className="relative rounded-2xl overflow-hidden">
+        {artist.coverImage ? (
+          <img src={artist.coverImage} alt={`${artist.name} cover`} className="w-full h-56 object-cover" />
+        ) : (
+          <div className="w-full h-56 bg-gradient-to-br from-primary/20 via-emerald-500/10 to-primary/5" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-5">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center overflow-hidden flex-shrink-0 ring-4 ring-background shadow-2xl">
+              {artist.profileImage ? (
+                <img src={artist.profileImage} alt={artist.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-4xl font-black text-primary">{artist.name[0]}</span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="text-2xl font-black tracking-tight">{artist.name}</h2>
+                {artist.verified && (
+                  <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/20">
+                    Verified
+                  </Badge>
+                )}
+              </div>
+              <p className="text-muted-foreground text-sm">{artist.bio || "No bio yet"}</p>
+            </div>
+            <EditProfileDialog artist={artist} />
           </div>
-          <p className="text-muted-foreground">{artist.bio || "No bio yet"}</p>
         </div>
-        <EditProfileDialog artist={artist} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <Card key={i}>
+          <Card key={i} className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <stat.icon className="h-4 w-4" />
-                <span className="text-xs">{stat.label}</span>
+                <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
+                  <stat.icon className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <span className="text-xs font-semibold uppercase tracking-wider">{stat.label}</span>
               </div>
-              <p className="text-2xl font-bold" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>{stat.value}</p>
+              <p className="text-2xl font-black tracking-tight" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}`}>{stat.value}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       <Tabs defaultValue="tracks">
-        <div className="flex items-center justify-between mb-4">
-          <TabsList>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <TabsList className="bg-card/60 border border-border/30">
             <TabsTrigger value="tracks">
               <Music className="h-4 w-4 mr-1" />
               Tracks
@@ -1093,29 +1100,29 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
           ) : tracks && tracks.length > 0 ? (
             <div className="space-y-2">
               {tracks.map((track) => (
-                <Card key={track.id} className="hover-elevate">
+                <Card key={track.id} className="bg-card/60 border-border/30 hover:border-primary/20 transition-all duration-200 hover:bg-card/90">
                   <CardContent className="p-4 flex items-center gap-4">
                     <div
-                      className="relative w-12 h-12 rounded overflow-hidden flex-shrink-0 cursor-pointer"
+                      className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 cursor-pointer group"
                       onClick={() => handlePlay(track)}
                       data-testid={`button-play-track-${track.id}`}
                     >
                       {track.coverImage ? (
                         <img src={track.coverImage} alt={track.title} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
                           <Music className="h-6 w-6 text-primary" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <Play className="h-5 w-5 text-white" />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium truncate">{track.title}</p>
+                        <p className="font-bold truncate">{track.title}</p>
                         {track.isPrerelease && (
-                          <Badge variant="secondary" className="bg-primary/20 text-primary text-xs">
+                          <Badge variant="secondary" className="bg-primary/20 text-primary text-xs border-primary/20">
                             <Star className="h-2.5 w-2.5 mr-0.5" />
                             Pre-release
                           </Badge>
@@ -1125,7 +1132,7 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
                         {track.genre || "Unknown genre"} • {Math.floor(track.duration / 60)}:{(track.duration % 60).toString().padStart(2, '0')}
                       </p>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm font-semibold text-muted-foreground">
                       {(track.playCount || 0).toLocaleString()} plays
                     </div>
                     <div className="flex items-center gap-2">
@@ -1133,7 +1140,7 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="text-destructive"
+                        className="text-destructive hover:text-destructive"
                         onClick={() => handleDelete(track.id, track.title)}
                         disabled={deleteMutation.isPending}
                         data-testid={`button-delete-track-${track.id}`}
@@ -1164,12 +1171,12 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
           ) : videos && videos.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               {videos.map((video) => (
-                <Card key={video.id} className="overflow-hidden" data-testid={`card-video-${video.id}`}>
+                <Card key={video.id} className="overflow-hidden bg-card/60 border-border/30 hover:border-primary/20 transition-colors" data-testid={`card-video-${video.id}`}>
                   <YouTubeEmbed videoUrl={video.videoUrl} title={video.title} />
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <h4 className="font-semibold truncate" data-testid={`text-video-title-${video.id}`}>{video.title}</h4>
+                        <h4 className="font-bold truncate" data-testid={`text-video-title-${video.id}`}>{video.title}</h4>
                         {video.description && (
                           <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{video.description}</p>
                         )}
@@ -1209,31 +1216,37 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
           ) : tracks && tracks.length > 0 ? (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="text-xs">Total Plays</span>
+                <Card className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider">Total Plays</span>
                     </div>
-                    <p className="text-3xl font-bold" data-testid="stat-analytics-total-plays">{totalPlays.toLocaleString()}</p>
+                    <p className="text-3xl font-black tracking-tight" data-testid="stat-analytics-total-plays">{totalPlays.toLocaleString()}</p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <Users className="h-4 w-4" />
-                      <span className="text-xs">Monthly Listeners</span>
+                <Card className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-blue-400" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider">Monthly Listeners</span>
                     </div>
-                    <p className="text-3xl font-bold" data-testid="stat-analytics-listeners">{(artist.monthlyListeners || 0).toLocaleString()}</p>
+                    <p className="text-3xl font-black tracking-tight" data-testid="stat-analytics-listeners">{(artist.monthlyListeners || 0).toLocaleString()}</p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <Heart className="h-4 w-4" />
-                      <span className="text-xs">Avg Plays Per Track</span>
+                <Card className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-pink-500/15 to-pink-500/5 flex items-center justify-center">
+                        <Heart className="h-4 w-4 text-pink-400" />
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wider">Avg Plays Per Track</span>
                     </div>
-                    <p className="text-3xl font-bold" data-testid="stat-analytics-avg-plays">
+                    <p className="text-3xl font-black tracking-tight" data-testid="stat-analytics-avg-plays">
                       {tracks.length > 0 ? Math.round(totalPlays / tracks.length).toLocaleString() : "0"}
                     </p>
                   </CardContent>
@@ -1241,30 +1254,34 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               </div>
 
               {topTrack && (
-                <Card>
+                <Card className="bg-card/60 border-border/30 overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-primary via-emerald-500 to-primary" />
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Star className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg font-black flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 flex items-center justify-center">
+                        <Star className="h-4 w-4 text-yellow-400" />
+                      </div>
                       Top Performing Track
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                      <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
                         <Music className="h-8 w-8 text-primary" />
                       </div>
                       <div>
-                        <p className="text-xl font-bold" data-testid="text-top-track-title">{topTrack.title}</p>
-                        <p className="text-muted-foreground">{(topTrack.playCount || 0).toLocaleString()} plays • {topTrack.genre || "Unknown genre"}</p>
+                        <p className="text-xl font-black tracking-tight" data-testid="text-top-track-title">{topTrack.title}</p>
+                        <p className="text-muted-foreground font-medium">{(topTrack.playCount || 0).toLocaleString()} plays • {topTrack.genre || "Unknown genre"}</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              <Card>
+              <Card className="bg-card/60 border-border/30 overflow-hidden">
+                <div className="h-1 bg-gradient-to-r from-primary/50 to-emerald-500/50" />
                 <CardHeader>
-                  <CardTitle className="text-lg">Track Performance</CardTitle>
+                  <CardTitle className="text-lg font-black">Track Performance</CardTitle>
                   <CardDescription>Play counts for each of your tracks</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1406,14 +1423,17 @@ function LyricsTab({ artistId }: { artistId: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500/15 to-primary/10 flex items-center justify-center">
+            <Sparkles className="h-4 w-4 text-primary" />
+          </div>
           AI Song Lyrics Generator
         </h3>
-        <p className="text-sm text-muted-foreground">Describe your song idea and AI will generate complete lyrics. Edit, then submit for beat production.</p>
+        <p className="text-sm text-muted-foreground mt-1">Describe your song idea and AI will generate complete lyrics. Edit, then submit for beat production.</p>
       </div>
 
-      <Card>
+      <Card className="bg-card/60 border-border/30 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-emerald-500" />
         <CardContent className="p-6 space-y-4">
           <div>
             <Label>Describe your song *</Label>
@@ -1524,13 +1544,13 @@ function LyricsTab({ artistId }: { artistId: string }) {
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-muted-foreground">Previous Submissions</h4>
           {requests.map((req: any) => (
-            <Card key={req.id}>
+            <Card key={req.id} className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
               <CardContent className="p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center flex-shrink-0">
                   <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{req.title}</p>
+                  <p className="font-bold truncate">{req.title}</p>
                   {req.genre && <p className="text-sm text-muted-foreground">Genre: {req.genre}</p>}
                   {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
                   <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
@@ -1615,14 +1635,17 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Headphones className="h-5 w-5 text-primary" />
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
+            <Headphones className="h-4 w-4 text-primary" />
+          </div>
           Request Mastering
         </h3>
-        <p className="text-sm text-muted-foreground">Submit your track for professional mastering. Our team will process it with EQ, compression, limiting, and loudness normalization to -14 LUFS.</p>
+        <p className="text-sm text-muted-foreground mt-1">Submit your track for professional mastering. Our team will process it with EQ, compression, limiting, and loudness normalization to -14 LUFS.</p>
       </div>
 
-      <Card>
+      <Card className="bg-card/60 border-border/30 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-primary to-emerald-500" />
         <CardContent className="p-6 space-y-4">
           <div>
             <Label>Select Track to Master *</Label>
@@ -1677,13 +1700,13 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
           {requests.map((req: any) => {
             const track = tracks.find(t => t.id === req.trackId);
             return (
-              <Card key={req.id} data-testid={`mastering-request-${req.id}`}>
+              <Card key={req.id} className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors" data-testid={`mastering-request-${req.id}`}>
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center flex-shrink-0">
                     <Headphones className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{track ? track.title : "Track"}</p>
+                    <p className="font-bold truncate">{track ? track.title : "Track"}</p>
                     {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
                     {req.adminNotes && <p className="text-sm text-muted-foreground truncate">Admin: {req.adminNotes}</p>}
                     <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
@@ -1763,10 +1786,15 @@ function DistributionTab({ artistId, tracks }: { artistId: string; tracks: Track
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Music Distribution</h3>
-          <p className="text-sm text-muted-foreground">Request distribution of your tracks to streaming platforms</p>
+          <h3 className="text-lg font-bold flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
+              <Send className="h-4 w-4 text-primary" />
+            </div>
+            Music Distribution
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">Request distribution of your tracks to streaming platforms</p>
         </div>
-        <Button onClick={() => setShowDialog(true)} className="bg-primary hover:bg-primary/90" data-testid="button-distribute-music">
+        <Button onClick={() => setShowDialog(true)} className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20" data-testid="button-distribute-music">
           <Send className="h-4 w-4 mr-2" />
           Distribute My Music
         </Button>
@@ -1783,13 +1811,13 @@ function DistributionTab({ artistId, tracks }: { artistId: string; tracks: Track
           {requests.map((req: any) => {
             const track = tracks.find(t => t.id === req.trackId);
             return (
-              <Card key={req.id}>
+              <Card key={req.id} className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
                 <CardContent className="p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center flex-shrink-0">
                     <Send className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
+                    <p className="font-bold truncate">
                       {track ? track.title : req.trackId ? "Track" : "All Tracks"}
                     </p>
                     {req.message && <p className="text-sm text-muted-foreground truncate">{req.message}</p>}
@@ -1880,14 +1908,16 @@ export default function ArtistPortalPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-full pb-28 px-6 py-8 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <Upload className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-extrabold tracking-tight mb-2">Artist Portal</h2>
-          <p className="text-muted-foreground mb-6">
+      <div className="min-h-full pb-28 flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-6">
+            <Upload className="h-10 w-10 text-primary" />
+          </div>
+          <h2 className="text-3xl font-black tracking-tight mb-3">Artist Portal</h2>
+          <p className="text-muted-foreground mb-6 font-medium">
             Sign in to upload your music, set pre-release dates, and manage your artist profile
           </p>
-          <Button asChild data-testid="button-login-artist">
+          <Button asChild className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20" data-testid="button-login-artist">
             <a href="/api/login">Sign In to Continue</a>
           </Button>
         </div>
@@ -1896,14 +1926,28 @@ export default function ArtistPortalPage() {
   }
 
   return (
-    <div className="min-h-full pb-28 px-6 py-8">
-      <h1 className="text-2xl font-extrabold tracking-tight mb-6">Artist Portal</h1>
-      
-      {artistProfile ? (
-        <ArtistDashboard artist={artistProfile} />
-      ) : (
-        <ArtistOnboarding />
-      )}
+    <div className="min-h-full pb-28">
+      <div className="relative overflow-hidden mb-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-primary/3 to-transparent" />
+        <div className="relative px-6 py-8">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
+              <Mic2 className="h-7 w-7 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Artist Portal</h1>
+              <p className="text-muted-foreground font-medium">Manage your music, analytics, and career</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="px-6">
+        {artistProfile ? (
+          <ArtistDashboard artist={artistProfile} />
+        ) : (
+          <ArtistOnboarding />
+        )}
+      </div>
     </div>
   );
 }
@@ -1918,34 +1962,36 @@ function TipsTab({ artistId }: { artistId: string }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card>
+        <Card className="bg-card/60 border-border/30 hover:border-green-500/20 transition-colors overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
           <CardContent className="p-6 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-500/10 flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-green-500" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Tips Received</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Tips Received</p>
               {loadingTotal ? (
                 <Skeleton className="h-8 w-24 mt-1" />
               ) : (
-                <p className="text-2xl font-bold text-green-500" data-testid="text-total-tips">
+                <p className="text-2xl font-black text-green-500" data-testid="text-total-tips">
                   ${parseFloat(tipTotal?.total || "0").toFixed(2)}
                 </p>
               )}
             </div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-primary to-emerald-500" />
           <CardContent className="p-6 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
               <Heart className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Number of Tips</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Number of Tips</p>
               {loadingTotal ? (
                 <Skeleton className="h-8 w-16 mt-1" />
               ) : (
-                <p className="text-2xl font-bold" data-testid="text-tip-count">
+                <p className="text-2xl font-black" data-testid="text-tip-count">
                   {tipTotal?.count || 0}
                 </p>
               )}
@@ -1953,9 +1999,9 @@ function TipsTab({ artistId }: { artistId: string }) {
           </CardContent>
         </Card>
       </div>
-      <Card>
+      <Card className="bg-card/60 border-border/30">
         <CardHeader>
-          <CardTitle className="text-base">About Tips</CardTitle>
+          <CardTitle className="text-base font-bold">About Tips</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
