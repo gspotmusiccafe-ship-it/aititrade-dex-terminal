@@ -423,7 +423,6 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-16 gap-4">
             <div className="flex items-center gap-2">
               <img src={logoImage} alt="AITIFY Music Radio" className="w-9 h-9 rounded-lg object-cover" />
-              <span className="font-bold text-xl">AITIFY MUSIC RADIO</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
