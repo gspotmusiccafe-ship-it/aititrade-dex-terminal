@@ -122,7 +122,7 @@ export function MusicPlayer() {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
         <img src={logoImage} alt="AITIFY" className="w-8 h-8 rounded-full object-cover relative ring-2 ring-primary/30" />
         <div className="text-center relative">
-          <p className="text-sm font-semibold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
+          <p className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
           <p className="text-xs text-muted-foreground">Tune in — music starts automatically</p>
         </div>
       </div>
@@ -134,7 +134,7 @@ export function MusicPlayer() {
       <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-background/95 via-card/95 to-background/95 backdrop-blur-xl border-t border-primary/20 z-50 flex items-center justify-center gap-4 px-4">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
         <div className="text-center relative">
-          <p className="text-sm font-semibold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-blocked-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
+          <p className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-blocked-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
           <p className="text-xs text-muted-foreground">{currentTrack.title} — {currentTrack.artist?.name}</p>
         </div>
         <Button
@@ -281,8 +281,8 @@ export function MusicPlayer() {
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent uppercase tracking-wider" data-testid="text-radio-station-label">97.7 THE FLAME</p>
-              <p className="font-medium text-sm truncate" data-testid="text-current-track-title">
+              <p className="text-[10px] font-extrabold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent uppercase tracking-wider" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+              <p className="font-bold text-sm truncate" data-testid="text-current-track-title">
                 {currentTrack.title}
               </p>
               <p className="text-xs text-muted-foreground truncate" data-testid="text-current-track-artist">

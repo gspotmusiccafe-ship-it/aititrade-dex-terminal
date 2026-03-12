@@ -166,7 +166,7 @@ export default function ArtistPage() {
                   </Badge>
                 )}
               </div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-3" data-testid="text-artist-name">
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-3" data-testid="text-artist-name">
                 {artist.name}
               </h1>
               <div className="flex items-center gap-4 text-muted-foreground">

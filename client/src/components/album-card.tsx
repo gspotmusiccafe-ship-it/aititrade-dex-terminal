@@ -44,7 +44,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
           )}
         </div>
 
-        <h3 className="font-semibold text-sm truncate mb-1">{album.title}</h3>
+        <h3 className="font-bold text-sm truncate mb-1">{album.title}</h3>
         <p className="text-xs text-muted-foreground truncate">{album.artist?.name}</p>
         {album.releaseDate && (
           <p className="text-xs text-muted-foreground mt-1">

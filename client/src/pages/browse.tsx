@@ -40,7 +40,7 @@ function BrowseAlbums() {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
             <Disc3 className="h-5 w-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold" data-testid="text-browse-title">All Albums</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-browse-title">All Albums</h1>
         </div>
       </div>
 
@@ -82,7 +82,7 @@ function BrowseArtists() {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
             <Users className="h-5 w-5 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold" data-testid="text-browse-title">All Artists</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight" data-testid="text-browse-title">All Artists</h1>
         </div>
       </div>
 

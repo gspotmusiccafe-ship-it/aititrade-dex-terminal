@@ -90,7 +90,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-full pb-28 px-6 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-4" data-testid="text-search-title">Search</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight mb-4" data-testid="text-search-title">Search</h1>
         <div className="relative max-w-xl">
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input

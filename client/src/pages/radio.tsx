@@ -711,8 +711,8 @@ export default function RadioPage() {
               <RadioIcon className="h-7 w-7 text-[#1DB954]" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold" data-testid="text-radio-title">Radio & Jam Sessions</h1>
-              <p className="text-muted-foreground">Radio shows & live jam sessions — Powered by Spotify</p>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight" data-testid="text-radio-title">Radio & Jam Sessions</h1>
+              <p className="text-muted-foreground font-medium">Radio shows & live jam sessions — Powered by Spotify</p>
             </div>
           </div>
         </div>

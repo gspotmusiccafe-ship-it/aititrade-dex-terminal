@@ -414,7 +414,7 @@ function ArtistOnboarding() {
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
             <Mic2 className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" data-testid="text-onboarding-title">
+          <h2 className="text-2xl font-extrabold tracking-tight mb-2" data-testid="text-onboarding-title">
             Become an Artist on AITIFY MUSIC RADIO
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
@@ -1876,7 +1876,7 @@ export default function ArtistPortalPage() {
       <div className="min-h-full pb-28 px-6 py-8 flex items-center justify-center">
         <div className="text-center max-w-md">
           <Upload className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-2xl font-bold mb-2">Artist Portal</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight mb-2">Artist Portal</h2>
           <p className="text-muted-foreground mb-6">
             Sign in to upload your music, set pre-release dates, and manage your artist profile
           </p>
@@ -1890,7 +1890,7 @@ export default function ArtistPortalPage() {
 
   return (
     <div className="min-h-full pb-28 px-6 py-8">
-      <h1 className="text-2xl font-bold mb-6">Artist Portal</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight mb-6">Artist Portal</h1>
       
       {artistProfile ? (
         <ArtistDashboard artist={artistProfile} />

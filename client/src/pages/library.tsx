@@ -123,7 +123,7 @@ export default function LibraryPage() {
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-4">
             <Music className="h-10 w-10 text-primary" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Your Library</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight mb-2">Your Library</h2>
           <p className="text-muted-foreground mb-6">
             Sign in to save your favorite songs, create playlists, and follow artists
           </p>
@@ -138,7 +138,7 @@ export default function LibraryPage() {
   return (
     <div className="min-h-full pb-28 px-6 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Your Library</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">Your Library</h1>
         <Button size="icon" variant="ghost" onClick={() => setShowCreateDialog(true)} data-testid="button-create-playlist">
           <Plus className="h-5 w-5" />
         </Button>

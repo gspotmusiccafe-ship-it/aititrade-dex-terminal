@@ -69,7 +69,7 @@ export function AppSidebar() {
               <img src={logoImage} alt="AITIFY Music Radio" className="w-10 h-10 rounded-lg object-cover relative" />
             </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">AITIFY</h1>
+              <h1 className="font-black text-lg leading-tight tracking-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">AITIFY</h1>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Music Radio</p>
             </div>
           </div>

@@ -47,7 +47,8 @@
   --chart-4: 45 90% 50%;
   --chart-5: 0 75% 55%;
 
-  --font-sans: 'Inter', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  --font-display: 'Montserrat', 'Plus Jakarta Sans', sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-mono: 'JetBrains Mono', monospace;
   --radius: .5rem;
@@ -140,6 +141,23 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+
+  h1 { font-weight: 900; letter-spacing: -0.04em; }
+  h2 { font-weight: 800; letter-spacing: -0.03em; }
+  h3 { font-weight: 700; letter-spacing: -0.02em; }
+
+  p {
+    line-height: 1.6;
   }
 }
 

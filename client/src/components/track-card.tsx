@@ -162,7 +162,7 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className={`font-medium text-sm truncate ${isCurrentTrack ? "text-primary" : ""}`}>
+          <p className={`font-bold text-sm truncate ${isCurrentTrack ? "text-primary" : ""}`}>
             {track.title}
           </p>
           {track.isPrerelease && (

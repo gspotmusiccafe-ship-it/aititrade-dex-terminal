@@ -146,10 +146,10 @@ export default function HomePage() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-primary/5 to-transparent" />
         <div className="relative px-6 py-8">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2" data-testid="text-greeting">
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2" data-testid="text-greeting">
             {getGreeting()}{user?.firstName ? `, ${user.firstName}` : ""}
           </h1>
-          <p className="text-muted-foreground">Discover new AI music 2 weeks before Spotify, Amazon Music, Deezer, YouTube & Anghami</p>
+          <p className="text-muted-foreground text-base sm:text-lg font-medium">Discover new AI music 2 weeks before Spotify, Amazon Music, Deezer, YouTube & Anghami</p>
         </div>
       </div>
 
@@ -183,7 +183,7 @@ export default function HomePage() {
                     {activeCfg.icon}
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-white" data-testid="text-active-category">
+                    <h2 className="text-lg font-extrabold tracking-tight text-white" data-testid="text-active-category">
                       {activeCfg.title}
                     </h2>
                     <p className="text-xs text-white/70">
@@ -265,7 +265,7 @@ export default function HomePage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-primary" />
-                <h2 className="text-xl font-bold">New Releases</h2>
+                <h2 className="text-xl font-extrabold tracking-tight">New Releases</h2>
               </div>
               <Button variant="ghost" size="sm" asChild data-testid="link-see-all-albums">
                 <Link href="/browse/albums">See All</Link>
@@ -286,7 +286,7 @@ export default function HomePage() {
         {topArtists && topArtists.length > 0 && (
           <section>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Popular Artists</h2>
+              <h2 className="text-xl font-extrabold tracking-tight">Popular Artists</h2>
               <Button variant="ghost" size="sm" asChild data-testid="link-see-all-artists">
                 <Link href="/browse/artists">See All</Link>
               </Button>

@@ -2127,7 +2127,7 @@ export default function AdminPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-3">
             <Shield className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl sm:text-3xl font-bold" data-testid="text-admin-title">Admin Portal</h1>
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" data-testid="text-admin-title">Admin Portal</h1>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <a href="https://suno.com/create/" target="_blank" rel="noopener noreferrer">

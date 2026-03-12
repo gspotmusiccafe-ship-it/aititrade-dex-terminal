@@ -49,7 +49,7 @@ export default function LikedSongsPage() {
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center mx-auto mb-4">
             <Heart className="h-10 w-10 text-purple-400" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Liked Songs</h2>
+          <h2 className="text-2xl font-extrabold tracking-tight mb-2">Liked Songs</h2>
           <p className="text-muted-foreground mb-6">
             Sign in to save your favorite tracks and access them anytime
           </p>

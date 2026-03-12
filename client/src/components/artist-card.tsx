@@ -38,7 +38,7 @@ export function ArtistCard({ artist }: ArtistCardProps) {
 
         <div className="text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <h3 className="font-semibold text-sm truncate">{artist.name}</h3>
+            <h3 className="font-bold text-sm truncate">{artist.name}</h3>
             {artist.verified && (
               <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
             )}

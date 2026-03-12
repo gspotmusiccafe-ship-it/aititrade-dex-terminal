@@ -390,11 +390,11 @@ export default function LandingPage() {
               <Star className="h-3 w-3 mr-1 text-yellow-500" />
               The All-AI Music Platform
             </Badge>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight mb-3" data-testid="text-radio-hero-title">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4" data-testid="text-radio-hero-title">
               AITIFY MUSIC RADIO{" "}
-              <span className="text-primary">97.7 THE FLAME</span>
+              <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">97.7 THE FLAME</span>
             </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
               The world's first all-AI music radio. Tune in free — hear AI-generated music 2 weeks before 
               Spotify, Amazon Music, Deezer, YouTube, and Anghami.
             </p>
@@ -442,10 +442,10 @@ export default function LandingPage() {
       <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-card/60 to-background">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4">
               Why Choose AITIFY MUSIC RADIO?
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg font-medium">
               We're building a new music experience that puts artists and listeners first
             </p>
           </div>
@@ -457,7 +457,7 @@ export default function LandingPage() {
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
+                  <h3 className="font-bold text-lg mb-2">{feature.title}</h3>
                   <p className="text-muted-foreground text-sm">{feature.description}</p>
                 </CardContent>
               </Card>
@@ -470,10 +470,10 @@ export default function LandingPage() {
       <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4">
               Simple, Transparent Pricing
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg font-medium">
               Choose the plan that works for you. Upgrade anytime for early access to new AI music.
             </p>
           </div>
@@ -496,9 +496,9 @@ export default function LandingPage() {
                 )}
                 <CardContent className={`p-6 ${tier.highlight ? "pt-10" : ""}`}>
                   <div className="mb-6">
-                    <h3 className="font-semibold text-xl mb-2">{tier.name}</h3>
+                    <h3 className="font-extrabold text-xl mb-2 tracking-tight">{tier.name}</h3>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold">{tier.price}</span>
+                      <span className="text-4xl font-black tracking-tight">{tier.price}</span>
                       <span className="text-muted-foreground text-sm">{tier.period}</span>
                     </div>
                   </div>
@@ -534,10 +534,10 @@ export default function LandingPage() {
       <section id="artists" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 via-background to-accent/5">
         <div className="max-w-4xl mx-auto text-center">
           <Crown className="h-12 w-12 text-primary mx-auto mb-6" />
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4">
             Are You an AI Music Artist?
           </h2>
-          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto text-lg font-medium">
             Upload your AI-generated music, set pre-release dates, and let fans hear it 
             2 weeks before Spotify, Amazon Music, Deezer, YouTube, and Anghami. Build your audience first on AITIFY.
           </p>

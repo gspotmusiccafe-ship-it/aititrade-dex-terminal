@@ -389,10 +389,10 @@ export default function MembershipPage() {
             <Crown className="h-3 w-3 mr-1" />
             AITIFY MUSIC RADIO Membership
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-membership-title">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4" data-testid="text-membership-title">
             Choose Your Plan
           </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+          <p className="text-muted-foreground max-w-xl mx-auto text-lg font-medium">
             From previews to unlimited downloads — pick the tier that matches your vibe.
             All plans include unlimited access to released music.
           </p>
@@ -436,7 +436,7 @@ export default function MembershipPage() {
                 </div>
               )}
               <CardHeader className={plan.popular ? "pt-10" : ""}>
-                <CardTitle className={`flex items-center gap-2 ${plan.iconColor}`}>
+                <CardTitle className={`flex items-center gap-2 ${plan.iconColor} font-extrabold tracking-tight`}>
                   {plan.name}
                   {plan.id === "gold" && <Crown className="h-5 w-5 text-yellow-500" />}
                   {plan.id === "bronze" && <Crown className="h-5 w-5 text-amber-600" />}
@@ -444,7 +444,7 @@ export default function MembershipPage() {
                 </CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="pt-2">
-                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+                  <span className="text-4xl font-black tracking-tight text-foreground">{plan.price}</span>
                   <span className="text-muted-foreground">{plan.period}</span>
                 </div>
               </CardHeader>
