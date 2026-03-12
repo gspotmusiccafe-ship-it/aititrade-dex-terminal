@@ -28,10 +28,10 @@ function getRedirectUri(req?: any): string {
   if (req) {
     const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
     const host = req.headers["x-forwarded-host"] || req.headers.host;
-    return `${proto}://${host}/api/callback`;
+    return `${proto}://${host}/api/spotify/callback`;
   }
   const domain = process.env.REPLIT_DOMAINS || process.env.REPLIT_DEV_DOMAIN;
-  return `https://${domain}/api/callback`;
+  return `https://${domain}/api/spotify/callback`;
 }
 
 export function getSession() {
@@ -79,7 +79,7 @@ export async function setupAuth(app: Express) {
     res.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`);
   });
 
-  app.get("/api/callback", async (req, res) => {
+  app.get("/api/spotify/callback", async (req, res) => {
     const code = req.query.code as string;
     const error = req.query.error as string;
 
