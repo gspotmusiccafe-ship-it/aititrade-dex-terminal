@@ -35,7 +35,6 @@ function HeroPlayer() {
   const [isMuted, setIsMuted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
-  const wantAutoPlayRef = useRef(false);
 
   const { data: tracks } = useQuery<TrackData[]>({
     queryKey: ["/api/tracks/featured"],
@@ -84,24 +83,63 @@ function HeroPlayer() {
     else play();
   }, [isPlaying, play, pause]);
 
+  const playlistRef = useRef(playlist);
+  playlistRef.current = playlist;
+  const currentIndexRef = useRef(currentIndex);
+  currentIndexRef.current = currentIndex;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
+  const playNextDirect = useCallback((audio: HTMLAudioElement, nextIndex: number) => {
+    const pl = playlistRef.current;
+    if (!pl.length) return;
+    const idx = ((nextIndex % pl.length) + pl.length) % pl.length;
+    const nextTrack = pl[idx];
+    if (!nextTrack) return;
+    currentIndexRef.current = idx;
+    setCurrentIndex(idx);
+    setCurrentTime(0);
+    setDuration(0);
+    setPlayError(null);
+    audio.src = nextTrack.audioUrl;
+    const p = audio.play();
+    if (p !== undefined) {
+      p.then(() => setIsPlaying(true))
+        .catch(() => {
+          setIsPlaying(false);
+          setPlayError("Tap play to continue listening");
+        });
+    }
+  }, []);
+
   const skipTo = useCallback((index: number, autoPlay = false) => {
-    if (!playlist.length) return;
-    const next = ((index % playlist.length) + playlist.length) % playlist.length;
+    const pl = playlistRef.current;
+    if (!pl.length) return;
+    const next = ((index % pl.length) + pl.length) % pl.length;
+    const audio = audioRef.current;
+    if (!audio) return;
     setPlayError(null);
     setCurrentIndex(next);
+    currentIndexRef.current = next;
     setIsLoaded(false);
     setCurrentTime(0);
     setDuration(0);
-    wantAutoPlayRef.current = autoPlay || isPlaying;
-  }, [playlist.length, isPlaying]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !current) return;
-    audio.src = current.audioUrl;
-    audio.volume = isMuted ? 0 : volume;
-    audio.load();
-  }, [currentIndex, current?.audioUrl]);
+    const nextTrack = pl[next];
+    if (nextTrack && (autoPlay || isPlayingRef.current)) {
+      audio.src = nextTrack.audioUrl;
+      const p = audio.play();
+      if (p !== undefined) {
+        p.then(() => setIsPlaying(true))
+          .catch(() => {
+            setIsPlaying(false);
+            setPlayError("Tap play to continue listening");
+          });
+      }
+    } else if (nextTrack) {
+      audio.src = nextTrack.audioUrl;
+      audio.load();
+    }
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -114,38 +152,28 @@ function HeroPlayer() {
     if (!audio) return;
     const onTime = () => setCurrentTime(audio.currentTime);
     const onMeta = () => { setDuration(audio.duration); setIsLoaded(true); };
-    const onCanPlay = () => {
-      setIsLoaded(true);
-      if (wantAutoPlayRef.current) {
-        wantAutoPlayRef.current = false;
-        const p = audio.play();
-        if (p !== undefined) {
-          p.then(() => setIsPlaying(true))
-            .catch(() => setIsPlaying(false));
-        }
-      }
+    const onEnded = () => {
+      playNextDirect(audio, currentIndexRef.current + 1);
     };
-    const onEnded = () => skipTo(currentIndex + 1, true);
     const onError = () => {
-      setIsPlaying(false);
       setIsLoaded(false);
-      if (playlist.length > 1) {
-        setTimeout(() => skipTo(currentIndex + 1, true), 500);
+      if (playlistRef.current.length > 1) {
+        setTimeout(() => playNextDirect(audio, currentIndexRef.current + 1), 300);
+      } else {
+        setIsPlaying(false);
       }
     };
     audio.addEventListener("timeupdate", onTime);
     audio.addEventListener("loadedmetadata", onMeta);
-    audio.addEventListener("canplay", onCanPlay);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("error", onError);
     return () => {
       audio.removeEventListener("timeupdate", onTime);
       audio.removeEventListener("loadedmetadata", onMeta);
-      audio.removeEventListener("canplay", onCanPlay);
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
     };
-  }, [currentIndex, skipTo]);
+  }, [playNextDirect]);
 
   const seek = (val: number[]) => {
     if (!audioRef.current) return;
