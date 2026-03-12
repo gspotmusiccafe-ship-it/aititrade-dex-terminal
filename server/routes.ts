@@ -11,7 +11,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integra
 import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
-import { getSpotifyClientForUser, getSpotifyProfile, getSpotifyAuthUrl, exchangeSpotifyCode, disconnectSpotify, clearSpotifyCache } from "./spotify";
+import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 
@@ -1773,43 +1773,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  // === Spotify OAuth & Playback ===
-
-  app.get("/api/spotify/auth", isAuthenticated, (req: any, res) => {
-    const authUrl = getSpotifyAuthUrl(req);
-    res.redirect(authUrl);
-  });
-
-  app.get("/api/spotify/callback", isAuthenticated, async (req: any, res) => {
-    try {
-      const { code, error } = req.query;
-      if (error) {
-        return res.redirect("/radio?spotify_error=" + encodeURIComponent(error as string));
-      }
-      if (!code) {
-        return res.redirect("/radio?spotify_error=no_code");
-      }
-      const userId = req.user.claims.sub;
-      const result = await exchangeSpotifyCode(code as string, userId, req);
-      if (!result.success) {
-        return res.redirect("/radio?spotify_error=" + encodeURIComponent(result.error || "unknown"));
-      }
-      res.redirect("/radio?spotify_connected=true");
-    } catch (error: any) {
-      console.error("Spotify callback error:", error);
-      res.redirect("/radio?spotify_error=" + encodeURIComponent(error.message));
-    }
-  });
-
-  app.post("/api/spotify/disconnect", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      await disconnectSpotify(userId);
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ message: error.message });
-    }
-  });
+  // === Spotify Playback (Spotify is now the primary auth — tokens stored at login) ===
 
   app.get("/api/spotify/me", isAuthenticated, async (req: any, res) => {
     try {

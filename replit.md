@@ -8,7 +8,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Frontend**: React + TypeScript with Vite, Tailwind CSS, shadcn/ui components
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Replit Auth (OpenID Connect)
+- **Authentication**: Spotify OAuth 2.0 (users log in with their Spotify account)
 - **Payments**: PayPal Web SDK (sandbox in dev, production in deployed app)
 
 ## Key Features
@@ -201,7 +201,7 @@ All uploaded files (audio tracks, cover images, artist profile/cover images, mas
 
 ## Development Notes
 
-- Authentication is handled by Replit Auth - no custom login forms needed
+- Authentication is handled by Spotify OAuth — paid members log in with their Spotify account, free users just visit the landing page radio
 - Database migrations: `npm run db:push`
 - Demo data is automatically seeded on first startup
 - The music player context manages global playback state

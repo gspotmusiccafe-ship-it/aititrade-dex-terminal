@@ -1,4 +1,5 @@
 import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Flame } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
@@ -194,10 +195,10 @@ export function AppSidebar() {
             </Button>
           </div>
         ) : (
-          <Button asChild className="w-full bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" data-testid="button-login-sidebar">
+          <Button asChild className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 border-0 shadow-lg shadow-[#1DB954]/20 gap-1.5" data-testid="button-login-sidebar">
             <a href="/api/login">
-              <User className="h-4 w-4 mr-2" />
-              Sign In
+              <SiSpotify className="h-4 w-4" />
+              Sign In with Spotify
             </a>
           </Button>
         )}

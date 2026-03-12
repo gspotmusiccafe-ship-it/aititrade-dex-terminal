@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SiSpotify } from "react-icons/si";
-import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, ExternalLink, Music, Users, Heart, Share2, SkipForward, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power, Unplug } from "lucide-react";
+import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, ExternalLink, Music, Users, Heart, Share2, SkipForward, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -589,7 +589,7 @@ function SpotifyConnectionPanel() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
-  const isConnected = spotifyProfile && !spotifyProfile.error && spotifyProfile.display_name;
+  const isConnected = spotifyProfile && !spotifyProfile.error && spotifyProfile.connected;
 
   if (profileLoading) {
     return <Skeleton className="h-20 w-full" />;
@@ -600,17 +600,10 @@ function SpotifyConnectionPanel() {
       <Card className="border-[#1DB954]/30 mb-6">
         <CardContent className="py-6 text-center">
           <SiSpotify className="h-12 w-12 mx-auto mb-3 text-[#1DB954]" />
-          <h3 className="font-bold text-lg mb-1">Connect Your Spotify Account</h3>
+          <h3 className="font-bold text-lg mb-1">Spotify Connection Issue</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-            Log in with Spotify to create jam sessions, track engagement, and control playback. 
-            This is required to host sessions and view engagement analytics.
+            Your Spotify connection needs to be refreshed. Please log out and log back in to reconnect.
           </p>
-          <a href="/api/spotify/auth">
-            <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2 text-white" data-testid="button-connect-spotify">
-              <SiSpotify className="h-5 w-5" />
-              Log In with Spotify
-            </Button>
-          </a>
         </CardContent>
       </Card>
     );
@@ -627,10 +620,10 @@ function SpotifyConnectionPanel() {
               </div>
               <div>
                 <p className="text-sm font-medium" data-testid="text-spotify-name">
-                  {spotifyProfile.display_name}
+                  {spotifyProfile.name || spotifyProfile.display_name}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {spotifyProfile.product === "premium" ? "Spotify Premium" : "Spotify Free"} · Connected
+                  {spotifyProfile.product === "premium" || spotifyProfile.isPremium ? "Spotify Premium" : "Spotify Free"} · Connected
                 </p>
               </div>
             </div>
@@ -644,17 +637,6 @@ function SpotifyConnectionPanel() {
               >
                 <Plus className="h-3.5 w-3.5" />
                 {showCreate ? "Cancel" : "New Jam Session"}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="gap-1.5 text-muted-foreground"
-                onClick={() => disconnectMutation.mutate()}
-                disabled={disconnectMutation.isPending}
-                data-testid="button-disconnect-spotify"
-              >
-                <Unplug className="h-3.5 w-3.5" />
-                Disconnect
               </Button>
             </div>
           </div>

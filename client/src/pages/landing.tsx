@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3 } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -377,11 +378,17 @@ export default function LandingPage() {
 
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button variant="ghost" asChild data-testid="button-login">
-                <a href="/api/login">Log in</a>
+              <Button variant="ghost" asChild data-testid="button-login" className="gap-1.5">
+                <a href="/api/login">
+                  <SiSpotify className="h-4 w-4 text-[#1DB954]" />
+                  Log in with Spotify
+                </a>
               </Button>
-              <Button asChild className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" data-testid="button-signup">
-                <a href="/api/login">Get Started</a>
+              <Button asChild className="bg-[#1DB954] hover:bg-[#1DB954]/90 border-0 shadow-lg shadow-[#1DB954]/20 gap-1.5" data-testid="button-signup">
+                <a href="/api/login">
+                  <SiSpotify className="h-4 w-4" />
+                  Get Started
+                </a>
               </Button>
             </div>
           </div>
@@ -418,10 +425,10 @@ export default function LandingPage() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </a>
               </Button>
-              <Button size="lg" asChild data-testid="button-hero-cta">
+              <Button size="lg" asChild data-testid="button-hero-cta" className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-1.5">
                 <a href="/api/login">
-                  <Headphones className="h-5 w-5 mr-2" />
-                  Log In for More
+                  <SiSpotify className="h-5 w-5" />
+                  Log In with Spotify
                 </a>
               </Button>
             </div>
@@ -520,12 +527,13 @@ export default function LandingPage() {
 
                   {tier.name !== "Free" && (
                     <Button
-                      className={`w-full ${tier.highlight ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
+                      className={`w-full gap-1.5 ${tier.highlight ? "bg-[#1DB954] hover:bg-[#1DB954]/90 border-0 shadow-lg shadow-[#1DB954]/20" : ""}`}
                       variant={tier.highlight ? "default" : "outline"}
                       asChild
                     >
                       <a href="/api/login">
-                        Start Free Trial
+                        <SiSpotify className="h-4 w-4" />
+                        Sign Up with Spotify
                       </a>
                     </Button>
                   )}
@@ -547,10 +555,11 @@ export default function LandingPage() {
             Upload your AI-generated music, set pre-release dates, and let fans hear it 
             2 weeks before Spotify, Amazon Music, Deezer, YouTube, and Anghami. Build your audience first on AITIFY.
           </p>
-          <Button size="lg" asChild>
+          <Button size="lg" asChild className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-1.5">
             <a href="/api/login">
+              <SiSpotify className="h-5 w-5" />
               Join as Artist
-              <ArrowRight className="h-4 w-4 ml-2" />
+              <ArrowRight className="h-4 w-4" />
             </a>
           </Button>
         </div>
