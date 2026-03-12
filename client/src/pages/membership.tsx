@@ -96,6 +96,7 @@ const plans = [
       { text: "In-house AI-music marketing", included: true },
       { text: "Unlimited track uploads", included: true },
       { text: "Upload music videos (MP3/YouTube)", included: true },
+      { text: "Aitify Music Store — 25% sales retention from your personal store link", included: true },
       { text: "Advanced analytics dashboard", included: true },
       { text: "Lossless audio quality", included: true },
     ],
