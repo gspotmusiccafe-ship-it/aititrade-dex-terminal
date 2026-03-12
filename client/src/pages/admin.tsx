@@ -2116,6 +2116,103 @@ function SpotifyLookupTab() {
   );
 }
 
+function CreateArtistHeaderButton() {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [createUserId, setCreateUserId] = useState("");
+  const [createName, setCreateName] = useState("");
+  const [createBio, setCreateBio] = useState("");
+
+  const { data: allUsers } = useQuery<User[]>({
+    queryKey: ["/api/admin/users"],
+  });
+
+  const createArtistMutation = useMutation({
+    mutationFn: async (data: { userId: string; name: string; bio: string }) => {
+      return apiRequest("POST", "/api/admin/artists/create", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists/pending"] });
+      setOpen(false);
+      setCreateUserId("");
+      setCreateName("");
+      setCreateBio("");
+      toast({ title: "Artist created successfully" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to create artist", description: error.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <>
+      <Button
+        size="sm"
+        className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20 text-white gap-1.5"
+        onClick={() => setOpen(true)}
+        data-testid="button-create-artist-header"
+      >
+        <Plus className="h-3.5 w-3.5" />
+        Create Artist
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Artist Profile</DialogTitle>
+            <DialogDescription>Create an artist profile for a user (bypasses membership requirement)</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Select User</Label>
+              <Select value={createUserId} onValueChange={setCreateUserId}>
+                <SelectTrigger data-testid="select-create-artist-user">
+                  <SelectValue placeholder="Choose a user..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allUsers?.map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.username || u.email || u.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Artist Name</Label>
+              <Input
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="Artist name"
+                data-testid="input-create-artist-name"
+              />
+            </div>
+            <div>
+              <Label>Bio</Label>
+              <Input
+                value={createBio}
+                onChange={(e) => setCreateBio(e.target.value)}
+                placeholder="Short bio (optional)"
+                data-testid="input-create-artist-bio"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => createArtistMutation.mutate({ userId: createUserId, name: createName, bio: createBio })}
+              disabled={!createUserId || !createName || createArtistMutation.isPending}
+              data-testid="button-confirm-create-artist"
+            >
+              {createArtistMutation.isPending ? "Creating..." : "Create Artist"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export default function AdminPage() {
   const { data: adminCheck, isLoading: checkingAdmin } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -2160,6 +2257,7 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <CreateArtistHeaderButton />
               <a href="https://suno.com/create/" target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-suno">
                   <Music className="h-3.5 w-3.5" />
