@@ -118,10 +118,11 @@ export function MusicPlayer() {
 
   if (!currentTrack) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-card border-t border-border flex items-center justify-center gap-3">
-        <img src={logoImage} alt="AITIFY" className="w-8 h-8 rounded-full object-cover" />
-        <div className="text-center">
-          <p className="text-sm font-semibold text-primary" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
+      <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-card via-card to-card border-t border-primary/10 flex items-center justify-center gap-3 backdrop-blur-xl">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
+        <img src={logoImage} alt="AITIFY" className="w-8 h-8 rounded-full object-cover relative ring-2 ring-primary/30" />
+        <div className="text-center relative">
+          <p className="text-sm font-semibold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
           <p className="text-xs text-muted-foreground">Tune in — music starts automatically</p>
         </div>
       </div>
@@ -130,14 +131,15 @@ export function MusicPlayer() {
 
   if (autoplayBlocked) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/90 to-black/70 backdrop-blur-xl border-t border-white/5 z-50 flex items-center justify-center gap-4 px-4">
-        <div className="text-center">
-          <p className="text-sm font-semibold text-primary" data-testid="text-radio-blocked-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
+      <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-background/95 via-card/95 to-background/95 backdrop-blur-xl border-t border-primary/20 z-50 flex items-center justify-center gap-4 px-4">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
+        <div className="text-center relative">
+          <p className="text-sm font-semibold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-blocked-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
           <p className="text-xs text-muted-foreground">{currentTrack.title} — {currentTrack.artist?.name}</p>
         </div>
         <Button
           size="sm"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+          className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-primary-foreground gap-2 shadow-lg shadow-primary/25 relative"
           onClick={resumeAutoplay}
           data-testid="button-tune-in"
         >
@@ -151,8 +153,8 @@ export function MusicPlayer() {
   return (
     <>
       {queueOpen && (
-        <div className="fixed right-0 bottom-20 md:bottom-24 w-80 max-h-[60vh] bg-card border border-border rounded-tl-lg shadow-xl z-50 flex flex-col" data-testid="queue-panel">
-          <div className="flex items-center justify-between p-3 border-b border-border">
+        <div className="fixed right-0 bottom-20 md:bottom-24 w-80 max-h-[60vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-tl-xl shadow-2xl z-50 flex flex-col" data-testid="queue-panel">
+          <div className="flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-primary/5 to-transparent">
             <h3 className="font-semibold text-sm">Queue</h3>
             <div className="flex items-center gap-1">
               {upcomingTracks.length > 0 && (
@@ -185,12 +187,12 @@ export function MusicPlayer() {
           <div className="overflow-y-auto flex-1">
             <div className="p-2">
               <p className="text-xs text-muted-foreground uppercase tracking-wider px-2 py-1">Now Playing</p>
-              <div className="flex items-center gap-2 p-2 rounded bg-primary/10">
+              <div className="flex items-center gap-2 p-2 rounded-lg bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/10">
                 <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
                   {currentTrack.coverImage ? (
                     <img src={currentTrack.coverImage} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full bg-primary/20 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
                       <span className="text-primary text-xs font-bold">{currentTrack.title[0]}</span>
                     </div>
                   )}
@@ -213,7 +215,7 @@ export function MusicPlayer() {
                     return (
                       <div
                         key={`${track.id}-${actualIndex}`}
-                        className="flex items-center gap-2 p-2 rounded hover:bg-accent/50 group/item cursor-pointer"
+                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/5 group/item cursor-pointer transition-colors"
                         onClick={() => playFromQueue(actualIndex)}
                         data-testid={`queue-track-${actualIndex}`}
                       >
@@ -222,7 +224,7 @@ export function MusicPlayer() {
                           {track.coverImage ? (
                             <img src={track.coverImage} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full bg-primary/10 flex items-center justify-center">
+                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                               <span className="text-primary/60 text-xs font-bold">{track.title[0]}</span>
                             </div>
                           )}
@@ -261,10 +263,11 @@ export function MusicPlayer() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 h-20 md:h-24 bg-gradient-to-t from-black/90 to-black/70 backdrop-blur-xl border-t border-white/5 z-50" data-testid="music-player">
-        <div className="h-full px-4 flex items-center justify-between gap-4 max-w-screen-2xl mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 h-20 md:h-24 bg-gradient-to-r from-background/95 via-card/95 to-background/95 backdrop-blur-xl border-t border-primary/10 z-50" data-testid="music-player">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-primary/3" />
+        <div className="h-full px-4 flex items-center justify-between gap-4 max-w-screen-2xl mx-auto relative">
           <div className="flex items-center gap-3 min-w-0 flex-1 max-w-[300px]">
-            <div className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 bg-muted">
+            <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 shadow-lg ring-1 ring-white/10">
               {currentTrack.coverImage ? (
                 <img
                   src={currentTrack.coverImage}
@@ -272,13 +275,13 @@ export function MusicPlayer() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-emerald-500/20 flex items-center justify-center">
                   <span className="text-primary text-lg font-bold">{currentTrack.title[0]}</span>
                 </div>
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold text-primary/80 uppercase tracking-wider" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+              <p className="text-[10px] font-semibold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent uppercase tracking-wider" data-testid="text-radio-station-label">97.7 THE FLAME</p>
               <p className="font-medium text-sm truncate" data-testid="text-current-track-title">
                 {currentTrack.title}
               </p>
@@ -315,7 +318,7 @@ export function MusicPlayer() {
               <Button
                 size="icon"
                 onClick={togglePlay}
-                className="h-10 w-10 rounded-full bg-white hover:bg-white/90 text-black"
+                className="h-10 w-10 rounded-full bg-gradient-to-br from-white to-white/90 hover:from-white hover:to-white text-black shadow-lg shadow-white/10"
                 data-testid="button-play-pause"
               >
                 {isPlaying ? (

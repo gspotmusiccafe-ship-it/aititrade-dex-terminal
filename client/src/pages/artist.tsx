@@ -53,6 +53,12 @@ export default function ArtistPage() {
     enabled: !!artistId,
   });
 
+  const { data: followerData } = useQuery<{ count: number }>({
+    queryKey: ["/api/artists", artistId, "followers", "count"],
+    queryFn: () => fetch(`/api/artists/${artistId}/followers/count`).then(r => r.json()),
+    enabled: !!artistId,
+  });
+
   const { data: followStatus } = useQuery<{ following: boolean }>({
     queryKey: ["/api/user/followed-artists", artistId, "check"],
     queryFn: () => fetch(`/api/user/followed-artists/${artistId}/check`, { credentials: "include" }).then(r => r.json()),
@@ -128,7 +134,6 @@ export default function ArtistPage() {
 
   return (
     <div className="min-h-full pb-28">
-      {/* Hero Header */}
       <div className="relative h-80 overflow-hidden">
         {artist.coverImage ? (
           <img
@@ -137,25 +142,25 @@ export default function ArtistPage() {
             className="absolute inset-0 w-full h-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/40 via-primary/20 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-primary/10 to-emerald-500/10" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         
         <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
           <div className="flex items-end gap-6">
-            <div className="w-48 h-48 rounded-full overflow-hidden shadow-2xl flex-shrink-0 bg-gradient-to-br from-primary/30 to-accent/30">
+            <div className="w-48 h-48 rounded-full overflow-hidden shadow-2xl shadow-primary/10 flex-shrink-0 ring-2 ring-white/10">
               {artist.profileImage ? (
                 <img src={artist.profileImage} alt={artist.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <span className="text-6xl font-bold text-primary">{artist.name[0]}</span>
+                <div className="w-full h-full bg-gradient-to-br from-primary/30 via-accent/20 to-emerald-500/10 flex items-center justify-center">
+                  <span className="text-6xl font-bold text-primary/60">{artist.name[0]}</span>
                 </div>
               )}
             </div>
             <div className="flex-1 pb-2">
               <div className="flex items-center gap-2 mb-2">
                 {artist.verified && (
-                  <Badge variant="secondary" className="bg-primary/20 text-primary">
+                  <Badge variant="secondary" className="bg-primary/20 text-primary border-primary/20">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     Verified Artist
                   </Badge>
@@ -167,19 +172,20 @@ export default function ArtistPage() {
               <div className="flex items-center gap-4 text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4" />
-                  <span>{(artist.monthlyListeners || 0).toLocaleString()} monthly listeners</span>
+                  <span>{(followerData?.count || 0).toLocaleString()} followers</span>
                 </div>
+                <span className="text-border">|</span>
+                <span>{(artist.monthlyListeners || 0).toLocaleString()} monthly listeners</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Controls */}
       <div className="px-6 py-6 flex items-center gap-4">
         <Button
           size="lg"
-          className="rounded-full h-14 w-14"
+          className="rounded-full h-14 w-14 bg-gradient-to-br from-primary to-emerald-500 shadow-lg shadow-primary/25"
           onClick={handlePlayAll}
           disabled={!tracks || tracks.length === 0}
           data-testid="button-play-artist"
@@ -196,7 +202,7 @@ export default function ArtistPage() {
         </Button>
         <Button
           variant={followStatus?.following ? "default" : "outline"}
-          className="rounded-full"
+          className={`rounded-full ${followStatus?.following ? "bg-gradient-to-r from-primary to-emerald-500 border-0" : "border-border/50 hover:border-primary/30"}`}
           onClick={handleFollow}
           disabled={followMutation.isPending}
           data-testid="button-follow-artist"
@@ -218,7 +224,7 @@ export default function ArtistPage() {
             artistId={artist.id}
             artistName={artist.name}
             trigger={
-              <Button variant="outline" className="rounded-full gap-2" data-testid="button-tip-artist">
+              <Button variant="outline" className="rounded-full gap-2 border-border/50 hover:border-primary/30" data-testid="button-tip-artist">
                 <DollarSign className="h-4 w-4" />
                 Tip
               </Button>
@@ -227,14 +233,12 @@ export default function ArtistPage() {
         )}
       </div>
 
-      {/* Bio */}
       {artist.bio && (
         <div className="px-6 pb-8">
           <p className="text-muted-foreground max-w-2xl">{artist.bio}</p>
         </div>
       )}
 
-      {/* Popular Tracks */}
       <div className="px-6 pb-8">
         <h2 className="text-xl font-bold mb-4">Popular</h2>
         {loadingTracks ? (
@@ -244,7 +248,7 @@ export default function ArtistPage() {
             ))}
           </div>
         ) : tracks && tracks.length > 0 ? (
-          <div className="space-y-1 bg-card/30 rounded-lg p-3">
+          <div className="space-y-1 rounded-xl border border-border/30 bg-card/30 p-3">
             {tracks.slice(0, 5).map((track, index) => (
               <TrackCard
                 key={track.id}
@@ -261,7 +265,6 @@ export default function ArtistPage() {
         )}
       </div>
 
-      {/* Albums */}
       {albums && albums.length > 0 && (
         <div className="px-6 pb-8">
           <h2 className="text-xl font-bold mb-4">Albums</h2>
@@ -273,7 +276,6 @@ export default function ArtistPage() {
         </div>
       )}
 
-      {/* Music Videos */}
       {videos && videos.length > 0 && (
         <div className="px-6 pb-8">
           <h2 className="text-xl font-bold mb-4">Music Videos</h2>
@@ -282,7 +284,7 @@ export default function ArtistPage() {
               const ytId = extractYouTubeId(video.videoUrl);
               if (!ytId) return null;
               return (
-                <Card key={video.id} className="overflow-hidden" data-testid={`card-artist-video-${video.id}`}>
+                <Card key={video.id} className="overflow-hidden border-border/30 bg-card/60 hover:border-primary/20 transition-colors" data-testid={`card-artist-video-${video.id}`}>
                   <iframe
                     src={`https://www.youtube.com/embed/${ytId}`}
                     title={video.title}

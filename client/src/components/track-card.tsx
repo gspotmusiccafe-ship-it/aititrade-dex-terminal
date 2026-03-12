@@ -114,8 +114,8 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
 
   return (
     <div
-      className={`group flex items-center gap-3 p-2 rounded-md hover-elevate cursor-pointer ${
-        isCurrentTrack ? "bg-primary/10" : ""
+      className={`group flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-all duration-200 ${
+        isCurrentTrack ? "bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/10" : "hover:bg-card/80 border border-transparent hover:border-border/30"
       }`}
       onClick={() => handlePlay()}
       data-testid={`track-card-${track.id}`}

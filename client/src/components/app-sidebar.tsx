@@ -60,13 +60,16 @@ export function AppSidebar() {
     : "Fan";
 
   return (
-    <Sidebar className="border-r-0">
+    <Sidebar className="border-r border-border/30">
       <SidebarHeader className="p-4">
         <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer" data-testid="link-logo">
-            <img src={logoImage} alt="AITIFY Music Radio" className="w-10 h-10 rounded-lg object-cover" />
+          <div className="flex items-center gap-3 cursor-pointer group" data-testid="link-logo">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-lg blur-md group-hover:bg-primary/30 transition-colors" />
+              <img src={logoImage} alt="AITIFY Music Radio" className="w-10 h-10 rounded-lg object-cover relative" />
+            </div>
             <div>
-              <h1 className="font-bold text-lg leading-tight">AITIFY</h1>
+              <h1 className="font-bold text-lg leading-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">AITIFY</h1>
               <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Music Radio</p>
             </div>
           </div>
@@ -74,7 +77,6 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* Main Navigation */}
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -92,11 +94,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="opacity-30" />
 
-        {/* Your Music */}
         <SidebarGroup>
-          <SidebarGroupLabel>Your Music</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Your Music</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {yourMusicItems.map((item) => (
@@ -113,10 +114,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="opacity-30" />
 
-        {/* Premium / Membership */}
         <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Explore</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -168,10 +169,10 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 pb-28 md:pb-28">
         {isAuthenticated && user ? (
-          <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
+          <div className="flex items-center gap-3 p-2 rounded-xl bg-gradient-to-r from-primary/5 to-transparent border border-border/30">
+            <Avatar className="h-9 w-9 ring-2 ring-primary/20">
               <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || "User"} />
-              <AvatarFallback className="bg-primary/20 text-primary">
+              <AvatarFallback className="bg-gradient-to-br from-primary/30 to-primary/10 text-primary font-bold">
                 {user.firstName?.[0] || user.email?.[0] || "U"}
               </AvatarFallback>
             </Avatar>
@@ -193,7 +194,7 @@ export function AppSidebar() {
             </Button>
           </div>
         ) : (
-          <Button asChild className="w-full" data-testid="button-login-sidebar">
+          <Button asChild className="w-full bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" data-testid="button-login-sidebar">
             <a href="/api/login">
               <User className="h-4 w-4 mr-2" />
               Sign In

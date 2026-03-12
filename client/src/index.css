@@ -78,7 +78,7 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* DARK MODE - Spotify-inspired dark theme */
+/* DARK MODE - Rich dark theme with depth */
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -88,34 +88,34 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  --background: 0 0% 7%;
-  --foreground: 0 0% 95%;
-  --border: 0 0% 18%;
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 95%;
-  --card-border: 0 0% 16%;
-  --sidebar: 0 0% 4%;
-  --sidebar-foreground: 0 0% 90%;
-  --sidebar-border: 0 0% 12%;
+  --background: 220 15% 6%;
+  --foreground: 210 20% 95%;
+  --border: 220 10% 16%;
+  --card: 220 13% 9%;
+  --card-foreground: 210 20% 95%;
+  --card-border: 220 10% 14%;
+  --sidebar: 220 18% 4%;
+  --sidebar-foreground: 210 15% 90%;
+  --sidebar-border: 220 12% 12%;
   --sidebar-primary: 142 76% 45%;
   --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 0 0% 15%;
-  --sidebar-accent-foreground: 0 0% 90%;
+  --sidebar-accent: 220 12% 13%;
+  --sidebar-accent-foreground: 210 15% 90%;
   --sidebar-ring: 142 76% 45%;
-  --popover: 0 0% 9%;
-  --popover-foreground: 0 0% 95%;
-  --popover-border: 0 0% 18%;
+  --popover: 220 15% 8%;
+  --popover-foreground: 210 20% 95%;
+  --popover-border: 220 10% 16%;
   --primary: 142 76% 45%;
   --primary-foreground: 0 0% 4%;
-  --secondary: 0 0% 16%;
-  --secondary-foreground: 0 0% 90%;
-  --muted: 0 0% 16%;
-  --muted-foreground: 0 0% 60%;
-  --accent: 142 25% 18%;
+  --secondary: 220 12% 14%;
+  --secondary-foreground: 210 15% 90%;
+  --muted: 220 12% 14%;
+  --muted-foreground: 215 10% 55%;
+  --accent: 142 25% 15%;
   --accent-foreground: 142 76% 55%;
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 100%;
-  --input: 0 0% 22%;
+  --input: 220 12% 20%;
   --ring: 142 76% 45%;
   --chart-1: 142 76% 45%;
   --chart-2: 200 85% 55%;
@@ -250,5 +250,44 @@
 
   .animate-spin-slow-paused {
     animation-play-state: paused;
+  }
+
+  /* Glow effects for cards and containers */
+  .glow-border {
+    position: relative;
+  }
+
+  .glow-border::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.3), transparent 50%, hsl(var(--primary) / 0.1));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Subtle shimmer on hover */
+  .shimmer-hover {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .shimmer-hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.03) 55%, transparent 60%);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+    pointer-events: none;
+  }
+
+  .shimmer-hover:hover::after {
+    transform: translateX(100%);
   }
 }

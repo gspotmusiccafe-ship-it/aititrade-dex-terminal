@@ -12,8 +12,8 @@ function CardSkeleton({ count = 10 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="p-4 rounded-lg bg-card/50">
-          <Skeleton className="aspect-square rounded-md mb-4" />
+        <div key={i} className="p-4 rounded-xl bg-card/40 border border-border/20">
+          <Skeleton className="aspect-square rounded-lg mb-4" />
           <Skeleton className="h-4 w-3/4 mb-2" />
           <Skeleton className="h-3 w-1/2" />
         </div>
@@ -32,12 +32,14 @@ function BrowseAlbums() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/">
-          <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-back">
+          <Button variant="ghost" size="icon" className="rounded-full border border-border/30 hover:border-primary/30" data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
         <div className="flex items-center gap-2">
-          <Disc3 className="h-6 w-6 text-primary" />
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
+            <Disc3 className="h-5 w-5 text-primary" />
+          </div>
           <h1 className="text-2xl font-bold" data-testid="text-browse-title">All Albums</h1>
         </div>
       </div>
@@ -51,9 +53,11 @@ function BrowseAlbums() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 text-muted-foreground">
-          <Disc3 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>No albums available yet</p>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-emerald-500/10 flex items-center justify-center mx-auto mb-3">
+            <Disc3 className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="text-muted-foreground">No albums available yet</p>
         </div>
       )}
     </div>
@@ -70,12 +74,14 @@ function BrowseArtists() {
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/">
-          <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-back">
+          <Button variant="ghost" size="icon" className="rounded-full border border-border/30 hover:border-primary/30" data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
         <div className="flex items-center gap-2">
-          <Users className="h-6 w-6 text-primary" />
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
           <h1 className="text-2xl font-bold" data-testid="text-browse-title">All Artists</h1>
         </div>
       </div>
@@ -89,9 +95,11 @@ function BrowseArtists() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16 text-muted-foreground">
-          <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>No artists available yet</p>
+        <div className="text-center py-16">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/10 to-emerald-500/10 flex items-center justify-center mx-auto mb-3">
+            <Users className="h-8 w-8 text-muted-foreground/50" />
+          </div>
+          <p className="text-muted-foreground">No artists available yet</p>
         </div>
       )}
     </div>

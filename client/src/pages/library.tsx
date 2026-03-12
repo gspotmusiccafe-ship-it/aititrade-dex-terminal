@@ -16,10 +16,10 @@ import type { Playlist, Artist } from "@shared/schema";
 function PlaylistCard({ playlist }: { playlist: Playlist }) {
   return (
     <Link href={`/playlist/${playlist.id}`}>
-      <Card className="hover-elevate cursor-pointer overflow-hidden" data-testid={`playlist-card-${playlist.id}`}>
+      <Card className="cursor-pointer overflow-hidden border-border/30 bg-card/60 hover:bg-card/90 hover:border-primary/20 transition-all duration-200" data-testid={`playlist-card-${playlist.id}`}>
         <CardContent className="p-0">
           <div className="flex items-center gap-4 p-4">
-            <div className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center shadow-lg ring-1 ring-white/5">
               {playlist.coverImage ? (
                 <img src={playlist.coverImage} alt={playlist.name} className="w-full h-full object-cover" />
               ) : (
@@ -40,10 +40,10 @@ function PlaylistCard({ playlist }: { playlist: Playlist }) {
 function FollowedArtistCard({ artist }: { artist: Artist }) {
   return (
     <Link href={`/artist/${artist.id}`}>
-      <Card className="hover-elevate cursor-pointer overflow-hidden" data-testid={`followed-artist-${artist.id}`}>
+      <Card className="cursor-pointer overflow-hidden border-border/30 bg-card/60 hover:bg-card/90 hover:border-primary/20 transition-all duration-200" data-testid={`followed-artist-${artist.id}`}>
         <CardContent className="p-0">
           <div className="flex items-center gap-4 p-4">
-            <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center shadow-lg ring-1 ring-white/5">
               {artist.profileImage ? (
                 <img src={artist.profileImage} alt={artist.name} className="w-full h-full object-cover" />
               ) : (
@@ -120,12 +120,14 @@ export default function LibraryPage() {
     return (
       <div className="min-h-full pb-28 px-6 py-8 flex items-center justify-center">
         <div className="text-center max-w-md">
-          <Music className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+            <Music className="h-10 w-10 text-primary" />
+          </div>
           <h2 className="text-2xl font-bold mb-2">Your Library</h2>
           <p className="text-muted-foreground mb-6">
             Sign in to save your favorite songs, create playlists, and follow artists
           </p>
-          <Button asChild data-testid="button-login-library">
+          <Button asChild className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20" data-testid="button-login-library">
             <a href="/api/login">Sign In</a>
           </Button>
         </div>
@@ -178,7 +180,7 @@ export default function LibraryPage() {
         <TabsContent value="playlists" className="space-y-4">
           {/* Liked Songs Card */}
           <Link href="/liked">
-            <Card className="hover-elevate cursor-pointer overflow-hidden bg-gradient-to-r from-purple-600/20 to-blue-600/20" data-testid="card-liked-songs">
+            <Card className="cursor-pointer overflow-hidden bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-purple-500/20 hover:border-purple-500/30 transition-all duration-200" data-testid="card-liked-songs">
               <CardContent className="p-0">
                 <div className="flex items-center gap-4 p-4">
                   <div className="w-14 h-14 rounded-md overflow-hidden flex-shrink-0 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
@@ -209,7 +211,7 @@ export default function LibraryPage() {
             <div className="text-center py-12 text-muted-foreground">
               <ListMusic className="h-12 w-12 mx-auto mb-3 opacity-50" />
               <p>No playlists yet</p>
-              <Button variant="link" className="mt-2" onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-playlist">
+              <Button variant="ghost" className="mt-2" onClick={() => setShowCreateDialog(true)} data-testid="button-create-first-playlist">
                 <Plus className="h-4 w-4 mr-1" />
                 Create your first playlist
               </Button>
