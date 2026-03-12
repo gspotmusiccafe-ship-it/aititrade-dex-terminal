@@ -381,9 +381,42 @@ const membershipTiers = [
   },
 ];
 
+function AuthErrorBanner() {
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get("auth_error");
+    if (authError) {
+      const messages: Record<string, string> = {
+        spotify_denied: "Spotify login was cancelled. Please try again.",
+        token_failed: "Login failed. Please try again.",
+        profile_failed: "Could not retrieve your Spotify profile. Please try again.",
+        login_failed: "Login failed. Please try again.",
+        server_error: "Something went wrong. Please try again later.",
+        spotify_not_registered: "Your Spotify account is not yet authorized for AITIFY Music Radio. Please contact support to get access.",
+      };
+      setError(messages[authError] || "Login failed. Please try again.");
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
+  if (!error) return null;
+
+  return (
+    <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] max-w-md w-full mx-4" data-testid="auth-error-banner">
+      <div className="bg-red-500/90 backdrop-blur-sm text-white px-4 py-3 rounded-lg shadow-lg flex items-center justify-between gap-3">
+        <p className="text-sm font-medium">{error}</p>
+        <button onClick={() => setError(null)} className="text-white/80 hover:text-white shrink-0" data-testid="button-dismiss-error">✕</button>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
+      <AuthErrorBanner />
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

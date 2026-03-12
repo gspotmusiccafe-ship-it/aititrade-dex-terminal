@@ -109,7 +109,14 @@ export async function setupAuth(app: Express) {
         }),
       });
 
-      const tokenData = await tokenRes.json();
+      const tokenText = await tokenRes.text();
+      let tokenData: any;
+      try {
+        tokenData = JSON.parse(tokenText);
+      } catch {
+        console.error("[Spotify Auth] Token response not JSON:", tokenText);
+        return res.redirect("/?auth_error=spotify_not_registered");
+      }
 
       if (!tokenRes.ok || !tokenData.access_token) {
         console.error("[Spotify Auth] Token exchange failed:", tokenData);
@@ -119,7 +126,15 @@ export async function setupAuth(app: Express) {
       const profileRes = await fetch("https://api.spotify.com/v1/me", {
         headers: { "Authorization": `Bearer ${tokenData.access_token}` },
       });
-      const profile = await profileRes.json();
+
+      const profileText = await profileRes.text();
+      let profile: any;
+      try {
+        profile = JSON.parse(profileText);
+      } catch {
+        console.error("[Spotify Auth] Profile response not JSON:", profileText);
+        return res.redirect("/?auth_error=profile_failed");
+      }
 
       if (!profile.id) {
         console.error("[Spotify Auth] Failed to get Spotify profile");
