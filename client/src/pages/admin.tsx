@@ -498,7 +498,7 @@ function ArtistsTab() {
         <h3 className="text-lg font-black">All Artists</h3>
         <Button
           size="sm"
-          className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20"
+          className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20 text-white"
           onClick={() => setCreateDialog(true)}
           data-testid="button-create-artist"
         >
