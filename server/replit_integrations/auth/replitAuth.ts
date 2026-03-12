@@ -137,7 +137,6 @@ export async function setupAuth(app: Express) {
       const { spotifyTokens } = await import("@shared/schema");
       const { eq } = await import("drizzle-orm");
 
-      const existing = await db.select().from(spotifyTokens).where(eq(spotifyTokens.userId, spotifyUserId));
       const spotifyTokenData = {
         userId: spotifyUserId,
         accessToken: tokenData.access_token,
@@ -150,11 +149,9 @@ export async function setupAuth(app: Express) {
         spotifyImage: profile.images?.[0]?.url || null,
       };
 
-      if (existing.length > 0) {
-        await db.update(spotifyTokens).set(spotifyTokenData).where(eq(spotifyTokens.userId, spotifyUserId));
-      } else {
-        await db.insert(spotifyTokens).values(spotifyTokenData);
-      }
+      const { sql: sqlTag } = await import("drizzle-orm");
+      await db.execute(sqlTag`DELETE FROM spotify_tokens WHERE user_id = ${spotifyUserId}`);
+      await db.insert(spotifyTokens).values(spotifyTokenData);
 
       const user = {
         claims: {

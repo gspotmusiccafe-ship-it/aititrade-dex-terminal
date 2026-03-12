@@ -14,7 +14,9 @@ class AuthStorage implements IAuthStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const existingById = await db.select().from(users).where(eq(users.id, userData.id!));
+    const newId = userData.id!;
+
+    const existingById = await db.select().from(users).where(eq(users.id, newId));
     if (existingById.length > 0) {
       const [updated] = await db
         .update(users)
@@ -25,7 +27,7 @@ class AuthStorage implements IAuthStorage {
           profileImageUrl: userData.profileImageUrl,
           updatedAt: new Date(),
         })
-        .where(eq(users.id, userData.id!))
+        .where(eq(users.id, newId))
         .returning();
       return updated;
     }
@@ -34,21 +36,20 @@ class AuthStorage implements IAuthStorage {
       const existingByEmail = await db.select().from(users).where(eq(users.email, userData.email));
       if (existingByEmail.length > 0) {
         const oldId = existingByEmail[0].id;
-        const newId = userData.id!;
 
-        await db.execute(sql`UPDATE artists SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE memberships SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE playlists SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE liked_tracks SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE followed_artists SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE spotify_tokens SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE tips SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE lyrics_requests SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE mastering_requests SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE distribution_requests SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE jam_sessions SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE jam_session_engagement SET user_id = ${newId} WHERE user_id = ${oldId}`);
-        await db.execute(sql`UPDATE jam_session_listeners SET user_id = ${newId} WHERE user_id = ${oldId}`);
+        const migrateTables = [
+          'artists', 'memberships', 'playlists', 'liked_tracks',
+          'followed_artists', 'tips', 'lyrics_requests',
+          'mastering_requests', 'distribution_requests',
+          'jam_sessions', 'jam_session_engagement', 'jam_session_listeners'
+        ];
+
+        for (const table of migrateTables) {
+          await db.execute(sql.raw(`UPDATE ${table} SET user_id = '${newId}' WHERE user_id = '${oldId}'`));
+        }
+
+        await db.execute(sql`DELETE FROM spotify_tokens WHERE user_id = ${oldId}`);
+        await db.execute(sql`DELETE FROM spotify_tokens WHERE user_id = ${newId}`);
 
         const [updated] = await db
           .update(users)
