@@ -50,14 +50,16 @@ interface Analytics {
 
 function StatCard({ title, value, icon: Icon, description }: { title: string; value: number | string; icon: any; description?: string }) {
   return (
-    <Card>
+    <Card className="bg-card/60 border-border/30 hover:border-primary/20 transition-colors">
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
+        <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</CardTitle>
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
+          <Icon className="h-4 w-4 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold" data-testid={`stat-${title.toLowerCase().replace(/\s+/g, '-')}`}>{value}</div>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
+        <div className="text-2xl font-black tracking-tight" data-testid={`stat-${title.toLowerCase().replace(/\s+/g, '-')}`}>{value}</div>
+        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
       </CardContent>
     </Card>
   );
@@ -102,10 +104,13 @@ function AnalyticsDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+        <Card className="bg-card/60 border-border/30 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-primary via-emerald-500 to-primary" />
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg font-black flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
+                <TrendingUp className="h-4 w-4 text-primary" />
+              </div>
               Top Tracks
             </CardTitle>
             <CardDescription>Most played tracks on the platform</CardDescription>
@@ -139,10 +144,13 @@ function AnalyticsDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card/60 border-border/30 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-blue-500/50 to-primary/50" />
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg font-black flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500/15 to-blue-500/5 flex items-center justify-center">
+                <Users className="h-4 w-4 text-blue-400" />
+              </div>
               Top Artists
             </CardTitle>
             <CardDescription>Most popular artists by monthly listeners</CardDescription>
@@ -250,17 +258,17 @@ function UsersTab() {
     <>
       <div className="space-y-2">
         {users?.map((user) => (
-          <div key={user.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`user-row-${user.id}`}>
-            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+          <div key={user.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`user-row-${user.id}`}>
+            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
               {user.profileImageUrl ? (
                 <img src={user.profileImageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
               ) : (
-                <Users className="h-5 w-5 text-muted-foreground" />
+                <Users className="h-5 w-5 text-primary" />
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium truncate">
+                <span className="font-bold truncate">
                   {user.firstName} {user.lastName}
                 </span>
                 {user.isAdmin && <Badge variant="secondary">Admin</Badge>}
@@ -437,22 +445,24 @@ function ArtistsTab() {
     <>
       {pendingArtists && pendingArtists.length > 0 && (
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            <UserCheck className="h-5 w-5 text-yellow-500" />
+          <h3 className="text-lg font-black mb-3 flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 flex items-center justify-center">
+              <UserCheck className="h-4 w-4 text-yellow-500" />
+            </div>
             Pending Applications ({pendingArtists.length})
           </h3>
           <div className="space-y-2">
             {pendingArtists.map((artist) => (
-              <div key={artist.id} className="flex items-center gap-4 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg" data-testid={`pending-artist-${artist.id}`}>
-                <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+              <div key={artist.id} className="flex items-center gap-4 p-4 border border-yellow-500/30 bg-yellow-500/5 rounded-lg hover:border-yellow-500/50 transition-colors" data-testid={`pending-artist-${artist.id}`}>
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-yellow-500/15 to-yellow-500/5 flex items-center justify-center overflow-hidden">
                   {artist.profileImage ? (
                     <img src={artist.profileImage} alt="" className="h-12 w-12 object-cover" />
                   ) : (
-                    <Music className="h-6 w-6 text-muted-foreground" />
+                    <Music className="h-6 w-6 text-yellow-500" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{artist.name}</p>
+                  <p className="font-bold truncate">{artist.name}</p>
                   <p className="text-sm text-muted-foreground truncate">{artist.bio || "No bio provided"}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -485,9 +495,10 @@ function ArtistsTab() {
       )}
 
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold">All Artists</h3>
+        <h3 className="text-lg font-black">All Artists</h3>
         <Button
           size="sm"
+          className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20"
           onClick={() => setCreateDialog(true)}
           data-testid="button-create-artist"
         >
@@ -497,17 +508,17 @@ function ArtistsTab() {
       </div>
       <div className="space-y-2">
         {artists?.map((artist) => (
-          <div key={artist.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`artist-row-${artist.id}`}>
-            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+          <div key={artist.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`artist-row-${artist.id}`}>
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center overflow-hidden">
               {artist.profileImage ? (
                 <img src={artist.profileImage} alt="" className="h-12 w-12 object-cover" />
               ) : (
-                <Music className="h-6 w-6 text-muted-foreground" />
+                <Music className="h-6 w-6 text-primary" />
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium truncate">{artist.name}</span>
+                <span className="font-bold truncate">{artist.name}</span>
                 {artist.verified && <Badge className="bg-primary/20 text-primary">Verified</Badge>}
                 <Badge variant={
                   artist.approvalStatus === "approved" ? "secondary" :
@@ -697,17 +708,17 @@ function ContentTab() {
     <>
       <div className="space-y-2">
         {tracks?.map((track) => (
-          <div key={track.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`track-row-${track.id}`}>
-            <div className="h-12 w-12 rounded bg-muted flex items-center justify-center overflow-hidden">
+          <div key={track.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`track-row-${track.id}`}>
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center overflow-hidden">
               {track.coverImage ? (
                 <img src={track.coverImage} alt="" className="h-12 w-12 object-cover" />
               ) : (
-                <Music className="h-6 w-6 text-muted-foreground" />
+                <Music className="h-6 w-6 text-primary" />
               )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium truncate">{track.title}</span>
+                <span className="font-bold truncate">{track.title}</span>
                 {track.isPrerelease && <Badge className="bg-yellow-500/20 text-yellow-600">Pre-release</Badge>}
               </div>
               <p className="text-sm text-muted-foreground truncate">
@@ -813,16 +824,16 @@ function MembershipsTab() {
   return (
     <div className="space-y-2">
       {memberships?.map((membership) => (
-        <div key={membership.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`membership-row-${membership.id}`}>
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+        <div key={membership.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`membership-row-${membership.id}`}>
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center">
             {membership.user?.profileImageUrl ? (
               <img src={membership.user.profileImageUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
             ) : (
-              <Users className="h-5 w-5 text-muted-foreground" />
+              <Users className="h-5 w-5 text-primary" />
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">
+            <p className="font-bold truncate">
               {membership.user?.firstName} {membership.user?.lastName}
             </p>
             <p className="text-sm text-muted-foreground truncate">{membership.user?.email}</p>
@@ -951,13 +962,13 @@ function AdminLyricsTab() {
 
       <div className="space-y-2">
         {requests?.map((req) => (
-          <div key={req.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`lyrics-request-${req.id}`}>
-            <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div key={req.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`lyrics-request-${req.id}`}>
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500/15 to-primary/10 flex items-center justify-center flex-shrink-0">
               <FileText className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium">{req.title}</span>
+                <span className="font-bold">{req.title}</span>
                 {statusBadge(req.status)}
               </div>
               {req.genre && <p className="text-sm text-muted-foreground">Genre: {req.genre}</p>}
@@ -1179,13 +1190,13 @@ function AdminMasteringTab() {
 
       <div className="space-y-2">
         {requests?.map((req) => (
-          <div key={req.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`mastering-request-${req.id}`}>
-            <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div key={req.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`mastering-request-${req.id}`}>
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center flex-shrink-0">
               <Headphones className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium">Track: {req.trackId}</span>
+                <span className="font-bold">Track: {req.trackId}</span>
                 {statusBadge(req.status)}
               </div>
               <p className="text-sm text-muted-foreground">Artist: {req.artistId}</p>
@@ -1402,13 +1413,13 @@ function DistributionTab() {
 
       <div className="space-y-2">
         {requests?.map((req) => (
-          <div key={req.id} className="flex items-center gap-4 p-4 border rounded-lg" data-testid={`distribution-request-${req.id}`}>
-            <div className="h-10 w-10 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <div key={req.id} className="flex items-center gap-4 p-4 rounded-lg bg-card/60 border border-border/30 hover:border-primary/20 transition-colors" data-testid={`distribution-request-${req.id}`}>
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/15 to-emerald-500/10 flex items-center justify-center flex-shrink-0">
               <Send className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-medium">Artist: {req.userId}</span>
+                <span className="font-bold">Artist: {req.userId}</span>
                 {statusBadge(req.status)}
               </div>
               {req.trackId && <p className="text-sm text-muted-foreground">Track ID: {req.trackId}</p>}
@@ -1532,8 +1543,10 @@ function RadioPlaylistTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Flame className="h-5 w-5 text-orange-500" />
+          <h3 className="text-lg font-black flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-orange-500/15 to-red-500/10 flex items-center justify-center">
+              <Flame className="h-4 w-4 text-orange-500" />
+            </div>
             97.7 THE FLAME - Radio Playlist
           </h3>
           <p className="text-sm text-muted-foreground mt-1">
@@ -1546,9 +1559,10 @@ function RadioPlaylistTab() {
       </div>
 
       {radioCount > 0 && (
-        <Card>
+        <Card className="bg-card/60 border-border/30 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500" />
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+            <CardTitle className="text-base font-black flex items-center gap-2">
               <Flame className="h-4 w-4 text-orange-500" />
               Currently On Air ({radioCount})
             </CardTitle>
@@ -1762,8 +1776,13 @@ function RadioShowsTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Radio Shows</h2>
-          <p className="text-sm text-muted-foreground">Pre-load Spotify playlist URLs for each time slot</p>
+          <h2 className="text-xl font-black flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#1DB954]/15 to-[#1DB954]/5 flex items-center justify-center">
+              <Radio className="h-4 w-4 text-[#1DB954]" />
+            </div>
+            Radio Shows
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">Pre-load Spotify playlist URLs for each time slot</p>
         </div>
         <Button onClick={openCreate} className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" data-testid="button-add-radio-show">
           <Plus className="h-4 w-4" />
@@ -1774,15 +1793,15 @@ function RadioShowsTab() {
       {shows && shows.length > 0 ? (
         <div className="space-y-3">
           {shows.map((show: any) => (
-            <Card key={show.id} className={`${!show.isActive ? "opacity-50" : ""}`} data-testid={`admin-radio-show-${show.id}`}>
+            <Card key={show.id} className={`bg-card/60 border-border/30 hover:border-[#1DB954]/20 transition-colors ${!show.isActive ? "opacity-50" : ""}`} data-testid={`admin-radio-show-${show.id}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 rounded-lg bg-[#1DB954]/10 flex items-center justify-center">
+                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-[#1DB954]/15 to-[#1DB954]/5 flex items-center justify-center">
                     <Radio className="h-5 w-5 text-[#1DB954]" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium">{show.name}</p>
+                      <p className="font-bold">{show.name}</p>
                       <Badge variant="outline" className="text-xs">{slotLabels[show.slot]?.split(" (")[0] || show.slot}</Badge>
                       {!show.isActive && <Badge variant="secondary">Inactive</Badge>}
                     </div>
@@ -1955,10 +1974,13 @@ function SpotifyLookupTab() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-card/60 border-border/30 overflow-hidden">
+        <div className="h-1 bg-gradient-to-r from-[#1DB954] to-[#1DB954]/50" />
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <SiSpotify className="h-5 w-5 text-[#1DB954]" />
+          <CardTitle className="font-black flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#1DB954]/15 to-[#1DB954]/5 flex items-center justify-center">
+              <SiSpotify className="h-4 w-4 text-[#1DB954]" />
+            </div>
             Spotify Stream Counter
           </CardTitle>
           <CardDescription>
@@ -2000,9 +2022,10 @@ function SpotifyLookupTab() {
       )}
 
       {selectedTrack && (
-        <Card className="border-[#1DB954]/30 bg-[#1DB954]/5">
+        <Card className="border-[#1DB954]/30 bg-[#1DB954]/5 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-[#1DB954] via-[#1DB954]/60 to-[#1DB954]" />
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg font-black flex items-center gap-2">
               <SiSpotify className="h-5 w-5 text-[#1DB954]" />
               Track Details
             </CardTitle>
@@ -2122,34 +2145,44 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-full pb-28 px-6 py-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" data-testid="text-admin-title">Admin Portal</h1>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <a href="https://suno.com/create/" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-suno">
-                <Music className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Suno</span> Production
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </a>
-            <a href="https://jumpstr.io" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-jumpstr">
-                <Disc3 className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Jumpstr</span> Distribution
-                <ExternalLink className="h-3 w-3" />
-              </Button>
-            </a>
+    <div className="min-h-full pb-28">
+      <div className="relative overflow-hidden mb-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-primary/3 to-transparent" />
+        <div className="relative px-6 py-8">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
+                <Shield className="h-7 w-7 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl sm:text-4xl font-black tracking-tight" data-testid="text-admin-title">Admin Portal</h1>
+                <p className="text-muted-foreground font-medium">Manage your platform</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <a href="https://suno.com/create/" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-suno">
+                  <Music className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Suno</span> Production
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </a>
+              <a href="https://jumpstr.io" target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="gap-1.5" data-testid="link-jumpstr">
+                  <Disc3 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Jumpstr</span> Distribution
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              </a>
+            </div>
           </div>
         </div>
-
+      </div>
+      <div className="px-6">
+        <div className="max-w-6xl mx-auto">
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="overflow-x-auto -mx-6 px-6 pb-2">
-            <TabsList className="inline-flex w-auto min-w-full gap-1">
+            <TabsList className="inline-flex w-auto min-w-full gap-1 bg-card/60 border border-border/30">
               <TabsTrigger value="dashboard" data-testid="tab-dashboard" className="whitespace-nowrap">
                 <BarChart3 className="h-4 w-4 mr-1.5" />
                 Dashboard
@@ -2241,6 +2274,7 @@ export default function AdminPage() {
             <SpotifyLookupTab />
           </TabsContent>
         </Tabs>
+        </div>
       </div>
     </div>
   );
