@@ -31,6 +31,8 @@ import {
   Wand2,
   Download,
   DollarSign,
+  ShoppingBag,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1059,6 +1061,16 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="gap-2 border-primary/30 hover:border-primary/50 hover:bg-primary/5"
+              onClick={() => window.open("https://payhip.com/auth/register/af6977122ef4124", "_blank", "noopener,noreferrer")}
+              data-testid="button-my-store"
+            >
+              <ShoppingBag className="h-4 w-4 text-primary" />
+              My Store
+              <ExternalLink className="h-3 w-3 text-muted-foreground" />
+            </Button>
             <AddVideoDialog artistId={artist.id} />
             <UploadTrackDialog artistId={artist.id} />
           </div>
