@@ -44,7 +44,10 @@ const plans = [
     ],
     popular: false,
     cta: "",
-    color: "text-muted-foreground",
+    gradient: "from-zinc-600 to-zinc-700",
+    iconColor: "text-zinc-400",
+    borderColor: "border-zinc-500/20",
+    glowColor: "",
   },
   {
     id: "silver",
@@ -61,7 +64,10 @@ const plans = [
     ],
     popular: false,
     cta: "Get Silver",
-    color: "text-gray-400",
+    gradient: "from-gray-400 to-gray-500",
+    iconColor: "text-gray-400",
+    borderColor: "border-gray-400/20",
+    glowColor: "",
   },
   {
     id: "bronze",
@@ -78,7 +84,10 @@ const plans = [
     ],
     popular: true,
     cta: "Get Bronze",
-    color: "text-amber-600",
+    gradient: "from-amber-600 to-amber-700",
+    iconColor: "text-amber-600",
+    borderColor: "border-amber-500/30",
+    glowColor: "shadow-amber-500/10",
   },
   {
     id: "gold",
@@ -102,7 +111,10 @@ const plans = [
     ],
     popular: false,
     cta: "Get Gold",
-    color: "text-yellow-500",
+    gradient: "from-yellow-500 to-amber-600",
+    iconColor: "text-yellow-500",
+    borderColor: "border-yellow-500/30",
+    glowColor: "shadow-yellow-500/10",
   },
 ];
 
@@ -286,7 +298,7 @@ function PayPalCheckoutDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="rounded-lg border p-4 bg-muted/30">
+          <div className="rounded-lg border border-border/30 p-4 bg-card/60">
             <div className="flex justify-between items-center">
               <div>
                 <p className="font-semibold">{tierName} Membership</p>
@@ -371,10 +383,10 @@ export default function MembershipPage() {
   return (
     <div className="min-h-full pb-28">
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/20 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/10 via-primary/5 to-transparent" />
         <div className="relative px-6 py-12 text-center">
-          <Badge variant="secondary" className="mb-4">
-            <Crown className="h-3 w-3 mr-1 text-yellow-500" />
+          <Badge variant="secondary" className="mb-4 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+            <Crown className="h-3 w-3 mr-1" />
             AITIFY MUSIC RADIO Membership
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-bold mb-4" data-testid="text-membership-title">
@@ -386,7 +398,7 @@ export default function MembershipPage() {
           </p>
           {isAuthenticated && currentTier !== "free" && (
             <div className="mt-4">
-              <Badge variant="default" className="text-sm px-3 py-1" data-testid="badge-current-tier">
+              <Badge className="text-sm px-3 py-1 bg-gradient-to-r from-primary to-emerald-500 border-0" data-testid="badge-current-tier">
                 Current Plan: {TIER_NAMES[currentTier] || currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}
               </Badge>
             </div>
@@ -395,10 +407,10 @@ export default function MembershipPage() {
       </div>
 
       <div className="px-6 py-8">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {benefits.map((benefit, index) => (
-            <div key={index} className="text-center p-4">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+            <div key={index} className="text-center p-5 rounded-xl bg-card/40 border border-border/20 hover:border-primary/20 transition-colors">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-3">
                 <benefit.icon className="h-6 w-6 text-primary" />
               </div>
               <h3 className="font-semibold mb-1">{benefit.title}</h3>
@@ -407,30 +419,32 @@ export default function MembershipPage() {
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {plans.map((plan) => (
             <Card
               key={plan.id}
-              className={`relative overflow-hidden ${
-                plan.popular ? "border-primary scale-105 z-10" : "border-border/50"
+              className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+                plan.popular
+                  ? `border-primary/50 shadow-xl ${plan.glowColor} scale-[1.02]`
+                  : `${plan.borderColor} bg-card/60 hover:bg-card/90 hover:border-primary/20`
               }`}
               data-testid={`membership-plan-${plan.id}`}
             >
               {plan.popular && (
-                <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-center py-1 text-xs font-medium">
+                <div className={`absolute top-0 left-0 right-0 bg-gradient-to-r ${plan.gradient} text-white text-center py-1.5 text-xs font-bold uppercase tracking-wider`}>
                   Most Popular
                 </div>
               )}
               <CardHeader className={plan.popular ? "pt-10" : ""}>
-                <CardTitle className={`flex items-center gap-2 ${plan.color}`}>
+                <CardTitle className={`flex items-center gap-2 ${plan.iconColor}`}>
                   {plan.name}
-                  {plan.id === "gold" && <Crown className="h-4 w-4 text-yellow-500" />}
-                  {plan.id === "bronze" && <Crown className="h-4 w-4 text-amber-600" />}
-                  {plan.id === "silver" && <Crown className="h-4 w-4 text-gray-400" />}
+                  {plan.id === "gold" && <Crown className="h-5 w-5 text-yellow-500" />}
+                  {plan.id === "bronze" && <Crown className="h-5 w-5 text-amber-600" />}
+                  {plan.id === "silver" && <Crown className="h-5 w-5 text-gray-400" />}
                 </CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="pt-2">
-                  <span className="text-3xl font-bold">{plan.price}</span>
+                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
                   <span className="text-muted-foreground">{plan.period}</span>
                 </div>
               </CardHeader>
@@ -440,12 +454,12 @@ export default function MembershipPage() {
                     <li
                       key={i}
                       className={`flex items-start gap-2 text-sm ${
-                        !feature.included ? "text-muted-foreground" : ""
+                        !feature.included ? "text-muted-foreground/50" : ""
                       }`}
                     >
                       <Check
                         className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                          feature.included ? "text-primary" : "text-muted-foreground/40"
+                          feature.included ? "text-primary" : "text-muted-foreground/30"
                         }`}
                       />
                       <span className={!feature.included ? "line-through" : ""}>
@@ -480,7 +494,7 @@ export default function MembershipPage() {
                   </Button>
                 ) : isAuthenticated ? (
                   <Button
-                    className="w-full"
+                    className={`w-full ${plan.popular ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
                     variant={plan.popular ? "default" : "outline"}
                     onClick={() => setCheckoutTier(plan.id)}
                     data-testid={`button-plan-${plan.id}`}
@@ -488,7 +502,12 @@ export default function MembershipPage() {
                     {plan.cta}
                   </Button>
                 ) : (
-                  <Button className="w-full" variant={plan.popular ? "default" : "outline"} asChild data-testid={`button-plan-${plan.id}`}>
+                  <Button
+                    className={`w-full ${plan.popular ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
+                    variant={plan.popular ? "default" : "outline"}
+                    asChild
+                    data-testid={`button-plan-${plan.id}`}
+                  >
                     <a href="/api/login">{plan.cta}</a>
                   </Button>
                 )}
@@ -497,7 +516,7 @@ export default function MembershipPage() {
           ))}
         </div>
 
-        <div className="text-center mt-12 max-w-2xl mx-auto">
+        <div className="text-center mt-12 max-w-2xl mx-auto p-6 rounded-xl bg-card/30 border border-border/20">
           <h3 className="font-semibold mb-2">Have questions?</h3>
           <p className="text-sm text-muted-foreground">
             All paid plans include a 7-day free trial. Cancel anytime.

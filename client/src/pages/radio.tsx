@@ -72,13 +72,13 @@ function ShowCard({ show }: { show: RadioShow }) {
                 <span className="text-xs text-muted-foreground">{config.time}</span>
               </div>
             </div>
-            <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer" className="shrink-0">
-              <Button variant="outline" size="sm" className="gap-1.5 border-[#1DB954]/30 hover:bg-[#1DB954]/10" data-testid={`button-open-spotify-${show.id}`}>
+            <Button variant="outline" size="sm" className="gap-1.5 border-[#1DB954]/30 hover:bg-[#1DB954]/10 shrink-0" asChild data-testid={`button-open-spotify-${show.id}`}>
+              <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer">
                 <SiSpotify className="h-4 w-4 text-[#1DB954]" />
                 Open in Spotify
                 <ExternalLink className="h-3 w-3" />
-              </Button>
-            </a>
+              </a>
+            </Button>
           </div>
           {show.description && (
             <p className="text-sm text-muted-foreground mt-2 ml-[52px]">{show.description}</p>
@@ -102,12 +102,12 @@ function ShowCard({ show }: { show: RadioShow }) {
 
         {!embedUrl && (
           <div className="p-6 text-center">
-            <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer">
-              <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" data-testid={`button-listen-${show.id}`}>
+            <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" asChild data-testid={`button-listen-${show.id}`}>
+              <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer">
                 <Play className="h-4 w-4" />
                 Listen on Spotify
-              </Button>
-            </a>
+              </a>
+            </Button>
           </div>
         )}
       </CardContent>
@@ -702,15 +702,22 @@ export default function RadioPage() {
   }
 
   return (
-    <div className="min-h-full pb-28 px-6 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center gap-3 mb-2">
-          <RadioIcon className="h-8 w-8 text-[#1DB954]" />
-          <div>
-            <h1 className="text-3xl font-bold" data-testid="text-radio-title">Radio & Jam Sessions</h1>
-            <p className="text-muted-foreground">Radio shows & live jam sessions - Powered by Spotify</p>
+    <div className="min-h-full pb-28">
+      <div className="relative overflow-hidden mb-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#1DB954]/10 via-[#1DB954]/3 to-transparent" />
+        <div className="relative px-6 py-8">
+          <div className="max-w-4xl mx-auto flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#1DB954]/20 to-[#1DB954]/5 flex items-center justify-center">
+              <RadioIcon className="h-7 w-7 text-[#1DB954]" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold" data-testid="text-radio-title">Radio & Jam Sessions</h1>
+              <p className="text-muted-foreground">Radio shows & live jam sessions — Powered by Spotify</p>
+            </div>
           </div>
         </div>
+      </div>
+      <div className="max-w-4xl mx-auto px-6">
 
         <Tabs defaultValue="shows" className="mt-6">
           <TabsList className="mb-4">

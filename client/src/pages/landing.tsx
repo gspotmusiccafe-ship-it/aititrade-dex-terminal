@@ -245,6 +245,7 @@ function HeroPlayer() {
                 disabled={!playlist.length}
                 className="p-2 rounded-full hover:bg-muted/50 transition-colors disabled:opacity-30"
                 data-testid="button-hero-prev"
+                aria-label="Previous track"
               >
                 <SkipBack className="h-4 w-4" />
               </button>
@@ -253,6 +254,7 @@ function HeroPlayer() {
                 disabled={!playlist.length}
                 className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-30 shadow-lg"
                 data-testid="button-hero-play"
+                aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
               </button>
@@ -261,6 +263,7 @@ function HeroPlayer() {
                 disabled={!playlist.length}
                 className="p-2 rounded-full hover:bg-muted/50 transition-colors disabled:opacity-30"
                 data-testid="button-hero-next"
+                aria-label="Next track"
               >
                 <SkipForward className="h-4 w-4" />
               </button>
@@ -346,7 +349,7 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             <div className="flex items-center gap-2">
@@ -371,7 +374,7 @@ export default function LandingPage() {
               <Button variant="ghost" asChild data-testid="button-login">
                 <a href="/api/login">Log in</a>
               </Button>
-              <Button asChild data-testid="button-signup">
+              <Button asChild className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" data-testid="button-signup">
                 <a href="/api/login">Get Started</a>
               </Button>
             </div>
@@ -436,7 +439,7 @@ export default function LandingPage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-card/50">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-card/60 to-background">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
@@ -449,9 +452,9 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-card/50 border-border/50 hover-elevate">
+              <Card key={index} className="bg-card/60 border-border/30 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5">
                 <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-primary" />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
@@ -475,19 +478,19 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
             {membershipTiers.map((tier, index) => (
               <Card
                 key={index}
-                className={`relative overflow-hidden ${
+                className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
                   tier.highlight
-                    ? "border-primary bg-primary/5"
-                    : "bg-card/50 border-border/50"
+                    ? "border-primary/50 bg-card/80 shadow-xl shadow-primary/10"
+                    : "bg-card/60 border-border/30 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
                 }`}
                 data-testid={`pricing-tier-${tier.name.toLowerCase()}`}
               >
                 {tier.highlight && (
-                  <div className="absolute top-0 left-0 right-0 bg-primary text-primary-foreground text-center py-1 text-xs font-medium">
+                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground text-center py-1.5 text-xs font-bold uppercase tracking-wider">
                     Most Popular
                   </div>
                 )}
@@ -511,7 +514,7 @@ export default function LandingPage() {
 
                   {tier.name !== "Free" && (
                     <Button
-                      className="w-full"
+                      className={`w-full ${tier.highlight ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
                       variant={tier.highlight ? "default" : "outline"}
                       asChild
                     >
@@ -548,7 +551,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-border/50">
+      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-border/20 bg-card/30">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
