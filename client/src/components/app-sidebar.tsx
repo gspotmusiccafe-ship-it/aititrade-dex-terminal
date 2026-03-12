@@ -166,7 +166,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 pb-28 md:pb-28">
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3">
             <Avatar className="h-9 w-9">

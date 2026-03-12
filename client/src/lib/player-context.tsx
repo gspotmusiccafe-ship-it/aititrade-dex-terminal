@@ -47,6 +47,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const playCountedRef = useRef<string | null>(null);
 
   const reportPlay = useCallback((trackId: string) => {
@@ -70,8 +72,53 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     audioRef.current = new Audio();
     audioRef.current.volume = state.volume;
+    audioRef.current.crossOrigin = "anonymous";
 
     const audio = audioRef.current;
+
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = ctx;
+      const source = ctx.createMediaElementSource(audio);
+      sourceNodeRef.current = source;
+
+      const bass = ctx.createBiquadFilter();
+      bass.type = "lowshelf";
+      bass.frequency.value = 200;
+      bass.gain.value = 6;
+
+      const subBass = ctx.createBiquadFilter();
+      subBass.type = "peaking";
+      subBass.frequency.value = 80;
+      subBass.Q.value = 1.0;
+      subBass.gain.value = 4;
+
+      const lowMid = ctx.createBiquadFilter();
+      lowMid.type = "peaking";
+      lowMid.frequency.value = 400;
+      lowMid.Q.value = 0.7;
+      lowMid.gain.value = 1;
+
+      const highMid = ctx.createBiquadFilter();
+      highMid.type = "peaking";
+      highMid.frequency.value = 3000;
+      highMid.Q.value = 0.7;
+      highMid.gain.value = -1;
+
+      const presence = ctx.createBiquadFilter();
+      presence.type = "highshelf";
+      presence.frequency.value = 8000;
+      presence.gain.value = 1;
+
+      source.connect(bass);
+      bass.connect(subBass);
+      subBass.connect(lowMid);
+      lowMid.connect(highMid);
+      highMid.connect(presence);
+      presence.connect(ctx.destination);
+    } catch (e) {
+      console.warn("Web Audio EQ not available, using direct playback");
+    }
 
     const handleTimeUpdate = () => {
       setState(prev => ({ ...prev, progress: audio.currentTime }));
@@ -193,6 +240,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("stalled", handleStalled);
       if (errorSkipTimeout) clearTimeout(errorSkipTimeout);
       audio.pause();
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close().catch(() => {});
+      }
     };
   }, []);
 
