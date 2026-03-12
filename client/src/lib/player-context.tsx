@@ -49,6 +49,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const preloadRef = useRef<HTMLAudioElement | null>(null);
   const playCountedRef = useRef<string | null>(null);
 
   const reportPlay = useCallback((trackId: string) => {
@@ -73,6 +74,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     audioRef.current = new Audio();
     audioRef.current.volume = state.volume;
     audioRef.current.crossOrigin = "anonymous";
+    audioRef.current.preload = "auto";
+
+    preloadRef.current = new Audio();
+    preloadRef.current.preload = "auto";
+    preloadRef.current.volume = 0;
 
     const audio = audioRef.current;
 
@@ -120,8 +126,24 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       console.warn("Web Audio EQ not available, using direct playback");
     }
 
+    let preloadedUrl = "";
     const handleTimeUpdate = () => {
-      setState(prev => ({ ...prev, progress: audio.currentTime }));
+      setState(prev => {
+        if (audio.duration && audio.currentTime > 0 && audio.duration - audio.currentTime < 15) {
+          const nextIdx = prev.shuffle
+            ? Math.floor(Math.random() * prev.queue.length)
+            : (prev.queueIndex + 1 < prev.queue.length ? prev.queueIndex + 1 : (prev.repeat === "all" ? 0 : -1));
+          if (nextIdx >= 0 && nextIdx < prev.queue.length) {
+            const nextUrl = prev.queue[nextIdx].audioUrl;
+            if (nextUrl && nextUrl !== preloadedUrl && preloadRef.current) {
+              preloadedUrl = nextUrl;
+              preloadRef.current.src = nextUrl;
+              preloadRef.current.load();
+            }
+          }
+        }
+        return { ...prev, progress: audio.currentTime };
+      });
     };
 
     const handleLoadedMetadata = () => {
@@ -240,6 +262,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("stalled", handleStalled);
       if (errorSkipTimeout) clearTimeout(errorSkipTimeout);
       audio.pause();
+      if (preloadRef.current) {
+        preloadRef.current.src = "";
+        preloadRef.current = null;
+      }
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {});
       }
