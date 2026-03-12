@@ -34,8 +34,8 @@ function HeroPlayer() {
   const [volume, setVolume] = useState(0.7);
   const [isMuted, setIsMuted] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [wantAutoPlay, setWantAutoPlay] = useState(false);
   const [playError, setPlayError] = useState<string | null>(null);
+  const wantAutoPlayRef = useRef(false);
 
   const { data: tracks } = useQuery<TrackData[]>({
     queryKey: ["/api/tracks/featured"],
@@ -92,7 +92,7 @@ function HeroPlayer() {
     setIsLoaded(false);
     setCurrentTime(0);
     setDuration(0);
-    setWantAutoPlay(autoPlay || isPlaying);
+    wantAutoPlayRef.current = autoPlay || isPlaying;
   }, [playlist.length, isPlaying]);
 
   useEffect(() => {
@@ -116,11 +116,12 @@ function HeroPlayer() {
     const onMeta = () => { setDuration(audio.duration); setIsLoaded(true); };
     const onCanPlay = () => {
       setIsLoaded(true);
-      if (wantAutoPlay) {
+      if (wantAutoPlayRef.current) {
+        wantAutoPlayRef.current = false;
         const p = audio.play();
         if (p !== undefined) {
-          p.then(() => { setIsPlaying(true); setWantAutoPlay(false); })
-            .catch(() => { setWantAutoPlay(false); setIsPlaying(false); });
+          p.then(() => setIsPlaying(true))
+            .catch(() => setIsPlaying(false));
         }
       }
     };
@@ -129,7 +130,7 @@ function HeroPlayer() {
       setIsPlaying(false);
       setIsLoaded(false);
       if (playlist.length > 1) {
-        setTimeout(() => skipTo(currentIndex + 1, false), 500);
+        setTimeout(() => skipTo(currentIndex + 1, true), 500);
       }
     };
     audio.addEventListener("timeupdate", onTime);
@@ -144,7 +145,7 @@ function HeroPlayer() {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
     };
-  }, [currentIndex, skipTo, wantAutoPlay]);
+  }, [currentIndex, skipTo]);
 
   const seek = (val: number[]) => {
     if (!audioRef.current) return;
