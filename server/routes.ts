@@ -144,18 +144,47 @@ export async function registerRoutes(
         return res.status(404).json({ message: "File not found" });
       }
       const [metadata] = await file.getMetadata();
-      res.set("Content-Type", metadata.contentType || "application/octet-stream");
+      const contentType = metadata.contentType || "application/octet-stream";
+      const fileSize = parseInt(metadata.size as string, 10);
+
+      res.set("Accept-Ranges", "bytes");
+      res.set("Content-Type", contentType);
       res.set("Content-Disposition", "inline");
       res.set("X-Content-Type-Options", "nosniff");
       res.set("Cache-Control", "public, max-age=3600");
-      const stream = file.createReadStream();
-      stream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).json({ message: "Error streaming file" });
+
+      const rangeHeader = req.headers.range;
+      if (rangeHeader && fileSize) {
+        const parts = rangeHeader.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+
+        res.status(206);
+        res.set("Content-Range", `bytes ${start}-${end}/${fileSize}`);
+        res.set("Content-Length", String(chunkSize));
+
+        const stream = file.createReadStream({ start, end });
+        stream.on("error", (err) => {
+          console.error("Stream error:", err);
+          if (!res.headersSent) {
+            res.status(500).json({ message: "Error streaming file" });
+          }
+        });
+        stream.pipe(res);
+      } else {
+        if (fileSize) {
+          res.set("Content-Length", String(fileSize));
         }
-      });
-      stream.pipe(res);
+        const stream = file.createReadStream();
+        stream.on("error", (err) => {
+          console.error("Stream error:", err);
+          if (!res.headersSent) {
+            res.status(500).json({ message: "Error streaming file" });
+          }
+        });
+        stream.pipe(res);
+      }
     } catch (error) {
       console.error("Error serving cloud file:", error);
       res.status(500).json({ message: "Failed to serve file" });

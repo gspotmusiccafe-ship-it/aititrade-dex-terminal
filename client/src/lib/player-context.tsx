@@ -272,8 +272,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const resumeAudioContext = useCallback(() => {
+    if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume().catch(() => {});
+    }
+  }, []);
+
   const playTrack = useCallback((track: TrackWithArtist, queue?: TrackWithArtist[]) => {
     if (audioRef.current) {
+      resumeAudioContext();
       playCountedRef.current = null;
       audioRef.current.src = track.audioUrl;
       const p = audioRef.current.play();
@@ -297,9 +304,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         queueIndex: queue ? queue.findIndex(t => t.id === track.id) : 0,
       }));
     }
-  }, [reportPlay]);
+  }, [reportPlay, resumeAudioContext]);
 
   const resumeAutoplay = useCallback(() => {
+    resumeAudioContext();
     if (audioRef.current && state.currentTrack) {
       const p = audioRef.current.play();
       if (p !== undefined) {
@@ -315,6 +323,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [state.currentTrack, reportPlay]);
 
   const togglePlay = useCallback(() => {
+    resumeAudioContext();
     if (audioRef.current && state.currentTrack) {
       if (state.isPlaying) {
         audioRef.current.pause();
