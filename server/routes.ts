@@ -1932,6 +1932,53 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/spotify/next", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
+      await spotify.player.skipToNext("");
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to skip" });
+    }
+  });
+
+  app.post("/api/spotify/previous", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const spotify = await getSpotifyClientForUser(userId);
+      await spotify.player.skipToPrevious("");
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to go back" });
+    }
+  });
+
+  app.put("/api/spotify/shuffle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { state } = req.body;
+      const spotify = await getSpotifyClientForUser(userId);
+      await spotify.player.togglePlaybackShuffle(state !== false);
+      res.json({ success: true, shuffle: state !== false });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to toggle shuffle" });
+    }
+  });
+
+  app.put("/api/spotify/repeat", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { state } = req.body;
+      const spotify = await getSpotifyClientForUser(userId);
+      const repeatState = state || "off";
+      await spotify.player.setRepeatMode(repeatState);
+      res.json({ success: true, repeat: repeatState });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message || "Failed to set repeat" });
+    }
+  });
+
   app.get("/api/spotify/search", isAuthenticated, async (req: any, res) => {
     try {
       const { q, type } = req.query;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SiSpotify } from "react-icons/si";
-import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, ExternalLink, Music, Users, Heart, Share2, SkipForward, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power } from "lucide-react";
+import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, Pause, ExternalLink, Music, Users, Heart, Share2, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +44,23 @@ function extractSpotifyEmbedUrl(url: string): string | null {
   }
 }
 
+function extractSpotifyOpenUrl(url: string): string | null {
+  try {
+    let spotifyUrl = url.trim();
+    if (spotifyUrl.startsWith("spotify:")) {
+      const parts = spotifyUrl.split(":");
+      if (parts.length >= 3) {
+        return `https://open.spotify.com/${parts[1]}/${parts[2]}`;
+      }
+    }
+    const match = spotifyUrl.match(/open\.spotify\.com\/(playlist|album|track)\/([a-zA-Z0-9]+)/);
+    if (match) return `https://open.spotify.com/${match[1]}/${match[2]}`;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function formatTime12(time24: string) {
   const [h, m] = time24.split(":");
   const hour = parseInt(h);
@@ -52,10 +69,109 @@ function formatTime12(time24: string) {
   return `${h12}:${m} ${ampm}`;
 }
 
+function SpotifyControls({ showId }: { showId: number }) {
+  const { toast } = useToast();
+  const [shuffleOn, setShuffleOn] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<"off" | "context" | "track">("off");
+
+  const skipNext = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spotify/next"),
+    onError: (e: any) => toast({ title: "Skip failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+  });
+
+  const skipPrev = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spotify/previous"),
+    onError: (e: any) => toast({ title: "Previous failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+  });
+
+  const toggleShuffle = useMutation({
+    mutationFn: (state: boolean) => apiRequest("PUT", "/api/spotify/shuffle", { state }),
+    onSuccess: (_data, state) => {
+      setShuffleOn(state);
+      toast({ title: state ? "Shuffle ON" : "Shuffle OFF" });
+    },
+    onError: (e: any) => toast({ title: "Shuffle failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+  });
+
+  const setRepeat = useMutation({
+    mutationFn: (state: string) => apiRequest("PUT", "/api/spotify/repeat", { state }),
+    onSuccess: (_data, state) => {
+      setRepeatMode(state as any);
+      const labels: Record<string, string> = { off: "Repeat OFF", context: "Repeat ALL", track: "Repeat ONE" };
+      toast({ title: labels[state] || "Repeat updated" });
+    },
+    onError: (e: any) => toast({ title: "Repeat failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+  });
+
+  const cycleRepeat = () => {
+    const next = repeatMode === "off" ? "context" : repeatMode === "context" ? "track" : "off";
+    setRepeat.mutate(next);
+  };
+
+  const RepeatIcon = repeatMode === "track" ? Repeat1 : Repeat;
+
+  return (
+    <div className="flex items-center justify-center gap-2 py-3 px-4 border-t border-border/30" data-testid={`spotify-controls-${showId}`}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-9 w-9 rounded-full ${shuffleOn ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+        onClick={() => toggleShuffle.mutate(!shuffleOn)}
+        disabled={toggleShuffle.isPending}
+        data-testid={`button-shuffle-${showId}`}
+        title={shuffleOn ? "Shuffle ON" : "Shuffle OFF"}
+      >
+        <Shuffle className="h-4 w-4" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+        onClick={() => skipPrev.mutate()}
+        disabled={skipPrev.isPending}
+        data-testid={`button-previous-${showId}`}
+        title="Previous"
+      >
+        <SkipBack className="h-4 w-4" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+        onClick={() => skipNext.mutate()}
+        disabled={skipNext.isPending}
+        data-testid={`button-skip-${showId}`}
+        title="Next"
+      >
+        <SkipForward className="h-4 w-4" />
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        className={`h-9 w-9 rounded-full ${repeatMode !== "off" ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+        onClick={cycleRepeat}
+        disabled={setRepeat.isPending}
+        data-testid={`button-repeat-${showId}`}
+        title={repeatMode === "off" ? "Repeat OFF" : repeatMode === "context" ? "Repeat ALL" : "Repeat ONE"}
+      >
+        <RepeatIcon className="h-4 w-4" />
+      </Button>
+
+      <span className="text-[10px] text-muted-foreground ml-1 hidden sm:inline">
+        {repeatMode === "track" ? "Repeat 1" : repeatMode === "context" ? "Repeat All" : ""}
+      </span>
+    </div>
+  );
+}
+
 function ShowCard({ show }: { show: RadioShow }) {
   const config = SLOT_CONFIG[show.slot] || SLOT_CONFIG.morning;
   const Icon = config.icon;
   const embedUrl = extractSpotifyEmbedUrl(show.spotifyPlaylistUrl);
+  const openUrl = extractSpotifyOpenUrl(show.spotifyPlaylistUrl);
 
   return (
     <Card className="overflow-hidden border-border/50 hover:border-[#1DB954]/30 transition-colors" data-testid={`radio-show-${show.id}`}>
@@ -86,7 +202,7 @@ function ShowCard({ show }: { show: RadioShow }) {
         </div>
 
         {embedUrl && (
-          <div className="p-4">
+          <div className="p-4 pb-0">
             <iframe
               src={embedUrl}
               width="100%"
@@ -100,7 +216,20 @@ function ShowCard({ show }: { show: RadioShow }) {
           </div>
         )}
 
-        {!embedUrl && (
+        {embedUrl && <SpotifyControls showId={show.id} />}
+
+        {!embedUrl && openUrl && (
+          <div className="p-6 text-center">
+            <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" asChild data-testid={`button-listen-${show.id}`}>
+              <a href={openUrl} target="_blank" rel="noopener noreferrer">
+                <Play className="h-4 w-4" />
+                Listen on Spotify
+              </a>
+            </Button>
+          </div>
+        )}
+
+        {!embedUrl && !openUrl && (
           <div className="p-6 text-center">
             <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" asChild data-testid={`button-listen-${show.id}`}>
               <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer">
