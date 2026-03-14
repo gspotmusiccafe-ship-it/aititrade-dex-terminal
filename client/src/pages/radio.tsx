@@ -247,10 +247,10 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
         </div>
 
         <div className="p-4 space-y-3">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:flex-wrap">
             <Button
               size="sm"
-              className="gap-1.5 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0"
+              className="gap-1.5 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0 col-span-2"
               onClick={() => playNowMutation.mutate()}
               disabled={playNowMutation.isPending}
               data-testid={`button-play-spotify-${session.id}`}
@@ -267,7 +267,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
               data-testid={`button-join-${session.id}`}
             >
               <LogIn className="h-3.5 w-3.5" />
-              Join Session
+              Join
             </Button>
             <Button
               size="sm"
@@ -284,7 +284,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
               <Button
                 size="sm"
                 variant="ghost"
-                className="gap-1.5 ml-auto"
+                className="gap-1.5 col-span-2 sm:ml-auto"
                 onClick={() => { setShowStats(!showStats); if (!showStats) refetchEngagement(); }}
                 data-testid={`button-stats-${session.id}`}
               >

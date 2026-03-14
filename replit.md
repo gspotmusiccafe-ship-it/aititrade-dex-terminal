@@ -48,13 +48,19 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Admin reviews distribution requests in the Admin Portal's Distribution tab (approve/reject with notes)
 - Database table: `distributionRequests` (artistId, userId, trackId, status, message, adminNotes)
 
-### Showtown Stage Manager
-- **`/showtown` page**: Showtown — "A City Built from Sound, Memory, and Imagination"
-- Displays all approved artists with real-time stream data from the platform
-- Each artist card shows: rank, profile, total in-house streams, Aitify Bonus ($0.001/stream), progress toward 1M stream goal
-- Summary stats: total artists, tracks, streams, and platform-wide bonus
-- Gold/black Showtown theme with monospace typography
-- API: `GET /api/showtown/artists` — returns approved artists with aggregated play counts
+### Leaderboard
+- **`/leaderboard` page**: Replaces former Showtown page
+- Ranks all released tracks by engagement score (streams + likes×5)
+- Bronze / Silver / Gold / Platinum tier badges based on score thresholds (0/1000/5000/10000)
+- Top track showcase with flashing album art and monthly bonus callout
+- Share buttons (email, SMS) on every track for promotion
+- Summary stats: total streams, artists, tracks
+- API: `GET /api/leaderboard` — returns ranked tracks with engagement scores and stats
+
+### Follow on Spotify
+- Admin sets Spotify profile URLs per artist via Admin Portal → Artists → Set/Edit Spotify button
+- Artist pages show green "Follow on Spotify" button linking to the artist's Spotify profile
+- API: `PATCH /api/admin/artists/:id/spotify-url` — admin sets spotifyProfileUrl field
 
 ### Admin Portal
 - **Dashboard**: Platform analytics (total users, artists, tracks, plays, revenue)

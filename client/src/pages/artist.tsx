@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { Play, Shuffle, CheckCircle2, Users, UserPlus, UserCheck, DollarSign } from "lucide-react";
+import { Play, Shuffle, CheckCircle2, Users, UserPlus, UserCheck, DollarSign, ExternalLink } from "lucide-react";
+import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -219,6 +220,20 @@ export default function ArtistPage() {
             </>
           )}
         </Button>
+        {artist?.spotifyProfileUrl && (
+          <Button
+            variant="outline"
+            className="rounded-full gap-2 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0 shadow-lg shadow-[#1DB954]/20"
+            asChild
+            data-testid="button-follow-spotify"
+          >
+            <a href={artist.spotifyProfileUrl} target="_blank" rel="noopener noreferrer">
+              <SiSpotify className="h-4 w-4" />
+              Follow on Spotify
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </Button>
+        )}
         {artist && (
           <TipJarDialog
             artistId={artist.id}

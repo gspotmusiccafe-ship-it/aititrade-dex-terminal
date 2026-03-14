@@ -23,7 +23,7 @@ import AdminPage from "@/pages/admin";
 import RadioPage from "@/pages/radio";
 import BrowsePage from "@/pages/browse";
 import PlaylistPage from "@/pages/playlist";
-import ShowtownPage from "@/pages/showtown";
+import LeaderboardPage from "@/pages/leaderboard";
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -100,7 +100,7 @@ function AuthenticatedLayout() {
               <Route path="/artist/:id" component={ArtistPage} />
               <Route path="/admin" component={AdminPage} />
               <Route path="/radio" component={RadioPage} />
-              <Route path="/showtown" component={ShowtownPage} />
+              <Route path="/leaderboard" component={LeaderboardPage} />
               <Route path="/playlist/:id" component={PlaylistPage} />
               <Route path="/browse/:section" component={BrowsePage} />
               <Route component={NotFound} />

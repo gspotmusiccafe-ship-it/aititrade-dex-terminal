@@ -348,6 +348,8 @@ function ArtistsTab() {
   const [createUserId, setCreateUserId] = useState("");
   const [createName, setCreateName] = useState("");
   const [createBio, setCreateBio] = useState("");
+  const [spotifyUrlDialog, setSpotifyUrlDialog] = useState<Artist | null>(null);
+  const [spotifyUrlInput, setSpotifyUrlInput] = useState("");
   
   const { data: artists, isLoading } = useQuery<Artist[]>({
     queryKey: ["/api/admin/artists"],
@@ -421,6 +423,21 @@ function ArtistsTab() {
     },
     onError: () => {
       toast({ title: "Failed to delete artist", variant: "destructive" });
+    },
+  });
+
+  const spotifyUrlMutation = useMutation({
+    mutationFn: async ({ id, url }: { id: string; url: string }) => {
+      return apiRequest("PATCH", `/api/admin/artists/${id}/spotify-url`, { spotifyProfileUrl: url });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/artists"] });
+      setSpotifyUrlDialog(null);
+      setSpotifyUrlInput("");
+      toast({ title: "Spotify URL updated" });
+    },
+    onError: () => {
+      toast({ title: "Failed to update Spotify URL", variant: "destructive" });
     },
   });
 
@@ -533,6 +550,16 @@ function ArtistsTab() {
             </div>
             <div className="flex items-center gap-2">
               <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-[#1DB954] border-[#1DB954]/30 hover:bg-[#1DB954]/10"
+                onClick={() => { setSpotifyUrlDialog(artist); setSpotifyUrlInput(artist.spotifyProfileUrl || ""); }}
+                data-testid={`button-spotify-url-${artist.id}`}
+              >
+                <SiSpotify className="h-3.5 w-3.5" />
+                {artist.spotifyProfileUrl ? "Edit" : "Set"}
+              </Button>
+              <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setDeleteConfirm(artist)}
@@ -597,6 +624,38 @@ function ArtistsTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!spotifyUrlDialog} onOpenChange={() => setSpotifyUrlDialog(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Spotify Profile URL</DialogTitle>
+            <DialogDescription>
+              Set the Spotify profile URL for {spotifyUrlDialog?.name}. This enables the "Follow on Spotify" button on their artist page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Spotify Profile URL</Label>
+            <Input
+              placeholder="https://open.spotify.com/artist/..."
+              value={spotifyUrlInput}
+              onChange={(e) => setSpotifyUrlInput(e.target.value)}
+              data-testid="input-spotify-profile-url"
+            />
+            <p className="text-xs text-muted-foreground">Paste the full Spotify artist page URL</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSpotifyUrlDialog(null)}>Cancel</Button>
+            <Button
+              className="bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0"
+              onClick={() => spotifyUrlDialog && spotifyUrlMutation.mutate({ id: spotifyUrlDialog.id, url: spotifyUrlInput })}
+              disabled={spotifyUrlMutation.isPending}
+              data-testid="button-save-spotify-url"
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createDialog} onOpenChange={() => setCreateDialog(false)}>
         <DialogContent>

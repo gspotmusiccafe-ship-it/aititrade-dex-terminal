@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder } from "./paypal";
@@ -300,6 +300,56 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching showtown tracks:", error);
       res.status(500).json({ message: "Failed to fetch showtown tracks" });
+    }
+  });
+
+  app.get("/api/leaderboard", async (_req, res) => {
+    try {
+      const leaderboardTracks = await db.select({
+        id: tracks.id,
+        title: tracks.title,
+        playCount: tracks.playCount,
+        genre: tracks.genre,
+        coverImage: tracks.coverImage,
+        artistId: tracks.artistId,
+        artistName: artists.name,
+        artistImage: artists.profileImage,
+        likeCount: sql<number>`CAST(COALESCE((SELECT COUNT(*) FROM liked_tracks WHERE liked_tracks.track_id = ${tracks.id}), 0) AS INTEGER)`,
+      })
+      .from(tracks)
+      .innerJoin(artists, eq(tracks.artistId, artists.id))
+      .where(and(eq(artists.approvalStatus, "approved"), eq(tracks.isPrerelease, false)))
+      .orderBy(desc(tracks.playCount))
+      .limit(50);
+
+      const rankedTracks = leaderboardTracks.map(t => {
+        const plays = Number(t.playCount) || 0;
+        const likes = Number(t.likeCount) || 0;
+        const engagementScore = plays + (likes * 5);
+        let rank = "bronze";
+        if (engagementScore >= 10000) rank = "platinum";
+        else if (engagementScore >= 5000) rank = "gold";
+        else if (engagementScore >= 1000) rank = "silver";
+        return { ...t, playCount: plays, likeCount: likes, engagementScore, rank };
+      });
+
+      rankedTracks.sort((a, b) => b.engagementScore - a.engagementScore);
+
+      const totalStreams = rankedTracks.reduce((sum, t) => sum + t.playCount, 0);
+      const artistIds = new Set(rankedTracks.map(t => t.artistId));
+
+      res.json({
+        tracks: rankedTracks,
+        stats: {
+          totalStreams,
+          totalArtists: artistIds.size,
+          totalTracks: rankedTracks.length,
+          topTrack: rankedTracks[0] || null,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
     }
   });
 
@@ -1709,6 +1759,18 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error) {
       console.error("Error rejecting artist:", error);
       res.status(500).json({ message: "Failed to reject artist" });
+    }
+  });
+
+  app.patch("/api/admin/artists/:id/spotify-url", isAdmin, async (req: any, res) => {
+    try {
+      const { spotifyProfileUrl } = req.body;
+      const [updated] = await db.update(artists).set({ spotifyProfileUrl: spotifyProfileUrl || null }).where(eq(artists.id, req.params.id)).returning();
+      if (!updated) return res.status(404).json({ message: "Artist not found" });
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating Spotify URL:", error);
+      res.status(500).json({ message: "Failed to update Spotify URL" });
     }
   });
 

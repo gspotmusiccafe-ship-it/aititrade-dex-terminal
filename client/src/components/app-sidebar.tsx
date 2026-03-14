@@ -1,4 +1,4 @@
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Flame } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -138,10 +138,10 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/showtown"}>
-                  <Link href="/showtown" data-testid="nav-showtown">
-                    <Flame className="h-5 w-5 text-[#d4af37]" />
-                    <span>Showtown</span>
+                <SidebarMenuButton asChild isActive={location === "/leaderboard"}>
+                  <Link href="/leaderboard" data-testid="nav-leaderboard">
+                    <Trophy className="h-5 w-5 text-yellow-500" />
+                    <span>Leaderboard</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
