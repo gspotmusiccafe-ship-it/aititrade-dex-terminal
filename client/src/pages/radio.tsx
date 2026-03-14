@@ -446,22 +446,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
         skipMutation.mutate();
         toast({ title: "Skipped", description: "Skipping to next track on Spotify" });
       } else if (vars.action === "share") {
-        const shareUrl = session.spotifyUri.startsWith("spotify:")
-          ? `https://open.spotify.com/${session.spotifyUri.split(":")[1]}/${session.spotifyUri.split(":")[2]}`
-          : session.spotifyUri;
-        const cleanUrl = shareUrl.split("?")[0];
-        const shareText = `Check out "${session.spotifyName || session.name}" on Spotify!`;
-
-        if (navigator.share) {
-          navigator.share({ title: session.spotifyName || session.name, text: shareText, url: cleanUrl }).catch(() => {});
-        } else {
-          navigator.clipboard.writeText(`${shareText}\n${cleanUrl}`).then(() => {
-            toast({ title: "Link copied!", description: "Share link copied to clipboard — paste it anywhere!" });
-          }).catch(() => {
-            window.open(`mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(cleanUrl)}`, "_blank");
-            toast({ title: "Share via email opened" });
-          });
-        }
+        // Share handling is done directly in handleShare() before the mutation
       } else if (vars.action === "save") {
         toast({ title: "Saved", description: `"${session.name}" saved to your engagement history` });
       } else if (vars.action === "like") {
@@ -482,6 +467,32 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
   });
 
   const scheduleDays = session.daysOfWeek ? session.daysOfWeek.split(",").map(d => DAY_NAMES[parseInt(d)]).join(", ") : "Every day";
+
+  const handleShare = async () => {
+    const shareUrl = session.spotifyUri.startsWith("spotify:")
+      ? `https://open.spotify.com/${session.spotifyUri.split(":")[1]}/${session.spotifyUri.split(":")[2]}`
+      : session.spotifyUri;
+    const cleanUrl = shareUrl.split("?")[0];
+    const shareText = `Check out "${session.spotifyName || session.name}" on Spotify!`;
+
+    engageMutation.mutate({ action: "share", trackName: session.spotifyName || session.name });
+
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: session.spotifyName || session.name, text: shareText, url: cleanUrl });
+      } else {
+        await navigator.clipboard.writeText(`${shareText}\n${cleanUrl}`);
+        toast({ title: "Link copied!", description: "Spotify link copied to your clipboard — paste it in a text, email, or DM!" });
+      }
+    } catch {
+      try {
+        await navigator.clipboard.writeText(`${shareText}\n${cleanUrl}`);
+        toast({ title: "Link copied!", description: "Spotify link copied to your clipboard — paste it in a text, email, or DM!" });
+      } catch {
+        window.open(`mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(cleanUrl)}`, "_blank");
+      }
+    }
+  };
 
   const engagementActions = [
     { action: "play", icon: Play, label: "Play", color: "text-green-400" },
@@ -588,7 +599,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                   size="sm"
                   variant="outline"
                   className="flex flex-col items-center gap-1 h-auto py-2 hover:bg-primary/10"
-                  onClick={() => engageMutation.mutate({ action, trackName: session.spotifyName || session.name })}
+                  onClick={() => action === "share" ? handleShare() : engageMutation.mutate({ action, trackName: session.spotifyName || session.name })}
                   disabled={engageMutation.isPending}
                   data-testid={`button-engage-${action}-${session.id}`}
                 >
