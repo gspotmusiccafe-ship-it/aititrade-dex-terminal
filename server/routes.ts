@@ -1939,7 +1939,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.skipToNext("");
       res.json({ success: true });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to skip" });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to skip"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
@@ -1950,7 +1951,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.skipToPrevious("");
       res.json({ success: true });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to go back" });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to go back"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
@@ -1962,7 +1964,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.togglePlaybackShuffle(state !== false);
       res.json({ success: true, shuffle: state !== false });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to toggle shuffle" });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to toggle shuffle"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
@@ -1975,7 +1978,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.setRepeatMode(repeatState);
       res.json({ success: true, repeat: repeatState });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to set repeat" });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to set repeat"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
@@ -2184,7 +2188,12 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json({ success: true });
     } catch (error: any) {
       console.error("Jam session play error:", error);
-      res.status(400).json({ message: error.message || "Failed to start playback. Make sure Spotify is open on a device." });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ 
+        message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to start playback"),
+        code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR",
+        spotifyUri: noDevice ? session[0].spotifyUri : undefined
+      });
     }
   });
 

@@ -69,19 +69,44 @@ function formatTime12(time24: string) {
   return `${h12}:${m} ${ampm}`;
 }
 
-function SpotifyControls({ showId }: { showId: number }) {
+function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: string }) {
   const { toast } = useToast();
   const [shuffleOn, setShuffleOn] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "context" | "track">("off");
 
+  const handleNoDevice = (action: string) => {
+    const openUrl = extractSpotifyOpenUrl(spotifyUrl);
+    if (openUrl) {
+      toast({
+        title: `${action} — Open Spotify First`,
+        description: "Opening this playlist in Spotify now. Come back and try again once it's playing.",
+      });
+      window.open(openUrl, "_blank");
+    } else {
+      toast({ title: `${action} failed`, description: "Open Spotify on your phone or computer and start playing first.", variant: "destructive" });
+    }
+  };
+
   const skipNext = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/spotify/next"),
-    onError: (e: any) => toast({ title: "Skip failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/spotify/next");
+      return res;
+    },
+    onError: (e: any) => {
+      if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Skip");
+      else toast({ title: "Skip failed", description: "Something went wrong", variant: "destructive" });
+    },
   });
 
   const skipPrev = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/spotify/previous"),
-    onError: (e: any) => toast({ title: "Previous failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/spotify/previous");
+      return res;
+    },
+    onError: (e: any) => {
+      if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Previous");
+      else toast({ title: "Previous failed", description: "Something went wrong", variant: "destructive" });
+    },
   });
 
   const toggleShuffle = useMutation({
@@ -90,7 +115,10 @@ function SpotifyControls({ showId }: { showId: number }) {
       setShuffleOn(state);
       toast({ title: state ? "Shuffle ON" : "Shuffle OFF" });
     },
-    onError: (e: any) => toast({ title: "Shuffle failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+    onError: (e: any) => {
+      if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Shuffle");
+      else toast({ title: "Shuffle failed", description: "Something went wrong", variant: "destructive" });
+    },
   });
 
   const setRepeat = useMutation({
@@ -100,7 +128,10 @@ function SpotifyControls({ showId }: { showId: number }) {
       const labels: Record<string, string> = { off: "Repeat OFF", context: "Repeat ALL", track: "Repeat ONE" };
       toast({ title: labels[state] || "Repeat updated" });
     },
-    onError: (e: any) => toast({ title: "Repeat failed", description: e.message || "Make sure Spotify is open on a device", variant: "destructive" }),
+    onError: (e: any) => {
+      if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Repeat");
+      else toast({ title: "Repeat failed", description: "Something went wrong", variant: "destructive" });
+    },
   });
 
   const cycleRepeat = () => {
@@ -216,7 +247,7 @@ function ShowCard({ show }: { show: RadioShow }) {
           </div>
         )}
 
-        {embedUrl && <SpotifyControls showId={show.id} />}
+        {embedUrl && <SpotifyControls showId={show.id} spotifyUrl={show.spotifyPlaylistUrl} />}
 
         {!embedUrl && openUrl && (
           <div className="p-6 text-center">
@@ -297,8 +328,24 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
     onSuccess: () => {
       toast({ title: "Playing on Spotify", description: `Now playing "${session.spotifyName || session.name}" on your Spotify` });
     },
-    onError: (err: Error) => {
-      toast({ title: "Playback Failed", description: err.message || "Make sure Spotify is open on a device.", variant: "destructive" });
+    onError: (err: any) => {
+      if (err.message === "NO_ACTIVE_DEVICE") {
+        const uri = session.spotifyUri;
+        let openUrl = uri;
+        if (uri.startsWith("spotify:")) {
+          const parts = uri.split(":");
+          if (parts.length >= 3) openUrl = `https://open.spotify.com/${parts[1]}/${parts[2]}`;
+        }
+        const match = openUrl.match(/open\.spotify\.com\/(playlist|album|track)\/([a-zA-Z0-9]+)/);
+        if (match) {
+          toast({ title: "Opening in Spotify", description: "No active Spotify device found. Opening the playlist in Spotify for you — come back and try again once it's playing." });
+          window.open(openUrl.split("?")[0], "_blank");
+        } else {
+          toast({ title: "No Spotify Device", description: "Open Spotify on your phone or computer and start playing first.", variant: "destructive" });
+        }
+      } else {
+        toast({ title: "Playback Failed", description: err.message || "Something went wrong", variant: "destructive" });
+      }
     },
   });
 
