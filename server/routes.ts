@@ -12,7 +12,7 @@ import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
-import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder } from "./paypal";
+import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -965,6 +965,90 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/user/membership/gold-subscription", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const membership = await storage.getUserMembership(userId);
+      if (!membership || membership.tier !== "gold" || !membership.isActive) {
+        return res.status(400).json({ message: "You must complete the $49.99 Gold joining fee first" });
+      }
+
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers.host;
+      const baseUrl = `${protocol}://${host}`;
+      const returnUrl = `${baseUrl}/membership?subscription=success`;
+      const cancelUrl = `${baseUrl}/membership?subscription=cancelled`;
+
+      const { subscriptionId, approvalUrl } = await createGoldSubscription(returnUrl, cancelUrl);
+
+      await storage.updateMembership(membership.id, {
+        paypalSubscriptionId: subscriptionId,
+        subscriptionStatus: "APPROVAL_PENDING",
+      });
+
+      res.json({ approvalUrl, subscriptionId });
+    } catch (error) {
+      console.error("Error creating Gold subscription:", error);
+      res.status(500).json({ message: "Failed to create subscription" });
+    }
+  });
+
+  app.post("/api/user/membership/gold-subscription/activate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { subscriptionId } = req.body;
+      const membership = await storage.getUserMembership(userId);
+
+      if (!membership || membership.tier !== "gold") {
+        return res.status(400).json({ message: "Gold membership not found" });
+      }
+
+      const details = await getSubscriptionDetails(subscriptionId || membership.paypalSubscriptionId);
+
+      if (details.status === "ACTIVE" || details.status === "APPROVED") {
+        await storage.updateMembership(membership.id, {
+          paypalSubscriptionId: details.id,
+          subscriptionStatus: details.status,
+        });
+        res.json({ success: true, status: details.status });
+      } else {
+        res.json({ success: false, status: details.status, message: "Subscription not yet active" });
+      }
+    } catch (error) {
+      console.error("Error activating Gold subscription:", error);
+      res.status(500).json({ message: "Failed to activate subscription" });
+    }
+  });
+
+  app.get("/api/user/membership/subscription-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const membership = await storage.getUserMembership(userId);
+
+      if (!membership || !membership.paypalSubscriptionId) {
+        return res.json({ hasSubscription: false });
+      }
+
+      try {
+        const details = await getSubscriptionDetails(membership.paypalSubscriptionId);
+        if (details.status !== membership.subscriptionStatus) {
+          await storage.updateMembership(membership.id, { subscriptionStatus: details.status });
+        }
+        res.json({
+          hasSubscription: true,
+          status: details.status,
+          nextBillingTime: details.billing_info?.next_billing_time,
+          subscriptionId: membership.paypalSubscriptionId,
+        });
+      } catch {
+        res.json({ hasSubscription: true, status: membership.subscriptionStatus, subscriptionId: membership.paypalSubscriptionId });
+      }
+    } catch (error) {
+      console.error("Error checking subscription:", error);
+      res.status(500).json({ message: "Failed to check subscription status" });
+    }
+  });
+
   // Cancel membership
   app.post("/api/user/membership/cancel", isAuthenticated, async (req: any, res) => {
     try {
@@ -972,7 +1056,14 @@ export async function registerRoutes(
       const membership = await storage.getUserMembership(userId);
       
       if (membership) {
-        await storage.updateMembership(membership.id, { isActive: false, tier: "free" });
+        if (membership.paypalSubscriptionId) {
+          try {
+            await cancelSubscription(membership.paypalSubscriptionId, "User cancelled membership");
+          } catch (e) {
+            console.error("Error cancelling PayPal subscription:", e);
+          }
+        }
+        await storage.updateMembership(membership.id, { isActive: false, tier: "free", subscriptionStatus: "CANCELLED" });
       }
       
       res.json({ success: true, tier: "free" });

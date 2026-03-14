@@ -69,6 +69,8 @@ export const memberships = pgTable("memberships", {
   isActive: boolean("is_active").default(true),
   downloadsUsed: integer("downloads_used").default(0),
   previewsUsed: integer("previews_used").default(0),
+  paypalSubscriptionId: varchar("paypal_subscription_id"),
+  subscriptionStatus: varchar("subscription_status"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

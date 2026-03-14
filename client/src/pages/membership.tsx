@@ -342,23 +342,69 @@ export default function MembershipPage() {
   const { isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [checkoutTier, setCheckoutTier] = useState<string | null>(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
   const { data: membership } = useQuery<{ tier: string; isActive: boolean; downloadsUsed?: number; previewsUsed?: number }>({
     queryKey: ["/api/user/membership"],
     enabled: isAuthenticated,
   });
 
+  const { data: subscriptionStatus } = useQuery<{ hasSubscription: boolean; status?: string; nextBillingTime?: string }>({
+    queryKey: ["/api/user/membership/subscription-status"],
+    enabled: isAuthenticated && membership?.tier === "gold",
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("subscription") === "success") {
+      window.history.replaceState({}, "", "/membership");
+      apiRequest("POST", "/api/user/membership/gold-subscription/activate", {}).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user/membership/subscription-status"] });
+        toast({ title: "Subscription activated!", description: "Your $9.99/month Gold subscription is set up. First charge in 30 days." });
+      }).catch(() => {
+        toast({ title: "Subscription pending", description: "Your subscription may take a moment to activate. Check back shortly." });
+      });
+    } else if (params.get("subscription") === "cancelled") {
+      window.history.replaceState({}, "", "/membership");
+      toast({ title: "Subscription not completed", description: "You can set up your monthly subscription anytime from this page.", variant: "destructive" });
+    }
+  }, []);
+
   const upgradeMutation = useMutation({
     mutationFn: async ({ tier, paypalOrderId }: { tier: string; paypalOrderId: string }) => {
       return apiRequest("POST", "/api/user/membership/upgrade", { tier, paypalOrderId });
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: async (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
       setCheckoutTier(null);
-      toast({
-        title: "Membership activated!",
-        description: `You are now a ${TIER_NAMES[variables.tier]} member. Enjoy your new benefits!`,
-      });
+
+      if (variables.tier === "gold") {
+        toast({
+          title: "Gold joining fee paid!",
+          description: "Setting up your $9.99/month subscription...",
+        });
+        setSubscriptionLoading(true);
+        try {
+          const subRes = await apiRequest("POST", "/api/user/membership/gold-subscription");
+          const subData = subRes as any;
+          if (subData.approvalUrl) {
+            window.location.href = subData.approvalUrl;
+          }
+        } catch (e) {
+          setSubscriptionLoading(false);
+          toast({
+            title: "Subscription setup failed",
+            description: "Your $49.99 joining fee was paid. You can set up the monthly subscription later from this page.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Membership activated!",
+          description: `You are now a ${TIER_NAMES[variables.tier]} member. Enjoy your new benefits!`,
+        });
+      }
     },
     onError: () => {
       toast({ title: "Activation failed", description: "Payment was received but activation failed. Please contact support.", variant: "destructive" });
@@ -371,7 +417,22 @@ export default function MembershipPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      toast({ title: "Membership cancelled", description: "You are now on the Free plan." });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership/subscription-status"] });
+      toast({ title: "Membership cancelled", description: "Your subscription has been cancelled. You are now on the Free plan." });
+    },
+  });
+
+  const setupSubscriptionMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/user/membership/gold-subscription");
+    },
+    onSuccess: (data: any) => {
+      if (data.approvalUrl) {
+        window.location.href = data.approvalUrl;
+      }
+    },
+    onError: () => {
+      toast({ title: "Subscription setup failed", description: "Please try again later.", variant: "destructive" });
     },
   });
 
@@ -478,6 +539,35 @@ export default function MembershipPage() {
                     <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
                       Current Plan
                     </Button>
+                    {plan.id === "gold" && subscriptionStatus && !subscriptionStatus.hasSubscription && (
+                      <Button
+                        className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-500/90 hover:to-amber-500/90 text-black border-0 font-bold"
+                        onClick={() => setupSubscriptionMutation.mutate()}
+                        disabled={setupSubscriptionMutation.isPending || subscriptionLoading}
+                        data-testid="button-setup-subscription"
+                      >
+                        {setupSubscriptionMutation.isPending || subscriptionLoading ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Setting up...</>
+                        ) : "Setup $9.99/mo Subscription"}
+                      </Button>
+                    )}
+                    {plan.id === "gold" && subscriptionStatus?.hasSubscription && (
+                      <div className="w-full text-center">
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs ${subscriptionStatus.status === "ACTIVE" || subscriptionStatus.status === "APPROVED" ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}`}
+                          data-testid="badge-subscription-status"
+                        >
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Subscription: {subscriptionStatus.status === "ACTIVE" || subscriptionStatus.status === "APPROVED" ? "Active" : subscriptionStatus.status}
+                        </Badge>
+                        {subscriptionStatus.nextBillingTime && (
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            Next billing: {new Date(subscriptionStatus.nextBillingTime).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {plan.id !== "free" && (
                       <Button
                         className="w-full"
@@ -500,9 +590,12 @@ export default function MembershipPage() {
                     className={`w-full ${plan.popular ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
                     variant={plan.popular ? "default" : "outline"}
                     onClick={() => setCheckoutTier(plan.id)}
+                    disabled={subscriptionLoading}
                     data-testid={`button-plan-${plan.id}`}
                   >
-                    {plan.cta}
+                    {subscriptionLoading && plan.id === "gold" ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+                    ) : plan.cta}
                   </Button>
                 )}
               </CardFooter>
