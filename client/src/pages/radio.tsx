@@ -375,6 +375,9 @@ interface EngagementStats {
 function JamSessionCard({ session, userId }: { session: ActiveSession; userId: string }) {
   const { toast } = useToast();
   const [showStats, setShowStats] = useState(false);
+  const [shuffleOn, setShuffleOn] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<"off" | "context" | "track">("off");
+  const [isPlaying, setIsPlaying] = useState(false);
   const isOwner = session.userId === userId;
 
   const { data: engagementData, refetch: refetchEngagement } = useQuery<EngagementStats>({
@@ -405,6 +408,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
   const playNowMutation = useMutation({
     mutationFn: () => apiRequest("POST", `/api/jam-sessions/${session.id}/play-now`),
     onSuccess: () => {
+      setIsPlaying(true);
       toast({ title: "Playing on Spotify", description: `Now playing "${session.spotifyName || session.name}" on your Spotify` });
     },
     onError: (err: any) => {
@@ -430,8 +434,44 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
 
   const skipMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/spotify/next"),
+    onSuccess: () => toast({ title: "Skipped to next" }),
     onError: () => {},
   });
+
+  const skipPrevMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spotify/previous"),
+    onSuccess: () => toast({ title: "Previous track" }),
+    onError: () => {},
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: () => apiRequest("PUT", "/api/spotify/pause"),
+    onSuccess: () => { setIsPlaying(false); toast({ title: "Paused" }); },
+    onError: () => {},
+  });
+
+  const toggleShuffleMutation = useMutation({
+    mutationFn: (state: boolean) => apiRequest("PUT", "/api/spotify/shuffle", { state }),
+    onSuccess: (_data, state) => { setShuffleOn(state); toast({ title: state ? "Shuffle ON" : "Shuffle OFF" }); },
+    onError: () => toast({ title: "Shuffle failed", variant: "destructive" }),
+  });
+
+  const setRepeatMutation = useMutation({
+    mutationFn: (state: string) => apiRequest("PUT", "/api/spotify/repeat", { state }),
+    onSuccess: (_data, state) => {
+      setRepeatMode(state as any);
+      const labels: Record<string, string> = { off: "Repeat OFF", context: "Repeat ALL", track: "Repeat ONE" };
+      toast({ title: labels[state] || "Repeat updated" });
+    },
+    onError: () => toast({ title: "Repeat failed", variant: "destructive" }),
+  });
+
+  const cycleRepeat = () => {
+    const next = repeatMode === "off" ? "context" : repeatMode === "context" ? "track" : "off";
+    setRepeatMutation.mutate(next);
+  };
+
+  const JamRepeatIcon = repeatMode === "track" ? Repeat1 : Repeat;
 
   const engageMutation = useMutation({
     mutationFn: (data: { action: string; trackName?: string; trackArtist?: string }) =>
@@ -588,6 +628,71 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                 {showStats ? "Hide Stats" : "View Stats"}
               </Button>
             )}
+          </div>
+
+          <div className="border border-border/30 rounded-lg p-2">
+            <div className="flex items-center justify-center gap-3 py-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 rounded-full ${shuffleOn ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => toggleShuffleMutation.mutate(!shuffleOn)}
+                disabled={toggleShuffleMutation.isPending}
+                data-testid={`button-jam-shuffle-${session.id}`}
+                title={shuffleOn ? "Shuffle ON" : "Shuffle OFF"}
+              >
+                <Shuffle className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                onClick={() => skipPrevMutation.mutate()}
+                disabled={skipPrevMutation.isPending}
+                data-testid={`button-jam-previous-${session.id}`}
+                title="Previous"
+              >
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full bg-white text-black hover:bg-white/90"
+                onClick={() => { if (isPlaying) pauseMutation.mutate(); else playNowMutation.mutate(); }}
+                disabled={playNowMutation.isPending || pauseMutation.isPending}
+                data-testid={`button-jam-playpause-${session.id}`}
+                title={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+                onClick={() => { skipMutation.mutate(); engageMutation.mutate({ action: "skip", trackName: session.spotifyName || session.name }); }}
+                disabled={skipMutation.isPending}
+                data-testid={`button-jam-skip-${session.id}`}
+                title="Next"
+              >
+                <SkipForward className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-8 w-8 rounded-full ${repeatMode !== "off" ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={cycleRepeat}
+                disabled={setRepeatMutation.isPending}
+                data-testid={`button-jam-repeat-${session.id}`}
+                title={repeatMode === "off" ? "Repeat OFF" : repeatMode === "context" ? "Repeat ALL" : "Repeat ONE"}
+              >
+                <JamRepeatIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center">
+              {repeatMode !== "off" && <span className="text-[#1DB954] font-medium mr-2">{repeatMode === "track" ? "Repeat 1" : "Repeat All"}</span>}
+              {shuffleOn && <span className="text-[#1DB954] font-medium mr-2">Shuffle</span>}
+              Controls your Spotify app
+            </p>
           </div>
 
           <div>
