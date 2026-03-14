@@ -163,6 +163,16 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const playNowMutation = useMutation({
+    mutationFn: () => apiRequest("POST", `/api/jam-sessions/${session.id}/play-now`),
+    onSuccess: () => {
+      toast({ title: "Playing on Spotify", description: `Now playing "${session.spotifyName || session.name}" on your Spotify` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Playback Failed", description: err.message || "Make sure Spotify is open on a device.", variant: "destructive" });
+    },
+  });
+
   const engageMutation = useMutation({
     mutationFn: (data: { action: string; trackName?: string; trackArtist?: string }) =>
       apiRequest("POST", `/api/jam-sessions/${session.id}/engagement`, data),
@@ -173,6 +183,9 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
       toast({ title: labels[vars.action] || "Recorded", description: `Action recorded for "${session.name}"` });
       queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions/active"] });
       if (showStats) refetchEngagement();
+      if (vars.action === "play") {
+        playNowMutation.mutate();
+      }
     },
     onError: (err: Error) => {
       if (err.message.includes("join this session")) {
@@ -235,6 +248,16 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
 
         <div className="p-4 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              size="sm"
+              className="gap-1.5 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0"
+              onClick={() => playNowMutation.mutate()}
+              disabled={playNowMutation.isPending}
+              data-testid={`button-play-spotify-${session.id}`}
+            >
+              <Play className="h-3.5 w-3.5" />
+              Play on Spotify
+            </Button>
             <Button
               size="sm"
               variant="default"
