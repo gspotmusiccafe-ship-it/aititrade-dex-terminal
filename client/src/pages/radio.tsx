@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SiSpotify } from "react-icons/si";
-import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, Pause, ExternalLink, Music, Users, Heart, Share2, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power } from "lucide-react";
+import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, Pause, ExternalLink, Music, Music2, Users, Heart, Share2, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +75,54 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
   const [repeatMode, setRepeatMode] = useState<"off" | "context" | "track">("off");
   const [isPlaying, setIsPlaying] = useState(false);
   const [deviceActive, setDeviceActive] = useState(false);
+  const [nowPlaying, setNowPlaying] = useState<{
+    trackName: string; artistName: string; albumArt: string | null;
+    progressMs: number; durationMs: number;
+  } | null>(null);
+  const progressRef = useRef<number>(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
+
+  const { data: playerState } = useQuery<any>({
+    queryKey: ["/api/spotify/player"],
+    enabled: isPlaying,
+    refetchInterval: isPlaying ? 5000 : false,
+    staleTime: 3000,
+  });
+
+  useEffect(() => {
+    if (playerState && playerState.is_playing && playerState.item) {
+      const item = playerState.item;
+      setNowPlaying({
+        trackName: item.name || "Unknown Track",
+        artistName: item.artists?.map((a: any) => a.name).join(", ") || "Unknown Artist",
+        albumArt: item.album?.images?.[2]?.url || item.album?.images?.[0]?.url || null,
+        progressMs: playerState.progress_ms || 0,
+        durationMs: item.duration_ms || 0,
+      });
+      progressRef.current = playerState.progress_ms || 0;
+      setDisplayProgress(playerState.progress_ms || 0);
+      if (playerState.shuffle_state !== undefined) setShuffleOn(playerState.shuffle_state);
+      if (playerState.repeat_state) setRepeatMode(playerState.repeat_state as any);
+    } else if (playerState && !playerState.is_playing) {
+      setIsPlaying(false);
+    }
+  }, [playerState]);
+
+  useEffect(() => {
+    if (!isPlaying || !nowPlaying) return;
+    const interval = setInterval(() => {
+      progressRef.current = Math.min(progressRef.current + 1000, nowPlaying.durationMs);
+      setDisplayProgress(progressRef.current);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying, nowPlaying?.durationMs]);
+
+  const formatMs = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
 
   const openUrl = extractSpotifyOpenUrl(spotifyUrl);
 
@@ -203,6 +251,33 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
           {isPlaying ? "Pause" : "Play in Spotify App"}
         </Button>
       </div>
+
+      {nowPlaying && (
+        <div className="px-4 pb-1" data-testid={`now-playing-show-${showId}`}>
+          <div className="flex items-center gap-3">
+            {nowPlaying.albumArt ? (
+              <img src={nowPlaying.albumArt} alt="" className="h-10 w-10 rounded shadow-md flex-shrink-0" />
+            ) : (
+              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                <Music2 className="h-5 w-5 text-muted-foreground" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold truncate" data-testid={`now-playing-show-track-${showId}`}>{nowPlaying.trackName}</p>
+              <p className="text-[10px] text-muted-foreground truncate" data-testid={`now-playing-show-artist-${showId}`}>{nowPlaying.artistName}</p>
+            </div>
+            <div className="text-[10px] text-muted-foreground font-mono flex-shrink-0" data-testid={`now-playing-show-time-${showId}`}>
+              {formatMs(displayProgress)} / {formatMs(nowPlaying.durationMs)}
+            </div>
+          </div>
+          <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#1DB954] rounded-full transition-all duration-1000 ease-linear"
+              style={{ width: `${nowPlaying.durationMs > 0 ? Math.min((displayProgress / nowPlaying.durationMs) * 100, 100) : 0}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-center gap-3 py-2 px-4 pb-3">
         <Button
@@ -473,6 +548,60 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
 
   const JamRepeatIcon = repeatMode === "track" ? Repeat1 : Repeat;
 
+  const [nowPlaying, setNowPlaying] = useState<{
+    trackName: string; artistName: string; albumArt: string | null;
+    progressMs: number; durationMs: number; isActive: boolean;
+  } | null>(null);
+  const progressRef = useRef<number>(0);
+  const [displayProgress, setDisplayProgress] = useState(0);
+
+  const { data: playerState } = useQuery<any>({
+    queryKey: ["/api/spotify/player"],
+    enabled: isPlaying,
+    refetchInterval: isPlaying ? 5000 : false,
+    staleTime: 3000,
+  });
+
+  useEffect(() => {
+    if (playerState && playerState.is_playing && playerState.item) {
+      const item = playerState.item;
+      setNowPlaying({
+        trackName: item.name || "Unknown Track",
+        artistName: item.artists?.map((a: any) => a.name).join(", ") || "Unknown Artist",
+        albumArt: item.album?.images?.[2]?.url || item.album?.images?.[0]?.url || null,
+        progressMs: playerState.progress_ms || 0,
+        durationMs: item.duration_ms || 0,
+        isActive: true,
+      });
+      progressRef.current = playerState.progress_ms || 0;
+      setDisplayProgress(playerState.progress_ms || 0);
+      setIsPlaying(true);
+      if (playerState.shuffle_state !== undefined) setShuffleOn(playerState.shuffle_state);
+      if (playerState.repeat_state) setRepeatMode(playerState.repeat_state as any);
+    } else if (playerState && !playerState.is_playing) {
+      setIsPlaying(false);
+      if (nowPlaying) {
+        setNowPlaying({ ...nowPlaying, isActive: false });
+      }
+    }
+  }, [playerState]);
+
+  useEffect(() => {
+    if (!isPlaying || !nowPlaying) return;
+    const interval = setInterval(() => {
+      progressRef.current = Math.min(progressRef.current + 1000, nowPlaying.durationMs);
+      setDisplayProgress(progressRef.current);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying, nowPlaying?.durationMs]);
+
+  const formatMs = (ms: number) => {
+    const totalSec = Math.floor(ms / 1000);
+    const min = Math.floor(totalSec / 60);
+    const sec = totalSec % 60;
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
+
   const engageMutation = useMutation({
     mutationFn: (data: { action: string; trackName?: string; trackArtist?: string }) =>
       apiRequest("POST", `/api/jam-sessions/${session.id}/engagement`, data),
@@ -631,6 +760,32 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
           </div>
 
           <div className="border border-border/30 rounded-lg p-2">
+            {nowPlaying && (
+              <div className="mb-2 px-2" data-testid={`now-playing-${session.id}`}>
+                <div className="flex items-center gap-3">
+                  {nowPlaying.albumArt ? (
+                    <img src={nowPlaying.albumArt} alt="" className="h-10 w-10 rounded shadow-md flex-shrink-0" />
+                  ) : (
+                    <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                      <Music2 className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold truncate" data-testid={`now-playing-track-${session.id}`}>{nowPlaying.trackName}</p>
+                    <p className="text-[10px] text-muted-foreground truncate" data-testid={`now-playing-artist-${session.id}`}>{nowPlaying.artistName}</p>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground font-mono flex-shrink-0" data-testid={`now-playing-time-${session.id}`}>
+                    {formatMs(displayProgress)} / {formatMs(nowPlaying.durationMs)}
+                  </div>
+                </div>
+                <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-[#1DB954] rounded-full transition-all duration-1000 ease-linear"
+                    style={{ width: `${nowPlaying.durationMs > 0 ? Math.min((displayProgress / nowPlaying.durationMs) * 100, 100) : 0}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-3 py-1">
               <Button
                 variant="ghost"
