@@ -73,39 +73,81 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
   const { toast } = useToast();
   const [shuffleOn, setShuffleOn] = useState(false);
   const [repeatMode, setRepeatMode] = useState<"off" | "context" | "track">("off");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [deviceActive, setDeviceActive] = useState(false);
+
+  const openUrl = extractSpotifyOpenUrl(spotifyUrl);
 
   const handleNoDevice = (action: string) => {
-    const openUrl = extractSpotifyOpenUrl(spotifyUrl);
     if (openUrl) {
       toast({
         title: `${action} — Open Spotify First`,
-        description: "Opening this playlist in Spotify now. Come back and try again once it's playing.",
+        description: "Click 'Play in Spotify App' to start playback, then use these controls.",
       });
-      window.open(openUrl, "_blank");
     } else {
-      toast({ title: `${action} failed`, description: "Open Spotify on your phone or computer and start playing first.", variant: "destructive" });
+      toast({ title: `${action} failed`, description: "Open Spotify on your computer and start playing first.", variant: "destructive" });
     }
   };
 
-  const skipNext = useMutation({
+  const playInApp = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/spotify/next");
-      return res;
+      const uri = spotifyUrl.trim();
+      let contextUri: string | undefined;
+      let uris: string[] | undefined;
+
+      const match = uri.match(/open\.spotify\.com\/(playlist|album|track)\/([a-zA-Z0-9]+)/);
+      if (match) {
+        const spotifyUri = `spotify:${match[1]}:${match[2]}`;
+        if (match[1] === "track") {
+          uris = [spotifyUri];
+        } else {
+          contextUri = spotifyUri;
+        }
+      }
+
+      return apiRequest("POST", "/api/spotify/play", { context_uri: contextUri, uris });
+    },
+    onSuccess: () => {
+      setIsPlaying(true);
+      setDeviceActive(true);
+      toast({ title: "Playing in Spotify App", description: "Controls are now active — use shuffle, skip, and repeat below." });
     },
     onError: (e: any) => {
+      if (e.message === "NO_ACTIVE_DEVICE" && openUrl) {
+        toast({ title: "Opening Spotify", description: "Opening playlist in Spotify — once it's playing, come back and controls will work." });
+        window.open(openUrl, "_blank");
+      } else {
+        toast({ title: "Playback failed", description: "Open Spotify on this device first.", variant: "destructive" });
+      }
+    },
+  });
+
+  const pausePlayback = useMutation({
+    mutationFn: () => apiRequest("PUT", "/api/spotify/pause"),
+    onSuccess: () => {
+      setIsPlaying(false);
+      toast({ title: "Paused" });
+    },
+    onError: (e: any) => {
+      if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Pause");
+    },
+  });
+
+  const skipNext = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spotify/next"),
+    onSuccess: () => toast({ title: "Skipped to next" }),
+    onError: (e: any) => {
       if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Skip");
-      else toast({ title: "Skip failed", description: "Something went wrong", variant: "destructive" });
+      else toast({ title: "Skip failed", variant: "destructive" });
     },
   });
 
   const skipPrev = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/spotify/previous");
-      return res;
-    },
+    mutationFn: () => apiRequest("POST", "/api/spotify/previous"),
+    onSuccess: () => toast({ title: "Previous track" }),
     onError: (e: any) => {
       if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Previous");
-      else toast({ title: "Previous failed", description: "Something went wrong", variant: "destructive" });
+      else toast({ title: "Previous failed", variant: "destructive" });
     },
   });
 
@@ -117,7 +159,7 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
     },
     onError: (e: any) => {
       if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Shuffle");
-      else toast({ title: "Shuffle failed", description: "Something went wrong", variant: "destructive" });
+      else toast({ title: "Shuffle failed", variant: "destructive" });
     },
   });
 
@@ -130,7 +172,7 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
     },
     onError: (e: any) => {
       if (e.message === "NO_ACTIVE_DEVICE") handleNoDevice("Repeat");
-      else toast({ title: "Repeat failed", description: "Something went wrong", variant: "destructive" });
+      else toast({ title: "Repeat failed", variant: "destructive" });
     },
   });
 
@@ -142,58 +184,95 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
   const RepeatIcon = repeatMode === "track" ? Repeat1 : Repeat;
 
   return (
-    <div className="flex items-center justify-center gap-2 py-3 px-4 border-t border-border/30" data-testid={`spotify-controls-${showId}`}>
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`h-9 w-9 rounded-full ${shuffleOn ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
-        onClick={() => toggleShuffle.mutate(!shuffleOn)}
-        disabled={toggleShuffle.isPending}
-        data-testid={`button-shuffle-${showId}`}
-        title={shuffleOn ? "Shuffle ON" : "Shuffle OFF"}
-      >
-        <Shuffle className="h-4 w-4" />
-      </Button>
+    <div className="border-t border-border/30" data-testid={`spotify-controls-${showId}`}>
+      <div className="flex items-center justify-center gap-1 py-2 px-4">
+        <Button
+          size="sm"
+          className="gap-1.5 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0 rounded-full h-8 px-4"
+          onClick={() => {
+            if (isPlaying) {
+              pausePlayback.mutate();
+            } else {
+              playInApp.mutate();
+            }
+          }}
+          disabled={playInApp.isPending || pausePlayback.isPending}
+          data-testid={`button-play-app-${showId}`}
+        >
+          <SiSpotify className="h-3.5 w-3.5" />
+          {isPlaying ? "Pause" : "Play in Spotify App"}
+        </Button>
+      </div>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
-        onClick={() => skipPrev.mutate()}
-        disabled={skipPrev.isPending}
-        data-testid={`button-previous-${showId}`}
-        title="Previous"
-      >
-        <SkipBack className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center justify-center gap-3 py-2 px-4 pb-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-9 w-9 rounded-full ${shuffleOn ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+          onClick={() => toggleShuffle.mutate(!shuffleOn)}
+          disabled={toggleShuffle.isPending}
+          data-testid={`button-shuffle-${showId}`}
+          title={shuffleOn ? "Shuffle ON" : "Shuffle OFF"}
+        >
+          <Shuffle className="h-4 w-4" />
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
-        onClick={() => skipNext.mutate()}
-        disabled={skipNext.isPending}
-        data-testid={`button-skip-${showId}`}
-        title="Next"
-      >
-        <SkipForward className="h-4 w-4" />
-      </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+          onClick={() => skipPrev.mutate()}
+          disabled={skipPrev.isPending}
+          data-testid={`button-previous-${showId}`}
+          title="Previous"
+        >
+          <SkipBack className="h-4 w-4" />
+        </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`h-9 w-9 rounded-full ${repeatMode !== "off" ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
-        onClick={cycleRepeat}
-        disabled={setRepeat.isPending}
-        data-testid={`button-repeat-${showId}`}
-        title={repeatMode === "off" ? "Repeat OFF" : repeatMode === "context" ? "Repeat ALL" : "Repeat ONE"}
-      >
-        <RepeatIcon className="h-4 w-4" />
-      </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-10 w-10 rounded-full bg-white text-black hover:bg-white/90"
+          onClick={() => {
+            if (isPlaying) pausePlayback.mutate();
+            else playInApp.mutate();
+          }}
+          disabled={playInApp.isPending || pausePlayback.isPending}
+          data-testid={`button-playpause-${showId}`}
+          title={isPlaying ? "Pause" : "Play"}
+        >
+          {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+        </Button>
 
-      <span className="text-[10px] text-muted-foreground ml-1 hidden sm:inline">
-        {repeatMode === "track" ? "Repeat 1" : repeatMode === "context" ? "Repeat All" : ""}
-      </span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+          onClick={() => skipNext.mutate()}
+          disabled={skipNext.isPending}
+          data-testid={`button-skip-${showId}`}
+          title="Next"
+        >
+          <SkipForward className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-9 w-9 rounded-full ${repeatMode !== "off" ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+          onClick={cycleRepeat}
+          disabled={setRepeat.isPending}
+          data-testid={`button-repeat-${showId}`}
+          title={repeatMode === "off" ? "Repeat OFF" : repeatMode === "context" ? "Repeat ALL" : "Repeat ONE"}
+        >
+          <RepeatIcon className="h-4 w-4" />
+        </Button>
+      </div>
+      <p className="text-[10px] text-muted-foreground text-center pb-2">
+        {repeatMode !== "off" && <span className="text-[#1DB954] font-medium mr-2">{repeatMode === "track" ? "Repeat 1" : "Repeat All"}</span>}
+        {shuffleOn && <span className="text-[#1DB954] font-medium mr-2">Shuffle</span>}
+        Controls your Spotify app
+      </p>
     </div>
   );
 }

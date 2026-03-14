@@ -1920,23 +1920,24 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.post("/api/spotify/play", isAuthenticated, async (req: any, res) => {
     try {
-      const { uri, deviceId } = req.body;
+      const { uri, deviceId, context_uri, uris } = req.body;
       const userId = req.user.claims.sub;
       const spotify = await getSpotifyClientForUser(userId);
-      const options: any = {};
-      if (deviceId) options.device_id = deviceId;
+      let playContextUri = context_uri;
+      let playUris = uris;
       if (uri) {
         if (uri.includes(":track:")) {
-          options.uris = [uri];
+          playUris = [uri];
         } else {
-          options.context_uri = uri;
+          playContextUri = uri;
         }
       }
-      await spotify.player.startResumePlayback(deviceId || "", options.context_uri, options.uris);
+      await spotify.player.startResumePlayback(deviceId || "", playContextUri, playUris);
       res.json({ success: true });
     } catch (error: any) {
       console.error("Spotify play error:", error);
-      res.status(400).json({ message: error.message || "Failed to start playback" });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to start playback"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
@@ -1947,7 +1948,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.pausePlayback("");
       res.json({ success: true });
     } catch (error: any) {
-      res.status(400).json({ message: error.message || "Failed to pause" });
+      const noDevice = error.message?.includes("No active device");
+      res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to pause"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
