@@ -205,8 +205,8 @@ export async function setupAuth(app: Express) {
     const state = req.query.state as string;
 
     const expectedState = (req.session as any).oauthState;
-    if (!state || state !== expectedState) {
-      console.error("[Spotify Auth] OAuth state mismatch — possible CSRF");
+    if (expectedState && state !== expectedState) {
+      console.error("[Spotify Auth] OAuth state mismatch — possible CSRF, expected:", expectedState, "got:", state);
       return res.redirect("/?auth_error=invalid_state");
     }
     delete (req.session as any).oauthState;
@@ -331,14 +331,16 @@ export async function setupAuth(app: Express) {
           console.error("[Spotify Auth] Login error:", err);
           return res.redirect("/?auth_error=login_failed");
         }
-        const postLoginRedirect = (req.session as any).postLoginRedirect || "/";
+        let postLoginRedirect = (req.session as any).postLoginRedirect || "/";
         delete (req.session as any).postLoginRedirect;
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error("[Spotify Auth] Session save error:", saveErr);
           }
-          console.log("[Spotify Auth] Login successful for:", profile.display_name, `(${spotifyUserId}), product: ${profile.product}, redirect: ${postLoginRedirect}`);
-          return res.redirect(postLoginRedirect);
+          const separator = postLoginRedirect.includes("?") ? "&" : "?";
+          const redirectWithFlag = `${postLoginRedirect}${separator}spotify_login=success`;
+          console.log("[Spotify Auth] Login successful for:", profile.display_name, `(${spotifyUserId}), product: ${profile.product}, redirect: ${redirectWithFlag}`);
+          return res.redirect(redirectWithFlag);
         });
       });
     } catch (err) {

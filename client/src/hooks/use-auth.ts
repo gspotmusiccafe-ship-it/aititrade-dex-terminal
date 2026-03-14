@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
@@ -25,6 +26,20 @@ async function logout(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("spotify_login") || params.has("auth_error")) {
+      params.delete("spotify_login");
+      params.delete("auth_error");
+      const newUrl = params.toString()
+        ? `${window.location.pathname}?${params.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    }
+  }, [queryClient]);
+
   const { data: user, isLoading, isFetching } = useQuery<UserWithSpotify | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
