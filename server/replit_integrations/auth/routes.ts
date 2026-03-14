@@ -12,7 +12,9 @@ export function registerAuthRoutes(app: Express): void {
       }
       res.json({
         ...user,
+        password: undefined,
         spotifyProduct: req.user.spotify_product || null,
+        spotifyConnected: user.spotifyConnected || !!req.user.access_token,
       });
     } catch (error) {
       console.error("Error fetching user:", error);

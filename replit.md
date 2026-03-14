@@ -8,7 +8,7 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - **Frontend**: React + TypeScript with Vite, Tailwind CSS, shadcn/ui components
 - **Backend**: Express.js with TypeScript
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Spotify OAuth 2.0 (users log in with their Spotify account)
+- **Authentication**: Email/password signup + login (primary), Spotify OAuth 2.0 (optional, for Spotify features)
 - **Payments**: PayPal Web SDK (sandbox in dev, production in deployed app)
 
 ## Key Features
@@ -23,8 +23,8 @@ AITIFY MUSIC RADIO is a full-stack music streaming application built with:
 - Premium membership for early access to pre-release content
 - **Buy Song**: Button on track cards and music player (links to https://payhip.com/aitifymusicstore)
 - **Tip Jar**: Send tips to artists via PayPal from artist pages and the music player
-- **Free account**: Listen-only — no services, no playlists, just music
-- **Free users stay on landing page only** — the landing page IS the radio. No login, no inside access, just tune in to 97.7 THE FLAME
+- **Free account**: Create account with email/password, get inside the app — listen to released music, follow artists, like tracks, tip artists, buy songs. No playlists, no pre-release access.
+- **Spotify connection optional**: Users can connect their Spotify account from the sidebar to unlock Spotify radio controls, jam session playback, and other Spotify-powered features. The embedded Spotify players (iframes) work for everyone without connection.
 
 ### For Artists
 - Artist Portal to manage profile and content
@@ -207,7 +207,7 @@ All uploaded files (audio tracks, cover images, artist profile/cover images, mas
 
 ## Development Notes
 
-- Authentication is handled by Spotify OAuth — paid members log in with their Spotify account, free users just visit the landing page radio
+- Authentication: Email/password signup + login (primary). Spotify OAuth is optional — users can connect Spotify from the sidebar to use playback controls and jam sessions. Existing Spotify-only accounts still work via "Log in with Spotify" on the landing page.
 - Database migrations: `npm run db:push`
 - Demo data is automatically seeded on first startup
 - The music player context manages global playback state

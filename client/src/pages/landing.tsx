@@ -1,13 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3 } from "lucide-react";
+import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface TrackData {
   id: string;
@@ -332,7 +336,7 @@ const membershipTiers = [
     name: "Free",
     price: "$0",
     period: "forever",
-    features: ["Listen on AITIFY MUSIC RADIO 97.7 THE FLAME", "No login required"],
+    features: ["Listen to released music", "Follow artists & like tracks", "Tip artists via PayPal", "Buy songs", "AITIFY MUSIC RADIO 97.7 THE FLAME"],
     highlight: false,
   },
   {
@@ -381,6 +385,156 @@ const membershipTiers = [
   },
 ];
 
+function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" | "signup"; onSuccess?: () => void }) {
+  const [mode, setMode] = useState<"login" | "signup">(initialMode);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const signupMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Account created!", description: "Welcome to AITIFY MUSIC RADIO" });
+      onSuccess?.();
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const loginMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/auth/login", { email, password }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      toast({ title: "Welcome back!" });
+      onSuccess?.();
+    },
+    onError: (err: Error) => setError(err.message),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (mode === "signup") {
+      if (!displayName.trim()) { setError("Display name is required"); return; }
+      signupMutation.mutate();
+    } else {
+      loginMutation.mutate();
+    }
+  };
+
+  const isPending = signupMutation.isPending || loginMutation.isPending;
+
+  return (
+    <Card className="bg-card/80 backdrop-blur-xl border-border/30 shadow-2xl shadow-primary/10 w-full max-w-sm">
+      <CardContent className="p-6">
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={mode === "login" ? "default" : "ghost"}
+            size="sm"
+            className="flex-1"
+            onClick={() => { setMode("login"); setError(""); }}
+            data-testid="tab-login"
+          >
+            Log In
+          </Button>
+          <Button
+            variant={mode === "signup" ? "default" : "ghost"}
+            size="sm"
+            className="flex-1"
+            onClick={() => { setMode("signup"); setError(""); }}
+            data-testid="tab-signup"
+          >
+            Sign Up
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === "signup" && (
+            <div className="space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="displayName"
+                  type="text"
+                  placeholder="Your name"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-display-name"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+                data-testid="input-email"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10 pr-10"
+                required
+                data-testid="input-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-500 font-medium" data-testid="text-auth-error">{error}</p>
+          )}
+
+          <Button type="submit" className="w-full" disabled={isPending} data-testid="button-auth-submit">
+            {isPending ? "Please wait..." : mode === "signup" ? "Create Account" : "Log In"}
+          </Button>
+        </form>
+
+        <div className="mt-4 pt-4 border-t border-border/30">
+          <p className="text-xs text-muted-foreground text-center mb-3">Or continue with</p>
+          <Button variant="outline" className="w-full gap-2 border-[#1DB954]/30 hover:bg-[#1DB954]/10 text-[#1DB954]" asChild data-testid="button-spotify-login">
+            <a href="/api/login/spotify">
+              <SiSpotify className="h-4 w-4" />
+              Log in with Spotify
+            </a>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function AuthErrorBanner() {
   const [error, setError] = useState<string | null>(null);
 
@@ -414,10 +568,26 @@ function AuthErrorBanner() {
 }
 
 export default function LandingPage() {
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthMode(mode);
+    setShowAuthModal(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <AuthErrorBanner />
-      {/* Header */}
+
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <AuthForm mode={authMode} onSuccess={() => setShowAuthModal(false)} />
+          </div>
+        </div>
+      )}
+
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
@@ -439,17 +609,11 @@ export default function LandingPage() {
 
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              <Button variant="ghost" asChild data-testid="button-login" className="gap-1.5">
-                <a href="/api/login">
-                  <SiSpotify className="h-4 w-4 text-[#1DB954]" />
-                  Log in with Spotify
-                </a>
+              <Button variant="ghost" onClick={() => openAuth("login")} data-testid="button-login" className="gap-1.5">
+                Log In
               </Button>
-              <Button asChild className="bg-[#1DB954] hover:bg-[#1DB954]/90 border-0 shadow-lg shadow-[#1DB954]/20 gap-1.5" data-testid="button-signup">
-                <a href="/api/login">
-                  <SiSpotify className="h-4 w-4" />
-                  Get Started
-                </a>
+              <Button onClick={() => openAuth("signup")} className="bg-primary hover:bg-primary/90 border-0 shadow-lg shadow-primary/20 gap-1.5" data-testid="button-signup">
+                Get Started Free
               </Button>
             </div>
           </div>
@@ -486,11 +650,9 @@ export default function LandingPage() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </a>
               </Button>
-              <Button size="lg" asChild data-testid="button-hero-cta" className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-1.5">
-                <a href="/api/login">
-                  <SiSpotify className="h-5 w-5" />
-                  Log In with Spotify
-                </a>
+              <Button size="lg" onClick={() => openAuth("signup")} data-testid="button-hero-cta" className="bg-primary hover:bg-primary/90 gap-1.5">
+                Create Free Account
+                <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
 
@@ -586,15 +748,21 @@ export default function LandingPage() {
                     ))}
                   </ul>
 
-                  {tier.name !== "Free" && (
+                  {tier.name !== "Free" ? (
                     <Button
                       className={`w-full ${tier.highlight ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
                       variant={tier.highlight ? "default" : "outline"}
-                      asChild
+                      onClick={() => openAuth("signup")}
                     >
-                      <a href="/api/login?redirect=/membership">
-                        Subscribe Now
-                      </a>
+                      Subscribe Now
+                    </Button>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => openAuth("signup")}
+                    >
+                      Join Free
                     </Button>
                   )}
                 </CardContent>
@@ -615,12 +783,9 @@ export default function LandingPage() {
             Upload your AI-generated music, set pre-release dates, and let fans hear it 
             2 weeks before Spotify, Amazon Music, Deezer, YouTube, and Anghami. Build your audience first on AITIFY.
           </p>
-          <Button size="lg" asChild className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-1.5">
-            <a href="/api/login">
-              <SiSpotify className="h-5 w-5" />
-              Join as Artist
-              <ArrowRight className="h-4 w-4" />
-            </a>
+          <Button size="lg" onClick={() => openAuth("signup")} className="bg-primary hover:bg-primary/90 gap-1.5">
+            Join as Artist
+            <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </section>

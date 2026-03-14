@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
-async function fetchUser(): Promise<User | null> {
+type UserWithSpotify = User & { spotifyProduct?: string; spotifyConnected?: boolean };
+
+async function fetchUser(): Promise<UserWithSpotify | null> {
   const response = await fetch("/api/auth/user", {
     credentials: "include",
   });
@@ -23,7 +25,7 @@ async function logout(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const { data: user, isLoading, isFetching } = useQuery<User | null>({
+  const { data: user, isLoading, isFetching } = useQuery<UserWithSpotify | null>({
     queryKey: ["/api/auth/user"],
     queryFn: fetchUser,
     retry: 2,
@@ -44,6 +46,7 @@ export function useAuth() {
     user,
     isLoading: isLoading || (isFetching && user === undefined),
     isAuthenticated: !!user,
+    spotifyConnected: !!user?.spotifyConnected,
     logout: logoutMutation.mutate,
     isLoggingOut: logoutMutation.isPending,
   };

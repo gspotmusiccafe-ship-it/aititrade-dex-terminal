@@ -33,7 +33,7 @@ const yourMusicItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, spotifyConnected } = useAuth();
   
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -168,7 +168,15 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 pb-28 md:pb-28">
+      <SidebarFooter className="p-4 pb-28 md:pb-28 space-y-2">
+        {isAuthenticated && user && !spotifyConnected && (
+          <Button asChild variant="outline" size="sm" className="w-full gap-2 border-[#1DB954]/30 hover:bg-[#1DB954]/10 text-[#1DB954]" data-testid="button-connect-spotify">
+            <a href="/api/login/spotify">
+              <SiSpotify className="h-4 w-4" />
+              Connect Spotify
+            </a>
+          </Button>
+        )}
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3 p-2 rounded-xl bg-gradient-to-r from-primary/5 to-transparent border border-border/30">
             <Avatar className="h-9 w-9 ring-2 ring-primary/20">
@@ -194,14 +202,7 @@ export function AppSidebar() {
               <span className="text-xs">Logout</span>
             </Button>
           </div>
-        ) : (
-          <Button asChild className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 border-0 shadow-lg shadow-[#1DB954]/20 gap-1.5" data-testid="button-login-sidebar">
-            <a href="/api/login">
-              <SiSpotify className="h-4 w-4" />
-              Sign In with Spotify
-            </a>
-          </Button>
-        )}
+        ) : null}
       </SidebarFooter>
     </Sidebar>
   );

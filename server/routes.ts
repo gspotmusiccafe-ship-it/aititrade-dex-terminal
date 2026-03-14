@@ -7,7 +7,7 @@ import express from "express";
 import { spawn } from "child_process";
 import { storage } from "./storage";
 import { db } from "./db";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
@@ -1885,7 +1885,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   // === Spotify Playback (Spotify is now the primary auth — tokens stored at login) ===
 
-  app.get("/api/spotify/me", isAuthenticated, async (req: any, res) => {
+  app.get("/api/spotify/me", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const profile = await getSpotifyProfile(userId);
@@ -1896,7 +1896,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/api/spotify/player", isAuthenticated, async (req: any, res) => {
+  app.get("/api/spotify/player", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const spotify = await getSpotifyClientForUser(userId);
@@ -1907,7 +1907,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/api/spotify/devices", isAuthenticated, async (req: any, res) => {
+  app.get("/api/spotify/devices", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const spotify = await getSpotifyClientForUser(userId);
@@ -1920,7 +1920,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   const isJsonParseError = (msg: string) => msg?.includes("Unexpected token") || msg?.includes("not valid JSON") || msg?.includes("Unexpected non-whitespace");
 
-  app.post("/api/spotify/play", isAuthenticated, async (req: any, res) => {
+  app.post("/api/spotify/play", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const { uri, deviceId, context_uri, uris } = req.body;
       const userId = req.user.claims.sub;
@@ -1944,7 +1944,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.put("/api/spotify/pause", isAuthenticated, async (req: any, res) => {
+  app.put("/api/spotify/pause", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const spotify = await getSpotifyClientForUser(userId);
@@ -1957,7 +1957,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.post("/api/spotify/next", isAuthenticated, async (req: any, res) => {
+  app.post("/api/spotify/next", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const spotify = await getSpotifyClientForUser(userId);
@@ -1970,7 +1970,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.post("/api/spotify/previous", isAuthenticated, async (req: any, res) => {
+  app.post("/api/spotify/previous", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const spotify = await getSpotifyClientForUser(userId);
@@ -1983,7 +1983,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.put("/api/spotify/shuffle", isAuthenticated, async (req: any, res) => {
+  app.put("/api/spotify/shuffle", isAuthenticated, requireSpotify, async (req: any, res) => {
     const { state } = req.body;
     const shuffleState = state !== false;
     try {
@@ -1998,7 +1998,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.put("/api/spotify/repeat", isAuthenticated, async (req: any, res) => {
+  app.put("/api/spotify/repeat", isAuthenticated, requireSpotify, async (req: any, res) => {
     const { state } = req.body;
     const repeatState = state || "off";
     try {
@@ -2013,7 +2013,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/api/spotify/search", isAuthenticated, async (req: any, res) => {
+  app.get("/api/spotify/search", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const { q, type } = req.query;
       if (!q) return res.status(400).json({ message: "Query required" });
@@ -2202,7 +2202,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.post("/api/jam-sessions/:id/play-now", isAuthenticated, async (req: any, res) => {
+  app.post("/api/jam-sessions/:id/play-now", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const session = await db.select().from(jamSessions).where(and(eq(jamSessions.id, req.params.id), eq(jamSessions.userId, userId)));
