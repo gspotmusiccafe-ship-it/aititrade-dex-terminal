@@ -1918,6 +1918,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  const isJsonParseError = (msg: string) => msg?.includes("Unexpected token") || msg?.includes("not valid JSON") || msg?.includes("Unexpected non-whitespace");
+
   app.post("/api/spotify/play", isAuthenticated, async (req: any, res) => {
     try {
       const { uri, deviceId, context_uri, uris } = req.body;
@@ -1936,6 +1938,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json({ success: true });
     } catch (error: any) {
       console.error("Spotify play error:", error);
+      if (isJsonParseError(error.message)) return res.json({ success: true });
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to start playback"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
@@ -1948,6 +1951,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.pausePlayback("");
       res.json({ success: true });
     } catch (error: any) {
+      if (isJsonParseError(error.message)) return res.json({ success: true });
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to pause"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
@@ -1960,6 +1964,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.skipToNext("");
       res.json({ success: true });
     } catch (error: any) {
+      if (isJsonParseError(error.message)) return res.json({ success: true });
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to skip"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
@@ -1972,33 +1977,37 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await spotify.player.skipToPrevious("");
       res.json({ success: true });
     } catch (error: any) {
+      if (isJsonParseError(error.message)) return res.json({ success: true });
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to go back"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
   app.put("/api/spotify/shuffle", isAuthenticated, async (req: any, res) => {
+    const { state } = req.body;
+    const shuffleState = state !== false;
     try {
       const userId = req.user.claims.sub;
-      const { state } = req.body;
       const spotify = await getSpotifyClientForUser(userId);
-      await spotify.player.togglePlaybackShuffle(state !== false);
-      res.json({ success: true, shuffle: state !== false });
+      await spotify.player.togglePlaybackShuffle(shuffleState);
+      res.json({ success: true, shuffle: shuffleState });
     } catch (error: any) {
+      if (isJsonParseError(error.message)) return res.json({ success: true, shuffle: shuffleState });
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to toggle shuffle"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
   });
 
   app.put("/api/spotify/repeat", isAuthenticated, async (req: any, res) => {
+    const { state } = req.body;
+    const repeatState = state || "off";
     try {
       const userId = req.user.claims.sub;
-      const { state } = req.body;
       const spotify = await getSpotifyClientForUser(userId);
-      const repeatState = state || "off";
       await spotify.player.setRepeatMode(repeatState);
       res.json({ success: true, repeat: repeatState });
     } catch (error: any) {
+      if (isJsonParseError(error.message)) return res.json({ success: true, repeat: repeatState });
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to set repeat"), code: noDevice ? "NO_ACTIVE_DEVICE" : "ERROR" });
     }
@@ -2209,6 +2218,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json({ success: true });
     } catch (error: any) {
       console.error("Jam session play error:", error);
+      if (isJsonParseError(error.message)) {
+        await db.update(jamSessions).set({ lastTriggered: new Date() }).where(eq(jamSessions.id, req.params.id));
+        return res.json({ success: true });
+      }
       const noDevice = error.message?.includes("No active device");
       res.status(400).json({ 
         message: noDevice ? "NO_ACTIVE_DEVICE" : (error.message || "Failed to start playback"),

@@ -428,18 +428,48 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
     },
   });
 
+  const skipMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/spotify/next"),
+    onError: () => {},
+  });
+
   const engageMutation = useMutation({
     mutationFn: (data: { action: string; trackName?: string; trackArtist?: string }) =>
       apiRequest("POST", `/api/jam-sessions/${session.id}/engagement`, data),
     onSuccess: (_, vars) => {
-      const labels: Record<string, string> = {
-        play: "Played", save: "Saved", share: "Shared", like: "Liked", skip: "Skipped", add_to_playlist: "Added to playlist"
-      };
-      toast({ title: labels[vars.action] || "Recorded", description: `Action recorded for "${session.name}"` });
       queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions/active"] });
       if (showStats) refetchEngagement();
+
       if (vars.action === "play") {
-        playNowMutation.mutate();
+        toast({ title: "Played", description: `Play recorded for "${session.name}"` });
+      } else if (vars.action === "skip") {
+        skipMutation.mutate();
+        toast({ title: "Skipped", description: "Skipping to next track on Spotify" });
+      } else if (vars.action === "share") {
+        const shareUrl = session.spotifyUri.startsWith("spotify:")
+          ? `https://open.spotify.com/${session.spotifyUri.split(":")[1]}/${session.spotifyUri.split(":")[2]}`
+          : session.spotifyUri;
+        const cleanUrl = shareUrl.split("?")[0];
+        const shareText = `Check out "${session.spotifyName || session.name}" on Spotify!`;
+
+        if (navigator.share) {
+          navigator.share({ title: session.spotifyName || session.name, text: shareText, url: cleanUrl }).catch(() => {});
+        } else {
+          navigator.clipboard.writeText(`${shareText}\n${cleanUrl}`).then(() => {
+            toast({ title: "Link copied!", description: "Share link copied to clipboard — paste it anywhere!" });
+          }).catch(() => {
+            window.open(`mailto:?subject=${encodeURIComponent(shareText)}&body=${encodeURIComponent(cleanUrl)}`, "_blank");
+            toast({ title: "Share via email opened" });
+          });
+        }
+      } else if (vars.action === "save") {
+        toast({ title: "Saved", description: `"${session.name}" saved to your engagement history` });
+      } else if (vars.action === "like") {
+        toast({ title: "Liked", description: `You liked "${session.name}"` });
+      } else if (vars.action === "add_to_playlist") {
+        toast({ title: "Added to Playlist", description: `"${session.name}" engagement recorded` });
+      } else {
+        toast({ title: "Recorded", description: `Action recorded for "${session.name}"` });
       }
     },
     onError: (err: Error) => {
