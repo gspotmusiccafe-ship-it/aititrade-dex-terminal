@@ -1553,12 +1553,16 @@ function LyricsTab({ artistId }: { artistId: string }) {
                 </div>
                 <div className="flex items-center gap-2">
                   {statusBadge(req.status)}
-                  {(req.status === "rejected" || req.status === "completed") && (
+                  {req.status !== "in_production" && (
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(req.id)}
+                      onClick={() => {
+                        if (confirm("Are you sure you want to delete this lyrics request?")) {
+                          deleteMutation.mutate(req.id);
+                        }
+                      }}
                       disabled={deleteMutation.isPending}
                       data-testid={`button-delete-lyrics-${req.id}`}
                     >
@@ -1720,12 +1724,16 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                         <Download className="h-4 w-4" />
                       </a>
                     )}
-                    {(req.status === "rejected" || req.status === "completed") && (
+                    {req.status !== "in_production" && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => deleteMutation.mutate(req.id)}
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this mastering request?")) {
+                            deleteMutation.mutate(req.id);
+                          }
+                        }}
                         disabled={deleteMutation.isPending}
                         data-testid={`button-delete-mastering-${req.id}`}
                       >
@@ -1766,6 +1774,19 @@ function DistributionTab({ artistId, tracks }: { artistId: string; tracks: Track
     },
     onError: () => {
       toast({ title: "Failed to submit request", variant: "destructive" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/distribution-requests/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/distribution-requests"] });
+      toast({ title: "Distribution request deleted" });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete request", variant: "destructive" });
     },
   });
 
@@ -1820,7 +1841,23 @@ function DistributionTab({ artistId, tracks }: { artistId: string; tracks: Track
                     {req.adminNotes && <p className="text-sm text-blue-400 truncate">Admin: {req.adminNotes}</p>}
                     <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleDateString()}</p>
                   </div>
-                  {statusBadge(req.status)}
+                  <div className="flex items-center gap-2">
+                    {statusBadge(req.status)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        if (confirm("Are you sure you want to delete this distribution request?")) {
+                          deleteMutation.mutate(req.id);
+                        }
+                      }}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-distribution-${req.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );

@@ -127,6 +127,7 @@ export interface IStorage {
   getAllDistributionRequests(): Promise<DistributionRequest[]>;
   getPendingDistributionRequests(): Promise<DistributionRequest[]>;
   updateDistributionRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<DistributionRequest | undefined>;
+  deleteDistributionRequest(id: string): Promise<void>;
   // Lyrics Requests
   createLyricsRequest(request: InsertLyricsRequest): Promise<LyricsRequest>;
   getLyricsRequestsByUser(userId: string): Promise<LyricsRequest[]>;
@@ -656,6 +657,10 @@ export class DatabaseStorage implements IStorage {
   async updateDistributionRequest(id: string, data: { status?: string; adminNotes?: string }): Promise<DistributionRequest | undefined> {
     const [result] = await db.update(distributionRequests).set(data).where(eq(distributionRequests.id, id)).returning();
     return result;
+  }
+
+  async deleteDistributionRequest(id: string): Promise<void> {
+    await db.delete(distributionRequests).where(eq(distributionRequests.id, id));
   }
 
   async createLyricsRequest(request: InsertLyricsRequest): Promise<LyricsRequest> {

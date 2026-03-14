@@ -1265,6 +1265,25 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/distribution-requests/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const requests = await storage.getDistributionRequestsByUser(userId);
+      const request = requests.find(r => r.id === req.params.id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      if (request.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized" });
+      }
+      await storage.deleteDistributionRequest(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting distribution request:", error);
+      res.status(500).json({ message: "Failed to delete request" });
+    }
+  });
+
   // ============ Lyrics Requests ============
 
   app.post("/api/lyrics-requests", isAuthenticated, async (req: any, res) => {
@@ -1408,8 +1427,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (request.userId !== userId) {
         return res.status(403).json({ message: "Not authorized" });
       }
-      if (request.status !== "rejected" && request.status !== "completed") {
-        return res.status(400).json({ message: "Can only delete rejected or completed requests" });
+      if (request.status === "in_production") {
+        return res.status(400).json({ message: "Cannot delete a request that is currently in production" });
       }
       await storage.deleteLyricsRequest(req.params.id);
       res.json({ success: true });
@@ -1429,8 +1448,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (request.userId !== userId) {
         return res.status(403).json({ message: "Not authorized" });
       }
-      if (request.status !== "rejected" && request.status !== "completed") {
-        return res.status(400).json({ message: "Can only delete rejected or completed requests" });
+      if (request.status === "in_production") {
+        return res.status(400).json({ message: "Cannot delete a request that is currently in production" });
       }
       await storage.deleteMasteringRequest(req.params.id);
       res.json({ success: true });
