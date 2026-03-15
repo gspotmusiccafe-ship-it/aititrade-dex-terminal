@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, downloadFile } from "@/lib/queryClient";
 import { usePlayer } from "@/lib/player-context";
 import type { Artist, Track, Album, TrackWithArtist, Video as VideoType } from "@shared/schema";
 
@@ -1714,15 +1714,14 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                   <div className="flex items-center gap-2">
                     {statusBadge(req.status)}
                     {req.status === "completed" && req.masteredUrl && (
-                      <a
-                        href={`${req.masteredUrl}?download=true`}
-                        download
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
+                      <button
+                        onClick={() => downloadFile(`${req.masteredUrl}?download=true`, `mastered-${req.trackId}.wav`)}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
                         data-testid={`button-download-mastered-${req.id}`}
                         title="Download mastered track"
                       >
                         <Download className="h-4 w-4" />
-                      </a>
+                      </button>
                     )}
                     {req.status !== "in_production" && (
                       <Button

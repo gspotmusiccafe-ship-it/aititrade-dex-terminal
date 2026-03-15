@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, downloadFile } from "@/lib/queryClient";
 import type { User, Artist, Membership, TrackWithArtist } from "@shared/schema";
 
 interface Analytics {
@@ -1262,15 +1262,14 @@ function AdminMasteringTab() {
               {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
               {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
               {req.masteredUrl && (
-                <a
-                  href={`${req.masteredUrl}?download=true`}
-                  download
-                  className="text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1"
+                <button
+                  onClick={() => downloadFile(`${req.masteredUrl}?download=true`, `mastered-${req.trackId}.wav`)}
+                  className="text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1 cursor-pointer"
                   data-testid={`link-mastered-download-${req.id}`}
                 >
                   <Download className="h-3 w-3" />
                   Download Mastered File
-                </a>
+                </button>
               )}
               <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleString()}</p>
             </div>
@@ -1349,13 +1348,11 @@ function AdminMasteringTab() {
                 <Button
                   variant="outline"
                   size="sm"
-                  asChild
+                  onClick={() => downloadFile(`${req.masteredUrl}?download=true`, `mastered-${req.trackId}.wav`)}
                   data-testid={`button-download-mastered-${req.id}`}
                 >
-                  <a href={`${req.masteredUrl}?download=true`} download>
-                    <Download className="h-4 w-4 mr-1" />
-                    Download
-                  </a>
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
                 </Button>
               )}
             </div>
