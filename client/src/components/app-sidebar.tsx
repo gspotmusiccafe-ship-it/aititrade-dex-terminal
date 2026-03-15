@@ -1,11 +1,15 @@
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy } from "lucide-react";
+import { useState } from "react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2 } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Sidebar,
   SidebarContent,
@@ -34,7 +38,29 @@ const yourMusicItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout, isAuthenticated, spotifyConnected } = useAuth();
-  
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const setPasswordMutation = useMutation({
+    mutationFn: async (password: string) => {
+      const res = await apiRequest("POST", "/api/auth/set-password", { password });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Password set!", description: "You can now log in with your email and password on any device." });
+      setShowSetPassword(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to set password", variant: "destructive" });
+    },
+  });
+
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
     enabled: isAuthenticated,
@@ -169,6 +195,62 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 pb-28 md:pb-28 space-y-2">
+        {isAuthenticated && user && !user.hasPassword && (
+          <>
+            {!showSetPassword ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full gap-2 border-yellow-500/30 hover:bg-yellow-500/10 text-yellow-500"
+                onClick={() => setShowSetPassword(true)}
+                data-testid="button-show-set-password"
+              >
+                <KeyRound className="h-4 w-4" />
+                Set Password for Mobile Login
+              </Button>
+            ) : (
+              <div className="space-y-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+                <p className="text-xs text-muted-foreground">Set a password to log in with email on any device</p>
+                <Input
+                  type="password"
+                  placeholder="New password (6+ chars)"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="h-8 text-xs"
+                  data-testid="input-new-password"
+                />
+                <Input
+                  type="password"
+                  placeholder="Confirm password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="h-8 text-xs"
+                  data-testid="input-confirm-password"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 h-7 text-xs"
+                    disabled={!newPassword || newPassword.length < 6 || newPassword !== confirmPassword || setPasswordMutation.isPending}
+                    onClick={() => setPasswordMutation.mutate(newPassword)}
+                    data-testid="button-set-password-submit"
+                  >
+                    {setPasswordMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Set Password"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => { setShowSetPassword(false); setNewPassword(""); setConfirmPassword(""); }}
+                    data-testid="button-cancel-set-password"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
         {isAuthenticated && user && !spotifyConnected && (
           <Button asChild variant="outline" size="sm" className="w-full gap-2 border-[#1DB954]/30 hover:bg-[#1DB954]/10 text-[#1DB954]" data-testid="button-connect-spotify">
             <a href="/api/login/spotify">

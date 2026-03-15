@@ -13,6 +13,7 @@ export function registerAuthRoutes(app: Express): void {
       res.json({
         ...user,
         password: undefined,
+        hasPassword: !!user.password,
         spotifyProduct: req.user.spotify_product || null,
         spotifyConnected: user.spotifyConnected || !!req.user.access_token,
       });

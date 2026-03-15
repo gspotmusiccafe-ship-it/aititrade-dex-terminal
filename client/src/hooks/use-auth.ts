@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
-type UserWithSpotify = User & { spotifyProduct?: string; spotifyConnected?: boolean };
+type UserWithSpotify = User & { spotifyProduct?: string; spotifyConnected?: boolean; hasPassword?: boolean };
 
 async function fetchUser(): Promise<UserWithSpotify | null> {
   const response = await fetch("/api/auth/user", {

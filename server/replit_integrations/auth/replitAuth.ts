@@ -174,6 +174,35 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/auth/set-password", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || !(req.user as any)?.claims?.sub) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const userId = (req.user as any).claims.sub;
+      const { password } = req.body;
+      if (!password || password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const user = await authStorage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      if (user.password) {
+        return res.status(400).json({ message: "Password already set. Use change password instead." });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const { db } = await import("../db");
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ password: hashedPassword }).where(eq(users.id, userId));
+      res.json({ success: true, message: "Password set successfully. You can now log in with email and password." });
+    } catch (error) {
+      console.error("[Auth] Set password error:", error);
+      res.status(500).json({ message: "Failed to set password" });
+    }
+  });
+
   app.get("/api/login/spotify", (req, res) => {
     const redirectUri = getRedirectUri(req);
     const postLoginRedirect = req.query.redirect as string || "/";

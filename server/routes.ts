@@ -149,7 +149,11 @@ export async function registerRoutes(
 
       res.set("Accept-Ranges", "bytes");
       res.set("Content-Type", contentType);
-      res.set("Content-Disposition", "inline");
+      if (req.query.download === "true") {
+        res.set("Content-Disposition", `attachment; filename="${filename}"`);
+      } else {
+        res.set("Content-Disposition", "inline");
+      }
       res.set("X-Content-Type-Options", "nosniff");
       res.set("Cache-Control", "public, max-age=3600");
 

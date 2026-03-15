@@ -1715,7 +1715,7 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                     {statusBadge(req.status)}
                     {req.status === "completed" && req.masteredUrl && (
                       <a
-                        href={req.masteredUrl}
+                        href={`${req.masteredUrl}?download=true`}
                         download
                         className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors"
                         data-testid={`button-download-mastered-${req.id}`}

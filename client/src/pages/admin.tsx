@@ -1263,7 +1263,7 @@ function AdminMasteringTab() {
               {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
               {req.masteredUrl && (
                 <a
-                  href={req.masteredUrl}
+                  href={`${req.masteredUrl}?download=true`}
                   download
                   className="text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1"
                   data-testid={`link-mastered-download-${req.id}`}
@@ -1352,7 +1352,7 @@ function AdminMasteringTab() {
                   asChild
                   data-testid={`button-download-mastered-${req.id}`}
                 >
-                  <a href={req.masteredUrl} download>
+                  <a href={`${req.masteredUrl}?download=true`} download>
                     <Download className="h-4 w-4 mr-1" />
                     Download
                   </a>
