@@ -391,7 +391,7 @@ function ArtistOnboarding() {
         "In-house AI-music marketing & promotions",
         "Aitify Music Store — 25% sales retention",
         "Tip Jar — fans tip you directly via PayPal",
-        "Showtown Stage Manager — live stream leaderboard",
+        "Leaderboard — track streams, rank up, earn tier badges",
         "Artist profile & bio page",
         "Advanced analytics dashboard",
         "Lossless audio quality",

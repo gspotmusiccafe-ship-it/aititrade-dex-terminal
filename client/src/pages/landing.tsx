@@ -377,7 +377,7 @@ const membershipTiers = [
       "Marketing & promotions",
       "Aitify Music Store (25% retention)",
       "Tip Jar from fans via PayPal",
-      "Showtown Stage Manager",
+      "Leaderboard ranking & tier badges",
       "Analytics dashboard",
       "Lossless audio quality",
     ],

@@ -107,7 +107,7 @@ const plans = [
       { text: "In-house AI-music marketing & promotions", included: true },
       { text: "Aitify Music Store — 25% sales retention from your personal store link", included: true },
       { text: "Tip Jar — fans send you tips directly via PayPal", included: true },
-      { text: "Showtown Stage Manager — live leaderboard with stream bonuses", included: true },
+      { text: "Leaderboard — track your streams, rank up, and earn tier badges", included: true },
       { text: "Advanced analytics dashboard", included: true },
       { text: "Artist profile & bio page", included: true },
       { text: "Lossless audio quality", included: true },
