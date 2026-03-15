@@ -25,7 +25,7 @@ The application employs a full-stack architecture:
 - **Music Streaming**: Core functionality for browsing and playing tracks.
 - **User Management**: Includes free accounts, various premium membership tiers (Silver, Bronze, Gold/Artist Pro) with tiered access to features like playlists and pre-release content.
 - **Artist Portal**: Allows artists to manage profiles, upload tracks, set pre-release dates, and access features like an AI Lyrics Generator (using OpenAI) and an Audio Mastering Engine (utilizing ffmpeg for processing).
-- **Admin Portal**: A comprehensive dashboard for platform analytics, user and artist management, content moderation, managing radio playlists (97.7 THE FLAME), radio shows, membership oversight, and tracking Spotify stream qualifiers.
+- **Admin Portal**: A comprehensive dashboard for platform analytics, user and artist management, content moderation, managing radio playlists (97.7 THE FLAME), radio shows, membership oversight, tracking Spotify stream qualifiers, and the Spotify Royalty Tracker (paste Spotify URLs to auto-load stream counts and track 1K qualification for royalties).
 - **Distribution System**: Facilitates artists submitting music for distribution, with admin review and approval workflows.
 - **Leaderboard**: Displays ranked tracks based on engagement scores, with a badging system (Bronze/Silver/Gold/Platinum) and promotional features.
 - **File Storage**: All uploaded files (audio, images) are stored in Replit Object Storage (GCS-backed) for persistence and scalability. Files are uploaded via Multer, then transferred to object storage, and served via a `/cloud/uploads/` route.

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2 } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1991,6 +1991,309 @@ function RadioShowsTab() {
   );
 }
 
+function SpotifyRoyaltyTab() {
+  const { toast } = useToast();
+  const [urlInput, setUrlInput] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [filterMode, setFilterMode] = useState<"all" | "needs-work" | "qualified">("all");
+
+  const { data: royaltyTracks, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/spotify-royalty-tracks"],
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (spotifyUrl: string) => apiRequest("POST", "/api/admin/spotify-royalty-tracks", { spotifyUrl }),
+    onSuccess: async (res) => {
+      const track = await res.json();
+      toast({ title: `Added: ${track.title}`, description: `${track.streamCount?.toLocaleString() || 0} streams loaded` });
+      setUrlInput("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spotify-royalty-tracks"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const refreshOneMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/api/admin/spotify-royalty-tracks/${id}/refresh`),
+    onSuccess: async (res) => {
+      const track = await res.json();
+      toast({ title: `Refreshed: ${track.title}`, description: `${track.streamCount?.toLocaleString()} streams` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spotify-royalty-tracks"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const refreshAllMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/spotify-royalty-tracks/refresh-all"),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      toast({ title: `Refreshed ${data.updated} of ${data.total} tracks`, description: data.stopped ? data.message : `${data.errors} errors` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spotify-royalty-tracks"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/spotify-royalty-tracks/${id}`),
+    onSuccess: () => {
+      toast({ title: "Track removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/spotify-royalty-tracks"] });
+    },
+  });
+
+  const handleBulkAdd = async () => {
+    const urls = urlInput.split("\n").map(u => u.trim()).filter(u => u.includes("spotify.com/track/"));
+    if (urls.length === 0) return toast({ title: "No valid Spotify URLs found", variant: "destructive" });
+    setAdding(true);
+    let added = 0;
+    let skipped = 0;
+    for (const url of urls) {
+      try {
+        await apiRequest("POST", "/api/admin/spotify-royalty-tracks", { spotifyUrl: url });
+        added++;
+      } catch (e: any) {
+        if (e.message?.includes("already")) skipped++;
+      }
+      await new Promise(r => setTimeout(r, 400));
+    }
+    toast({ title: `Loaded ${added} tracks`, description: skipped > 0 ? `${skipped} already tracked` : undefined });
+    setUrlInput("");
+    setAdding(false);
+    queryClient.invalidateQueries({ queryKey: ["/api/admin/spotify-royalty-tracks"] });
+  };
+
+  const filtered = (royaltyTracks || []).filter((t: any) => {
+    if (filterMode === "needs-work") return !t.isQualified;
+    if (filterMode === "qualified") return t.isQualified;
+    return true;
+  });
+
+  const totalTracks = royaltyTracks?.length || 0;
+  const qualifiedCount = royaltyTracks?.filter((t: any) => t.isQualified).length || 0;
+  const needsWorkCount = totalTracks - qualifiedCount;
+  const totalStreams = royaltyTracks?.reduce((sum: number, t: any) => sum + (t.streamCount || 0), 0) || 0;
+  const avgStreams = totalTracks > 0 ? Math.round(totalStreams / totalTracks) : 0;
+
+  if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold" data-testid="text-royalty-title">Spotify Royalty Tracker</h3>
+        <p className="text-sm text-muted-foreground">Track your songs on Spotify — paste URLs to load stream counts and monitor qualification toward 1,000 streams</p>
+      </div>
+
+      <Card className="bg-card/60 border-border/30">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-1">
+              <Textarea
+                placeholder={"Paste Spotify track URLs (one per line)\nhttps://open.spotify.com/track/...\nhttps://open.spotify.com/track/..."}
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                rows={4}
+                className="font-mono text-sm"
+                data-testid="input-spotify-urls"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Paste one or multiple Spotify track URLs — stream data will be loaded automatically</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                onClick={handleBulkAdd}
+                disabled={adding || !urlInput.trim()}
+                data-testid="button-load-tracks"
+              >
+                {adding ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Link2 className="h-4 w-4 mr-1" />}
+                Load Tracks
+              </Button>
+              {totalTracks > 0 && (
+                <Button
+                  variant="outline"
+                  onClick={() => refreshAllMutation.mutate()}
+                  disabled={refreshAllMutation.isPending}
+                  data-testid="button-refresh-all-royalty"
+                >
+                  {refreshAllMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+                  Refresh All
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black" data-testid="text-royalty-total">{totalTracks}</p>
+            <p className="text-xs text-muted-foreground">Tracks on Spotify</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black text-green-500" data-testid="text-royalty-qualified">{qualifiedCount}</p>
+            <p className="text-xs text-muted-foreground">Earning Royalties</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black text-yellow-500" data-testid="text-royalty-needs-work">{needsWorkCount}</p>
+            <p className="text-xs text-muted-foreground">Need 1K Streams</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black" data-testid="text-royalty-total-streams">{totalStreams.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Total Streams</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black" data-testid="text-royalty-avg">{avgStreams.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Avg per Track</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant={filterMode === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterMode("all")} data-testid="button-royalty-filter-all">
+          All ({totalTracks})
+        </Button>
+        <Button variant={filterMode === "needs-work" ? "default" : "outline"} size="sm" onClick={() => setFilterMode("needs-work")} data-testid="button-royalty-filter-needs-work">
+          <Target className="h-3 w-3 mr-1" /> Needs 1K ({needsWorkCount})
+        </Button>
+        <Button variant={filterMode === "qualified" ? "default" : "outline"} size="sm" onClick={() => setFilterMode("qualified")} data-testid="button-royalty-filter-qualified">
+          <CheckCircle className="h-3 w-3 mr-1" /> Qualified ({qualifiedCount})
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map((t: any) => {
+          const progress = Math.min((t.streamCount / 1000) * 100, 100);
+          const streamsNeeded = Math.max(0, 1000 - t.streamCount);
+
+          return (
+            <Card key={t.id} className={`bg-card/60 border-border/30 ${t.isQualified ? 'border-l-4 border-l-green-500' : streamsNeeded <= 200 ? 'border-l-4 border-l-yellow-500' : ''}`} data-testid={`card-royalty-${t.id}`}>
+              <CardContent className="py-4">
+                <div className="flex items-start gap-4">
+                  {t.coverArt && (
+                    <img src={t.coverArt} alt="" className="w-14 h-14 rounded object-cover flex-shrink-0" />
+                  )}
+                  {!t.coverArt && (
+                    <div className="w-14 h-14 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                      <Music className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold truncate" data-testid={`text-royalty-track-${t.id}`}>{t.title}</h4>
+                      {t.isQualified ? (
+                        <Badge variant="default" className="bg-green-600 text-white shrink-0">
+                          <CheckCircle className="h-3 w-3 mr-1" /> Earning
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 shrink-0">
+                          {streamsNeeded.toLocaleString()} to go
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{t.artistName}{t.albumName ? ` • ${t.albumName}` : ""}{t.releaseDate ? ` • ${t.releaseDate}` : ""}</p>
+
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${t.isQualified ? 'bg-green-500' : progress >= 80 ? 'bg-yellow-500' : progress >= 50 ? 'bg-blue-500' : 'bg-primary'}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-mono font-bold shrink-0" data-testid={`text-royalty-streams-${t.id}`}>
+                        {t.streamCount.toLocaleString()} / 1,000
+                      </span>
+                    </div>
+
+                    {t.lastFetchedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">Last updated: {new Date(t.lastFetchedAt).toLocaleString()}</p>
+                    )}
+                    {t.notes && <p className="text-xs text-blue-400 mt-1">{t.notes}</p>}
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => refreshOneMutation.mutate(t.id)}
+                      disabled={refreshOneMutation.isPending}
+                      title="Refresh stream count"
+                      data-testid={`button-refresh-royalty-${t.id}`}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${refreshOneMutation.isPending ? 'animate-spin' : ''}`} />
+                    </Button>
+                    <a
+                      href={t.spotifyUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-[#1DB954] hover:bg-muted"
+                      title="Open on Spotify"
+                      data-testid={`link-spotify-royalty-${t.id}`}
+                    >
+                      <SiSpotify className="h-4 w-4" />
+                    </a>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteMutation.mutate(t.id)}
+                      className="text-destructive hover:text-destructive"
+                      title="Remove from tracker"
+                      data-testid={`button-delete-royalty-${t.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <SiSpotify className="h-12 w-12 mx-auto mb-4 opacity-50 text-[#1DB954]" />
+            <p>{totalTracks === 0 ? "Paste Spotify track URLs above to start tracking your royalty qualification" : "No tracks match this filter"}</p>
+          </div>
+        )}
+      </div>
+
+      {royaltyTracks && royaltyTracks.length > 0 && needsWorkCount > 0 && (
+        <Card className="bg-gradient-to-r from-[#1DB954]/10 to-green-600/10 border-[#1DB954]/30">
+          <CardContent className="py-4">
+            <h4 className="font-semibold text-[#1DB954] mb-2">Priority Boost Targets</h4>
+            <p className="text-sm text-muted-foreground mb-3">These songs are closest to qualifying — use Jam Sessions to push them over 1,000:</p>
+            <div className="space-y-2">
+              {royaltyTracks
+                .filter((t: any) => !t.isQualified)
+                .sort((a: any, b: any) => b.streamCount - a.streamCount)
+                .slice(0, 10)
+                .map((t: any, i: number) => (
+                  <div key={t.id} className="flex items-center gap-3 text-sm">
+                    <span className="w-6 text-right font-mono text-muted-foreground">{i + 1}.</span>
+                    {t.coverArt && <img src={t.coverArt} alt="" className="w-8 h-8 rounded object-cover" />}
+                    <span className="truncate flex-1">{t.title}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="w-24 bg-muted rounded-full h-2 overflow-hidden">
+                        <div className={`h-full rounded-full ${t.streamCount >= 800 ? 'bg-yellow-500' : 'bg-primary'}`} style={{ width: `${Math.min((t.streamCount / 1000) * 100, 100)}%` }} />
+                      </div>
+                      <span className="font-mono text-yellow-500 w-20 text-right">
+                        {(1000 - t.streamCount).toLocaleString()} left
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function StreamQualifierTab() {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -2640,6 +2943,10 @@ export default function AdminPage() {
                 <Target className="h-4 w-4 mr-1.5 text-yellow-500" />
                 1K Qualifier
               </TabsTrigger>
+              <TabsTrigger value="royalty" data-testid="tab-royalty" className="whitespace-nowrap">
+                <DollarSign className="h-4 w-4 mr-1.5 text-[#1DB954]" />
+                Royalty Tracker
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -2689,6 +2996,10 @@ export default function AdminPage() {
 
           <TabsContent value="qualifier">
             <StreamQualifierTab />
+          </TabsContent>
+
+          <TabsContent value="royalty">
+            <SpotifyRoyaltyTab />
           </TabsContent>
         </Tabs>
         </div>

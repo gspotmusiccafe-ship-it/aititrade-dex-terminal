@@ -318,6 +318,26 @@ export const insertStreamQualifierSchema = createInsertSchema(streamQualifiers).
 export type InsertStreamQualifier = z.infer<typeof insertStreamQualifierSchema>;
 export type StreamQualifier = typeof streamQualifiers.$inferSelect;
 
+export const spotifyRoyaltyTracks = pgTable("spotify_royalty_tracks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  spotifyTrackId: varchar("spotify_track_id").notNull().unique(),
+  spotifyUrl: text("spotify_url").notNull(),
+  title: varchar("title").notNull(),
+  artistName: varchar("artist_name"),
+  albumName: varchar("album_name"),
+  coverArt: text("cover_art"),
+  releaseDate: varchar("release_date"),
+  streamCount: integer("stream_count").default(0),
+  isQualified: boolean("is_qualified").default(false),
+  notes: text("notes"),
+  lastFetchedAt: timestamp("last_fetched_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSpotifyRoyaltyTrackSchema = createInsertSchema(spotifyRoyaltyTracks).omit({ id: true, createdAt: true, lastFetchedAt: true });
+export type InsertSpotifyRoyaltyTrack = z.infer<typeof insertSpotifyRoyaltyTrackSchema>;
+export type SpotifyRoyaltyTrack = typeof spotifyRoyaltyTracks.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };
