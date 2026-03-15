@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -2735,6 +2735,107 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   };
 
   app.get("/api/admin/spotify/track/:trackId", isAdmin, spotifyTrackLookupHandler);
+
+  // ── Stream Qualifier Tracker ────────────────────────────────────────
+  app.get("/api/admin/stream-qualifiers", isAdmin, async (req: any, res) => {
+    try {
+      const qualifiers = await db
+        .select({
+          id: streamQualifiers.id,
+          trackId: streamQualifiers.trackId,
+          spotifyStreamCount: streamQualifiers.spotifyStreamCount,
+          targetStreams: streamQualifiers.targetStreams,
+          isQualified: streamQualifiers.isQualified,
+          notes: streamQualifiers.notes,
+          updatedAt: streamQualifiers.updatedAt,
+          createdAt: streamQualifiers.createdAt,
+          trackTitle: tracks.title,
+          trackGenre: tracks.genre,
+          artistId: tracks.artistId,
+          artistName: artists.name,
+          coverImage: tracks.coverImage,
+        })
+        .from(streamQualifiers)
+        .leftJoin(tracks, eq(streamQualifiers.trackId, tracks.id))
+        .leftJoin(artists, eq(tracks.artistId, artists.id))
+        .orderBy(desc(streamQualifiers.spotifyStreamCount));
+      res.json(qualifiers);
+    } catch (error) {
+      console.error("Error fetching stream qualifiers:", error);
+      res.status(500).json({ message: "Failed to fetch stream qualifiers" });
+    }
+  });
+
+  app.post("/api/admin/stream-qualifiers", isAdmin, async (req: any, res) => {
+    try {
+      const { trackId, spotifyStreamCount, notes } = req.body;
+      if (!trackId) return res.status(400).json({ message: "trackId required" });
+      const existing = await db.select().from(streamQualifiers).where(eq(streamQualifiers.trackId, trackId));
+      if (existing.length > 0) return res.status(409).json({ message: "Track already being tracked" });
+      const count = spotifyStreamCount ?? 0;
+      const [qualifier] = await db.insert(streamQualifiers).values({
+        trackId,
+        spotifyStreamCount: count,
+        isQualified: count >= 1000,
+        notes: notes || null,
+      }).returning();
+      res.json(qualifier);
+    } catch (error) {
+      console.error("Error adding stream qualifier:", error);
+      res.status(500).json({ message: "Failed to add stream qualifier" });
+    }
+  });
+
+  app.post("/api/admin/stream-qualifiers/bulk", isAdmin, async (req: any, res) => {
+    try {
+      const allTracks = await db.select({ id: tracks.id }).from(tracks);
+      const existing = await db.select({ trackId: streamQualifiers.trackId }).from(streamQualifiers);
+      const existingIds = new Set(existing.map(e => e.trackId));
+      const toAdd = allTracks.filter(t => !existingIds.has(t.id));
+      if (toAdd.length === 0) return res.json({ added: 0 });
+      await db.insert(streamQualifiers).values(toAdd.map(t => ({
+        trackId: t.id,
+        spotifyStreamCount: 0,
+        isQualified: false,
+      })));
+      res.json({ added: toAdd.length });
+    } catch (error) {
+      console.error("Error bulk adding qualifiers:", error);
+      res.status(500).json({ message: "Failed to bulk add qualifiers" });
+    }
+  });
+
+  app.patch("/api/admin/stream-qualifiers/:id", isAdmin, async (req: any, res) => {
+    try {
+      const { spotifyStreamCount, notes, isQualified } = req.body;
+      const updates: any = { updatedAt: new Date() };
+      if (spotifyStreamCount !== undefined) {
+        updates.spotifyStreamCount = spotifyStreamCount;
+        updates.isQualified = spotifyStreamCount >= 1000;
+      }
+      if (isQualified !== undefined) updates.isQualified = isQualified;
+      if (notes !== undefined) updates.notes = notes;
+      const [qualifier] = await db.update(streamQualifiers)
+        .set(updates)
+        .where(eq(streamQualifiers.id, req.params.id))
+        .returning();
+      if (!qualifier) return res.status(404).json({ message: "Qualifier not found" });
+      res.json(qualifier);
+    } catch (error) {
+      console.error("Error updating stream qualifier:", error);
+      res.status(500).json({ message: "Failed to update stream qualifier" });
+    }
+  });
+
+  app.delete("/api/admin/stream-qualifiers/:id", isAdmin, async (req: any, res) => {
+    try {
+      await db.delete(streamQualifiers).where(eq(streamQualifiers.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting stream qualifier:", error);
+      res.status(500).json({ message: "Failed to delete stream qualifier" });
+    }
+  });
 
   return httpServer;
 }

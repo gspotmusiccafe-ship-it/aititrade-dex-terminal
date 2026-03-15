@@ -303,6 +303,21 @@ export type MasteringRequest = typeof masteringRequests.$inferSelect;
 export type InsertTip = z.infer<typeof insertTipSchema>;
 export type Tip = typeof tips.$inferSelect;
 
+export const streamQualifiers = pgTable("stream_qualifiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  spotifyStreamCount: integer("spotify_stream_count").default(0),
+  targetStreams: integer("target_streams").default(1000),
+  isQualified: boolean("is_qualified").default(false),
+  notes: text("notes"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertStreamQualifierSchema = createInsertSchema(streamQualifiers).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertStreamQualifier = z.infer<typeof insertStreamQualifierSchema>;
+export type StreamQualifier = typeof streamQualifiers.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

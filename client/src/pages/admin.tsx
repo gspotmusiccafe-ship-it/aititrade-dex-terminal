@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1991,6 +1991,261 @@ function RadioShowsTab() {
   );
 }
 
+function StreamQualifierTab() {
+  const { toast } = useToast();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editStreams, setEditStreams] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [filterMode, setFilterMode] = useState<"all" | "needs-work" | "qualified">("all");
+
+  const { data: qualifiers, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/stream-qualifiers"],
+  });
+
+  const bulkAddMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/stream-qualifiers/bulk"),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      toast({ title: `Added ${data.added} tracks to tracker` });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stream-qualifiers"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: any) => apiRequest("PATCH", `/api/admin/stream-qualifiers/${id}`, data),
+    onSuccess: () => {
+      toast({ title: "Stream count updated" });
+      setEditingId(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stream-qualifiers"] });
+    },
+    onError: (e: Error) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/stream-qualifiers/${id}`),
+    onSuccess: () => {
+      toast({ title: "Track removed from tracker" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stream-qualifiers"] });
+    },
+  });
+
+  const filtered = (qualifiers || []).filter((q: any) => {
+    if (filterMode === "needs-work") return !q.isQualified;
+    if (filterMode === "qualified") return q.isQualified;
+    return true;
+  });
+
+  const totalTracks = qualifiers?.length || 0;
+  const qualifiedCount = qualifiers?.filter((q: any) => q.isQualified).length || 0;
+  const needsWorkCount = totalTracks - qualifiedCount;
+  const totalStreams = qualifiers?.reduce((sum: number, q: any) => sum + (q.spotifyStreamCount || 0), 0) || 0;
+
+  if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold" data-testid="text-qualifier-title">Spotify 1K Stream Qualifier</h3>
+          <p className="text-sm text-muted-foreground">Track which songs need 1,000 streams to qualify for royalties</p>
+        </div>
+        <Button
+          onClick={() => bulkAddMutation.mutate()}
+          disabled={bulkAddMutation.isPending}
+          data-testid="button-bulk-add-qualifiers"
+        >
+          {bulkAddMutation.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />}
+          Add All Tracks
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black" data-testid="text-total-tracked">{totalTracks}</p>
+            <p className="text-xs text-muted-foreground">Total Tracked</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black text-green-500" data-testid="text-qualified-count">{qualifiedCount}</p>
+            <p className="text-xs text-muted-foreground">Qualified (1K+)</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black text-yellow-500" data-testid="text-needs-work-count">{needsWorkCount}</p>
+            <p className="text-xs text-muted-foreground">Needs Work</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/60 border-border/30">
+          <CardContent className="pt-4 pb-4">
+            <p className="text-2xl font-black" data-testid="text-total-streams">{totalStreams.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">Total Streams</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant={filterMode === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterMode("all")} data-testid="button-filter-all">
+          All ({totalTracks})
+        </Button>
+        <Button variant={filterMode === "needs-work" ? "default" : "outline"} size="sm" onClick={() => setFilterMode("needs-work")} data-testid="button-filter-needs-work">
+          <Target className="h-3 w-3 mr-1" /> Needs Work ({needsWorkCount})
+        </Button>
+        <Button variant={filterMode === "qualified" ? "default" : "outline"} size="sm" onClick={() => setFilterMode("qualified")} data-testid="button-filter-qualified">
+          <CheckCircle className="h-3 w-3 mr-1" /> Qualified ({qualifiedCount})
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {filtered.map((q: any) => {
+          const progress = Math.min((q.spotifyStreamCount / 1000) * 100, 100);
+          const isEditing = editingId === q.id;
+          const streamsNeeded = Math.max(0, 1000 - q.spotifyStreamCount);
+
+          return (
+            <Card key={q.id} className={`bg-card/60 border-border/30 ${q.isQualified ? 'border-l-4 border-l-green-500' : streamsNeeded <= 200 ? 'border-l-4 border-l-yellow-500' : ''}`} data-testid={`card-qualifier-${q.id}`}>
+              <CardContent className="py-4">
+                <div className="flex items-start gap-4">
+                  {q.coverImage && (
+                    <img src={q.coverImage} alt="" className="w-12 h-12 rounded object-cover flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-semibold truncate" data-testid={`text-qualifier-track-${q.id}`}>{q.trackTitle || "Unknown Track"}</h4>
+                      {q.isQualified ? (
+                        <Badge variant="default" className="bg-green-600 text-white shrink-0" data-testid={`badge-qualified-${q.id}`}>
+                          <CheckCircle className="h-3 w-3 mr-1" /> Qualified
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-yellow-500 border-yellow-500/50 shrink-0" data-testid={`badge-needs-work-${q.id}`}>
+                          <Target className="h-3 w-3 mr-1" /> {streamsNeeded} to go
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{q.artistName || "Unknown Artist"} • {q.trackGenre || "No genre"}</p>
+
+                    <div className="mt-2 flex items-center gap-3">
+                      <div className="flex-1 bg-muted rounded-full h-3 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${q.isQualified ? 'bg-green-500' : progress >= 80 ? 'bg-yellow-500' : 'bg-primary'}`}
+                          style={{ width: `${progress}%` }}
+                          data-testid={`progress-bar-${q.id}`}
+                        />
+                      </div>
+                      <span className="text-sm font-mono font-bold shrink-0" data-testid={`text-stream-count-${q.id}`}>
+                        {q.spotifyStreamCount.toLocaleString()} / 1,000
+                      </span>
+                    </div>
+
+                    {q.notes && <p className="text-xs text-muted-foreground mt-1">{q.notes}</p>}
+
+                    {isEditing && (
+                      <div className="mt-3 flex flex-col gap-2 p-3 bg-muted/50 rounded-lg">
+                        <div className="flex gap-2">
+                          <Input
+                            type="number"
+                            placeholder="Stream count"
+                            value={editStreams}
+                            onChange={(e) => setEditStreams(e.target.value)}
+                            className="w-32"
+                            data-testid={`input-edit-streams-${q.id}`}
+                          />
+                          <Input
+                            placeholder="Notes (optional)"
+                            value={editNotes}
+                            onChange={(e) => setEditNotes(e.target.value)}
+                            className="flex-1"
+                            data-testid={`input-edit-notes-${q.id}`}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => updateMutation.mutate({
+                              id: q.id,
+                              spotifyStreamCount: parseInt(editStreams) || 0,
+                              notes: editNotes || undefined,
+                            })}
+                            disabled={updateMutation.isPending}
+                            data-testid={`button-save-streams-${q.id}`}
+                          >
+                            {updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} data-testid={`button-cancel-edit-${q.id}`}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    {!isEditing && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setEditingId(q.id);
+                          setEditStreams(String(q.spotifyStreamCount));
+                          setEditNotes(q.notes || "");
+                        }}
+                        data-testid={`button-edit-qualifier-${q.id}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteMutation.mutate(q.id)}
+                      className="text-destructive hover:text-destructive"
+                      data-testid={`button-delete-qualifier-${q.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>{totalTracks === 0 ? 'Click "Add All Tracks" to start tracking your songs' : "No tracks match this filter"}</p>
+          </div>
+        )}
+      </div>
+
+      {qualifiers && qualifiers.length > 0 && !qualifiers.every((q: any) => q.isQualified) && (
+        <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
+          <CardContent className="py-4">
+            <h4 className="font-semibold text-yellow-500 mb-2">Focus Tracks</h4>
+            <p className="text-sm text-muted-foreground mb-3">These tracks are closest to qualifying — concentrate promotion efforts here:</p>
+            <div className="space-y-1">
+              {qualifiers
+                .filter((q: any) => !q.isQualified)
+                .sort((a: any, b: any) => b.spotifyStreamCount - a.spotifyStreamCount)
+                .slice(0, 5)
+                .map((q: any) => (
+                  <div key={q.id} className="flex items-center justify-between text-sm">
+                    <span className="truncate">{q.trackTitle}</span>
+                    <span className="font-mono text-yellow-500 shrink-0 ml-2">
+                      {q.spotifyStreamCount} / 1,000 ({Math.round((q.spotifyStreamCount / 1000) * 100)}%)
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function SpotifyLookupTab() {
   const { toast } = useToast();
   const [selectedTrack, setSelectedTrack] = useState<SpotifyTrackDetail | null>(null);
@@ -2381,6 +2636,10 @@ export default function AdminPage() {
                 <SiSpotify className="h-4 w-4 mr-1.5 text-[#1DB954]" />
                 Streams
               </TabsTrigger>
+              <TabsTrigger value="qualifier" data-testid="tab-qualifier" className="whitespace-nowrap">
+                <Target className="h-4 w-4 mr-1.5 text-yellow-500" />
+                1K Qualifier
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -2426,6 +2685,10 @@ export default function AdminPage() {
 
           <TabsContent value="spotify">
             <SpotifyLookupTab />
+          </TabsContent>
+
+          <TabsContent value="qualifier">
+            <StreamQualifierTab />
           </TabsContent>
         </Tabs>
         </div>
