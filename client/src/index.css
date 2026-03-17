@@ -315,7 +315,9 @@
   }
 
   .animate-marquee {
-    animation: marquee 45s linear infinite;
+    display: flex;
+    width: max-content;
+    animation: marquee 30s linear infinite;
   }
 
   .animate-marquee:hover {
