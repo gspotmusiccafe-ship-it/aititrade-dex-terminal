@@ -496,7 +496,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-lime-500/20 transition-colors"
             data-testid={`button-mintor-${track.id}`}
           >
-            MINTOR $9.99/MO
+            MINTOR $99.99 + $9.99/MO
           </a>
           <a
             href={BLUEVINE_TRUST_URL}

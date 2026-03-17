@@ -350,10 +350,11 @@ const membershipTiers = [
   },
   {
     name: "Mint Factory CEO",
-    price: "$9.99",
-    period: "/month",
+    price: "$99.99",
+    period: " setup",
     stream: "mintor",
     features: [
+      "$99.99 SET-UP FEE + $9.99/MO RECURRING",
       "Full Sovereign Exchange access",
       "Mint & trade all asset classes",
       "2-Week Early Pre-release trading",
@@ -651,7 +652,7 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
-              <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-1 font-bold">MINTOR: $9.99/MO</span>
+              <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-1 font-bold">MINTOR: $99.99 SETUP + $9.99/MO</span>
               <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-1 font-bold">TRUST: $25 DOWN / $19.79 MO</span>
               <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">CLASS: AI-GENERATED EQUITY</span>
               <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-1">FREE: FRONT PAGE ONLY</span>
@@ -711,7 +712,7 @@ export default function LandingPage() {
               POSITION TIERS & FINANCING TERMS
             </h2>
             <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
-              &gt; DUAL-STREAM REVENUE MODEL | <span className="text-lime-400 font-bold">MINTOR $9.99/MO</span> | <span className="text-amber-400 font-bold">TRUST $25 DOWN</span>
+              &gt; DUAL-STREAM REVENUE MODEL | <span className="text-lime-400 font-bold">MINTOR $99.99 + $9.99/MO</span> | <span className="text-amber-400 font-bold">TRUST $25 DOWN</span>
             </p>
           </div>
 
@@ -785,7 +786,7 @@ export default function LandingPage() {
                         className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
                         data-testid="button-mintor-checkout"
                       >
-                        ACTIVATE MINTOR — $9.99/MO
+                        ACTIVATE MINTOR — $99.99 + $9.99/MO
                       </a>
                     ) : isTrust ? (
                       <a

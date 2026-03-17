@@ -58,10 +58,10 @@ const plans = [
   {
     id: "mintor",
     name: "Mint Factory CEO",
-    price: "$9.99",
-    period: "/month",
+    price: "$99.99",
+    period: " setup",
     stream: "mintor",
-    description: "Full exchange access — mint & trade all asset classes",
+    description: "$99.99 set-up fee + $9.99/mo recurring — full exchange access",
     features: [
       { text: "Full Sovereign Exchange access", included: true },
       { text: "Mint & trade all asset classes", included: true },
@@ -75,7 +75,7 @@ const plans = [
       { text: "Lossless audio quality", included: true },
     ],
     popular: true,
-    cta: "ACTIVATE MINTOR — $9.99/MO",
+    cta: "ACTIVATE MINTOR — $99.99 + $9.99/MO",
     gradient: "from-lime-800 to-lime-900",
     iconColor: "text-lime-400",
     borderColor: "border-lime-400/30",
@@ -281,7 +281,7 @@ function PayPalCheckoutDialog({
           </DialogTitle>
           <DialogDescription>
             {tier === "mint_factory_ceo"
-              ? `Complete your one-time payment of $${amount} via PayPal to join as a Mint Factory CEO. After joining, it's $9.99/month to stay active.`
+              ? `Complete your $99.99 set-up fee via PayPal to join as a Mint Factory CEO. After joining, it's $9.99/month recurring to stay active.`
               : `Complete your payment of $${amount}/month via PayPal to activate your ${tierName} access.`}
           </DialogDescription>
         </DialogHeader>
@@ -292,7 +292,7 @@ function PayPalCheckoutDialog({
               <div>
                 <p className="font-semibold">{tierName}</p>
                 <p className="text-sm text-muted-foreground">
-                  {tier === "mint_factory_ceo" ? "One-time join fee + $9.99/month" : "Monthly subscription"}
+                  {tier === "mint_factory_ceo" ? "$99.99 set-up fee + $9.99/mo recurring" : "Monthly subscription"}
                 </p>
               </div>
               <p className="text-2xl font-bold">${amount}</p>
@@ -347,7 +347,7 @@ export default function MembershipPage() {
       apiRequest("POST", "/api/user/membership/gold-subscription/activate", {}).then(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
         queryClient.invalidateQueries({ queryKey: ["/api/user/membership/subscription-status"] });
-        toast({ title: "Subscription activated!", description: "Your $9.99/month Mint Factory CEO subscription is set up. First charge in 30 days." });
+        toast({ title: "Subscription activated!", description: "Your $9.99/mo Mint Factory CEO recurring subscription is set up. First charge in 30 days." });
       }).catch(() => {
         toast({ title: "Subscription pending", description: "Your subscription may take a moment to activate. Check back shortly." });
       });
@@ -368,7 +368,7 @@ export default function MembershipPage() {
       if (variables.tier === "mint_factory_ceo") {
         toast({
           title: "Mint Factory CEO joining fee paid!",
-          description: "Setting up your $9.99/month subscription...",
+          description: "Setting up your $9.99/mo recurring subscription...",
         });
         setSubscriptionLoading(true);
         try {
@@ -570,7 +570,7 @@ export default function MembershipPage() {
                       data-testid="button-mintor-checkout"
                     >
                       <Button className="w-full bg-lime-600 hover:bg-lime-700 text-white border-0 font-extrabold shadow-lg shadow-lime-500/20">
-                        ACTIVATE MINTOR — $9.99/MO
+                        ACTIVATE MINTOR — $99.99 + $9.99/MO
                       </Button>
                     </a>
                   ) : isTrust ? (

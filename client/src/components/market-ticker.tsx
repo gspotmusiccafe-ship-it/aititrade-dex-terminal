@@ -28,7 +28,7 @@ export function MarketTicker() {
   });
 
   const { data: trackAssets } = useQuery<any[]>({
-    queryKey: ["/api/tracks"],
+    queryKey: ["/api/tracks/featured"],
     refetchInterval: 60000,
   });
 

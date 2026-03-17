@@ -29,7 +29,7 @@ import DashboardPage from "@/pages/dashboard";
 import TrustVaultPage from "@/pages/trust-vault";
 import { useEffect } from "react";
 
-const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee"];
+const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee", "gold"];
 
 interface MembershipData {
   tier: string;
