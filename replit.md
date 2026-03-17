@@ -22,10 +22,14 @@ The application employs a full-stack architecture:
 - **Payments**: PayPal Web SDK handles all payment transactions for subscriptions and artist tips.
 
 **Key Features & Technical Implementations:**
+- **Sovereign Exchange / Trading Floor**: Bloomberg Terminal-style UI (emerald-on-black, font-mono) with Asset Cards for each track. Tracks display as tradeable assets with ticker symbols, gross sales, units sold, unit price, yield, and capacity bars. $1K sales ceiling per asset with 60% capacity warnings and settlement locks at $300/15 holders.
+- **Digital Order System**: "ACQUIRE POSITION" button generates a Digital Tracking Number (ATFY-xxxxx) as proof of ownership. Orders are recorded in the `orders` table with atomic transaction-based placement (race-condition-safe). Each order increments the track's `salesCount`. A Digital Receipt modal displays the Certificate ID, asset name, unit price, ledger gross, capacity %, and confirmation status. No hard asset downloads — orders are ledger entries (paper trades).
+- **Asset Classes**: `standard` (emerald styling) and `inspirational` (violet styling with yield band 30%-45%). Set via `asset_class` column in `tracks` table.
 - **Music Streaming**: Core functionality for browsing and playing tracks.
 - **User Management**: Includes free accounts, various premium membership tiers (Silver, Bronze, Gold/Artist Pro) with tiered access to features like playlists and pre-release content.
 - **Artist Portal**: Allows artists to manage profiles, upload tracks, set pre-release dates, and access features like an AI Lyrics Generator (using OpenAI) and an Audio Mastering Engine (utilizing ffmpeg for processing).
 - **Admin Portal**: A comprehensive dashboard for platform analytics, user and artist management, content moderation, managing radio playlists (97.7 THE FLAME), radio shows, membership oversight, tracking Spotify stream qualifiers, and the Spotify Royalty Tracker (paste Spotify URLs to auto-load stream counts and track 1K qualification for royalties).
+- **JAM Console**: Bloomberg Terminal-reskinned Radio & Jam Sessions page with Spotify remote controls, engagement tracking, and live session management. All Spotify mutations (play, pause, skip, shuffle, repeat) intact.
 - **Distribution System**: Facilitates artists submitting music for distribution, with admin review and approval workflows.
 - **Leaderboard**: Displays ranked tracks based on engagement scores, with a badging system (Bronze/Silver/Gold/Platinum) and promotional features.
 - **File Storage**: All uploaded files (audio, images) are stored in Replit Object Storage (GCS-backed) for persistence and scalability. Files are uploaded via Multer, then transferred to object storage, and served via a `/cloud/uploads/` route.

@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -211,6 +211,76 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching featured tracks:", error);
       res.status(500).json({ message: "Failed to fetch tracks" });
+    }
+  });
+
+  app.post("/api/orders", async (req, res) => {
+    try {
+      const { trackId } = req.body;
+      if (!trackId || typeof trackId !== "string") return res.status(400).json({ message: "trackId required" });
+
+      const result = await db.transaction(async (tx) => {
+        const [track] = await tx.select().from(tracks).where(eq(tracks.id, trackId));
+        if (!track) throw new Error("NOT_FOUND");
+
+        const price = parseFloat(track.unitPrice || "0.99");
+        if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
+
+        const currentSales = track.salesCount || 0;
+        const currentGross = currentSales * price;
+        if (currentGross >= 1000) throw new Error("CEILING_REACHED");
+
+        const ts = Date.now().toString(36).toUpperCase();
+        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+        const trackingNumber = `ATFY-${ts}-${rand}`;
+
+        const [order] = await tx.insert(orders).values({
+          trackId,
+          trackingNumber,
+          unitPrice: price.toString(),
+          status: "confirmed",
+        }).returning();
+
+        const [updated] = await tx.update(tracks)
+          .set({ salesCount: sql`${tracks.salesCount} + 1` })
+          .where(eq(tracks.id, trackId))
+          .returning();
+
+        const newSales = updated.salesCount || currentSales + 1;
+        const newGross = parseFloat((newSales * price).toFixed(2));
+        const capacityPct = Math.min(100, parseFloat(((newGross / 1000) * 100).toFixed(1)));
+
+        return {
+          order: { id: order.id, trackingNumber: order.trackingNumber, status: order.status, createdAt: order.createdAt },
+          receipt: {
+            trackingNumber: order.trackingNumber,
+            asset: track.title,
+            unitPrice: price,
+            grossSales: newGross,
+            capacityPct,
+            status: newGross >= 1000 ? "CLOSED" : "CONFIRMED",
+            timestamp: new Date().toISOString(),
+          },
+        };
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      if (error.message === "NOT_FOUND") return res.status(404).json({ message: "Asset not found" });
+      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "TRADE CLOSED — $1K CEILING REACHED" });
+      if (error.message === "INVALID_PRICE") return res.status(400).json({ message: "Invalid asset price" });
+      console.error("Order placement error:", error);
+      res.status(500).json({ message: "Order failed" });
+    }
+  });
+
+  app.get("/api/orders/:trackId/count", async (req, res) => {
+    try {
+      const [result] = await db.select({ total: count() }).from(orders)
+        .where(eq(orders.trackId, req.params.trackId));
+      res.json({ trackId: req.params.trackId, totalOrders: result?.total || 0 });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch order count" });
     }
   });
 

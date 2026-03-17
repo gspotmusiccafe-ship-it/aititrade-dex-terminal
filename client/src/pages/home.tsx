@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Play, Pause, Music, ShoppingCart, Activity, Zap, Lock, AlertTriangle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { TrackWithArtist } from "@shared/schema";
 
 const CEILING = 1000.00;
@@ -12,9 +13,81 @@ const SETTLEMENT_PAYOUT = 300.00;
 const HOLDER_COUNT = 15;
 const PAYHIP_STORE = "https://payhip.com/aitifymusicstore";
 
+interface OrderReceipt {
+  trackingNumber: string;
+  asset: string;
+  unitPrice: number;
+  grossSales: number;
+  capacityPct: number;
+  status: string;
+  timestamp: string;
+}
+
+function DigitalReceipt({ receipt, onClose }: { receipt: OrderReceipt; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-black border border-emerald-500/40 font-mono max-w-sm w-full shadow-2xl shadow-emerald-500/10" onClick={e => e.stopPropagation()} data-testid="digital-receipt">
+        <div className="border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileCheck className="h-3.5 w-3.5 text-emerald-400" />
+            <span className="text-[10px] text-emerald-400 font-bold">DIGITAL ORDER CONFIRMED</span>
+          </div>
+          <button onClick={onClose} className="text-emerald-500/40 hover:text-emerald-400"><X className="h-3.5 w-3.5" /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
+            <p className="text-[8px] text-emerald-500/40 mb-1">TRACKING NUMBER / CERTIFICATE ID</p>
+            <p className="text-sm text-emerald-400 font-black tracking-wider" data-testid="text-tracking-number">{receipt.trackingNumber}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-1 text-center">
+            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
+              <p className="text-[8px] text-emerald-500/40">ASSET</p>
+              <p className="text-[10px] text-emerald-400 font-bold">{receipt.asset.toUpperCase()}</p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
+              <p className="text-[8px] text-emerald-500/40">UNIT PRICE</p>
+              <p className="text-[10px] text-emerald-400 font-bold">${receipt.unitPrice.toFixed(2)}</p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
+              <p className="text-[8px] text-emerald-500/40">LEDGER GROSS</p>
+              <p className="text-[10px] text-white font-bold">${receipt.grossSales.toFixed(2)}</p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
+              <p className="text-[8px] text-emerald-500/40">CAPACITY</p>
+              <p className={`text-[10px] font-bold ${receipt.capacityPct >= 60 ? "text-yellow-400" : "text-emerald-400"}`}>{receipt.capacityPct}%</p>
+            </div>
+          </div>
+          <div className="border border-emerald-500/10 bg-zinc-900 p-2 text-center">
+            <p className="text-[8px] text-emerald-500/40">STATUS</p>
+            <p className={`text-xs font-black ${receipt.status === "CLOSED" ? "text-red-400" : "text-emerald-400"}`}>
+              {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "POSITION ACQUIRED — PROOF OF OWNERSHIP"}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-[8px] text-emerald-500/30">{receipt.timestamp}</p>
+            <p className="text-[8px] text-emerald-500/20 mt-1">AITIFY SOVEREIGN EXCHANGE — DIGITAL ORDER RECEIPT</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
+  const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
+
+  const orderMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/orders", { trackId: track.id });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      setReceipt(data.receipt);
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+    },
+  });
 
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
@@ -169,15 +242,14 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
               <Lock className="h-3 w-3" /> TRADE CLOSED
             </div>
           ) : (
-            <a
-              href={PAYHIP_STORE}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-1 bg-emerald-600 text-white text-[10px] font-bold py-1.5 text-center hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1"
-              data-testid={`button-buy-${track.id}`}
+            <button
+              onClick={() => orderMutation.mutate()}
+              disabled={orderMutation.isPending}
+              className="flex-1 bg-emerald-600 text-white text-[10px] font-bold py-1.5 text-center hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+              data-testid={`button-acquire-${track.id}`}
             >
-              <ShoppingCart className="h-3 w-3" /> BUY @ {priceLabel}
-            </a>
+              <FileCheck className="h-3 w-3" /> {orderMutation.isPending ? "PLACING..." : `ACQUIRE POSITION @ ${priceLabel}`}
+            </button>
           )}
           <button
             className="flex-1 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold py-1.5 text-center hover:bg-emerald-500/10 transition-colors"
@@ -188,6 +260,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           </button>
         </div>
       </div>
+      {receipt && <DigitalReceipt receipt={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
 }

@@ -49,6 +49,21 @@ export const tracks = pgTable("tracks", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const orders = pgTable("orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  trackingNumber: varchar("tracking_number").notNull(),
+  buyerEmail: varchar("buyer_email"),
+  buyerName: varchar("buyer_name"),
+  unitPrice: text("unit_price").notNull().default("0.99"),
+  status: varchar("status").default("confirmed"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, trackingNumber: true, createdAt: true });
+export type InsertOrder = z.infer<typeof insertOrderSchema>;
+export type Order = typeof orders.$inferSelect;
+
 export const videos = pgTable("videos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   artistId: varchar("artist_id").notNull().references(() => artists.id),
