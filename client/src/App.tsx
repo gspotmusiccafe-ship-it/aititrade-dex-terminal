@@ -1,6 +1,6 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -25,6 +25,8 @@ import RadioPage from "@/pages/radio";
 import BrowsePage from "@/pages/browse";
 import PlaylistPage from "@/pages/playlist";
 import LeaderboardPage from "@/pages/leaderboard";
+
+const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo"];
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -58,8 +60,47 @@ function AppRouter() {
   );
 }
 
+function PremiumGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  const { data: membership, isLoading: membershipLoading } = useQuery<{ tier: string; isActive: boolean }>({
+    queryKey: ["/api/user/membership"],
+    enabled: isAuthenticated,
+  });
+
+  if (!isAuthenticated) return <LandingPage />;
+
+  if (membershipLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-emerald-500/20 animate-pulse" />
+          <p className="text-emerald-500/50 font-mono text-xs">VERIFYING ACCESS...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tier = membership?.tier || "free";
+  const isPremium = PREMIUM_TIERS.includes(tier) && membership?.isActive !== false;
+
+  if (!isPremium) return <LandingPage />;
+
+  return <>{children}</>;
+}
+
+function useIsPremiumUser() {
+  const { isAuthenticated } = useAuth();
+  const { data: membership } = useQuery<{ tier: string; isActive: boolean }>({
+    queryKey: ["/api/user/membership"],
+    enabled: isAuthenticated,
+  });
+  const tier = membership?.tier || "free";
+  return isAuthenticated && PREMIUM_TIERS.includes(tier) && membership?.isActive !== false;
+}
+
 function AuthenticatedLayout() {
   const { isAuthenticated, isLoading } = useAuth();
+  const isPremium = useIsPremiumUser();
 
   if (isLoading) {
     return (
@@ -80,11 +121,11 @@ function AuthenticatedLayout() {
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        {isAuthenticated && <AppSidebar />}
+        {isPremium && <AppSidebar />}
         <SidebarInset className="flex flex-col flex-1">
           <div className="sticky top-0 z-40">
             <MarketTicker />
-            {isAuthenticated && (
+            {isPremium && (
               <header className="flex items-center justify-between p-2 border-b border-emerald-500/10 bg-black">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
                 <ThemeToggle />
@@ -93,18 +134,18 @@ function AuthenticatedLayout() {
           </div>
           <main className="flex-1 overflow-auto">
             <Switch>
-              <Route path="/" component={HomePage} />
-              <Route path="/search" component={isAuthenticated ? SearchPage : LandingPage} />
-              <Route path="/library" component={isAuthenticated ? LibraryPage : LandingPage} />
+              <Route path="/">{() => <PremiumGate><HomePage /></PremiumGate>}</Route>
+              <Route path="/search">{() => <PremiumGate><SearchPage /></PremiumGate>}</Route>
+              <Route path="/library">{() => <PremiumGate><LibraryPage /></PremiumGate>}</Route>
               <Route path="/membership" component={MembershipPage} />
-              <Route path="/artist-portal" component={isAuthenticated ? ArtistPortalPage : LandingPage} />
-              <Route path="/liked" component={isAuthenticated ? LikedSongsPage : LandingPage} />
-              <Route path="/artist/:id" component={ArtistPage} />
-              <Route path="/admin" component={isAuthenticated ? AdminPage : LandingPage} />
-              <Route path="/radio" component={RadioPage} />
-              <Route path="/leaderboard" component={LeaderboardPage} />
-              <Route path="/playlist/:id" component={isAuthenticated ? PlaylistPage : LandingPage} />
-              <Route path="/browse/:section" component={BrowsePage} />
+              <Route path="/artist-portal">{() => <PremiumGate><ArtistPortalPage /></PremiumGate>}</Route>
+              <Route path="/liked">{() => <PremiumGate><LikedSongsPage /></PremiumGate>}</Route>
+              <Route path="/artist/:id">{() => <PremiumGate><ArtistPage /></PremiumGate>}</Route>
+              <Route path="/admin">{() => <PremiumGate><AdminPage /></PremiumGate>}</Route>
+              <Route path="/radio">{() => <PremiumGate><RadioPage /></PremiumGate>}</Route>
+              <Route path="/leaderboard">{() => <PremiumGate><LeaderboardPage /></PremiumGate>}</Route>
+              <Route path="/playlist/:id">{() => <PremiumGate><PlaylistPage /></PremiumGate>}</Route>
+              <Route path="/browse/:section">{() => <PremiumGate><BrowsePage /></PremiumGate>}</Route>
               <Route path="/login" component={LandingPage} />
               <Route component={NotFound} />
             </Switch>

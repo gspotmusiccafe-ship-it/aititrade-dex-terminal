@@ -31,14 +31,15 @@ const TIER_NAMES: Record<string, string> = {
 const plans = [
   {
     id: "free",
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    description: "Listen on 97.7 THE FLAME radio — no login required",
+    name: "Front Page Investor",
+    price: "FREE",
+    period: "",
+    description: "Paper trading on the landing page — Spotify account required",
     features: [
-      { text: "Stream on 97.7 THE FLAME radio", included: true },
-      { text: "No login required", included: true },
-      { text: "Inside app access", included: false },
+      { text: "Paper trading on 97.7 THE FLAME", included: true },
+      { text: "Stream AI-generated assets", included: true },
+      { text: "Landing page access only", included: true },
+      { text: "Inside exchange access", included: false },
       { text: "Pre-release / High-Volatility assets", included: false },
       { text: "Minting rights", included: false },
     ],

@@ -334,52 +334,58 @@ const features = [
 
 const membershipTiers = [
   {
-    name: "Free",
-    price: "$0",
-    period: "forever",
-    features: ["Listen to released music", "Follow artists & like tracks", "Tip artists via PayPal", "Buy songs", "AITIFY MUSIC RADIO 97.7 THE FLAME"],
-    highlight: false,
-  },
-  {
-    name: "Silver",
-    price: "$1.99",
-    period: "/month",
+    name: "Front Page Investor",
+    price: "FREE",
+    period: "",
     features: [
-      "Listen to released music",
-      "Follow artists",
-      "Create unlimited playlists",
+      "Paper trading on 97.7 THE FLAME",
+      "Stream AI-generated assets",
+      "Free Spotify account required",
+      "Landing page access only",
+      "No inside exchange access",
     ],
     highlight: false,
   },
   {
-    name: "Bronze",
-    price: "$3.99",
+    name: "Entry Trader",
+    price: "$4.99",
     period: "/month",
     features: [
-      "Released + pre-release music",
-      "Create unlimited playlists",
-      "Watch music videos",
+      "Inside exchange access",
+      "Acquire standard positions",
+      "Follow artists & create playlists",
+      "Standard audio quality",
+    ],
+    highlight: false,
+  },
+  {
+    name: "Exchange Trader",
+    price: "$24.99",
+    period: "/month",
+    features: [
+      "Full exchange access",
+      "All assets + pre-release papers",
+      "High-Volatility trading",
+      "Priority settlement queue",
       "High quality audio",
     ],
     highlight: true,
   },
   {
-    name: "Gold",
-    price: "$49.99",
+    name: "Mint Factory CEO",
+    price: "$99",
     period: " to join",
     features: [
-      "Everything in Bronze + $9.99/mo",
-      "Unlimited track uploads",
-      "Upload music videos (MP3/YouTube)",
+      "Everything in Exchange Trader",
+      "$9.99/month to stay active",
+      "16% Daily Trading Credit",
+      "Minting rights — upload assets",
       "AI Lyrics Generator",
-      "Aitify Music Production Team",
-      "Professional audio mastering",
+      "Audio mastering engine",
       "Distribution to all platforms",
       "Marketing & promotions",
-      "Aitify Music Store (25% retention)",
-      "Tip Jar from fans via PayPal",
-      "Leaderboard ranking & tier badges",
-      "Analytics dashboard",
+      "25% store retention",
+      "Leaderboard & analytics",
       "Lossless audio quality",
     ],
     highlight: false,
@@ -639,10 +645,11 @@ export default function LandingPage() {
               SETTLEMENT RATE: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">CLASS: MUSICAL EQUITY</span>
-              <span className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-2 py-1">CEO POS: $99</span>
-              <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-1">INVESTOR POS: $25</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">FINANCING: $475 TERMS</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">CLASS: AI-GENERATED EQUITY</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-2 py-1">MINT FACTORY CEO: $99</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">EXCHANGE TRADER: $24.99</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-2 py-1">ENTRY TRADER: $4.99</span>
+              <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-1">FREE: FRONT PAGE ONLY</span>
             </div>
           </div>
 
@@ -712,7 +719,7 @@ export default function LandingPage() {
                     ? "border-emerald-500/60 bg-black"
                     : "border-emerald-500/20 bg-black hover:border-emerald-500/40"
                 }`}
-                data-testid={`pricing-tier-${tier.name.toLowerCase()}`}
+                data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {tier.highlight && (
                   <div className="bg-emerald-500/20 text-emerald-400 text-center py-1 text-[9px] font-bold uppercase tracking-wider border-b border-emerald-500/30">
@@ -726,21 +733,24 @@ export default function LandingPage() {
                       <span className="text-2xl font-black text-white">{tier.price}</span>
                       <span className="text-emerald-500/40 text-[10px]">{tier.period}</span>
                     </div>
-                    {tier.name !== "Free" && (
-                      <p className="text-[9px] text-yellow-400/70 mt-1">$475 FINANCING TERMS AVAILABLE</p>
+                    {tier.name === "Front Page Investor" && (
+                      <p className="text-[9px] text-zinc-500 mt-1">PAPER TRADING ONLY — SPOTIFY ACCOUNT REQUIRED</p>
+                    )}
+                    {tier.name !== "Front Page Investor" && (
+                      <p className="text-[9px] text-emerald-500/50 mt-1">INSIDE EXCHANGE ACCESS</p>
                     )}
                   </div>
 
                   <ul className="space-y-2 mb-5">
                     {tier.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-2 text-[11px] text-emerald-500/60">
-                        <span className="text-emerald-400 mt-0.5">▸</span>
-                        <span>{feature}</span>
+                        <span className={`mt-0.5 ${tier.name === "Front Page Investor" && feature.includes("No ") ? "text-red-400" : "text-emerald-400"}`}>▸</span>
+                        <span className={tier.name === "Front Page Investor" && feature.includes("No ") ? "text-red-400/60" : ""}>{feature}</span>
                       </li>
                     ))}
                   </ul>
 
-                  {tier.name !== "Free" ? (
+                  {tier.name !== "Front Page Investor" ? (
                     <button
                       className={`w-full py-2 text-[10px] font-bold transition-colors ${tier.highlight ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
                       onClick={() => openAuth("signup")}
@@ -749,10 +759,10 @@ export default function LandingPage() {
                     </button>
                   ) : (
                     <button
-                      className="w-full py-2 text-[10px] font-bold border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+                      className="w-full py-2 text-[10px] font-bold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors"
                       onClick={() => openAuth("signup")}
                     >
-                      OPEN FREE ACCOUNT
+                      CREATE FREE ACCOUNT
                     </button>
                   )}
                 </div>
