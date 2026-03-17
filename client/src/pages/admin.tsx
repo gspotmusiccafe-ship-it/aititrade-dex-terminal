@@ -1999,6 +1999,7 @@ function CeoVaultTab() {
   const generateBlueprint = (theme: string) => {
     const t = theme.trim() || "Untitled Dynomite";
     const ticker = `$${t.toUpperCase().replace(/\s+/g, '').slice(0, 10)}`;
+    const lyricsTemplate = `[Intro: 10s Instrumental Snap]\n[Chorus: Explosive Energy]\n(Enter your 70-word firecracker here...)\n[Verse: High-Velocity Bars]\n[Bridge: Tension]\n[Outro: Sudden Cut-off/Fade]`;
     setBlueprint({
       theme: t,
       ticker,
@@ -2006,10 +2007,12 @@ function CeoVaultTab() {
       wordConstraint: 70,
       durationTarget: "90 Seconds",
       sunoTags: "Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity",
+      lyricsTemplate,
       lyricPrompt: `Write exactly 70 words. R&B/Soul. Theme: ${t}. Structure: [Intro][Chorus][Verse][Bridge][Outro]. High energy.`,
       sunoPrompt: `[Intro: Atmospheric, 4x4 Snap, 10s] [Chorus: Exploding energy, Soulful R&B, 20s] [Verse: Rapid fire, 70 words total, 25s] [Bridge: High tension, 15s] [Outro: Sudden Cut-off, 20s]. Theme: "${t}". Tags: Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity.`,
-      ideogramPrompt: `Cinematic Dynomite, firecracker wrapped in gold foil, explosive R&B aesthetic, luxury 8k render, neon emerald lighting, "AITIFY" branding in smoke, no text on gold foil. Theme: "${t}".`,
-      youtubeDescription: `AITIFY DYNOMITE SERIES — "${t}". High-Velocity Asset. 90-Second Burn. Sector: ${ticker}. Stream now on all platforms.`,
+      ideogramPrompt: `Album cover, 1:1 aspect ratio, cinematic dynomite firecracker wrapped in gold foil, "AITIFY" embossed on gold, luxury R&B aesthetic, 8k render, emerald neon smoke, hyper-realistic lighting. Theme: "${t}".`,
+      youtubeTitle: `${t.toUpperCase()} (AITIFY DYNOMITE SERIES)`,
+      youtubeDescription: `TITLE: ${t.toUpperCase()} (AITIFY DYNOMITE SERIES)\nDESCRIPTION:\nOfficial high-velocity asset from AITIFY.\nSector: ${ticker} | Type: Firecracker (90s Burn)\nStream settlement verified at 97.7 THE FLAME.\n#Aitify #SovereignAsset #Dynomite`,
     });
     toast({ title: `Blueprint generated: ${ticker}` });
   };
@@ -2092,6 +2095,16 @@ function CeoVaultTab() {
               </div>
 
               <div className="space-y-2">
+                <div className="bg-black/40 rounded p-3 border border-yellow-500/20">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-yellow-400 font-mono">LYRICS TEMPLATE</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.lyricsTemplate, "Lyrics template")} data-testid="button-copy-template">
+                      <Copy className="h-3 w-3 mr-1" /> Copy
+                    </Button>
+                  </div>
+                  <pre className="text-xs text-yellow-300/80 leading-relaxed whitespace-pre-wrap font-mono">{blueprint.lyricsTemplate}</pre>
+                </div>
+
                 <div className="bg-black/40 rounded p-3 border border-zinc-800">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-yellow-400 font-mono">LYRIC PROMPT</span>
@@ -2122,14 +2135,14 @@ function CeoVaultTab() {
                   <p className="text-xs text-zinc-300 leading-relaxed">{blueprint.ideogramPrompt}</p>
                 </div>
 
-                <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                <div className="bg-black/40 rounded p-3 border border-red-500/20">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-red-400 font-mono">YOUTUBE DESCRIPTION</span>
-                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.youtubeDescription, "YouTube description")} data-testid="button-copy-youtube">
+                    <span className="text-xs font-bold text-red-400 font-mono">YOUTUBE METADATA</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.youtubeDescription, "YouTube metadata")} data-testid="button-copy-youtube">
                       <Copy className="h-3 w-3 mr-1" /> Copy
                     </Button>
                   </div>
-                  <p className="text-xs text-zinc-300 leading-relaxed">{blueprint.youtubeDescription}</p>
+                  <pre className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-mono">{blueprint.youtubeDescription}</pre>
                 </div>
               </div>
             </div>
