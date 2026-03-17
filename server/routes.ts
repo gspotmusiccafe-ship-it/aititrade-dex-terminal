@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -207,6 +207,7 @@ export async function registerRoutes(
         .select()
         .from(tracks)
         .innerJoin(artists, eq(tracks.artistId, artists.id))
+        .where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`)
         .orderBy(desc(tracks.playCount));
       const allTracks = allResult.map(r => ({ ...r.tracks, artist: r.artists }));
       res.json(allTracks);
@@ -216,10 +217,104 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/orders", async (req, res) => {
+  app.get("/api/tracks/trust-vault", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const membership = await storage.getUserMembership(userId);
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.isAdmin === true;
+
+      if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
+        return res.status(403).json({
+          message: "TRUST VAULT ACCESS DENIED",
+          redirect: "/membership",
+          requiredTier: "asset_trustee",
+        });
+      }
+
+      const globalResult = await db
+        .select()
+        .from(tracks)
+        .innerJoin(artists, eq(tracks.artistId, artists.id))
+        .where(eq(tracks.releaseType, "global"))
+        .orderBy(desc(tracks.playCount));
+      const globalTracks = globalResult.map(r => ({ ...r.tracks, artist: r.artists }));
+      res.json(globalTracks);
+    } catch (error) {
+      console.error("Error fetching trust vault:", error);
+      res.status(500).json({ message: "Failed to fetch trust vault" });
+    }
+  });
+
+  app.get("/api/royalty-pool", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const membership = await storage.getUserMembership(userId);
+      const user = await storage.getUser(userId);
+      const isAdmin = user?.isAdmin === true;
+
+      if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
+        return res.status(403).json({ message: "Royalty pool access requires Trust Investor status" });
+      }
+
+      const globalTracks = await db
+        .select()
+        .from(tracks)
+        .where(eq(tracks.releaseType, "global"));
+
+      const totalGlobalSales = globalTracks.reduce((sum, t) => {
+        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "0.99"));
+      }, 0);
+
+      const allTrustees = await db
+        .select()
+        .from(memberships)
+        .where(and(eq(memberships.trustInvestor, true), eq(memberships.isActive, true)));
+
+      const totalTrustUnits = allTrustees.length;
+      const royaltyRate = 0.16;
+      const totalRoyaltyPool = parseFloat((totalGlobalSales * royaltyRate).toFixed(2));
+      const perUnitShare = totalTrustUnits > 0 ? parseFloat((totalRoyaltyPool / totalTrustUnits).toFixed(4)) : 0;
+
+      const userShare = allTrustees.find(t => t.userId === userId) ? perUnitShare : 0;
+
+      res.json({
+        totalGlobalAssets: globalTracks.length,
+        totalGlobalSales: parseFloat(totalGlobalSales.toFixed(2)),
+        royaltyRate: `${(royaltyRate * 100).toFixed(0)}%`,
+        totalRoyaltyPool,
+        totalTrustUnits,
+        perUnitShare,
+        userShare,
+        distribution: allTrustees.map(t => ({
+          userId: t.userId,
+          share: perUnitShare,
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching royalty pool:", error);
+      res.status(500).json({ message: "Failed to fetch royalty pool" });
+    }
+  });
+
+  app.post("/api/orders", async (req: any, res) => {
     try {
       const { trackId } = req.body;
       if (!trackId || typeof trackId !== "string") return res.status(400).json({ message: "trackId required" });
+
+      const [preCheck] = await db.select().from(tracks).where(eq(tracks.id, trackId));
+      if (preCheck && (preCheck.releaseType || "native") === "global") {
+        const userId = req.user?.claims?.sub;
+        if (!userId) {
+          return res.status(403).json({ message: "TRUST VAULT — Authentication required for Global Assets", redirect: "/membership" });
+        }
+        const membership = await storage.getUserMembership(userId);
+        const user = await storage.getUser(userId);
+        const isAdmin = user?.isAdmin === true;
+        if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
+          return res.status(403).json({ message: "GLOBAL ASSET — Trust Certificate Required. Only Asset Trustees can acquire Global positions.", redirect: "/membership" });
+        }
+      }
 
       const result = await db.transaction(async (tx) => {
         const [track] = await tx.select().from(tracks).where(eq(tracks.id, trackId));
@@ -1139,6 +1234,7 @@ export async function registerRoutes(
         .select()
         .from(tracks)
         .innerJoin(artists, eq(tracks.artistId, artists.id))
+        .where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`)
         .orderBy(desc(tracks.isPrerelease), desc(tracks.playCount));
       const allTracks = result.map(r => ({ ...r.tracks, artist: r.artists }));
       res.json(allTracks);

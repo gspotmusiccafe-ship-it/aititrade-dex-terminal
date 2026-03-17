@@ -262,17 +262,17 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const priceLabel = price === 0.99 ? "$0.99" : price === 2.50 ? "$2.50" : price === 5.00 ? "$5.00" : `$${price.toFixed(2)}`;
   const priceClass = price >= 5 ? "text-amber-400" : price >= 2.50 ? "text-yellow-300" : "text-lime-400";
 
-  const borderColor = isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : isGlobal ? "border-blue-500/30 hover:border-blue-500/60" : isInspirational ? "border-violet-500/40 hover:border-violet-500/70" : "border-emerald-500/20 hover:border-emerald-500/60";
-  const headerBg = isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : isGlobal ? "border-blue-500/20 bg-blue-500/5" : isInspirational ? "border-violet-500/20 bg-violet-500/5" : "border-emerald-500/10 bg-emerald-500/5";
+  const borderColor = isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : isGlobal ? "border-amber-500/40 hover:border-amber-400/70" : isInspirational ? "border-violet-500/40 hover:border-violet-500/70" : "border-emerald-500/20 hover:border-emerald-500/60";
+  const headerBg = isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : isGlobal ? "border-amber-500/20 bg-amber-500/5" : isInspirational ? "border-violet-500/20 bg-violet-500/5" : "border-emerald-500/10 bg-emerald-500/5";
 
   return (
     <div className={`bg-black border font-mono group transition-all ${borderColor}`} data-testid={`asset-card-${track.id}`}>
       <div className={`border-b px-3 py-1.5 flex items-center justify-between ${headerBg}`}>
         <div className="flex items-center gap-2">
-          <span className={`font-bold text-sm ${isClosed ? "text-red-400" : isGlobal ? "text-blue-400" : isInspirational ? "text-violet-400" : "text-lime-400"}`}>{ticker}</span>
+          <span className={`font-bold text-sm ${isClosed ? "text-red-400" : isGlobal ? "text-amber-400" : isInspirational ? "text-violet-400" : "text-lime-400"}`}>{ticker}</span>
           <span className="text-zinc-400 text-[10px] font-semibold">{assetId}</span>
           {isGlobal && (
-            <span className="text-[8px] px-1 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold flex items-center gap-0.5"><Globe className="h-2.5 w-2.5" /> GLOBAL</span>
+            <span className="text-[8px] px-1 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold flex items-center gap-0.5"><Globe className="h-2.5 w-2.5" /> TRUST VAULT</span>
           )}
           {isInspirational && !isGlobal && (
             <span className="text-[8px] px-1 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">INSPIRATIONAL</span>
@@ -284,8 +284,8 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
         <div className="flex items-center gap-1.5">
           <span className={`text-[11px] font-extrabold ${priceClass}`}>{priceLabel}</span>
           {isGlobal ? (
-            <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 font-bold flex items-center gap-1">
-              <Shield className="h-2.5 w-2.5" /> VERIFIED
+            <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 font-extrabold flex items-center gap-1">
+              <Shield className="h-2.5 w-2.5" /> TRUST VAULT
             </span>
           ) : isClosed ? (
             <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-bold flex items-center gap-1">
@@ -362,12 +362,12 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
         </div>
 
         {isGlobal ? (
-          <div className="mb-2 px-2 py-2 border border-blue-500/20 bg-blue-500/5">
+          <div className="mb-2 px-2 py-2 border border-amber-500/20 bg-amber-500/5">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[9px] text-blue-400 font-bold flex items-center gap-1"><Globe className="h-3 w-3" /> VERIFIED GLOBAL RELEASE</span>
-              <span className="text-[9px] text-blue-300 font-bold flex items-center gap-1"><Shield className="h-3 w-3" /> TRUST CERTIFIED</span>
+              <span className="text-[9px] text-amber-400 font-extrabold flex items-center gap-1"><Globe className="h-3 w-3" /> GLOBAL YIELD ASSET</span>
+              <span className="text-[9px] text-amber-300 font-extrabold flex items-center gap-1"><Shield className="h-3 w-3" /> TRUST CERTIFIED</span>
             </div>
-            <p className="text-[8px] text-blue-500/40 text-center">NO CAP LIMIT — GLOBAL DISTRIBUTION — STORE FULFILLMENT</p>
+            <p className="text-[8px] text-amber-500/40 text-center">ROYALTY-BEARING — GLOBAL DISTRIBUTION — TRUST VAULT EXCLUSIVE</p>
           </div>
         ) : (
           <div className="mb-2">
@@ -430,14 +430,13 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
               <Lock className="h-3 w-3" /> PREMIUM TRADING ACCOUNT REQUIRED
             </a>
           ) : isGlobal ? (
-            <button
-              onClick={() => orderMutation.mutate()}
-              disabled={orderMutation.isPending}
-              className="flex-1 bg-blue-600 text-white text-[11px] font-extrabold py-2 text-center hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-              data-testid={`button-acquire-${track.id}`}
+            <a
+              href="/membership"
+              className="flex-1 bg-amber-600/20 border border-amber-500/40 text-amber-400 text-[11px] font-extrabold py-2 text-center flex items-center justify-center gap-1 hover:border-amber-400/60 hover:bg-amber-600/30 transition-colors"
+              data-testid={`button-trust-gate-${track.id}`}
             >
-              <Globe className="h-3 w-3" /> {orderMutation.isPending ? "VERIFYING..." : `ACQUIRE TRUST @ ${priceLabel}`}
-            </button>
+              <Shield className="h-3 w-3" /> TRUST CERTIFICATE REQUIRED — $25 DOWN
+            </a>
           ) : (
             <button
               onClick={() => orderMutation.mutate()}
@@ -449,7 +448,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             </button>
           )}
           <button
-            className={`flex-1 border ${isGlobal ? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"} text-[10px] font-bold py-1.5 text-center transition-colors`}
+            className={`flex-1 border ${isGlobal ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"} text-[10px] font-bold py-1.5 text-center transition-colors`}
             onClick={() => onPlay(track)}
             data-testid={`button-stream-${track.id}`}
           >
@@ -561,7 +560,7 @@ export default function HomePage() {
         <div className="flex items-center gap-4 text-[10px]">
           <span className="text-zinc-600">VARIANTS:</span>
           <span className="text-emerald-400">$0.99</span>
-          <span className="text-blue-400">$2.50</span>
+          <span className="text-amber-400">$2.50</span>
           <span className="text-yellow-400">$5.00</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">CLASS:</span>
