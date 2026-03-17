@@ -40,6 +40,7 @@ export const tracks = pgTable("tracks", {
   coverImage: text("cover_image"),
   playCount: integer("play_count").default(0),
   unitPrice: text("unit_price").default("3.50"),
+  buyBackRate: text("buy_back_rate").default("0.18"),
   salesCount: integer("sales_count").default(0),
   assetClass: varchar("asset_class").default("standard"),
   releaseType: varchar("release_type").default("native"),

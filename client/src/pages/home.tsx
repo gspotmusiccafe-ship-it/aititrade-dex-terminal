@@ -224,7 +224,7 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
   );
 }
 
-function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buyBackRate, paperTradeCap }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string; dynamicPoolSize?: number; dynamicPrice?: number; buyBackRate?: number; paperTradeCap?: number }) {
+function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -251,15 +251,15 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buy
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
 
-  const price = dynamicPrice || parseFloat((track as any).unitPrice || "3.50");
+  const price = parseFloat((track as any).unitPrice || "3.50");
   const sales = (track as any).salesCount || 0;
   const assetClass = ((track as any).assetClass || "standard").toLowerCase();
   const releaseType = ((track as any).releaseType || "native").toLowerCase();
   const isGlobal = releaseType === "global";
   const isInspirational = assetClass === "inspirational";
-  const poolCeiling = dynamicPoolSize || CEILING;
-  const ptCap = paperTradeCap || (poolCeiling * 0.50);
-  const bbRate = buyBackRate || 0.18;
+  const poolCeiling = CEILING;
+  const ptCap = poolCeiling * 0.50;
+  const bbRate = parseFloat((track as any).buyBackRate || "0.18");
   const bbLabel = `${Math.round(bbRate * 100)}%`;
   const minterFeeLabel = "16%";
   const grossSales = parseFloat((sales * price).toFixed(2));
@@ -267,8 +267,8 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buy
   const paperTradePct = Math.min(100, parseFloat(((grossSales / ptCap) * 100).toFixed(1)));
   const flashThreshold = poolCeiling * 0.9;
   const isFlashZone = !isGlobal && grossSales >= flashThreshold && grossSales < poolCeiling;
-  const isClosed = !isGlobal && (grossSales >= poolCeiling || (flashTimer !== null && flashTimer <= 0));
-  const isPaperCapHit = !isGlobal && grossSales >= ptCap && !isClosed;
+  const isClosed = !isGlobal && grossSales >= poolCeiling;
+  const isPaperCapHit = false;
   const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed && !isFlashZone;
   const remaining = Math.max(0, parseFloat((poolCeiling - grossSales).toFixed(2)));
   const unitsRemaining = price > 0 ? Math.ceil(remaining / price) : 0;
@@ -279,7 +279,6 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buy
   useEffect(() => {
     if (isFlashZone && !flashTriggeredRef.current && !isClosed) {
       flashTriggeredRef.current = true;
-      setFlashTimer(FLASH_TIMER_SECONDS);
     }
   }, [isFlashZone, isClosed]);
 
@@ -289,8 +288,6 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buy
       setFlashTimer(prev => {
         if (prev === null || prev <= 1) {
           clearInterval(interval);
-          setIsReconciling(true);
-          setTimeout(() => setIsReconciling(false), 30000);
           return 0;
         }
         return prev - 1;
@@ -447,29 +444,39 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buy
           <div className="mb-2">
             <div className="flex items-center justify-between mb-0.5">
               <span className={`text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-zinc-400"}`}>
-                POOL: ${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })} / ${poolCeiling.toLocaleString()} COLLECTED
+                MARKET PROGRESS
               </span>
-              <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>{capacityPct}%</span>
+              <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>
+                ${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })} / $1,000
+              </span>
             </div>
-            <div className="w-full bg-zinc-900 h-2 relative overflow-hidden">
+            <div className="w-full bg-zinc-900 h-3 relative overflow-hidden border border-zinc-700/50">
               <div
-                className={`h-2 transition-all ${isClosed ? "bg-red-500" : isFlashZone ? "bg-red-500 animate-pulse" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
+                className={`h-full transition-all duration-500 ${isClosed ? "bg-red-500" : isFlashZone ? "bg-red-500 animate-pulse" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
                 style={{ width: `${capacityPct}%` }}
               />
-              {isFlashZone && (
-                <div className="absolute right-0 top-0 h-2 w-[10%] bg-red-500/30 animate-pulse" />
+              {capacityPct >= 50 && capacityPct < 90 && (
+                <div className="absolute left-1/2 top-0 h-full w-px bg-amber-500/40" title="50% Paper Trade Cap" />
               )}
+              {isFlashZone && (
+                <div className="absolute right-0 top-0 h-full w-[10%] bg-red-500/30 animate-pulse" />
+              )}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={`text-[8px] font-black ${capacityPct > 50 ? "text-black" : "text-zinc-400"}`}>
+                  {capacityPct.toFixed(1)}%
+                </span>
+              </div>
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT — {reconciliationPct}% of 1K VOL</span>
+              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT</span>
               {!isClosed && !isFlashZone && (
-                <span className="text-lime-400/70 text-[10px] font-bold">{unitsRemaining} UNITS TO CLOSE</span>
+                <span className="text-lime-400/70 text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO SETTLE</span>
               )}
               {isFlashZone && !isClosed && (
-                <span className="text-red-400 text-[10px] font-extrabold animate-pulse">⚡ {unitsRemaining} UNITS LEFT</span>
+                <span className="text-red-400 text-[10px] font-extrabold animate-pulse">⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO RUSH</span>
               )}
-              {isClosed && !isReconciling && <span className="text-red-400 text-[10px] font-bold">SETTLED</span>}
-              {isReconciling && <span className="text-amber-400 text-[10px] font-extrabold">RECONCILING</span>}
+              {isClosed && !isReconciling && <span className="text-red-400 text-[10px] font-bold">SETTLED — REOPENING</span>}
+              {isReconciling && <span className="text-amber-400 text-[10px] font-extrabold">SETTLE & RE-ROLL</span>}
             </div>
           </div>
         )}
@@ -814,10 +821,6 @@ export default function HomePage() {
                 track={track}
                 onPlay={(t) => playTrack(t, displayTracks)}
                 userTier={userTier}
-                dynamicPoolSize={marketSession?.pools?.find(p => p.trackId === track.id)?.poolSize}
-                dynamicPrice={marketSession?.pools?.find(p => p.trackId === track.id)?.dynamicPrice}
-                buyBackRate={marketSession?.pools?.find(p => p.trackId === track.id)?.buyBackRate}
-                paperTradeCap={marketSession?.pools?.find(p => p.trackId === track.id)?.paperTradeCap}
               />
             ))}
           </div>
@@ -833,7 +836,7 @@ export default function HomePage() {
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
           <span>AITIFY SOVEREIGN MINT | 97.7 THE FLAME | AityPay ENGINE</span>
-          <span>CEILING: DYNAMIC | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 70/30</span>
+          <span>CEILING: $1K FILL-TO-CLOSE | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 70/30</span>
         </div>
       </div>
     </div>

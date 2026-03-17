@@ -14,7 +14,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, computeLiquiditySplit, recyclePool } from "./market-governor";
+import { getMarketState, computeLiquiditySplit, generateRecycleValues, invalidateCache, POOL_CEILING, MINTER_FEE, initTrackPricing } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -107,6 +107,7 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   initSheetsFromEnv();
+  initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
 
   app.get("/uploads/:filename", async (req: any, res) => {
     try {
@@ -340,23 +341,26 @@ export async function registerRoutes(
       const [track] = await db.select().from(tracks).where(eq(tracks.id, req.params.trackId));
       if (!track) return res.status(404).json({ message: "Track not found" });
 
-      const price = pool.dynamicPrice || parseFloat(track.unitPrice || "3.50");
+      const price = parseFloat(track.unitPrice || "3.50");
+      const bbRate = parseFloat(track.buyBackRate || "0.18");
       const grossSales = (track.salesCount || 0) * price;
       const split = computeLiquiditySplit(grossSales);
-      const poolPct = Math.min(100, (grossSales / pool.poolSize) * 100);
-      const paperTradeUsed = Math.min(100, (grossSales / pool.paperTradeCap) * 100);
-      const unitsRemaining = Math.max(0, Math.ceil((pool.poolSize - grossSales) / price));
+      const poolPct = Math.min(100, (grossSales / POOL_CEILING) * 100);
+      const paperTradeCap = POOL_CEILING * 0.50;
+      const paperTradeUsed = Math.min(100, (grossSales / paperTradeCap) * 100);
+      const unitsRemaining = Math.max(0, Math.ceil((POOL_CEILING - grossSales) / price));
 
       res.json({
         ...pool,
         currentPrice: price,
+        buyBackRate: bbRate,
         grossSales: parseFloat(grossSales.toFixed(2)),
         poolFillPct: parseFloat(poolPct.toFixed(1)),
         paperTradeUsedPct: parseFloat(paperTradeUsed.toFixed(1)),
+        paperTradeCap,
         unitsRemaining,
         houseCut: split.houseCut,
         payoutPot: split.payoutPot,
-        reconciliationPct: parseFloat(((price / pool.poolSize) * 100).toFixed(2)),
         session: state.session,
       });
     } catch (error) {
@@ -452,16 +456,11 @@ export async function registerRoutes(
         const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
         const currentSales = track.salesCount || 0;
 
-        const marketState = await getMarketState();
-        let trackPool = marketState.pools.find(p => p.trackId === trackId);
-
-        const price = isGlobal
-          ? parseFloat(track.unitPrice || "3.50")
-          : (trackPool?.dynamicPrice || parseFloat(track.unitPrice || "3.50"));
+        const price = parseFloat(track.unitPrice || "3.50");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
 
-        const minterFee = parseFloat((price * 0.16).toFixed(4));
-        const positionValue = parseFloat((price - minterFee).toFixed(4));
+        const minterFeeAmt = parseFloat((price * MINTER_FEE).toFixed(4));
+        const positionValue = parseFloat((price - minterFeeAmt).toFixed(4));
 
         if (isGlobal) {
           const ts = Date.now().toString(36).toUpperCase();
@@ -473,7 +472,7 @@ export async function registerRoutes(
             trackingNumber: trustId,
             unitPrice: price.toString(),
             creatorCredit: "0.16",
-            creatorCreditAmount: minterFee.toString(),
+            creatorCreditAmount: minterFeeAmt.toString(),
             positionHolderAmount: positionValue.toString(),
             status: "verified",
           }).returning();
@@ -490,7 +489,7 @@ export async function registerRoutes(
               asset: track.title,
               ticker,
               unitPrice: price,
-              originatorCredit: minterFee,
+              originatorCredit: minterFeeAmt,
               positionValue,
               aiModel: track.aiModel || "AITIFY-GEN-1",
               releaseType: "global",
@@ -501,27 +500,16 @@ export async function registerRoutes(
           };
         }
 
-        const poolCeiling = trackPool?.poolSize || 1000;
-        const paperTradeCap = trackPool?.paperTradeCap || (poolCeiling * 0.50);
-        const buyBackRate = trackPool?.buyBackRate || 0.18;
+        const buyBackRate = parseFloat(track.buyBackRate || "0.18");
+        const currentGross = parseFloat((currentSales * price).toFixed(2));
+        const paperTradeCap = POOL_CEILING * 0.50;
 
-        const currentGross = currentSales * price;
-
-        if (currentGross >= poolCeiling) {
-          const recycled = recyclePool(marketState, trackId);
-          await tx.update(tracks)
-            .set({
-              salesCount: 0,
-              unitPrice: recycled.dynamicPrice.toString(),
-            })
-            .where(eq(tracks.id, trackId));
-
-          throw new Error("POOL_RECYCLED");
+        if (currentGross >= POOL_CEILING) {
+          throw new Error("CEILING_REACHED");
         }
 
-        if (currentGross >= paperTradeCap) throw new Error("PAPER_TRADE_CAP");
-
-        const split = computeLiquiditySplit(currentGross + price);
+        const newGrossAfter = parseFloat(((currentSales + 1) * price).toFixed(2));
+        const split = computeLiquiditySplit(newGrossAfter);
 
         const seq = String(currentSales + 1).padStart(3, "0");
         const mintId = `MNT-977-${ticker}-${seq}`;
@@ -531,34 +519,36 @@ export async function registerRoutes(
           trackingNumber: mintId,
           unitPrice: price.toString(),
           creatorCredit: "0.16",
-          creatorCreditAmount: minterFee.toString(),
+          creatorCreditAmount: minterFeeAmt.toString(),
           positionHolderAmount: positionValue.toString(),
           status: "confirmed",
         }).returning();
 
         const [updated] = await tx.update(tracks)
-          .set({
-            salesCount: sql`${tracks.salesCount} + 1`,
-            unitPrice: price.toString(),
-          })
+          .set({ salesCount: sql`${tracks.salesCount} + 1` })
           .where(eq(tracks.id, trackId))
           .returning();
 
+        invalidateCache();
+
         const newSales = updated.salesCount || currentSales + 1;
         const newGross = parseFloat((newSales * price).toFixed(2));
-        const capacityPct = Math.min(100, parseFloat(((newGross / poolCeiling) * 100).toFixed(1)));
+        const capacityPct = Math.min(100, parseFloat(((newGross / POOL_CEILING) * 100).toFixed(1)));
 
         let poolRecycled = false;
-        let recycledPool = trackPool;
-        if (newGross >= poolCeiling) {
-          recycledPool = recyclePool(marketState, trackId) as any;
+        let recycledData: { newPrice: number; newBuyBackRate: number } | null = null;
+        if (newGross >= POOL_CEILING) {
+          const marketState = await getMarketState();
+          recycledData = generateRecycleValues(marketState.session.volatility);
           poolRecycled = true;
           await tx.update(tracks)
             .set({
               salesCount: 0,
-              unitPrice: (recycledPool as any).dynamicPrice.toString(),
+              unitPrice: recycledData.newPrice.toString(),
+              buyBackRate: recycledData.newBuyBackRate.toString(),
             })
             .where(eq(tracks.id, trackId));
+          invalidateCache();
         }
 
         return {
@@ -569,28 +559,27 @@ export async function registerRoutes(
             asset: track.title,
             ticker,
             unitPrice: price,
-            originatorCredit: minterFee,
-            minterFee: 0.16,
+            originatorCredit: minterFeeAmt,
+            minterFee: MINTER_FEE,
             buyBackRate,
             buyBackAmount: parseFloat((price * buyBackRate).toFixed(4)),
             positionValue,
             aiModel: track.aiModel || "AITIFY-GEN-1",
             grossSales: newGross,
             totalMints: newSales,
-            mintCap: poolCeiling,
+            poolCeiling: POOL_CEILING,
             paperTradeCap,
             capacityPct,
             releaseType: "native",
-            status: poolRecycled ? "RECYCLED" : (newGross >= poolCeiling ? "CLOSED" : "MINTED"),
-            poolSize: poolCeiling,
+            status: poolRecycled ? "SETTLED_REOPENED" : "MINTED",
+            poolSize: POOL_CEILING,
             houseCut: split.houseCut,
             payoutPot: split.payoutPot,
             timestamp: new Date().toISOString(),
-            ...(poolRecycled && recycledPool ? {
+            ...(poolRecycled && recycledData ? {
               recycled: {
-                newPrice: (recycledPool as any).dynamicPrice,
-                newBuyBackRate: (recycledPool as any).buyBackRate,
-                newPaperTradeCap: (recycledPool as any).paperTradeCap,
+                newPrice: recycledData.newPrice,
+                newBuyBackRate: recycledData.newBuyBackRate,
               },
             } : {}),
           },
@@ -619,9 +608,7 @@ export async function registerRoutes(
       res.json(result);
     } catch (error: any) {
       if (error.message === "NOT_FOUND") return res.status(404).json({ message: "Asset not found" });
-      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "TRADE CLOSED — POOL CEILING REACHED" });
-      if (error.message === "POOL_RECYCLED") return res.status(200).json({ message: "POOL RECYCLED — CLOSE-SETTLE-REOPEN COMPLETE. New price and buy-back assigned.", recycled: true });
-      if (error.message === "PAPER_TRADE_CAP") return res.status(409).json({ message: "PAPER TRADE CAP REACHED — 50% of pool size hit. Wait for recycle." });
+      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "POOL SETTLED — $1K FILL-TO-CLOSE CEILING REACHED. Awaiting re-roll." });
       if (error.message === "INVALID_PRICE") return res.status(400).json({ message: "Invalid asset price" });
       console.error("Order placement error:", error);
       res.status(500).json({ message: "Order failed" });
