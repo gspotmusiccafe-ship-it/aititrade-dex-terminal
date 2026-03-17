@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
+import { MarketTicker } from "@/components/market-ticker";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -578,6 +579,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <div className="fixed top-0 left-0 right-0 z-[60]">
+        <MarketTicker />
+      </div>
       <AuthErrorBanner />
 
       {showAuthModal && (
@@ -588,7 +592,7 @@ export default function LandingPage() {
         </div>
       )}
 
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+      <header className="fixed top-[30px] left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 gap-4">
             <div className="flex items-center gap-2">
@@ -621,7 +625,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section — AITIFY MUSIC RADIO 97.7 THE FLAME */}
-      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8">
+      <section className="pt-40 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <Badge variant="secondary" className="text-xs mb-4 inline-flex">
@@ -633,7 +637,7 @@ export default function LandingPage() {
               <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">97.7 THE FLAME</span>
             </h1>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
-              The world's first all-AI music radio. Tune in free — hear AI-generated music 2 weeks before 
+              The world's first all-AI music exchange. Stream sovereign assets 2 weeks before 
               Spotify, Amazon Music, Deezer, YouTube, and Anghami.
             </p>
           </div>
