@@ -406,7 +406,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({ title: "Account created!", description: "Welcome to AITIFY MUSIC RADIO" });
+      toast({ title: "✦ ACCOUNT CREATED", description: "Welcome to the Sovereign Exchange — upgrade to start trading" });
       onSuccess?.();
     },
     onError: (err: Error) => setError(err.message),
@@ -416,7 +416,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     mutationFn: () => apiRequest("POST", "/api/auth/login", { email, password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      toast({ title: "Welcome back!" });
+      toast({ title: "✦ LOGIN VERIFIED", description: "Access granted — loading exchange..." });
       onSuccess?.();
     },
     onError: (err: Error) => setError(err.message),

@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -25,6 +25,7 @@ import RadioPage from "@/pages/radio";
 import BrowsePage from "@/pages/browse";
 import PlaylistPage from "@/pages/playlist";
 import LeaderboardPage from "@/pages/leaderboard";
+import { useEffect } from "react";
 
 const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo"];
 
@@ -60,6 +61,24 @@ function AppRouter() {
   );
 }
 
+function UpgradeRedirect() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    setLocation("/membership");
+  }, [setLocation]);
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="flex flex-col items-center gap-4 text-center font-mono">
+        <div className="w-16 h-16 bg-lime-500/20 flex items-center justify-center">
+          <span className="text-lime-400 text-2xl font-extrabold">$</span>
+        </div>
+        <p className="text-lime-400 text-sm font-extrabold" data-testid="text-upgrade-redirect">PREMIUM TRADING ACCOUNT REQUIRED</p>
+        <p className="text-zinc-400 text-xs">REDIRECTING TO MEMBERSHIP...</p>
+      </div>
+    </div>
+  );
+}
+
 function PremiumGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
   const { data: membership, isLoading: membershipLoading } = useQuery<{ tier: string; isActive: boolean }>({
@@ -73,8 +92,8 @@ function PremiumGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-500/20 animate-pulse" />
-          <p className="text-emerald-500/50 font-mono text-xs">VERIFYING ACCESS...</p>
+          <div className="w-12 h-12 bg-lime-500/20 animate-pulse" />
+          <p className="text-lime-400 font-mono text-xs font-extrabold">VERIFYING ACCESS...</p>
         </div>
       </div>
     );
@@ -83,7 +102,7 @@ function PremiumGate({ children }: { children: React.ReactNode }) {
   const tier = membership?.tier || "free";
   const isPremium = PREMIUM_TIERS.includes(tier) && membership?.isActive !== false;
 
-  if (!isPremium) return <LandingPage />;
+  if (!isPremium) return <UpgradeRedirect />;
 
   return <>{children}</>;
 }
