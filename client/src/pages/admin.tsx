@@ -520,7 +520,7 @@ function ArtistsTab() {
           data-testid="button-create-artist"
         >
           <Plus className="h-4 w-4 mr-1" />
-          Create Artist
+          Create Mentor
         </Button>
       </div>
       <div className="space-y-2">
@@ -660,9 +660,9 @@ function ArtistsTab() {
       <Dialog open={createDialog} onOpenChange={() => setCreateDialog(false)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Artist Profile</DialogTitle>
+            <DialogTitle>Create Mentor Profile</DialogTitle>
             <DialogDescription>
-              Create an artist profile for any user without requiring a Gold membership.
+              Create a mentor profile for any user without requiring a Gold membership.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -714,7 +714,7 @@ function ArtistsTab() {
               data-testid="button-submit-create-artist"
             >
               {createArtistMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
-              Create Artist
+              Create Mentor
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -3189,13 +3189,13 @@ function CreateArtistHeaderButton() {
         data-testid="button-create-artist-header"
       >
         <Plus className="h-3.5 w-3.5" />
-        Create Artist
+        Create Mentor
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Artist Profile</DialogTitle>
-            <DialogDescription>Create an artist profile for a user (bypasses membership requirement)</DialogDescription>
+            <DialogTitle>Create Mentor Profile</DialogTitle>
+            <DialogDescription>Create a mentor profile for a user (bypasses membership requirement)</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
@@ -3239,7 +3239,7 @@ function CreateArtistHeaderButton() {
               disabled={!createUserId || !createName || createArtistMutation.isPending}
               data-testid="button-confirm-create-artist"
             >
-              {createArtistMutation.isPending ? "Creating..." : "Create Artist"}
+              {createArtistMutation.isPending ? "Creating..." : "Create Mentor"}
             </Button>
           </DialogFooter>
         </DialogContent>

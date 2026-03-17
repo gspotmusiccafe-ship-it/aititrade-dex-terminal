@@ -551,7 +551,7 @@ function ArtistOnboarding() {
             />
           </div>
           <Button type="submit" className="w-full" disabled={createArtistMutation.isPending} data-testid="button-create-artist">
-            {createArtistMutation.isPending ? "Creating..." : "Create Artist Profile"}
+            {createArtistMutation.isPending ? "Creating..." : "Create Mentor Profile"}
           </Button>
         </form>
       </CardContent>
