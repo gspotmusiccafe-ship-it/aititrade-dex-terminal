@@ -1,19 +1,13 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart, Shuffle, Repeat, Repeat1, ShoppingCart, ListPlus, ListMusic, X, Trash2, DollarSign } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign } from "lucide-react";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { TipJarDialog } from "@/components/tip-jar-dialog";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 function formatTime(seconds: number): string {
   if (!seconds || isNaN(seconds)) return "0:00";
@@ -48,82 +42,17 @@ export function MusicPlayer() {
   } = usePlayer();
 
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeLoading, setLikeLoading] = useState(false);
-  const [playlistOpen, setPlaylistOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
-
-  useEffect(() => {
-    if (currentTrack) {
-      fetch(`/api/user/liked-tracks/${currentTrack.id}/check`, { credentials: "include" })
-        .then(res => {
-          if (!res.ok) return { liked: false };
-          return res.json();
-        })
-        .then(data => setIsLiked(data.liked))
-        .catch(() => setIsLiked(false));
-    }
-  }, [currentTrack?.id]);
-
-  const { data: playlists } = useQuery<{ id: string; name: string }[]>({
-    queryKey: ["/api/playlists"],
-    enabled: isAuthenticated && playlistOpen,
-  });
-
-  const addToPlaylistMutation = useMutation({
-    mutationFn: async (playlistId: string) => {
-      if (!currentTrack) return;
-      await apiRequest("POST", `/api/playlists/${playlistId}/tracks`, { trackId: currentTrack.id });
-    },
-    onSuccess: (_data, playlistId) => {
-      const playlist = playlists?.find(p => p.id === playlistId);
-      toast({ title: "Added to playlist", description: `"${currentTrack?.title}" added to ${playlist?.name || "playlist"}` });
-      queryClient.invalidateQueries({ queryKey: ["/api/playlists", playlistId, "tracks"] });
-      setPlaylistOpen(false);
-    },
-    onError: () => {
-      toast({ title: "Already in playlist", description: "This track is already in the selected playlist.", variant: "destructive" });
-    },
-  });
-
-  const handleLike = async () => {
-    if (!currentTrack || likeLoading) return;
-    setLikeLoading(true);
-    try {
-      if (isLiked) {
-        const res = await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "DELETE", credentials: "include" });
-        if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.message || "Failed"); }
-        setIsLiked(false);
-        toast({ title: "Removed from liked songs" });
-      } else {
-        const res = await fetch(`/api/user/liked-tracks/${currentTrack.id}`, { method: "POST", credentials: "include" });
-        if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.message || "Failed"); }
-        setIsLiked(true);
-        toast({ title: "Added to liked songs" });
-      }
-      queryClient.invalidateQueries({ queryKey: ["/api/user/liked-tracks"] });
-    } catch (err: any) {
-      const msg = err?.message || "";
-      if (msg.includes("Upgrade")) {
-        toast({ title: "Membership Required", description: msg, variant: "destructive" });
-      } else {
-        toast({ title: "Please sign in to like tracks", variant: "destructive" });
-      }
-    }
-    setLikeLoading(false);
-  };
 
   const upcomingTracks = queue.slice(queueIndex + 1);
 
   if (!currentTrack) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-card via-card to-card border-t border-primary/10 flex items-center justify-center gap-3 backdrop-blur-xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
-        <img src={logoImage} alt="AITIFY" className="w-8 h-8 rounded-full object-cover relative ring-2 ring-primary/30" />
-        <div className="text-center relative">
-          <p className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-station-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
-          <p className="text-xs text-muted-foreground">Tune in — music starts automatically</p>
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-emerald-500/20 flex items-center justify-center gap-3 font-mono z-50">
+        <img src={logoImage} alt="AITIFY" className="w-6 h-6 object-cover" />
+        <div className="text-center">
+          <p className="text-xs font-bold text-emerald-400" data-testid="text-radio-station-name">97.7 THE FLAME | SOVEREIGN EXCHANGE</p>
+          <p className="text-[10px] text-emerald-500/40">AWAITING STREAM...</p>
         </div>
       </div>
     );
@@ -131,120 +60,101 @@ export function MusicPlayer() {
 
   if (autoplayBlocked) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-r from-background/95 via-card/95 to-background/95 backdrop-blur-xl border-t border-primary/20 z-50 flex items-center justify-center gap-4 px-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5" />
-        <div className="text-center relative">
-          <p className="text-sm font-extrabold tracking-tight bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent" data-testid="text-radio-blocked-name">AITIFY MUSIC RADIO 97.7 THE FLAME</p>
-          <p className="text-xs text-muted-foreground">{currentTrack.title} — {currentTrack.artist?.name}</p>
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-emerald-500/20 z-50 flex items-center justify-center gap-4 px-4 font-mono">
+        <div className="text-center">
+          <p className="text-xs font-bold text-emerald-400" data-testid="text-radio-blocked-name">97.7 THE FLAME</p>
+          <p className="text-[10px] text-emerald-500/50">{currentTrack.title} — {currentTrack.artist?.name}</p>
         </div>
-        <Button
-          size="sm"
-          className="bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 text-primary-foreground gap-2 shadow-lg shadow-primary/25 relative"
+        <button
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 text-[10px] font-bold flex items-center gap-1 transition-colors"
           onClick={resumeAutoplay}
           data-testid="button-tune-in"
         >
-          <Play className="h-4 w-4" />
-          Tune In
-        </Button>
+          <Play className="h-3 w-3" />
+          TUNE IN
+        </button>
       </div>
     );
   }
 
+  const ticker = `$${(currentTrack.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 10)}`;
+
   return (
     <>
       {queueOpen && (
-        <div className="fixed right-0 bottom-20 md:bottom-24 w-80 max-h-[60vh] bg-card/95 backdrop-blur-xl border border-border/50 rounded-tl-xl shadow-2xl z-50 flex flex-col" data-testid="queue-panel">
-          <div className="flex items-center justify-between p-3 border-b border-border/30 bg-gradient-to-r from-primary/5 to-transparent">
-            <h3 className="font-semibold text-sm">Queue</h3>
+        <div className="fixed right-0 bottom-16 w-72 max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-500/10 bg-emerald-500/5">
+            <span className="text-[10px] text-emerald-400 font-bold">QUEUE</span>
             <div className="flex items-center gap-1">
               {upcomingTracks.length > 0 && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
-                  onClick={() => {
-                    clearQueue();
-                    toast({ title: "Queue cleared" });
-                  }}
-                  title="Clear queue"
+                  className="h-6 w-6 text-emerald-500/50 hover:text-emerald-400"
+                  onClick={() => { clearQueue(); toast({ title: "Queue cleared" }); }}
                   data-testid="button-clear-queue"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-3 w-3" />
                 </Button>
               )}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-6 w-6 text-emerald-500/50 hover:text-emerald-400"
                 onClick={() => setQueueOpen(false)}
                 data-testid="button-close-queue"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
 
           <div className="overflow-y-auto flex-1">
             <div className="p-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider px-2 py-1">Now Playing</p>
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-gradient-to-r from-primary/15 to-primary/5 border border-primary/10">
-                <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
+              <p className="text-[9px] text-emerald-500/40 uppercase px-2 py-1">NOW PLAYING</p>
+              <div className="flex items-center gap-2 p-2 bg-emerald-500/5 border border-emerald-500/10">
+                <div className="w-7 h-7 bg-zinc-900 overflow-hidden flex-shrink-0">
                   {currentTrack.coverImage ? (
-                    <img src={currentTrack.coverImage} alt="" className="w-full h-full object-cover" />
+                    <img src={currentTrack.coverImage} alt="" className="w-full h-full object-cover opacity-80" />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center">
-                      <span className="text-primary text-xs font-bold">{currentTrack.title[0]}</span>
+                    <div className="w-full h-full bg-emerald-500/10 flex items-center justify-center">
+                      <span className="text-emerald-400 text-[9px] font-bold">{currentTrack.title[0]}</span>
                     </div>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate text-primary">{currentTrack.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{currentTrack.artist?.name}</p>
+                  <p className="text-[11px] font-bold truncate text-emerald-400">{currentTrack.title.toUpperCase()}</p>
+                  <p className="text-[9px] text-zinc-600 truncate">{currentTrack.artist?.name}</p>
                 </div>
               </div>
             </div>
 
             {upcomingTracks.length > 0 && (
               <div className="p-2 pt-0">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider px-2 py-1">
-                  Up Next ({upcomingTracks.length})
-                </p>
+                <p className="text-[9px] text-emerald-500/40 uppercase px-2 py-1">NEXT ({upcomingTracks.length})</p>
                 <div className="space-y-0.5">
                   {upcomingTracks.map((track, i) => {
                     const actualIndex = queueIndex + 1 + i;
                     return (
                       <div
                         key={`${track.id}-${actualIndex}`}
-                        className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/5 group/item cursor-pointer transition-colors"
+                        className="flex items-center gap-2 p-1.5 hover:bg-emerald-500/5 group/item cursor-pointer transition-colors"
                         onClick={() => playFromQueue(actualIndex)}
                         data-testid={`queue-track-${actualIndex}`}
                       >
-                        <span className="text-xs text-muted-foreground w-4 text-center">{i + 1}</span>
-                        <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0 bg-muted">
-                          {track.coverImage ? (
-                            <img src={track.coverImage} alt="" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                              <span className="text-primary/60 text-xs font-bold">{track.title[0]}</span>
-                            </div>
-                          )}
-                        </div>
+                        <span className="text-[9px] text-zinc-600 w-3 text-center">{i + 1}</span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm truncate">{track.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">{track.artist?.name}</p>
+                          <p className="text-[10px] text-white truncate">{track.title}</p>
+                          <p className="text-[9px] text-zinc-600 truncate">{track.artist?.name}</p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFromQueue(actualIndex);
-                          }}
-                          title="Remove from queue"
+                          className="h-5 w-5 opacity-0 group-hover/item:opacity-100 text-zinc-600"
+                          onClick={(e) => { e.stopPropagation(); removeFromQueue(actualIndex); }}
                           data-testid={`button-remove-queue-${actualIndex}`}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-2.5 w-2.5" />
                         </Button>
                       </div>
                     );
@@ -252,99 +162,69 @@ export function MusicPlayer() {
                 </div>
               </div>
             )}
-
-            {upcomingTracks.length === 0 && (
-              <div className="p-4 text-center">
-                <p className="text-sm text-muted-foreground">No upcoming tracks</p>
-                <p className="text-xs text-muted-foreground mt-1">Add songs to your queue from any track</p>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 h-20 md:h-24 bg-gradient-to-r from-background/95 via-card/95 to-background/95 backdrop-blur-xl border-t border-primary/10 z-50" data-testid="music-player">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-primary/3" />
-        <div className="h-full px-4 flex items-center justify-between gap-4 max-w-screen-2xl mx-auto relative">
-          <div className="flex items-center gap-3 min-w-0 flex-1 max-w-[300px]">
-            <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 shadow-lg ring-1 ring-white/10">
+      <div className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-emerald-500/20 z-50 font-mono" data-testid="music-player">
+        <div className="h-full px-3 flex items-center justify-between gap-3 max-w-screen-2xl mx-auto">
+          <div className="flex items-center gap-2 min-w-0 flex-1 max-w-[280px]">
+            <div className="w-10 h-10 bg-zinc-900 overflow-hidden flex-shrink-0 border border-emerald-500/10">
               {currentTrack.coverImage ? (
-                <img
-                  src={currentTrack.coverImage}
-                  alt={currentTrack.title}
-                  className="w-full h-full object-cover"
-                />
+                <img src={currentTrack.coverImage} alt={currentTrack.title} className="w-full h-full object-cover opacity-80" />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-primary/30 to-emerald-500/20 flex items-center justify-center">
-                  <span className="text-primary text-lg font-bold">{currentTrack.title[0]}</span>
+                <div className="w-full h-full bg-emerald-500/10 flex items-center justify-center">
+                  <span className="text-emerald-400 text-sm font-bold">{currentTrack.title[0]}</span>
                 </div>
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-extrabold bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent uppercase tracking-wider" data-testid="text-radio-station-label">97.7 THE FLAME</p>
-              <p className="font-bold text-sm truncate" data-testid="text-current-track-title">
-                {currentTrack.title}
+              <p className="text-[9px] font-bold text-emerald-500/50" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+              <p className="font-bold text-[11px] truncate text-emerald-400" data-testid="text-current-track-title">
+                {currentTrack.title.toUpperCase()}
               </p>
-              <p className="text-xs text-muted-foreground truncate" data-testid="text-current-track-artist">
-                {currentTrack.artist?.name}
+              <p className="text-[9px] text-zinc-600 truncate" data-testid="text-current-track-artist">
+                {currentTrack.artist?.name} <span className="text-emerald-500/30 ml-1">{ticker}</span>
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="flex-shrink-0 hidden md:flex"
-              onClick={handleLike}
-              disabled={likeLoading}
-              data-testid="button-like-track"
-            >
-              <Heart className={`h-4 w-4 ${isLiked ? "fill-primary text-primary" : ""}`} />
-            </Button>
           </div>
 
-          <div className="flex flex-col items-center gap-1 flex-1 max-w-[600px]">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-0.5 flex-1 max-w-[500px]">
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="icon"
-                className={`hidden md:flex hover:text-foreground ${shuffle ? "text-primary" : "text-muted-foreground"}`}
+                className={`hidden md:flex h-7 w-7 ${shuffle ? "text-emerald-400" : "text-zinc-600"} hover:text-emerald-400`}
                 onClick={toggleShuffle}
                 data-testid="button-shuffle"
               >
-                <Shuffle className="h-4 w-4" />
+                <Shuffle className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={prevTrack} data-testid="button-prev-track">
-                <SkipBack className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-emerald-400" onClick={prevTrack} data-testid="button-prev-track">
+                <SkipBack className="h-4 w-4" />
               </Button>
-              <Button
-                size="icon"
+              <button
                 onClick={togglePlay}
-                className="h-10 w-10 rounded-full bg-gradient-to-br from-white to-white/90 hover:from-white hover:to-white text-black shadow-lg shadow-white/10"
+                className="h-8 w-8 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center transition-colors"
                 data-testid="button-play-pause"
               >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5 ml-0.5" />
-                )}
-              </Button>
-              <Button variant="ghost" size="icon" onClick={nextTrack} data-testid="button-next-track">
-                <SkipForward className="h-5 w-5" />
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
+              </button>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-emerald-400" onClick={nextTrack} data-testid="button-next-track">
+                <SkipForward className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
-                className={`hidden md:flex hover:text-foreground ${repeat !== "off" ? "text-primary" : "text-muted-foreground"}`}
+                className={`hidden md:flex h-7 w-7 ${repeat !== "off" ? "text-emerald-400" : "text-zinc-600"} hover:text-emerald-400`}
                 onClick={toggleRepeat}
                 data-testid="button-repeat"
               >
-                {repeat === "one" ? <Repeat1 className="h-4 w-4" /> : <Repeat className="h-4 w-4" />}
+                {repeat === "one" ? <Repeat1 className="h-3.5 w-3.5" /> : <Repeat className="h-3.5 w-3.5" />}
               </Button>
             </div>
-
             <div className="w-full flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-10 text-right">
-                {formatTime(progress)}
-              </span>
+              <span className="text-[9px] text-zinc-600 w-8 text-right">{formatTime(progress)}</span>
               <Slider
                 value={[progress]}
                 max={duration || 100}
@@ -353,76 +233,33 @@ export function MusicPlayer() {
                 className="flex-1"
                 data-testid="slider-progress"
               />
-              <span className="text-xs text-muted-foreground w-10">
-                {formatTime(duration)}
-              </span>
+              <span className="text-[9px] text-zinc-600 w-8">{formatTime(duration)}</span>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-2 flex-1 justify-end max-w-[250px]">
+          <div className="hidden md:flex items-center gap-1 flex-1 justify-end max-w-[200px]">
             <Button
               variant="ghost"
               size="icon"
               title="Queue"
-              className={`relative ${queueOpen ? "text-primary" : ""}`}
+              className={`h-7 w-7 ${queueOpen ? "text-emerald-400" : "text-zinc-600"} hover:text-emerald-400 relative`}
               onClick={() => setQueueOpen(!queueOpen)}
               data-testid="button-toggle-queue"
             >
-              <ListMusic className="h-4 w-4" />
+              <ListMusic className="h-3.5 w-3.5" />
               {upcomingTracks.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-primary text-[9px] text-primary-foreground flex items-center justify-center font-bold">
+                <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 text-[8px] text-black flex items-center justify-center font-bold">
                   {upcomingTracks.length > 9 ? "9+" : upcomingTracks.length}
                 </span>
               )}
             </Button>
-            <Popover open={playlistOpen} onOpenChange={(open) => {
-              if (open && !isAuthenticated) {
-                toast({ title: "Sign in required", description: "Log in to add tracks to playlists.", variant: "destructive" });
-                return;
-              }
-              setPlaylistOpen(open);
-            }}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  title="Add to Playlist"
-                  data-testid="button-add-to-playlist-player"
-                >
-                  <ListPlus className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="end">
-                <p className="text-sm font-medium px-2 py-1 mb-1">Add to Playlist</p>
-                {playlists && playlists.length > 0 ? (
-                  <div className="space-y-0.5 max-h-48 overflow-y-auto">
-                    {playlists.map((pl) => (
-                      <button
-                        key={pl.id}
-                        className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent flex items-center gap-2"
-                        onClick={() => addToPlaylistMutation.mutate(pl.id)}
-                        disabled={addToPlaylistMutation.isPending}
-                        data-testid={`button-player-playlist-option-${pl.id}`}
-                      >
-                        <ListPlus className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="truncate">{pl.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground px-2 py-2">
-                    No playlists yet. Create one in your Library.
-                  </p>
-                )}
-              </PopoverContent>
-            </Popover>
             {currentTrack.artist && (
               <TipJarDialog
                 artistId={currentTrack.artist.id}
                 artistName={currentTrack.artist.name}
                 trigger={
-                  <Button variant="ghost" size="icon" title="Tip Artist" data-testid="button-tip-player">
-                    <DollarSign className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-yellow-400" title="Tip Artist" data-testid="button-tip-player">
+                    <DollarSign className="h-3.5 w-3.5" />
                   </Button>
                 }
               />
@@ -430,32 +267,28 @@ export function MusicPlayer() {
             <Button
               variant="ghost"
               size="icon"
-              title="Buy Song"
-              onClick={() => {
-                window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer");
-              }}
+              className="h-7 w-7 text-zinc-600 hover:text-emerald-400"
+              title="Buy"
+              onClick={() => window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer")}
               data-testid="button-buy-current"
             >
-              <ShoppingCart className="h-4 w-4" />
+              <ShoppingCart className="h-3.5 w-3.5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
+              className="h-7 w-7 text-zinc-600 hover:text-emerald-400"
               onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
               data-testid="button-volume-toggle"
             >
-              {volume === 0 ? (
-                <VolumeX className="h-5 w-5" />
-              ) : (
-                <Volume2 className="h-5 w-5" />
-              )}
+              {volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </Button>
             <Slider
               value={[volume * 100]}
               max={100}
               step={1}
               onValueChange={([value]) => setVolume(value / 100)}
-              className="w-24"
+              className="w-20"
               data-testid="slider-volume"
             />
           </div>

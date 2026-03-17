@@ -2132,6 +2132,30 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/live-pop-scores", async (_req: any, res) => {
+    try {
+      const all = await db.select({
+        id: spotifyRoyaltyTracks.id,
+        spotifyTrackId: spotifyRoyaltyTracks.spotifyTrackId,
+        title: spotifyRoyaltyTracks.title,
+        artistName: spotifyRoyaltyTracks.artistName,
+        streamCount: spotifyRoyaltyTracks.streamCount,
+        isQualified: spotifyRoyaltyTracks.isQualified,
+        coverArt: spotifyRoyaltyTracks.coverArt,
+        lastFetchedAt: spotifyRoyaltyTracks.lastFetchedAt,
+      }).from(spotifyRoyaltyTracks).orderBy(desc(spotifyRoyaltyTracks.streamCount));
+      const scored = all.map(t => ({
+        ...t,
+        popScore: Math.min(100, Math.round(((t.streamCount || 0) / 1000) * 100)),
+        settlement: ((t.streamCount || 0) * 0.00025).toFixed(4),
+        ticker: `$${(t.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`,
+      }));
+      res.json(scored);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   app.get("/api/market-ticker", async (_req: any, res) => {
     try {
       const all = await db.select({

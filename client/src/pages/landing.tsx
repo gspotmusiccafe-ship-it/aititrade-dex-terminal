@@ -578,235 +578,221 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-black">
       <div className="fixed top-0 left-0 right-0 z-[60]">
         <MarketTicker />
       </div>
       <AuthErrorBanner />
 
       {showAuthModal && (
-        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
           <div onClick={(e) => e.stopPropagation()}>
             <AuthForm mode={authMode} onSuccess={() => setShowAuthModal(false)} />
           </div>
         </div>
       )}
 
-      <header className="fixed top-[30px] left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+      <header className="fixed top-[30px] left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-emerald-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-4">
+          <div className="flex items-center justify-between h-14 gap-4 font-mono">
             <div className="flex items-center gap-2">
-              <img src={logoImage} alt="AITIFY Music Radio" className="w-9 h-9 rounded-lg object-cover" />
+              <img src={logoImage} alt="AITIFY" className="w-7 h-7 object-cover" />
+              <span className="text-emerald-400 text-xs font-bold hidden sm:inline">AITIFY EXCHANGE</span>
             </div>
 
-            <nav className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Features
+            <nav className="hidden md:flex items-center gap-4">
+              <a href="#features" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
+                Capabilities
               </a>
-              <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
+              <a href="#pricing" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
+                Positions
               </a>
-              <a href="#artists" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                For Artists
+              <a href="#artists" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
+                List Assets
               </a>
             </nav>
 
             <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <Button variant="ghost" onClick={() => openAuth("login")} data-testid="button-login" className="gap-1.5">
-                Log In
-              </Button>
-              <Button onClick={() => openAuth("signup")} className="bg-primary hover:bg-primary/90 border-0 shadow-lg shadow-primary/20 gap-1.5" data-testid="button-signup">
-                Get Started Free
-              </Button>
+              <button onClick={() => openAuth("login")} data-testid="button-login" className="text-emerald-400 text-[10px] font-bold px-3 py-1.5 border border-emerald-500/30 hover:bg-emerald-500/10 transition-colors">
+                LOG IN
+              </button>
+              <button onClick={() => openAuth("signup")} className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-1.5 transition-colors" data-testid="button-signup">
+                OPEN ACCOUNT
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section — AITIFY MUSIC RADIO 97.7 THE FLAME */}
-      <section className="pt-40 pb-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-8">
-            <Badge variant="secondary" className="text-xs mb-4 inline-flex">
-              <Star className="h-3 w-3 mr-1 text-yellow-500" />
-              The All-AI Music Platform
-            </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4" data-testid="text-radio-hero-title">
+      {/* Hero Section — Bloomberg Terminal */}
+      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
+        <div className="max-w-7xl mx-auto font-mono">
+          <div className="border border-emerald-500/30 bg-black p-6 sm:p-10 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-500 text-xs">SOVEREIGN EXCHANGE TERMINAL</span>
+            </div>
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4 text-emerald-400" data-testid="text-radio-hero-title">
               AITIFY MUSIC RADIO{" "}
-              <span className="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">97.7 THE FLAME</span>
+              <span className="text-yellow-400">97.7 THE FLAME</span>
             </h1>
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto font-medium">
-              The world's first all-AI music exchange. Stream sovereign assets 2 weeks before 
-              Spotify, Amazon Music, Deezer, YouTube, and Anghami.
+            <p className="text-sm sm:text-base text-emerald-500/70 max-w-2xl font-mono">
+              &gt; SOVEREIGN MUSIC EXCHANGE | STREAM ASSETS 2 WEEKS PRE-MARKET |
+              SETTLEMENT RATE: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME
             </p>
+            <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">CLASS: MUSICAL EQUITY</span>
+              <span className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-2 py-1">CEO POS: $99</span>
+              <span className="bg-blue-500/10 border border-blue-500/20 text-blue-400 px-2 py-1">INVESTOR POS: $25</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">FINANCING: $475 TERMS</span>
+            </div>
           </div>
 
           <div className="max-w-lg mx-auto mb-8">
             <HeroPlayer />
           </div>
 
-          <div className="text-center space-y-4">
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" variant="outline" asChild>
-                <a href="#pricing">
-                  Upgrade for Full Access
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </a>
-              </Button>
-              <Button size="lg" onClick={() => openAuth("signup")} data-testid="button-hero-cta" className="bg-primary hover:bg-primary/90 gap-1.5">
-                Create Free Account
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-6 justify-center pt-2">
-              <div className="flex -space-x-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 border-2 border-background"
-                  />
-                ))}
-              </div>
-              <div className="text-sm">
-                <span className="font-semibold">10,000+</span>
-                <span className="text-muted-foreground"> music lovers tuned in</span>
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Button size="lg" variant="outline" asChild className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono">
+              <a href="#pricing">
+                VIEW FINANCING TERMS
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </a>
+            </Button>
+            <Button size="lg" onClick={() => openAuth("signup")} data-testid="button-hero-cta" className="bg-emerald-600 hover:bg-emerald-700 font-mono gap-1.5 border-0">
+              OPEN TRADING ACCOUNT
+              <ArrowRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-card/60 to-background">
-        <div className="max-w-7xl mx-auto">
+      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
+        <div className="max-w-7xl mx-auto font-mono">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4">
-              Why Choose AITIFY MUSIC RADIO?
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
+              SOVEREIGN EXCHANGE CAPABILITIES
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg font-medium">
-              We're building a new music experience that puts artists and listeners first
+            <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
+              &gt; TRADE SOVEREIGN ASSETS | EARN SETTLEMENT | BUILD POSITIONS
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-4">
             {features.map((feature, index) => (
-              <Card key={index} className="bg-card/60 border-border/30 hover:border-primary/20 hover:-translate-y-1 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5">
-                <CardContent className="p-6">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mb-4">
-                    <feature.icon className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="font-bold text-lg mb-2">{feature.title}</h3>
-                  <p className="text-muted-foreground text-sm">{feature.description}</p>
-                </CardContent>
-              </Card>
+              <div key={index} className="bg-black border border-emerald-500/20 hover:border-emerald-500/50 transition-all p-5">
+                <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
+                  <feature.icon className="h-5 w-5 text-emerald-400" />
+                </div>
+                <h3 className="font-bold text-sm mb-2 text-emerald-400">{feature.title.toUpperCase()}</h3>
+                <p className="text-emerald-500/50 text-xs">{feature.description}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      {/* Pricing Section — Financing Gate */}
+      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
+        <div className="max-w-7xl mx-auto font-mono">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4">
-              Simple, Transparent Pricing
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
+              POSITION TIERS & FINANCING TERMS
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg font-medium">
-              Choose the plan that works for you. Upgrade anytime for early access to new AI music.
+            <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
+              &gt; INVESTOR $25 | CEO $99 | FINANCING AVAILABLE AT $475 TERMS
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-6xl mx-auto">
             {membershipTiers.map((tier, index) => (
-              <Card
+              <div
                 key={index}
-                className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+                className={`relative overflow-hidden transition-all border ${
                   tier.highlight
-                    ? "border-primary/50 bg-card/80 shadow-xl shadow-primary/10"
-                    : "bg-card/60 border-border/30 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5"
+                    ? "border-emerald-500/60 bg-black"
+                    : "border-emerald-500/20 bg-black hover:border-emerald-500/40"
                 }`}
                 data-testid={`pricing-tier-${tier.name.toLowerCase()}`}
               >
                 {tier.highlight && (
-                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-primary to-emerald-500 text-primary-foreground text-center py-1.5 text-xs font-bold uppercase tracking-wider">
-                    Most Popular
+                  <div className="bg-emerald-500/20 text-emerald-400 text-center py-1 text-[9px] font-bold uppercase tracking-wider border-b border-emerald-500/30">
+                    RECOMMENDED POSITION
                   </div>
                 )}
-                <CardContent className={`p-6 ${tier.highlight ? "pt-10" : ""}`}>
-                  <div className="mb-6">
-                    <h3 className="font-extrabold text-xl mb-2 tracking-tight">{tier.name}</h3>
+                <div className="p-5">
+                  <div className="mb-4">
+                    <h3 className="font-bold text-sm mb-1 text-emerald-400 tracking-tight">{tier.name.toUpperCase()}</h3>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-black tracking-tight">{tier.price}</span>
-                      <span className="text-muted-foreground text-sm">{tier.period}</span>
+                      <span className="text-2xl font-black text-white">{tier.price}</span>
+                      <span className="text-emerald-500/40 text-[10px]">{tier.period}</span>
                     </div>
+                    {tier.name !== "Free" && (
+                      <p className="text-[9px] text-yellow-400/70 mt-1">$475 FINANCING TERMS AVAILABLE</p>
+                    )}
                   </div>
 
-                  <ul className="space-y-3 mb-6">
+                  <ul className="space-y-2 mb-5">
                     {tier.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                      <li key={i} className="flex items-start gap-2 text-[11px] text-emerald-500/60">
+                        <span className="text-emerald-400 mt-0.5">▸</span>
                         <span>{feature}</span>
                       </li>
                     ))}
                   </ul>
 
                   {tier.name !== "Free" ? (
-                    <Button
-                      className={`w-full ${tier.highlight ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
-                      variant={tier.highlight ? "default" : "outline"}
+                    <button
+                      className={`w-full py-2 text-[10px] font-bold transition-colors ${tier.highlight ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
                       onClick={() => openAuth("signup")}
                     >
-                      Subscribe Now
-                    </Button>
+                      ACQUIRE POSITION
+                    </button>
                   ) : (
-                    <Button
-                      className="w-full"
-                      variant="outline"
+                    <button
+                      className="w-full py-2 text-[10px] font-bold border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                       onClick={() => openAuth("signup")}
                     >
-                      Join Free
-                    </Button>
+                      OPEN FREE ACCOUNT
+                    </button>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Artists CTA Section */}
-      <section id="artists" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 via-background to-accent/5">
-        <div className="max-w-4xl mx-auto text-center">
-          <Crown className="h-12 w-12 text-primary mx-auto mb-6" />
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4">
-            Are You an AI Music Artist?
+      <section id="artists" className="py-20 px-4 sm:px-6 lg:px-8 bg-black border-t border-emerald-500/10">
+        <div className="max-w-4xl mx-auto text-center font-mono">
+          <Crown className="h-10 w-10 text-yellow-400 mx-auto mb-4" />
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
+            LIST YOUR ASSETS ON THE EXCHANGE
           </h2>
-          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto text-lg font-medium">
-            Upload your AI-generated music, set pre-release dates, and let fans hear it 
-            2 weeks before Spotify, Amazon Music, Deezer, YouTube, and Anghami. Build your audience first on AITIFY.
+          <p className="text-emerald-500/50 mb-8 max-w-2xl mx-auto text-sm">
+            &gt; Upload sovereign music assets | Set pre-release dates | Earn settlement at $0.00025/stream
           </p>
-          <Button size="lg" onClick={() => openAuth("signup")} className="bg-primary hover:bg-primary/90 gap-1.5">
-            Join as Artist
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <button onClick={() => openAuth("signup")} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 text-xs font-bold transition-colors">
+            APPLY FOR ARTIST LISTING
+          </button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t border-border/20 bg-card/30">
-        <div className="max-w-7xl mx-auto">
+      <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-emerald-500/10 bg-black">
+        <div className="max-w-7xl mx-auto font-mono">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={logoImage} alt="AITIFY Music Radio" className="w-8 h-8 rounded-lg object-cover" />
-              <span className="font-bold">AITIFY MUSIC RADIO</span>
+              <img src={logoImage} alt="AITIFY" className="w-6 h-6 object-cover" />
+              <span className="text-emerald-400 text-xs font-bold">AITIFY SOVEREIGN EXCHANGE</span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Get music first. Support artists directly.
+            <p className="text-[10px] text-emerald-500/40">
+              SETTLEMENT: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME | 97.7 THE FLAME
             </p>
-            <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} AITIFY MUSIC RADIO. All rights reserved.
+            <p className="text-[10px] text-emerald-500/30">
+              &copy; {new Date().getFullYear()} AITIFY MUSIC RADIO. ALL RIGHTS RESERVED.
             </p>
           </div>
         </div>
