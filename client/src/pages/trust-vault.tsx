@@ -134,7 +134,7 @@ export default function TrustVaultPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {tracks.map((track) => {
-              const price = parseFloat(track.unitPrice || "0.99");
+              const price = parseFloat(track.unitPrice || "3.50");
               const sales = track.salesCount || 0;
               const grossSales = parseFloat((sales * price).toFixed(2));
               const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);

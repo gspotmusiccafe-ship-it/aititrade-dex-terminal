@@ -251,7 +251,7 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackW
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
 
-  const price = parseFloat((track as any).unitPrice || "0.99");
+  const price = parseFloat((track as any).unitPrice || "3.50");
   const sales = (track as any).salesCount || 0;
   const assetClass = ((track as any).assetClass || "standard").toLowerCase();
   const releaseType = ((track as any).releaseType || "native").toLowerCase();
@@ -600,13 +600,13 @@ export default function HomePage() {
     : allTracks;
 
   const totalGrossSales = displayTracks.reduce((sum, t) => {
-    const p = parseFloat((t as any).unitPrice || "0.99");
+    const p = parseFloat((t as any).unitPrice || "3.50");
     const s = (t as any).salesCount || 0;
     return sum + (s * p);
   }, 0);
   const totalUnits = displayTracks.reduce((sum, t) => sum + ((t as any).salesCount || 0), 0);
   const closedCount = displayTracks.filter(t => {
-    const p = parseFloat((t as any).unitPrice || "0.99");
+    const p = parseFloat((t as any).unitPrice || "3.50");
     const s = (t as any).salesCount || 0;
     const trackPool = marketSession?.pools?.find(pl => pl.trackId === t.id);
     const ceil = trackPool?.poolSize || CEILING;

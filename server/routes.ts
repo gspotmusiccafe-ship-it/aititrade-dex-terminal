@@ -267,7 +267,7 @@ export async function registerRoutes(
         .where(eq(tracks.releaseType, "global"));
 
       const totalGlobalSales = globalTracks.reduce((sum, t) => {
-        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "0.99"));
+        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "3.50"));
       }, 0);
 
       const allTrustees = await db
@@ -336,7 +336,7 @@ export async function registerRoutes(
       const [track] = await db.select().from(tracks).where(eq(tracks.id, req.params.trackId));
       if (!track) return res.status(404).json({ message: "Track not found" });
 
-      const price = parseFloat(track.unitPrice || "0.99");
+      const price = parseFloat(track.unitPrice || "3.50");
       const grossSales = (track.salesCount || 0) * price;
       const split = computeLiquiditySplit(grossSales);
       const poolPct = Math.min(100, (grossSales / pool.poolSize) * 100);
@@ -440,7 +440,7 @@ export async function registerRoutes(
         const [track] = await tx.select().from(tracks).where(eq(tracks.id, trackId));
         if (!track) throw new Error("NOT_FOUND");
 
-        const price = parseFloat(track.unitPrice || "0.99");
+        const price = parseFloat(track.unitPrice || "3.50");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
 
         const releaseType = ((track as any).releaseType || "native").toLowerCase();
@@ -583,7 +583,7 @@ export async function registerRoutes(
         salesCount: tracks.salesCount,
         unitPrice: tracks.unitPrice,
       }).from(tracks);
-      const totalGross = allTracks.reduce((sum, t) => sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "0.99")), 0);
+      const totalGross = allTracks.reduce((sum, t) => sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "3.50")), 0);
       res.json({
         totalMints: result?.total || 0,
         mintCap: 1000,
@@ -592,7 +592,7 @@ export async function registerRoutes(
           id: t.id,
           title: t.title,
           mints: t.salesCount || 0,
-          gross: parseFloat(((t.salesCount || 0) * parseFloat(t.unitPrice || "0.99")).toFixed(2)),
+          gross: parseFloat(((t.salesCount || 0) * parseFloat(t.unitPrice || "3.50")).toFixed(2)),
         })),
       });
     } catch (error) {
