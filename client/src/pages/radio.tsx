@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { SiSpotify } from "react-icons/si";
-import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, Pause, ExternalLink, Music, Music2, Users, Heart, Share2, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power } from "lucide-react";
+import { Radio as RadioIcon, Sun, Sunrise, CloudSun, Sunset, Moon, Play, Pause, ExternalLink, Music, Music2, Users, Heart, Share2, SkipForward, SkipBack, Shuffle, Repeat, Repeat1, ListPlus, Bookmark, LogIn, LogOut, BarChart3, Clock, Headphones, Eye, Plus, Trash2, Power, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1229,6 +1229,38 @@ function SpotifyConnectionPanel() {
   );
 }
 
+function MarketTicker() {
+  const { data: assets } = useQuery<any[]>({
+    queryKey: ["/api/market-ticker"],
+    refetchInterval: 60000,
+  });
+
+  if (!assets || assets.length === 0) return null;
+
+  const doubled = [...assets, ...assets];
+
+  return (
+    <div className="w-full bg-black/80 border-y border-emerald-500/30 py-2.5 overflow-hidden" data-testid="market-ticker">
+      <div className="flex animate-marquee whitespace-nowrap">
+        {doubled.map((asset, i) => (
+          <span key={`${asset.id}-${i}`} className="mx-6 text-xs font-mono inline-flex items-center gap-1.5">
+            <span className="text-emerald-400 font-bold">${asset.title.toUpperCase().replace(/\s+/g, '').slice(0, 12)}</span>
+            <span className="text-white/80">{(asset.streamCount || 0).toLocaleString()} VOL</span>
+            <span className={asset.isQualified ? 'text-yellow-400' : 'text-blue-400'}>
+              [{asset.isQualified ? 'QUALIFIED' : 'EMERGING'}]
+            </span>
+            {asset.isQualified ? (
+              <TrendingUp className="h-3 w-3 text-green-400" />
+            ) : (
+              <span className="text-emerald-500/70">▲ {Math.round(((asset.streamCount || 0) / 1000) * 100)}%</span>
+            )}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function RadioPage() {
   const { user } = useAuth();
 
@@ -1278,6 +1310,9 @@ export default function RadioPage() {
           </div>
         </div>
       </div>
+
+      <MarketTicker />
+
       <div className="max-w-4xl mx-auto px-6">
 
         <Tabs defaultValue="shows" className="mt-6">

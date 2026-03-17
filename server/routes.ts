@@ -2132,6 +2132,21 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/market-ticker", async (_req: any, res) => {
+    try {
+      const all = await db.select({
+        id: spotifyRoyaltyTracks.id,
+        title: spotifyRoyaltyTracks.title,
+        artistName: spotifyRoyaltyTracks.artistName,
+        streamCount: spotifyRoyaltyTracks.streamCount,
+        isQualified: spotifyRoyaltyTracks.isQualified,
+      }).from(spotifyRoyaltyTracks).orderBy(desc(spotifyRoyaltyTracks.streamCount));
+      res.json(all);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ticker data" });
+    }
+  });
+
   // Radio Shows - admin management
   app.get("/api/admin/radio-shows", isAuthenticated, async (req: any, res) => {
     try {
