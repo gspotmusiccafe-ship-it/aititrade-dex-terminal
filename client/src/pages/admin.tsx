@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1991,6 +1991,247 @@ function RadioShowsTab() {
   );
 }
 
+function JamControlTab() {
+  const { toast } = useToast();
+  const SETTLEMENT_RATE = 0.00025;
+
+  const [seats, setSeats] = useState([
+    { slot: 1, label: "THE KING", userId: "", userName: "G. Smooth", role: "Leader", locked: true },
+    { slot: 2, label: "THE QUEEN", userId: "", userName: "Jmarie", role: "Co-Leader", locked: true },
+    { slot: 3, label: "LEASE SEAT", userId: "", userName: "", role: "Vacant", locked: false },
+    { slot: 4, label: "LEASE SEAT", userId: "", userName: "", role: "Vacant", locked: false },
+    { slot: 5, label: "LEASE SEAT", userId: "", userName: "", role: "Vacant", locked: false },
+    { slot: 6, label: "LEASE SEAT", userId: "", userName: "", role: "Vacant", locked: false },
+  ]);
+
+  const { data: jamSessions, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/jam-sessions"],
+  });
+
+  const { data: engagement } = useQuery<any>({
+    queryKey: ["/api/jam-sessions/engagement/overview"],
+  });
+
+  const toggleSession = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("PATCH", `/api/jam-sessions/${id}/toggle`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions"] });
+      toast({ title: "Session toggled" });
+    },
+  });
+
+  const deleteSession = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/jam-sessions/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/jam-sessions"] });
+      toast({ title: "Session removed" });
+    },
+  });
+
+  const updateSeatName = (slot: number, name: string) => {
+    setSeats(prev => prev.map(s => s.slot === slot ? { ...s, userName: name, role: name ? "Leased" : "Vacant" } : s));
+  };
+
+  const totalStreams = engagement?.totalStreams || 0;
+  const totalSessions = engagement?.totalSessions || 0;
+  const estimatedSettlement = totalStreams * SETTLEMENT_RATE;
+  const occupiedSeats = seats.filter(s => s.userName).length;
+
+  return (
+    <div className="space-y-6">
+      <Card className="bg-card/60 border-border/30">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-black tracking-tight flex items-center gap-2">
+                <Wifi className="h-5 w-5 text-[#1DB954]" />
+                JAM CONTROL CENTER
+              </CardTitle>
+              <CardDescription>Spotify Jam Session Leader Seats & Settlement Tracking</CardDescription>
+            </div>
+            <Badge className="bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/40 font-mono">
+              RATE: ${SETTLEMENT_RATE}/stream
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="bg-black/40 rounded-lg p-3 border border-zinc-800 text-center">
+              <p className="text-2xl font-black text-white">{occupiedSeats}/6</p>
+              <p className="text-xs text-zinc-500 font-mono">SEATS FILLED</p>
+            </div>
+            <div className="bg-black/40 rounded-lg p-3 border border-zinc-800 text-center">
+              <p className="text-2xl font-black text-[#1DB954]">{totalSessions}</p>
+              <p className="text-xs text-zinc-500 font-mono">TOTAL SESSIONS</p>
+            </div>
+            <div className="bg-black/40 rounded-lg p-3 border border-zinc-800 text-center">
+              <p className="text-2xl font-black text-white">{totalStreams.toLocaleString()}</p>
+              <p className="text-xs text-zinc-500 font-mono">TOTAL STREAMS</p>
+            </div>
+            <div className="bg-black/40 rounded-lg p-3 border border-[#1DB954]/30 text-center">
+              <p className="text-2xl font-black text-[#1DB954]">${estimatedSettlement.toFixed(4)}</p>
+              <p className="text-xs text-zinc-500 font-mono">EST. SETTLEMENT</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <Crown className="h-4 w-4 text-yellow-500" />
+              LEADER SEAT CONFIGURATION
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {seats.map((seat) => (
+                <div
+                  key={seat.slot}
+                  className={`rounded-lg p-4 border ${
+                    seat.locked
+                      ? seat.slot === 1
+                        ? "bg-yellow-500/5 border-yellow-500/30"
+                        : "bg-purple-500/5 border-purple-500/30"
+                      : seat.userName
+                        ? "bg-[#1DB954]/5 border-[#1DB954]/30"
+                        : "bg-black/40 border-zinc-800 border-dashed"
+                  }`}
+                  data-testid={`jam-seat-${seat.slot}`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-zinc-600">SLOT {seat.slot}</span>
+                      <Badge className={`text-[10px] ${
+                        seat.locked ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/40" :
+                        seat.userName ? "bg-[#1DB954]/20 text-[#1DB954] border-[#1DB954]/40" :
+                        "bg-zinc-800 text-zinc-500 border-zinc-700"
+                      }`}>
+                        {seat.role}
+                      </Badge>
+                    </div>
+                    {seat.locked ? (
+                      <Lock className="h-3.5 w-3.5 text-yellow-500" />
+                    ) : (
+                      <Unlock className="h-3.5 w-3.5 text-zinc-600" />
+                    )}
+                  </div>
+                  <p className="text-[10px] font-mono text-zinc-600 mb-1">{seat.label}</p>
+                  {seat.locked ? (
+                    <p className="text-sm font-bold text-white">{seat.userName}</p>
+                  ) : (
+                    <Input
+                      value={seat.userName}
+                      onChange={(e) => updateSeatName(seat.slot, e.target.value)}
+                      placeholder="Assign listener..."
+                      className="h-7 text-xs bg-black/60 border-zinc-700"
+                      data-testid={`input-seat-name-${seat.slot}`}
+                    />
+                  )}
+                  {seat.userName && !seat.locked && (
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[10px] text-zinc-500 font-mono">POTENTIAL INCOME</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-1.5 text-[10px] text-red-400 hover:text-red-300"
+                        onClick={() => updateSeatName(seat.slot, "")}
+                        data-testid={`button-remove-seat-${seat.slot}`}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <SiSpotify className="h-4 w-4 text-[#1DB954]" />
+              ACTIVE JAM SESSIONS
+            </h3>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+              </div>
+            ) : !jamSessions?.length ? (
+              <div className="bg-black/40 rounded-lg p-6 border border-zinc-800 text-center">
+                <Wifi className="h-8 w-8 text-zinc-700 mx-auto mb-2" />
+                <p className="text-sm text-zinc-500">No Jam Sessions configured</p>
+                <p className="text-xs text-zinc-600 mt-1">Create sessions from the Spotify tab to start streaming</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {jamSessions.map((session: any) => (
+                  <div key={session.id} className="bg-black/40 rounded-lg p-3 border border-zinc-800 flex items-center justify-between" data-testid={`jam-session-${session.id}`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${session.isActive ? "bg-[#1DB954] animate-pulse" : "bg-zinc-600"}`} />
+                      <div>
+                        <p className="text-sm font-bold text-white">{session.name}</p>
+                        <p className="text-xs text-zinc-500 font-mono">{session.spotifyName || session.spotifyUri}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-[10px] ${session.isActive ? "bg-[#1DB954]/20 text-[#1DB954]" : "bg-zinc-800 text-zinc-500"}`}>
+                        {session.isActive ? "LIVE" : "PAUSED"}
+                      </Badge>
+                      <span className="text-[10px] text-zinc-600 font-mono">{session.scheduledTime}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={() => toggleSession.mutate(session.id)}
+                        data-testid={`button-toggle-jam-${session.id}`}
+                      >
+                        {session.isActive ? <Ban className="h-3 w-3" /> : <CheckCircle className="h-3 w-3" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-red-400 hover:text-red-300"
+                        onClick={() => deleteSession.mutate(session.id)}
+                        data-testid={`button-delete-jam-${session.id}`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-black/60 rounded-lg p-4 border border-emerald-500/20">
+            <h3 className="text-sm font-bold text-emerald-400 mb-3 flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              SETTLEMENT LEDGER
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
+              <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                <span className="text-zinc-600">RATE PER STREAM</span>
+                <p className="text-lg font-black text-white mt-1">${SETTLEMENT_RATE}</p>
+              </div>
+              <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                <span className="text-zinc-600">RATE PER SESSION</span>
+                <p className="text-lg font-black text-white mt-1">${(SETTLEMENT_RATE * 10).toFixed(4)}</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5">~10 streams/session avg</p>
+              </div>
+              <div className="bg-black/40 rounded p-3 border border-[#1DB954]/30">
+                <span className="text-zinc-600">PROJECTED MONTHLY</span>
+                <p className="text-lg font-black text-[#1DB954] mt-1">${(totalStreams * SETTLEMENT_RATE * 30).toFixed(2)}</p>
+                <p className="text-[10px] text-zinc-600 mt-0.5">Based on current daily avg</p>
+              </div>
+            </div>
+          </div>
+
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function CeoVaultTab() {
   const { toast } = useToast();
   const [themeInput, setThemeInput] = useState("");
@@ -3127,6 +3368,10 @@ export default function AdminPage() {
                 <DollarSign className="h-4 w-4 mr-1.5 text-[#1DB954]" />
                 Royalty Tracker
               </TabsTrigger>
+              <TabsTrigger value="jam-control" data-testid="tab-jam-control" className="whitespace-nowrap data-[state=active]:bg-[#1DB954]/10 data-[state=active]:text-[#1DB954]">
+                <Wifi className="h-4 w-4 mr-1.5" />
+                Jam Control
+              </TabsTrigger>
               <TabsTrigger value="vault" data-testid="tab-vault" className="whitespace-nowrap data-[state=active]:bg-yellow-500/10 data-[state=active]:text-yellow-400">
                 <ShieldCheck className="h-4 w-4 mr-1.5" />
                 CEO Vault
@@ -3184,6 +3429,10 @@ export default function AdminPage() {
 
           <TabsContent value="royalty">
             <SpotifyRoyaltyTab />
+          </TabsContent>
+
+          <TabsContent value="jam-control">
+            <JamControlTab />
           </TabsContent>
 
           <TabsContent value="vault">
