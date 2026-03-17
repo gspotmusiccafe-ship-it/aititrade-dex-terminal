@@ -1071,7 +1071,7 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
             </TabsTrigger>
             <TabsTrigger value="creative-suite" className="text-lime-400 data-[state=active]:text-lime-300 data-[state=active]:bg-lime-500/10">
               <Palette className="h-4 w-4 mr-1" />
-              Creative Suite
+              CEO Command
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
@@ -1348,80 +1348,134 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
 }
 
 function CreativeSuiteTab() {
+  const { toast } = useToast();
+
+  const IDEOGRAM_PROMPT = "Create a bold, premium certificate design with a pitch black background. Use LIME GREEN (#84cc16) neon borders and circuit-board patterns. Include BOLD GOLD (#f59e0b) text reading 'CERTIFIED AI-GENERATED ASSET' with a metallic sheen. Add geometric neural network lines, a hexagonal trust seal, and futuristic typography. Style: Bloomberg Terminal meets luxury brand certificate. High contrast, no gradients on text.";
+
   const tools = [
     {
       id: "suno",
-      name: "SUNO — AI AUDIO ENGINE",
-      description: "Generate high-fidelity audio assets. Create beats, instrumentals, and full tracks powered by AI.",
+      name: "SUNO",
+      subtitle: "AI AUDIO ENGINE",
+      description: "Generate high-fidelity beats, instrumentals, and full AI tracks. Mint audio assets at production quality.",
       url: "https://suno.com",
       icon: "🎵",
+      color: "lime",
     },
     {
       id: "jumpstr",
-      name: "JUMPSTR — DISTRIBUTION & VELOCITY",
-      description: "Handle distribution and social velocity of minted assets. Amplify reach across platforms.",
+      name: "JUMPSTR",
+      subtitle: "DISTRIBUTION & VELOCITY",
+      description: "Distribute minted assets across platforms. Amplify social velocity and reach for maximum market penetration.",
       url: "https://jumpstr.io",
       icon: "🚀",
+      color: "lime",
     },
     {
       id: "ideogram",
-      name: "IDEOGRAM — COVER ART GENERATOR",
-      description: "Generate bold gold and lime green cover art for Trust Certificates and asset thumbnails.",
+      name: "IDEOGRAM",
+      subtitle: "COVER ART GENERATOR",
+      description: "Generate bold gold and lime green cover art for Trust Certificates, asset thumbnails, and brand identity.",
       url: "https://ideogram.ai",
       icon: "🎨",
+      color: "amber",
+      hasPromptCopy: true,
     },
   ];
 
+  const openPopup = (url: string, name: string) => {
+    const w = 1200;
+    const h = 800;
+    const left = (window.screen.width - w) / 2;
+    const top = (window.screen.height - h) / 2;
+    window.open(url, name, `width=${w},height=${h},left=${left},top=${top},menubar=no,toolbar=no,location=yes,status=no,scrollbars=yes,resizable=yes`);
+  };
+
+  const copyIdeogramPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(IDEOGRAM_PROMPT);
+      toast({ title: "✦ PROMPT COPIED", description: "Gold/Lime Trust Certificate prompt ready. Paste into Ideogram." });
+    } catch {
+      toast({ title: "Copy failed", description: "Manually select and copy the prompt.", variant: "destructive" });
+    }
+  };
+
   return (
-    <div className="space-y-6 w-full">
+    <div className="space-y-8 w-full">
       <div>
-        <h3 className="text-2xl font-extrabold flex items-center gap-3 text-lime-400 font-mono">
-          <div className="h-10 w-10 rounded-lg bg-lime-500/15 flex items-center justify-center">
+        <h3 className="text-2xl font-extrabold flex items-center gap-3 text-lime-400 font-mono tracking-wide">
+          <div className="h-10 w-10 rounded-lg bg-lime-500/15 flex items-center justify-center border border-lime-500/30">
             <Palette className="h-6 w-6 text-lime-400" />
           </div>
-          CREATIVE SUITE — EXTERNAL TOOLS
+          CEO COMMAND CENTER
         </h3>
-        <p className="text-sm text-zinc-400 mt-2 font-mono">
-          Integrated creative tools for Asset Architects. Generate audio, distribute assets, and create cover art — all without leaving the dashboard.
+        <p className="text-sm text-zinc-500 mt-2 font-mono">
+          QUICK-LAUNCH CREATIVE TOOLS — Each opens in a dedicated 1200×800 popup window for full-speed operation.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 w-full">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
         {tools.map((tool) => (
-          <Card key={tool.id} className="bg-black border-2 border-lime-500/50 overflow-hidden w-full" data-testid={`creative-suite-${tool.id}`}>
-            <CardHeader className="pb-3 bg-lime-500/5 border-b border-lime-500/30">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-extrabold text-lime-400 font-mono flex items-center gap-3">
-                  <span className="text-2xl">{tool.icon}</span>
-                  {tool.name}
-                </CardTitle>
-                <a
-                  href={tool.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-lime-400 transition-colors font-mono"
-                  data-testid={`link-open-${tool.id}`}
-                >
-                  OPEN IN NEW TAB
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+          <Card
+            key={tool.id}
+            className={`bg-black border-2 ${tool.color === "amber" ? "border-amber-500/50 hover:border-amber-400/80" : "border-lime-500/50 hover:border-lime-400/80"} overflow-hidden transition-all duration-200 hover:shadow-lg ${tool.color === "amber" ? "hover:shadow-amber-500/10" : "hover:shadow-lime-500/10"} group`}
+            data-testid={`creative-suite-${tool.id}`}
+          >
+            <CardContent className="p-0">
+              <div className={`p-6 ${tool.color === "amber" ? "bg-amber-500/5" : "bg-lime-500/5"} border-b ${tool.color === "amber" ? "border-amber-500/20" : "border-lime-500/20"}`}>
+                <div className="text-center mb-4">
+                  <span className="text-5xl block mb-3">{tool.icon}</span>
+                  <h4 className={`text-2xl font-extrabold font-mono tracking-wider ${tool.color === "amber" ? "text-amber-400" : "text-lime-400"}`}>
+                    {tool.name}
+                  </h4>
+                  <p className={`text-xs font-bold font-mono mt-1 ${tool.color === "amber" ? "text-amber-500/70" : "text-lime-500/70"} tracking-widest`}>
+                    {tool.subtitle}
+                  </p>
+                </div>
+                <p className="text-zinc-400 text-xs font-mono text-center leading-relaxed">
+                  {tool.description}
+                </p>
               </div>
-              <CardDescription className="text-zinc-400 font-mono text-xs mt-1">{tool.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 w-full">
-              <iframe
-                src={tool.url}
-                title={tool.name}
-                className="w-full border-0"
-                style={{ minHeight: "800px", height: "800px" }}
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-                loading="lazy"
-                data-testid={`iframe-${tool.id}`}
-              />
+
+              <div className="p-4 space-y-3">
+                <Button
+                  onClick={() => openPopup(tool.url, tool.id)}
+                  className={`w-full py-5 text-lg font-extrabold font-mono tracking-wide ${tool.color === "amber" ? "bg-amber-600 hover:bg-amber-700" : "bg-lime-600 hover:bg-lime-700"} text-white border-0 shadow-lg ${tool.color === "amber" ? "shadow-amber-500/20" : "shadow-lime-500/20"}`}
+                  data-testid={`button-launch-${tool.id}`}
+                >
+                  <ExternalLink className="h-5 w-5 mr-2" />
+                  LAUNCH {tool.name}
+                </Button>
+
+                {tool.hasPromptCopy && (
+                  <Button
+                    onClick={copyIdeogramPrompt}
+                    variant="outline"
+                    className="w-full py-4 text-sm font-extrabold font-mono border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:border-amber-400/50"
+                    data-testid="button-copy-ideogram-prompt"
+                  >
+                    📋 COPY TRUST CERTIFICATE PROMPT
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <Card className="bg-black/50 border border-zinc-800 overflow-hidden">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <div className="h-8 w-8 rounded bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-amber-500/20">
+              <span className="text-sm">📋</span>
+            </div>
+            <div>
+              <p className="text-xs font-bold font-mono text-amber-400 mb-1">IDEOGRAM PROMPT — GOLD/LIME TRUST CERTIFICATE</p>
+              <p className="text-[11px] font-mono text-zinc-500 leading-relaxed select-all">{IDEOGRAM_PROMPT}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
