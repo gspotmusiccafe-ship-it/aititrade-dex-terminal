@@ -25,6 +25,7 @@ import RadioPage from "@/pages/radio";
 import BrowsePage from "@/pages/browse";
 import PlaylistPage from "@/pages/playlist";
 import LeaderboardPage from "@/pages/leaderboard";
+import DashboardPage from "@/pages/dashboard";
 import { useEffect } from "react";
 
 const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee"];
@@ -142,6 +143,7 @@ function AuthenticatedLayout() {
               <Route path="/leaderboard">{() => <PremiumGate><LeaderboardPage /></PremiumGate>}</Route>
               <Route path="/playlist/:id">{() => <PremiumGate><PlaylistPage /></PremiumGate>}</Route>
               <Route path="/browse/:section">{() => <PremiumGate><BrowsePage /></PremiumGate>}</Route>
+              <Route path="/dashboard">{() => <PremiumGate><DashboardPage /></PremiumGate>}</Route>
               <Route path="/login" component={LandingPage} />
               <Route component={NotFound} />
             </Switch>

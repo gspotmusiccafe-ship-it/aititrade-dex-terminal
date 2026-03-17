@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2 } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -189,6 +189,14 @@ export function AppSidebar() {
                   <Link href="/artist-portal" data-testid="nav-artist-portal">
                     <Upload className="h-5 w-5" />
                     <span>Mint Factory</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/dashboard"}>
+                  <Link href="/dashboard" data-testid="nav-dashboard">
+                    <GraduationCap className="h-5 w-5 text-lime-400" />
+                    <span className="text-lime-400 font-bold">CEO Class</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

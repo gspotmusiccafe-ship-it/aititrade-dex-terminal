@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -3250,6 +3250,50 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error) {
       console.error("Error deleting spotify royalty track:", error);
       res.status(500).json({ message: "Failed to delete track" });
+    }
+  });
+
+  app.get("/api/credit-steps", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const steps = await db.select().from(creditSteps).where(eq(creditSteps.userId, userId));
+      res.json(steps);
+    } catch (error) {
+      console.error("Error fetching credit steps:", error);
+      res.status(500).json({ message: "Failed to fetch credit steps" });
+    }
+  });
+
+  app.post("/api/credit-steps/update", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { stepNumber, status } = req.body;
+      if (!stepNumber || !status) {
+        return res.status(400).json({ message: "stepNumber and status required" });
+      }
+      const existing = await db.select().from(creditSteps)
+        .where(and(eq(creditSteps.userId, userId), eq(creditSteps.stepNumber, stepNumber)));
+      if (existing.length > 0) {
+        await db.update(creditSteps)
+          .set({
+            status,
+            completedAt: status === "completed" ? new Date() : null,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(creditSteps.userId, userId), eq(creditSteps.stepNumber, stepNumber)));
+      } else {
+        await db.insert(creditSteps).values({
+          userId,
+          stepNumber,
+          status,
+          completedAt: status === "completed" ? new Date() : null,
+        });
+      }
+      const steps = await db.select().from(creditSteps).where(eq(creditSteps.userId, userId));
+      res.json(steps);
+    } catch (error) {
+      console.error("Error updating credit step:", error);
+      res.status(500).json({ message: "Failed to update credit step" });
     }
   });
 

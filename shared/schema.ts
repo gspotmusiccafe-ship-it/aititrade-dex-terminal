@@ -374,6 +374,21 @@ export const insertAutopilotPlaylistSchema = createInsertSchema(autopilotPlaylis
 export type InsertAutopilotPlaylist = z.infer<typeof insertAutopilotPlaylistSchema>;
 export type AutopilotPlaylist = typeof autopilotPlaylists.$inferSelect;
 
+export const creditSteps = pgTable("credit_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  stepNumber: integer("step_number").notNull(),
+  status: varchar("status").notNull().default("locked"),
+  notes: text("notes"),
+  completedAt: timestamp("completed_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCreditStepSchema = createInsertSchema(creditSteps).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCreditStep = z.infer<typeof insertCreditStepSchema>;
+export type CreditStep = typeof creditSteps.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };
