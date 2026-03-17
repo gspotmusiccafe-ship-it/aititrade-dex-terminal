@@ -1360,7 +1360,11 @@ function LyricsTab({ artistId }: { artistId: string }) {
     onSuccess: (data: any) => {
       setGeneratedLyrics(data.lyrics);
       setIsGenerating(false);
-      toast({ title: "Lyrics generated!", description: "Review your lyrics below. Edit them and submit when ready." });
+      if (!songTitle.trim()) {
+        const autoTitle = prompt.trim().split(/[.,!?\n]/)[0].slice(0, 60).trim();
+        setSongTitle(autoTitle || "Untitled Track");
+      }
+      toast({ title: "✦ LYRICS GENERATED", description: "Review below — title auto-populated. Edit and mint when ready." });
     },
     onError: () => {
       setIsGenerating(false);
@@ -1416,58 +1420,62 @@ function LyricsTab({ artistId }: { artistId: string }) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full">
       <div>
-        <h3 className="text-lg font-bold flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500/15 to-primary/10 flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-primary" />
+        <h3 className="text-2xl font-extrabold flex items-center gap-3 text-lime-400">
+          <div className="h-10 w-10 rounded-lg bg-lime-500/15 flex items-center justify-center">
+            <Sparkles className="h-6 w-6 text-lime-400" />
           </div>
-          AI Song Lyrics Generator
+          ASSET MINT — AI SONG GENERATOR
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">Describe your song idea and AI will generate complete lyrics. Edit, then submit for beat production.</p>
+        <p className="text-sm text-zinc-400 mt-2 font-mono">Describe your song idea below. AI generates complete lyrics. Edit, then mint your asset for distribution.</p>
       </div>
 
-      <Card className="bg-card/60 border-border/30 overflow-hidden">
-        <div className="h-1 bg-gradient-to-r from-primary via-purple-500 to-emerald-500" />
-        <CardContent className="p-6 space-y-4">
-          <div>
-            <Label>Describe your song *</Label>
+      <Card className="bg-card/60 border-lime-500/30 overflow-hidden w-full">
+        <div className="h-1.5 bg-gradient-to-r from-lime-500 via-lime-400 to-emerald-500" />
+        <CardContent className="p-6 space-y-5 w-full">
+          <div className="w-full">
+            <Label className="text-base font-extrabold text-lime-400">Describe your song *</Label>
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. A love song about missing someone on a rainy night, with a catchy chorus about finding your way back..."
-              className="mt-1.5 min-h-[100px]"
+              className="mt-2 w-full font-mono border-lime-500/30 focus:border-lime-500"
+              style={{ minHeight: "600px", fontSize: "1.5rem", lineHeight: "2rem" }}
               data-testid="input-lyrics-prompt"
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
             <div>
-              <Label>Genre</Label>
+              <Label className="text-sm font-bold text-zinc-300">Genre</Label>
               <Input
                 value={genre}
                 onChange={(e) => setGenre(e.target.value)}
                 placeholder="e.g. R&B, Hip-Hop..."
-                className="mt-1.5"
+                className="mt-1.5 border-lime-500/20"
+                style={{ fontSize: "1.5rem", padding: "0.75rem" }}
                 data-testid="input-lyrics-genre"
               />
             </div>
             <div>
-              <Label>Mood</Label>
+              <Label className="text-sm font-bold text-zinc-300">Mood</Label>
               <Input
                 value={mood}
                 onChange={(e) => setMood(e.target.value)}
                 placeholder="e.g. Melancholic, Upbeat..."
-                className="mt-1.5"
+                className="mt-1.5 border-lime-500/20"
+                style={{ fontSize: "1.5rem", padding: "0.75rem" }}
                 data-testid="input-lyrics-mood"
               />
             </div>
             <div>
-              <Label>Style Reference</Label>
+              <Label className="text-sm font-bold text-zinc-300">Style Reference</Label>
               <Input
                 value={style}
                 onChange={(e) => setStyle(e.target.value)}
                 placeholder="e.g. Like Drake, Adele..."
-                className="mt-1.5"
+                className="mt-1.5 border-lime-500/20"
+                style={{ fontSize: "1.5rem", padding: "0.75rem" }}
                 data-testid="input-lyrics-style"
               />
             </div>
@@ -1475,44 +1483,47 @@ function LyricsTab({ artistId }: { artistId: string }) {
           <Button
             onClick={handleGenerate}
             disabled={isGenerating || !prompt.trim()}
+            className="w-full py-6 text-2xl font-extrabold bg-lime-600 hover:bg-lime-700 text-white border-0 shadow-lg shadow-lime-500/20"
             data-testid="button-generate-lyrics"
           >
-            {isGenerating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
-            {isGenerating ? "Generating..." : "Generate Lyrics"}
+            {isGenerating ? <Loader2 className="h-7 w-7 mr-3 animate-spin" /> : <Wand2 className="h-7 w-7 mr-3" />}
+            {isGenerating ? "GENERATING LYRICS..." : "GENERATE LYRICS"}
           </Button>
         </CardContent>
       </Card>
 
       {generatedLyrics && (
-        <Card className="border-primary/30">
+        <Card className="border-lime-500/40 w-full">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Generated Lyrics
+            <CardTitle className="text-xl font-extrabold flex items-center gap-2 text-lime-400">
+              <Sparkles className="h-5 w-5 text-lime-400" />
+              GENERATED LYRICS — READY TO MINT
             </CardTitle>
-            <CardDescription>Review and edit your lyrics, then submit for beat production</CardDescription>
+            <CardDescription className="text-zinc-400">Review and edit your lyrics, then mint your asset for beat production & distribution</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Song Title *</Label>
+          <CardContent className="space-y-5 w-full">
+            <div className="w-full">
+              <Label className="text-base font-extrabold text-lime-400">Song Title *</Label>
               <Input
                 value={songTitle}
                 onChange={(e) => setSongTitle(e.target.value)}
                 placeholder="Give your song a title..."
-                className="mt-1.5"
+                className="mt-2 border-lime-500/30 font-bold"
+                style={{ fontSize: "1.5rem", padding: "0.75rem" }}
                 data-testid="input-lyrics-title"
               />
             </div>
-            <div>
-              <Label>Lyrics (editable)</Label>
+            <div className="w-full">
+              <Label className="text-base font-extrabold text-lime-400">Lyrics (editable)</Label>
               <Textarea
                 value={generatedLyrics}
                 onChange={(e) => setGeneratedLyrics(e.target.value)}
-                className="mt-1.5 min-h-[300px] font-mono text-sm"
+                className="mt-2 w-full font-mono border-lime-500/30 focus:border-lime-500"
+                style={{ minHeight: "600px", fontSize: "1.5rem", lineHeight: "2rem" }}
                 data-testid="input-lyrics-content"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3 w-full">
               <Button
                 onClick={() => submitMutation.mutate({
                   title: songTitle,
@@ -1521,14 +1532,21 @@ function LyricsTab({ artistId }: { artistId: string }) {
                   notes: `Prompt: ${prompt}${mood ? ` | Mood: ${mood}` : ""}${style ? ` | Style: ${style}` : ""}`,
                 })}
                 disabled={submitMutation.isPending || !songTitle.trim() || !generatedLyrics.trim()}
+                className="flex-1 py-6 text-2xl font-extrabold bg-lime-600 hover:bg-lime-700 text-white border-0 shadow-lg shadow-lime-500/20"
                 data-testid="button-submit-lyrics"
               >
-                {submitMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                Submit for Beat Production
+                {submitMutation.isPending ? <Loader2 className="h-7 w-7 mr-3 animate-spin" /> : <Send className="h-7 w-7 mr-3" />}
+                MINT ASSET
               </Button>
-              <Button variant="outline" onClick={handleGenerate} disabled={isGenerating} data-testid="button-regenerate-lyrics">
-                <Wand2 className="h-4 w-4 mr-2" />
-                Regenerate
+              <Button
+                variant="outline"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="py-6 text-xl font-extrabold border-lime-500/30 text-lime-400 hover:bg-lime-500/10 px-8"
+                data-testid="button-regenerate-lyrics"
+              >
+                <Wand2 className="h-6 w-6 mr-2" />
+                REGENERATE
               </Button>
             </div>
           </CardContent>
