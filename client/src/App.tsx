@@ -27,7 +27,7 @@ import PlaylistPage from "@/pages/playlist";
 import LeaderboardPage from "@/pages/leaderboard";
 import { useEffect } from "react";
 
-const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo"];
+const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee"];
 
 function AppRouter() {
   const { isAuthenticated, isLoading } = useAuth();

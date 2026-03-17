@@ -337,6 +337,7 @@ const membershipTiers = [
     name: "Front Page Investor",
     price: "FREE",
     period: "",
+    stream: "free",
     features: [
       "Paper trading on 97.7 THE FLAME",
       "Stream AI-generated assets",
@@ -347,46 +348,38 @@ const membershipTiers = [
     highlight: false,
   },
   {
-    name: "Entry Trader",
-    price: "$4.99",
+    name: "Mint Factory CEO",
+    price: "$9.99",
     period: "/month",
+    stream: "mintor",
     features: [
-      "Inside exchange access",
-      "Acquire standard positions",
-      "Follow Asset Architects & create playlists",
-      "Standard audio quality",
-    ],
-    highlight: false,
-  },
-  {
-    name: "Exchange Trader",
-    price: "$24.99",
-    period: "/month",
-    features: [
-      "Full exchange access",
-      "All assets + pre-release papers",
-      "High-Volatility trading",
-      "Priority settlement queue",
-      "High quality audio",
+      "Full Sovereign Exchange access",
+      "Mint & trade all asset classes",
+      "2-Week Early Pre-release trading",
+      "16% Daily Trading Credit",
+      "AI Lyrics Generator & Audio Mastering",
+      "Distribution to Spotify, Amazon, YouTube",
+      "Marketing & promotions",
+      "Aitify Music Store — 25% retention",
+      "Leaderboard, analytics & tier badges",
+      "Lossless audio quality",
     ],
     highlight: true,
   },
   {
-    name: "Mint Factory CEO",
-    price: "$99",
-    period: " to join",
+    name: "Asset Trustee",
+    price: "$500",
+    period: " total",
+    stream: "trust",
     features: [
-      "Everything in Exchange Trader",
-      "$9.99/month to stay active",
-      "16% Daily Trading Credit",
-      "Minting rights — upload assets",
-      "AI Lyrics Generator",
-      "Audio mastering engine",
-      "Distribution to all platforms",
-      "Marketing & promotions",
-      "25% store retention",
-      "Leaderboard & analytics",
-      "Lossless audio quality",
+      "$25 DOWN / 0% INTEREST",
+      "Full Sovereign Exchange access",
+      "All assets + pre-release papers",
+      "Priority settlement queue",
+      "High-Volatility asset trading",
+      "Dual-status — hold with MINTOR tier",
+      "Trust certificate on all positions",
+      "High quality audio",
     ],
     highlight: false,
   },
@@ -708,68 +701,104 @@ export default function LandingPage() {
               POSITION TIERS & FINANCING TERMS
             </h2>
             <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
-              &gt; INVESTOR $25 | CEO $99 | FINANCING AVAILABLE AT $475 TERMS
+              &gt; DUAL-STREAM REVENUE MODEL | <span className="text-lime-400 font-bold">MINTOR $9.99/MO</span> | <span className="text-amber-400 font-bold">TRUST $25 DOWN</span>
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-6xl mx-auto">
-            {membershipTiers.map((tier, index) => (
-              <div
-                key={index}
-                className={`relative overflow-hidden transition-all border ${
-                  tier.highlight
-                    ? "border-emerald-500/60 bg-black"
-                    : "border-emerald-500/20 bg-black hover:border-emerald-500/40"
-                }`}
-                data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                {tier.highlight && (
-                  <div className="bg-emerald-500/20 text-emerald-400 text-center py-1 text-[9px] font-bold uppercase tracking-wider border-b border-emerald-500/30">
-                    RECOMMENDED POSITION
-                  </div>
-                )}
-                <div className="p-5">
-                  <div className="mb-4">
-                    <h3 className="font-bold text-sm mb-1 text-emerald-400 tracking-tight">{tier.name.toUpperCase()}</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-white">{tier.price}</span>
-                      <span className="text-emerald-500/40 text-[10px]">{tier.period}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
+            {membershipTiers.map((tier, index) => {
+              const isMintor = tier.stream === "mintor";
+              const isTrust = tier.stream === "trust";
+              const isFree = tier.stream === "free";
+              const borderCls = isTrust
+                ? "border-amber-500/60 bg-black hover:border-amber-500/80"
+                : isMintor
+                ? "border-lime-500/60 bg-black"
+                : "border-zinc-700/40 bg-black hover:border-zinc-700/60";
+              const titleCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-zinc-400";
+              const priceCls = isTrust ? "text-amber-300" : isMintor ? "text-lime-300" : "text-white";
+              const bulletCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-zinc-500";
+              const featureCls = isTrust ? "text-amber-500/70" : isMintor ? "text-lime-500/70" : "text-zinc-500";
+
+              return (
+                <div
+                  key={index}
+                  className={`relative overflow-hidden transition-all border ${borderCls}`}
+                  data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
+                >
+                  {isMintor && (
+                    <div className="bg-lime-500/20 text-lime-400 text-center py-1.5 text-[10px] font-extrabold uppercase tracking-wider border-b border-lime-500/30">
+                      ◆ MINTOR — MINT & TRADE
                     </div>
-                    {tier.name === "Front Page Investor" && (
-                      <p className="text-[9px] text-zinc-500 mt-1">PAPER TRADING ONLY — SPOTIFY ACCOUNT REQUIRED</p>
+                  )}
+                  {isTrust && (
+                    <div className="bg-amber-500/20 text-amber-400 text-center py-1.5 text-[10px] font-extrabold uppercase tracking-wider border-b border-amber-500/30">
+                      ◆ TRUST INVESTOR — $25 DOWN
+                    </div>
+                  )}
+                  <div className="p-5">
+                    <div className="mb-4">
+                      <h3 className={`font-extrabold text-sm mb-1 tracking-tight ${titleCls}`}>{tier.name.toUpperCase()}</h3>
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-2xl font-black ${priceCls}`}>{tier.price}</span>
+                        <span className={`text-[10px] ${featureCls}`}>{tier.period}</span>
+                      </div>
+                      {isFree && (
+                        <p className="text-[9px] text-zinc-500 mt-1">PAPER TRADING ONLY — SPOTIFY ACCOUNT REQUIRED</p>
+                      )}
+                      {isMintor && (
+                        <p className="text-[10px] text-lime-400/60 mt-1 font-bold">BLUEVINE RECURRING — CANCEL ANYTIME</p>
+                      )}
+                      {isTrust && (
+                        <p className="text-[10px] text-amber-400/60 mt-1 font-bold">$25 DOWN / 0% INTEREST — $500 TOTAL</p>
+                      )}
+                    </div>
+
+                    <ul className="space-y-2 mb-5">
+                      {tier.features.map((feature, i) => (
+                        <li key={i} className={`flex items-start gap-2 text-[11px] ${featureCls}`}>
+                          <span className={`mt-0.5 ${isFree && feature.includes("No ") ? "text-red-400" : bulletCls}`}>▸</span>
+                          <span className={`${isFree && feature.includes("No ") ? "text-red-400/60" : ""} ${feature.includes("$25 DOWN") ? "font-extrabold text-amber-400" : ""}`}>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    {isTrust && (
+                      <p className="text-[9px] text-amber-500/50 mb-3 text-center font-bold">DUAL ACCESS — HOLD WITH MINTOR TIER</p>
                     )}
-                    {tier.name !== "Front Page Investor" && (
-                      <p className="text-[9px] text-emerald-500/50 mt-1">INSIDE EXCHANGE ACCESS</p>
+
+                    {isMintor ? (
+                      <a
+                        href="https://www.bluevine.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
+                        data-testid="button-mintor-checkout"
+                      >
+                        ACTIVATE MINTOR — $9.99/MO
+                      </a>
+                    ) : isTrust ? (
+                      <a
+                        href="https://www.bluevine.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-amber-600 text-white hover:bg-amber-700 transition-colors"
+                        data-testid="button-trust-checkout"
+                      >
+                        ACQUIRE TRUST — $25 DOWN
+                      </a>
+                    ) : (
+                      <button
+                        className="w-full py-2 text-[10px] font-bold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors"
+                        onClick={() => openAuth("signup")}
+                      >
+                        CREATE FREE ACCOUNT
+                      </button>
                     )}
                   </div>
-
-                  <ul className="space-y-2 mb-5">
-                    {tier.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[11px] text-emerald-500/60">
-                        <span className={`mt-0.5 ${tier.name === "Front Page Investor" && feature.includes("No ") ? "text-red-400" : "text-emerald-400"}`}>▸</span>
-                        <span className={tier.name === "Front Page Investor" && feature.includes("No ") ? "text-red-400/60" : ""}>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  {tier.name !== "Front Page Investor" ? (
-                    <button
-                      className={`w-full py-2 text-[10px] font-bold transition-colors ${tier.highlight ? "bg-emerald-600 text-white hover:bg-emerald-700" : "border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"}`}
-                      onClick={() => openAuth("signup")}
-                    >
-                      ACQUIRE POSITION
-                    </button>
-                  ) : (
-                    <button
-                      className="w-full py-2 text-[10px] font-bold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors"
-                      onClick={() => openAuth("signup")}
-                    >
-                      CREATE FREE ACCOUNT
-                    </button>
-                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

@@ -85,9 +85,11 @@ const MEMBERSHIP_LIMITS: Record<string, { downloads: number; previews: number }>
   entry_trader: { downloads: 0, previews: 0 },
   exchange_trader: { downloads: 0, previews: -1 },
   mint_factory_ceo: { downloads: -1, previews: -1 },
+  mintor: { downloads: -1, previews: -1 },
+  asset_trustee: { downloads: 0, previews: -1 },
 };
 
-const PAID_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo"];
+const PAID_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee"];
 
 async function getUserTier(userId: string): Promise<string> {
   const membership = await storage.getUserMembership(userId);

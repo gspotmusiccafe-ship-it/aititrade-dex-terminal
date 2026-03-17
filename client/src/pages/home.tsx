@@ -397,18 +397,22 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
 
         <div className="flex gap-1 mb-1">
           <a
-            href="/membership"
-            className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-amber-600/20 transition-colors"
-            data-testid={`button-ceo-${track.id}`}
+            href="https://www.bluevine.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-lime-500/20 transition-colors"
+            data-testid={`button-mintor-${track.id}`}
           >
-            MINT FACTORY CEO $99
+            MINTOR $9.99/MO
           </a>
           <a
-            href="/membership"
-            className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-lime-500/20 transition-colors"
-            data-testid={`button-exchange-${track.id}`}
+            href="https://www.bluevine.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-amber-600/20 transition-colors"
+            data-testid={`button-trust-${track.id}`}
           >
-            EXCHANGE TRADER $25
+            TRUST $25 DOWN
           </a>
         </div>
         <div className="flex gap-1">

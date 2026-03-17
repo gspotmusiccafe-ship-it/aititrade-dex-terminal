@@ -16,16 +16,19 @@ import {
 } from "@/components/ui/dialog";
 
 const TIER_PRICES: Record<string, string> = {
+  mintor: "9.99",
+  asset_trustee: "25.00",
+  mint_factory_ceo: "9.99",
   entry_trader: "4.99",
   exchange_trader: "24.99",
-  mint_factory_ceo: "99.00",
-  mint_factory_ceo_monthly: "9.99",
 };
 
 const TIER_NAMES: Record<string, string> = {
+  mintor: "Mint Factory CEO",
+  asset_trustee: "Asset Trustee",
+  mint_factory_ceo: "Mint Factory CEO",
   entry_trader: "Entry Trader",
   exchange_trader: "Exchange Trader",
-  mint_factory_ceo: "Mint Factory CEO",
 };
 
 const plans = [
@@ -34,6 +37,7 @@ const plans = [
     name: "Front Page Investor",
     price: "FREE",
     period: "",
+    stream: "free",
     description: "Paper trading on the landing page — Spotify account required",
     features: [
       { text: "Paper trading on 97.7 THE FLAME", included: true },
@@ -51,83 +55,62 @@ const plans = [
     glowColor: "",
   },
   {
-    id: "entry_trader",
-    name: "Entry Trader",
-    price: "$4.99",
+    id: "mintor",
+    name: "Mint Factory CEO",
+    price: "$9.99",
     period: "/month",
-    description: "Restricted access — standard assets only",
-    features: [
-      { text: "Access the Sovereign Exchange", included: true },
-      { text: "Acquire standard asset positions", included: true },
-      { text: "Follow artists & create playlists", included: true },
-      { text: "Standard audio quality", included: true },
-      { text: "Pre-release assets", included: false },
-      { text: "High-Volatility assets", included: false },
-    ],
-    popular: false,
-    cta: "ENTER THE FLOOR",
-    gradient: "from-emerald-800 to-emerald-900",
-    iconColor: "text-emerald-500",
-    borderColor: "border-emerald-500/20",
-    glowColor: "",
-  },
-  {
-    id: "exchange_trader",
-    name: "Exchange Trader",
-    price: "$24.99",
-    period: "/month",
-    description: "Full market access — all assets + early pre-release papers",
+    stream: "mintor",
+    description: "Full exchange access — mint & trade all asset classes",
     features: [
       { text: "Full Sovereign Exchange access", included: true },
-      { text: "Acquire ALL asset positions", included: true },
-      { text: "Early Pre-release paper access", included: true },
-      { text: "High-Volatility asset trading", included: true },
-      { text: "High quality audio streaming", included: true },
-      { text: "Priority settlement queue", included: true },
-    ],
-    popular: true,
-    cta: "UNLOCK FULL ACCESS",
-    gradient: "from-emerald-700 to-emerald-800",
-    iconColor: "text-emerald-400",
-    borderColor: "border-emerald-400/30",
-    glowColor: "shadow-emerald-500/10",
-  },
-  {
-    id: "mint_factory_ceo",
-    name: "Mint Factory CEO",
-    price: "$99",
-    period: " to join",
-    description: "Full access + minting rights + 16% daily trading credit",
-    features: [
-      { text: "Everything in Exchange Trader", included: true },
-      { text: "$9.99/month to stay active", included: true },
+      { text: "Mint & trade all asset classes", included: true },
+      { text: "2-Week Early Pre-release trading", included: true },
       { text: "16% Daily Trading Credit on all positions", included: true },
-      { text: "Minting rights — upload & mint AI-generated assets", included: true },
-      { text: "AI Lyrics Generator — prompt-to-song engine", included: true },
-      { text: "Professional audio mastering (radio-ready, -14 LUFS)", included: true },
-      { text: "Distribution to Spotify, Amazon Music, Deezer, YouTube & Anghami", included: true },
-      { text: "In-house AI-music marketing & promotions", included: true },
-      { text: "Aitify Music Store — 25% sales retention", included: true },
-      { text: "Tip Jar — direct PayPal tips from fans", included: true },
-      { text: "Leaderboard rank tracking & tier badges", included: true },
-      { text: "Advanced analytics dashboard", included: true },
-      { text: "Artist profile & bio page", included: true },
+      { text: "AI Lyrics Generator & Audio Mastering", included: true },
+      { text: "Distribution to Spotify, Amazon, YouTube", included: true },
+      { text: "Marketing & promotions", included: true },
+      { text: "Aitify Music Store — 25% retention", included: true },
+      { text: "Leaderboard, analytics & tier badges", included: true },
       { text: "Lossless audio quality", included: true },
     ],
+    popular: true,
+    cta: "ACTIVATE MINTOR — $9.99/MO",
+    gradient: "from-lime-800 to-lime-900",
+    iconColor: "text-lime-400",
+    borderColor: "border-lime-400/30",
+    glowColor: "shadow-lime-500/10",
+  },
+  {
+    id: "asset_trustee",
+    name: "Asset Trustee",
+    price: "$500",
+    period: " total",
+    stream: "trust",
+    description: "$25 Down / 0% Interest — full exchange + trust certificates",
+    features: [
+      { text: "$25 DOWN / 0% INTEREST", included: true },
+      { text: "Full Sovereign Exchange access", included: true },
+      { text: "All assets + pre-release papers", included: true },
+      { text: "Priority settlement queue", included: true },
+      { text: "High-Volatility asset trading", included: true },
+      { text: "Dual-status — hold with MINTOR tier", included: true },
+      { text: "Trust certificate on all positions", included: true },
+      { text: "High quality audio streaming", included: true },
+    ],
     popular: false,
-    cta: "BECOME CEO",
-    gradient: "from-emerald-600 to-emerald-700",
-    iconColor: "text-emerald-300",
-    borderColor: "border-emerald-300/30",
-    glowColor: "shadow-emerald-400/10",
+    cta: "ACQUIRE TRUST — $25 DOWN",
+    gradient: "from-amber-800 to-amber-900",
+    iconColor: "text-amber-400",
+    borderColor: "border-amber-400/30",
+    glowColor: "shadow-amber-500/10",
   },
 ];
 
 const benefits = [
   {
     icon: Star,
-    title: "Early Pre-release Papers",
-    description: "Exchange Traders and Mint Factory CEOs get early access to AI-generated assets before public listing",
+    title: "2-Week Early Pre-release",
+    description: "Mintors get early access to AI-generated assets before retail distribution",
   },
   {
     icon: Headphones,
@@ -137,12 +120,12 @@ const benefits = [
   {
     icon: Zap,
     title: "16% Daily Trading Credit",
-    description: "Mint Factory CEOs earn 16% originator credit on every position minted",
+    description: "Mintors earn 16% originator credit on every position minted",
   },
   {
     icon: Crown,
-    title: "Full Market Access",
-    description: "Exchange Traders unlock all assets including High-Volatility and Pre-release positions",
+    title: "Dual-Stream Access",
+    description: "Hold both MINTOR and TRUST INVESTOR status simultaneously for maximum coverage",
   },
 ];
 
@@ -485,130 +468,143 @@ export default function MembershipPage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-          {plans.map((plan) => (
-            <Card
-              key={plan.id}
-              className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
-                plan.popular
-                  ? `border-primary/50 shadow-xl ${plan.glowColor} scale-[1.02]`
-                  : `${plan.borderColor} bg-card/60 hover:bg-card/90 hover:border-primary/20`
-              }`}
-              data-testid={`membership-plan-${plan.id}`}
-            >
-              {plan.popular && (
-                <div className={`absolute top-0 left-0 right-0 bg-gradient-to-r ${plan.gradient} text-white text-center py-1.5 text-xs font-bold uppercase tracking-wider`}>
-                  Most Popular
-                </div>
-              )}
-              <CardHeader className={plan.popular ? "pt-10" : ""}>
-                <CardTitle className={`flex items-center gap-2 ${plan.iconColor} font-extrabold tracking-tight`}>
-                  {plan.name}
-                  {plan.id === "mint_factory_ceo" && <Crown className="h-5 w-5 text-emerald-300" />}
-                  {plan.id === "exchange_trader" && <Zap className="h-5 w-5 text-emerald-400" />}
-                  {plan.id === "entry_trader" && <ShieldCheck className="h-5 w-5 text-emerald-500" />}
-                </CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
-                <div className="pt-2">
-                  <span className="text-4xl font-black tracking-tight text-foreground">{plan.price}</span>
-                  <span className="text-muted-foreground">{plan.period}</span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3">
-                  {plan.features.map((feature, i) => (
-                    <li
-                      key={i}
-                      className={`flex items-start gap-2 text-sm ${
-                        !feature.included ? "text-muted-foreground/50" : ""
-                      }`}
-                    >
-                      <Check
-                        className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                          feature.included ? "text-primary" : "text-muted-foreground/30"
-                        }`}
-                      />
-                      <span className={!feature.included ? "line-through" : ""}>
-                        {feature.text}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-2">
-                {isCurrent(plan.id) ? (
-                  <>
-                    <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
-                      Current Plan
-                    </Button>
-                    {plan.id === "mint_factory_ceo" && subscriptionStatus && !subscriptionStatus.hasSubscription && (
-                      <Button
-                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-500/90 hover:to-emerald-600/90 text-black border-0 font-bold"
-                        onClick={() => setupSubscriptionMutation.mutate()}
-                        disabled={setupSubscriptionMutation.isPending || subscriptionLoading}
-                        data-testid="button-setup-subscription"
-                      >
-                        {setupSubscriptionMutation.isPending || subscriptionLoading ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Setting up...</>
-                        ) : "Setup $9.99/mo Subscription"}
-                      </Button>
-                    )}
-                    {plan.id === "mint_factory_ceo" && subscriptionStatus?.hasSubscription && (
-                      <div className="w-full text-center">
-                        <Badge
-                          variant="secondary"
-                          className={`text-xs ${subscriptionStatus.status === "ACTIVE" || subscriptionStatus.status === "APPROVED" ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-yellow-500/10 text-yellow-500 border-yellow-500/20"}`}
-                          data-testid="badge-subscription-status"
-                        >
-                          <ShieldCheck className="h-3 w-3 mr-1" />
-                          Subscription: {subscriptionStatus.status === "ACTIVE" || subscriptionStatus.status === "APPROVED" ? "Active" : subscriptionStatus.status}
-                        </Badge>
-                        {subscriptionStatus.nextBillingTime && (
-                          <p className="text-[10px] text-muted-foreground mt-1">
-                            Next billing: {new Date(subscriptionStatus.nextBillingTime).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    {plan.id !== "free" && (
-                      <Button
-                        className="w-full"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => cancelMutation.mutate()}
-                        disabled={cancelMutation.isPending}
-                        data-testid="button-cancel-membership"
-                      >
-                        Cancel Plan
-                      </Button>
-                    )}
-                  </>
-                ) : plan.id === "free" ? (
-                  <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
-                    Free Plan
-                  </Button>
-                ) : (
-                  <Button
-                    className={`w-full ${plan.popular ? "bg-gradient-to-r from-primary to-emerald-500 hover:from-primary/90 hover:to-emerald-500/90 border-0 shadow-lg shadow-primary/20" : ""}`}
-                    variant={plan.popular ? "default" : "outline"}
-                    onClick={() => setCheckoutTier(plan.id)}
-                    disabled={subscriptionLoading}
-                    data-testid={`button-plan-${plan.id}`}
-                  >
-                    {subscriptionLoading && plan.id === "mint_factory_ceo" ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
-                    ) : plan.cta}
-                  </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {plans.map((plan) => {
+            const isMintor = plan.stream === "mintor";
+            const isTrust = plan.stream === "trust";
+            const isFree = plan.stream === "free";
+            const titleCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-zinc-400";
+            const priceCls = isTrust ? "text-amber-300" : isMintor ? "text-lime-300" : "";
+            const checkCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-primary";
+            const borderCls = isTrust
+              ? "border-amber-500/40 hover:border-amber-500/60"
+              : isMintor
+              ? "border-lime-500/40 hover:border-lime-500/60"
+              : plan.borderColor;
+
+            return (
+              <Card
+                key={plan.id}
+                className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${borderCls} bg-card/60 hover:bg-card/90 ${plan.popular ? `shadow-xl ${plan.glowColor} scale-[1.02]` : ""}`}
+                data-testid={`membership-plan-${plan.id}`}
+              >
+                {isMintor && (
+                  <div className="bg-lime-500/20 text-lime-400 text-center py-1.5 text-xs font-extrabold uppercase tracking-wider">
+                    ◆ MINTOR — MINT & TRADE
+                  </div>
                 )}
-              </CardFooter>
-            </Card>
-          ))}
+                {isTrust && (
+                  <div className="bg-amber-500/20 text-amber-400 text-center py-1.5 text-xs font-extrabold uppercase tracking-wider">
+                    ◆ TRUST INVESTOR — $25 DOWN
+                  </div>
+                )}
+                <CardHeader className={plan.popular ? "pt-6" : ""}>
+                  <CardTitle className={`flex items-center gap-2 ${titleCls} font-extrabold tracking-tight`}>
+                    {plan.name}
+                    {isMintor && <Crown className="h-5 w-5 text-lime-300" />}
+                    {isTrust && <Zap className="h-5 w-5 text-amber-300" />}
+                  </CardTitle>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="pt-2">
+                    <span className={`text-4xl font-black tracking-tight ${priceCls || "text-foreground"}`}>{plan.price}</span>
+                    <span className="text-muted-foreground">{plan.period}</span>
+                  </div>
+                  {isMintor && (
+                    <p className="text-[10px] text-lime-400/60 font-bold mt-1">BLUEVINE RECURRING — CANCEL ANYTIME</p>
+                  )}
+                  {isTrust && (
+                    <p className="text-[10px] text-amber-400/60 font-bold mt-1">$25 DOWN / 0% INTEREST — $500 TOTAL</p>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, i) => (
+                      <li
+                        key={i}
+                        className={`flex items-start gap-2 text-sm ${
+                          !feature.included ? "text-muted-foreground/50" : ""
+                        }`}
+                      >
+                        <Check
+                          className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
+                            feature.included ? checkCls : "text-muted-foreground/30"
+                          }`}
+                        />
+                        <span className={`${!feature.included ? "line-through" : ""} ${feature.text.includes("$25 DOWN") ? "font-extrabold text-amber-400" : ""}`}>
+                          {feature.text}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter className="flex flex-col gap-2">
+                  {isCurrent(plan.id) ? (
+                    <>
+                      <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
+                        Current Plan
+                      </Button>
+                      {plan.id !== "free" && (
+                        <Button
+                          className="w-full"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => cancelMutation.mutate()}
+                          disabled={cancelMutation.isPending}
+                          data-testid="button-cancel-membership"
+                        >
+                          Cancel Plan
+                        </Button>
+                      )}
+                    </>
+                  ) : isFree ? (
+                    <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
+                      Free Plan
+                    </Button>
+                  ) : isMintor ? (
+                    <a
+                      href="https://www.bluevine.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full"
+                      data-testid="button-mintor-checkout"
+                    >
+                      <Button className="w-full bg-lime-600 hover:bg-lime-700 text-white border-0 font-extrabold shadow-lg shadow-lime-500/20">
+                        ACTIVATE MINTOR — $9.99/MO
+                      </Button>
+                    </a>
+                  ) : isTrust ? (
+                    <a
+                      href="https://www.bluevine.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full"
+                      data-testid="button-trust-checkout"
+                    >
+                      <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white border-0 font-extrabold shadow-lg shadow-amber-500/20">
+                        ACQUIRE TRUST — $25 DOWN
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => setCheckoutTier(plan.id)}
+                      disabled={subscriptionLoading}
+                      data-testid={`button-plan-${plan.id}`}
+                    >
+                      {plan.cta}
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            );
+          })}
         </div>
 
         <div className="text-center mt-12 max-w-2xl mx-auto p-6 rounded-xl bg-card/30 border border-border/20">
-          <h3 className="font-semibold mb-2">Have questions?</h3>
+          <p className="text-xs text-lime-400/60 font-bold mb-1">DUAL-STREAM REVENUE MODEL</p>
           <p className="text-sm text-muted-foreground">
-            All tiers include a 7-day free trial. Cancel anytime.
+            Hold both <span className="text-lime-400 font-bold">MINTOR</span> and <span className="text-amber-400 font-bold">TRUST INVESTOR</span> status simultaneously.
             100% AI-powered platform — all assets are certified AI-generated.
           </p>
         </div>

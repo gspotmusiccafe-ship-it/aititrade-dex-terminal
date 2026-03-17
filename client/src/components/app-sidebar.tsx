@@ -80,6 +80,8 @@ export function AppSidebar() {
     entry_trader: "Entry Trader",
     exchange_trader: "Exchange Trader",
     mint_factory_ceo: "Mint Factory CEO",
+    mintor: "Mint Factory CEO",
+    asset_trustee: "Asset Trustee",
   };
   const planLabel = membership?.tier && TIER_LABELS[membership.tier]
     ? TIER_LABELS[membership.tier]

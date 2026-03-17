@@ -87,6 +87,7 @@ export const memberships = pgTable("memberships", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   tier: varchar("tier").notNull().default("free"),
+  trustInvestor: boolean("trust_investor").default(false),
   startDate: timestamp("start_date").defaultNow(),
   endDate: timestamp("end_date"),
   isActive: boolean("is_active").default(true),
