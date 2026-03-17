@@ -52,12 +52,22 @@ export async function logRadioEvent(payload: RadioLogPayload): Promise<boolean> 
   }
 
   try {
+    const details = [
+      `Show: ${payload.showName}`,
+      `ISRC: ${payload.isrc}`,
+      payload.duration ? `Duration: ${payload.duration}s` : null,
+      payload.poolCapacity ? `Pool: ${payload.poolCapacity}` : null,
+    ].filter(Boolean).join(" | ");
+
     const response = await fetch(radioWebhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sheet: "Radio Stats",
-        data: payload,
+        userId: payload.userId,
+        eventType: "RADIO_" + payload.status.toUpperCase(),
+        trackName: payload.trackName,
+        details,
+        status: payload.status,
       }),
       signal: AbortSignal.timeout(10000),
     });
@@ -79,12 +89,26 @@ export async function logMarketEvent(payload: MarketLogPayload): Promise<boolean
   }
 
   try {
+    const details = [
+      `Ticker: $${payload.ticker}`,
+      `Price: $${payload.unitPrice.toFixed(2)}`,
+      `Gross: $${payload.grossSales.toFixed(2)}`,
+      `Pool: $${payload.poolSize} (${payload.capacityPct}%)`,
+      `Mint: ${payload.mintId}`,
+      `House: $${payload.houseCut.toFixed(2)}`,
+      `Payout: $${payload.payoutPot.toFixed(2)}`,
+    ].join(" | ");
+
     const response = await fetch(marketWebhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        sheet: "Market Stats",
-        data: payload,
+        userId: payload.userId,
+        eventType: payload.eventType,
+        assetTicker: `$${payload.ticker}`,
+        trackName: payload.trackName,
+        details,
+        status: payload.eventType === "POOL_CLOSE" ? "CLOSED" : "CONFIRMED",
       }),
       signal: AbortSignal.timeout(10000),
     });
