@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1992,6 +1992,31 @@ function RadioShowsTab() {
 }
 
 function CeoVaultTab() {
+  const { toast } = useToast();
+  const [themeInput, setThemeInput] = useState("");
+  const [blueprint, setBlueprint] = useState<any>(null);
+
+  const generateBlueprint = (theme: string) => {
+    const t = theme.trim() || "Untitled Dynomite";
+    const ticker = `$${t.toUpperCase().replace(/\s+/g, '').slice(0, 10)}`;
+    setBlueprint({
+      theme: t,
+      ticker,
+      structure: "INTRO (8 bars) | CHORUS | VERSE (Short) | BRIDGE | OUTRO",
+      wordConstraint: 70,
+      durationTarget: "90 Seconds",
+      sunoPrompt: `[Intro: Atmospheric, 4x4 Snap] [Chorus: Exploding energy, Soulful R&B] [Verse: Rapid fire, 70 words total] [Bridge: High tension] [Outro: Sudden Cut-off]. Theme: "${t}". Style: 75bpm, Heavy Bass, Silk Vocals.`,
+      ideogramPrompt: `Cinematic Dynomite, firecracker wrapped in gold foil, explosive R&B aesthetic, luxury 8k render, neon emerald lighting, "AITIFY" branding in smoke. Theme: "${t}".`,
+      youtubeDescription: `AITIFY DYNOMITE SERIES — "${t}". High-Velocity Asset. 90-Second Burn. Sector: ${ticker}. Stream now on all platforms.`,
+    });
+    toast({ title: `Blueprint generated: ${ticker}` });
+  };
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: `${label} copied to clipboard` });
+  };
+
   return (
     <div className="p-6 border-2 border-yellow-500/30 bg-black/40 rounded-xl space-y-6">
       <div className="flex justify-between items-center">
@@ -2018,6 +2043,80 @@ function CeoVaultTab() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="bg-zinc-900 border-2 border-orange-500/30 hover:border-orange-500/50 transition-all" data-testid="card-production-room">
+        <CardContent className="p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-orange-400" />
+            <h3 className="text-lg font-bold text-orange-400 font-mono">DYNOMITE PRODUCTION ROOM</h3>
+          </div>
+          <p className="text-xs text-zinc-400">Generate a complete production blueprint — Suno prompt, Ideogram cover art prompt, and YouTube description — for your next 90-second Dynomite drop.</p>
+
+          <div className="flex gap-2">
+            <Input
+              placeholder="Enter theme / mood / concept..."
+              value={themeInput}
+              onChange={(e) => setThemeInput(e.target.value)}
+              className="bg-black/60 border-zinc-700 text-white"
+              data-testid="input-dynomite-theme"
+              onKeyDown={(e) => e.key === "Enter" && generateBlueprint(themeInput)}
+            />
+            <Button
+              onClick={() => generateBlueprint(themeInput)}
+              className="bg-orange-600 hover:bg-orange-700 text-white font-bold shrink-0"
+              data-testid="button-generate-blueprint"
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              GENERATE
+            </Button>
+          </div>
+
+          {blueprint && (
+            <div className="space-y-3 pt-2 border-t border-zinc-800">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-orange-500/20 text-orange-400 border border-orange-500/40 font-mono">{blueprint.ticker}</Badge>
+                <span className="text-xs text-zinc-500">{blueprint.durationTarget} | {blueprint.wordConstraint} words max</span>
+              </div>
+
+              <div className="text-xs font-mono text-zinc-400 bg-black/40 rounded p-2 border border-zinc-800">
+                <span className="text-zinc-600">STRUCTURE:</span> {blueprint.structure}
+              </div>
+
+              <div className="space-y-2">
+                <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-emerald-400 font-mono">SUNO PROMPT</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.sunoPrompt, "Suno prompt")} data-testid="button-copy-suno">
+                      <Copy className="h-3 w-3 mr-1" /> Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{blueprint.sunoPrompt}</p>
+                </div>
+
+                <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-purple-400 font-mono">IDEOGRAM COVER ART</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.ideogramPrompt, "Ideogram prompt")} data-testid="button-copy-ideogram">
+                      <Copy className="h-3 w-3 mr-1" /> Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{blueprint.ideogramPrompt}</p>
+                </div>
+
+                <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-red-400 font-mono">YOUTUBE DESCRIPTION</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.youtubeDescription, "YouTube description")} data-testid="button-copy-youtube">
+                      <Copy className="h-3 w-3 mr-1" /> Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{blueprint.youtubeDescription}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
