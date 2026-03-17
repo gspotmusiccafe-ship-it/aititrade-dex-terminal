@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 
 const CEILING = 1000.00;
+const FLASH_THRESHOLD = 900.00;
+const FLASH_TIMER_SECONDS = 120;
 const SETTLEMENT_PAYOUT = 300.00;
 const HOLDER_COUNT = 15;
 const PAYHIP_STORE = "https://payhip.com/aitifymusicstore";
@@ -227,6 +229,9 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
   const [trustReceipt, setTrustReceipt] = useState<TrustReceipt | null>(null);
+  const [flashTimer, setFlashTimer] = useState<number | null>(null);
+  const [isReconciling, setIsReconciling] = useState(false);
+  const flashTriggeredRef = useRef(false);
 
   const orderMutation = useMutation({
     mutationFn: async () => {
@@ -254,10 +259,42 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const isInspirational = assetClass === "inspirational";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / CEILING) * 100).toFixed(1)));
-  const isClosed = !isGlobal && grossSales >= CEILING;
-  const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed;
+  const isFlashZone = !isGlobal && grossSales >= FLASH_THRESHOLD && grossSales < CEILING;
+  const isClosed = !isGlobal && (grossSales >= CEILING || (flashTimer !== null && flashTimer <= 0));
+  const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed && !isFlashZone;
   const remaining = Math.max(0, parseFloat((CEILING - grossSales).toFixed(2)));
+  const unitsRemaining = price > 0 ? Math.ceil(remaining / price) : 0;
+  const reconciliationPct = price > 0 ? parseFloat(((price / CEILING) * 100).toFixed(1)) : 0;
   const yieldPct = capacityPct >= 45 ? "45%" : capacityPct >= 30 ? "30%" : "16%";
+
+  useEffect(() => {
+    if (isFlashZone && !flashTriggeredRef.current && !isClosed) {
+      flashTriggeredRef.current = true;
+      setFlashTimer(FLASH_TIMER_SECONDS);
+    }
+  }, [isFlashZone, isClosed]);
+
+  useEffect(() => {
+    if (flashTimer === null || flashTimer <= 0) return;
+    const interval = setInterval(() => {
+      setFlashTimer(prev => {
+        if (prev === null || prev <= 1) {
+          clearInterval(interval);
+          setIsReconciling(true);
+          setTimeout(() => setIsReconciling(false), 30000);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [flashTimer !== null && flashTimer > 0]);
+
+  const formatTimer = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
 
   const priceLabel = price === 0.99 ? "$0.99" : price === 2.50 ? "$2.50" : price === 5.00 ? "$5.00" : `$${price.toFixed(2)}`;
   const priceClass = price >= 5 ? "text-amber-400" : price >= 2.50 ? "text-yellow-300" : "text-lime-400";
@@ -301,16 +338,34 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
         </div>
       </div>
 
-      {isHighCapacity && (
-        <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center gap-2 animate-pulse">
-          <AlertTriangle className="h-3 w-3 text-yellow-400 flex-shrink-0" />
-          <span className="text-[9px] text-yellow-400 font-bold">{capacityPct.toFixed(0)}% CAPACITY — RECONCILIATION AT $1K CEILING</span>
+      {isFlashZone && flashTimer !== null && flashTimer > 0 && (
+        <div className="px-3 py-2 bg-red-500/15 border-b border-red-500/30 text-center animate-pulse" data-testid={`flash-warning-${track.id}`}>
+          <div className="flex items-center justify-center gap-2">
+            <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+            <span className="text-sm text-red-400 font-extrabold tracking-wider">⚡ TRADING CLOSES IN {formatTimer(flashTimer)}</span>
+            <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+          </div>
+          <p className="text-[9px] text-red-400/70 font-bold mt-0.5">{unitsRemaining} UNITS REMAINING TO CLOSE POOL — FLASH-POOL ACTIVE</p>
         </div>
       )}
 
-      {isClosed && (
+      {isHighCapacity && !isFlashZone && (
+        <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center gap-2 animate-pulse">
+          <AlertTriangle className="h-3 w-3 text-yellow-400 flex-shrink-0" />
+          <span className="text-[9px] text-yellow-400 font-bold">{capacityPct.toFixed(0)}% CAPACITY — {unitsRemaining} UNITS TO $1K CEILING</span>
+        </div>
+      )}
+
+      {isClosed && !isReconciling && (
         <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 text-center">
-          <p className="text-[10px] text-red-400 font-bold">TRADE CLOSED — ${SETTLEMENT_PAYOUT} SETTLEMENT PENDING TO {HOLDER_COUNT} HOLDERS</p>
+          <p className="text-[10px] text-red-400 font-bold">POOL CLOSED — ${SETTLEMENT_PAYOUT} SETTLEMENT PENDING TO {HOLDER_COUNT} HOLDERS</p>
+        </div>
+      )}
+
+      {isReconciling && (
+        <div className="px-3 py-2 bg-amber-500/10 border-b border-amber-500/20 text-center animate-pulse" data-testid={`reconciling-${track.id}`}>
+          <p className="text-[10px] text-amber-400 font-extrabold">POOL CLOSED — RECONCILING...</p>
+          <p className="text-[8px] text-amber-400/50 mt-0.5">SETTLEMENT IN PROGRESS — TRADING WILL REOPEN AFTER RECONCILIATION</p>
         </div>
       )}
 
@@ -372,19 +427,30 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
         ) : (
           <div className="mb-2">
             <div className="flex items-center justify-between mb-0.5">
-              <span className="text-[10px] text-zinc-400 font-bold">SALES → $1K CEILING</span>
-              <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>{capacityPct}%</span>
+              <span className={`text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-zinc-400"}`}>
+                POOL: ${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })} / ${CEILING.toLocaleString()} COLLECTED
+              </span>
+              <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>{capacityPct}%</span>
             </div>
-            <div className="w-full bg-zinc-900 h-1.5">
+            <div className="w-full bg-zinc-900 h-2 relative overflow-hidden">
               <div
-                className={`h-1.5 transition-all ${isClosed ? "bg-red-500" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
+                className={`h-2 transition-all ${isClosed ? "bg-red-500" : isFlashZone ? "bg-red-500 animate-pulse" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
                 style={{ width: `${capacityPct}%` }}
               />
+              {isFlashZone && (
+                <div className="absolute right-0 top-0 h-2 w-[10%] bg-red-500/30 animate-pulse" />
+              )}
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT</span>
-              {!isClosed && <span className="text-lime-400/70 text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO CLOSE</span>}
-              {isClosed && <span className="text-red-400 text-[10px] font-bold">SETTLED</span>}
+              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT — {reconciliationPct}% of 1K VOL</span>
+              {!isClosed && !isFlashZone && (
+                <span className="text-lime-400/70 text-[10px] font-bold">{unitsRemaining} UNITS TO CLOSE</span>
+              )}
+              {isFlashZone && !isClosed && (
+                <span className="text-red-400 text-[10px] font-extrabold animate-pulse">⚡ {unitsRemaining} UNITS LEFT</span>
+              )}
+              {isClosed && !isReconciling && <span className="text-red-400 text-[10px] font-bold">SETTLED</span>}
+              {isReconciling && <span className="text-amber-400 text-[10px] font-extrabold">RECONCILING</span>}
             </div>
           </div>
         )}
@@ -417,9 +483,9 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
           </a>
         </div>
         <div className="flex gap-1">
-          {isClosed ? (
-            <div className="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold py-1.5 text-center flex items-center justify-center gap-1 cursor-not-allowed">
-              <Lock className="h-3 w-3" /> TRADE CLOSED
+          {isClosed || isReconciling ? (
+            <div className={`flex-1 ${isReconciling ? "bg-amber-500/10 border border-amber-500/30 text-amber-400" : "bg-red-500/10 border border-red-500/30 text-red-400"} text-[10px] font-extrabold py-2 text-center flex items-center justify-center gap-1 cursor-not-allowed`} data-testid={`button-closed-${track.id}`}>
+              <Lock className="h-3 w-3" /> {isReconciling ? "POOL CLOSED — RECONCILING" : "POOL CLOSED — SETTLED"}
             </div>
           ) : userTier === "free" ? (
             <a

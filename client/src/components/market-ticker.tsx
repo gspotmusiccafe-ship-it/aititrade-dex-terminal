@@ -83,19 +83,30 @@ export function MarketTicker() {
       data-testid="market-ticker-global"
     >
       <div className="animate-marquee flex items-center whitespace-nowrap h-full">
-        {quadrupled.map((asset, i) => (
-          <div key={`${asset.id}-${i}`} className="inline-flex items-center mx-5 space-x-2 text-xs font-mono uppercase flex-shrink-0">
-            <span className="text-lime-400 font-extrabold">${asset.ticker}</span>
-            <span className="text-white font-bold">{asset.title.slice(0, 16)}</span>
-            <span className="text-lime-400 font-extrabold">${asset.price.toFixed(2)}</span>
-            <span className="text-zinc-400">{asset.salesCount.toLocaleString()} UNITS</span>
-            <span className="text-lime-500 font-bold">▲ {((asset.salesCount / 10) + 12).toFixed(1)}%</span>
-            {asset.isPrerelease && (
-              <span className="text-amber-400 font-extrabold text-[9px] border border-amber-500/40 px-1 py-0">PRE</span>
-            )}
-            <span className="text-zinc-700 ml-2">│</span>
-          </div>
-        ))}
+        {quadrupled.map((asset, i) => {
+          const grossVol = asset.salesCount * asset.price;
+          const poolPct = Math.min(100, (grossVol / 1000) * 100);
+          const isFlash = poolPct >= 90 && poolPct < 100;
+          const isPoolClosed = poolPct >= 100;
+          return (
+            <div key={`${asset.id}-${i}`} className="inline-flex items-center mx-5 space-x-2 text-xs font-mono uppercase flex-shrink-0">
+              <span className={`font-extrabold ${isFlash ? "text-red-400" : "text-lime-400"}`}>${asset.ticker}</span>
+              <span className="text-white font-bold">{asset.title.slice(0, 16)}</span>
+              <span className="text-lime-400 font-extrabold">${asset.price.toFixed(2)}</span>
+              <span className="text-zinc-400">{asset.salesCount.toLocaleString()} UNITS</span>
+              <span className={`font-bold ${isFlash ? "text-red-400" : "text-lime-500"}`}>
+                {isPoolClosed ? "CLOSED" : `${poolPct.toFixed(0)}% POOL`}
+              </span>
+              {isFlash && (
+                <span className="text-red-400 font-extrabold text-[9px] border border-red-500/40 px-1 py-0 animate-pulse">⚡FLASH</span>
+              )}
+              {asset.isPrerelease && (
+                <span className="text-amber-400 font-extrabold text-[9px] border border-amber-500/40 px-1 py-0">PRE</span>
+              )}
+              <span className="text-zinc-700 ml-2">│</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
