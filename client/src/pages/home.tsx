@@ -173,6 +173,8 @@ export default function HomePage() {
 
   const { data: featuredTracks, isLoading: loadingTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/featured"],
+    refetchInterval: 30000,
+    staleTime: 0,
   });
 
   useEffect(() => {

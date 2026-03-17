@@ -63,17 +63,13 @@ function AuthenticatedLayout() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-primary animate-pulse" />
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="w-12 h-12 bg-emerald-500/20 animate-pulse" />
+          <p className="text-emerald-500/50 font-mono text-xs">LOADING EXCHANGE...</p>
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return <LandingPage />;
   }
 
   const sidebarStyle = {
@@ -84,29 +80,32 @@ function AuthenticatedLayout() {
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        <AppSidebar />
+        {isAuthenticated && <AppSidebar />}
         <SidebarInset className="flex flex-col flex-1">
           <div className="sticky top-0 z-40">
             <MarketTicker />
-            <header className="flex items-center justify-between p-3 border-b border-border/50 bg-background/80 backdrop-blur-sm">
-              <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <ThemeToggle />
-            </header>
+            {isAuthenticated && (
+              <header className="flex items-center justify-between p-2 border-b border-emerald-500/10 bg-black">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <ThemeToggle />
+              </header>
+            )}
           </div>
           <main className="flex-1 overflow-auto">
             <Switch>
               <Route path="/" component={HomePage} />
-              <Route path="/search" component={SearchPage} />
-              <Route path="/library" component={LibraryPage} />
+              <Route path="/search" component={isAuthenticated ? SearchPage : LandingPage} />
+              <Route path="/library" component={isAuthenticated ? LibraryPage : LandingPage} />
               <Route path="/membership" component={MembershipPage} />
-              <Route path="/artist-portal" component={ArtistPortalPage} />
-              <Route path="/liked" component={LikedSongsPage} />
+              <Route path="/artist-portal" component={isAuthenticated ? ArtistPortalPage : LandingPage} />
+              <Route path="/liked" component={isAuthenticated ? LikedSongsPage : LandingPage} />
               <Route path="/artist/:id" component={ArtistPage} />
-              <Route path="/admin" component={AdminPage} />
+              <Route path="/admin" component={isAuthenticated ? AdminPage : LandingPage} />
               <Route path="/radio" component={RadioPage} />
               <Route path="/leaderboard" component={LeaderboardPage} />
-              <Route path="/playlist/:id" component={PlaylistPage} />
+              <Route path="/playlist/:id" component={isAuthenticated ? PlaylistPage : LandingPage} />
               <Route path="/browse/:section" component={BrowsePage} />
+              <Route path="/login" component={LandingPage} />
               <Route component={NotFound} />
             </Switch>
           </main>
