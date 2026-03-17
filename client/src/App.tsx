@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { MusicPlayer } from "@/components/music-player";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
+import { MarketTicker } from "@/components/market-ticker";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import HomePage from "@/pages/home";
@@ -85,10 +86,13 @@ function AuthenticatedLayout() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1">
-          <header className="flex items-center justify-between p-3 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-40">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <ThemeToggle />
-          </header>
+          <div className="sticky top-0 z-40">
+            <MarketTicker />
+            <header className="flex items-center justify-between p-3 border-b border-border/50 bg-background/80 backdrop-blur-sm">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ThemeToggle />
+            </header>
+          </div>
           <main className="flex-1 overflow-auto">
             <Switch>
               <Route path="/" component={HomePage} />
