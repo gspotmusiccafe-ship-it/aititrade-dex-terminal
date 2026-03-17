@@ -11,16 +11,7 @@ interface TickerAsset {
   isPrerelease?: boolean;
 }
 
-const FALLBACK_TICKER: TickerAsset[] = [
-  { id: "f1", title: "VELOCITY PRIME", artistName: "AITIFY-GEN-1", price: 1.99, salesCount: 247, playCount: 8420, ticker: "VLCP", isPrerelease: true },
-  { id: "f2", title: "NEURAL DRIFT", artistName: "AITIFY-GEN-1", price: 2.49, salesCount: 183, playCount: 6100, ticker: "NRLD", isPrerelease: false },
-  { id: "f3", title: "QUANTUM BASS", artistName: "AITIFY-GEN-1", price: 1.49, salesCount: 312, playCount: 11200, ticker: "QNTB", isPrerelease: true },
-  { id: "f4", title: "SOVEREIGN WAVE", artistName: "AITIFY-GEN-1", price: 3.99, salesCount: 95, playCount: 3800, ticker: "SVWV", isPrerelease: false },
-  { id: "f5", title: "MINT PROTOCOL", artistName: "AITIFY-GEN-1", price: 2.99, salesCount: 156, playCount: 5600, ticker: "MNTP", isPrerelease: true },
-  { id: "f6", title: "ALPHA SIGNAL", artistName: "AITIFY-GEN-1", price: 1.99, salesCount: 201, playCount: 7300, ticker: "ALSG", isPrerelease: false },
-  { id: "f7", title: "CIRCUIT BREAK", artistName: "AITIFY-GEN-1", price: 4.99, salesCount: 67, playCount: 2100, ticker: "CRCB", isPrerelease: true },
-  { id: "f8", title: "DATA STREAM", artistName: "AITIFY-GEN-1", price: 1.49, salesCount: 289, playCount: 9800, ticker: "DTST", isPrerelease: false },
-];
+const FALLBACK_TICKER: TickerAsset[] = [];
 
 function generateTicker(title: string): string {
   const words = title.replace(/[^a-zA-Z\s]/g, "").trim().split(/\s+/);
@@ -71,7 +62,15 @@ export function MarketTicker() {
   }
 
   if (assets.length === 0) {
-    assets = FALLBACK_TICKER;
+    return (
+      <div
+        className="w-full bg-black border-b border-lime-500/40 overflow-hidden sticky top-0 z-50 flex items-center justify-center"
+        style={{ height: "32px" }}
+        data-testid="market-ticker-global"
+      >
+        <span className="text-emerald-500/40 text-[10px] font-mono">AITIFY SOVEREIGN EXCHANGE — AWAITING MARKET DATA</span>
+      </div>
+    );
   }
 
   const quadrupled = [...assets, ...assets, ...assets, ...assets];
