@@ -2,7 +2,7 @@
 
 ## Overview
 
-AITIFY MUSIC RADIO is the world's first all-AI music streaming platform, designed to give premium subscribers early access to AI-generated music. It's a full-stack application built to host AI artists, manage their content, and provide a rich streaming experience for listeners. The platform aims to create a new market for AI-generated music, allowing artists to upload, distribute, and monetize their creations, while offering listeners unique, exclusive content. Key capabilities include music streaming, playlist management, artist interaction, premium subscriptions for early releases, and an Artist Portal for content management, AI-powered lyrics generation, and audio mastering.
+AITIFY MUSIC RADIO is the world's first all-AI music streaming platform, offering premium subscribers early access to AI-generated music. It's a full-stack application designed to host AI artists, manage their content, and provide a rich streaming experience. The platform aims to establish a new market for AI-generated music, enabling artists to upload, distribute, and monetize their creations, while offering listeners exclusive content. Key features include music streaming, playlist management, artist interaction, premium subscriptions, and an Artist Portal with AI-powered lyrics generation and audio mastering. The business vision is to create a dynamic marketplace for AI-generated assets, fostering a new ecosystem for AI artists and investors.
 
 ## User Preferences
 
@@ -14,51 +14,51 @@ Focus on delivering robust and scalable solutions.
 
 ## System Architecture
 
-The application employs a full-stack architecture:
-- **Frontend**: React + TypeScript with Vite, Tailwind CSS for styling, and shadcn/ui for components. The UI/UX is dark-mode-first with a green accent color, inspired by Spotify's aesthetic.
-- **Backend**: Express.js with TypeScript for API services.
-- **Database**: PostgreSQL, managed with Drizzle ORM.
-- **Authentication**: Primary authentication uses email/password. Optional Spotify OAuth 2.0 is integrated for enhanced Spotify-related features.
-- **Payments**: PayPal Web SDK handles all payment transactions for subscriptions and artist tips.
+The application utilizes a full-stack architecture with a focus on a dark-mode first UI/UX.
+
+-   **Frontend**: React + TypeScript with Vite, styled using Tailwind CSS and shadcn/ui components. The design aesthetic is inspired by Spotify, featuring a dark theme with a green accent color.
+-   **Backend**: Express.js with TypeScript for API services.
+-   **Database**: PostgreSQL, managed with Drizzle ORM.
+-   **Authentication**: Primary authentication via email/password, with optional Spotify OAuth 2.0 integration for enhanced features.
+-   **Payments**: PayPal Web SDK handles all subscription and artist tipping transactions.
 
 **Key Features & Technical Implementations:**
-- **Sovereign Exchange / Trading Floor**: Bloomberg Terminal-style UI (emerald-on-black, font-mono) with Asset Cards for each track. Tracks display as tradeable assets with ticker symbols, gross sales, units sold, unit price, yield, and capacity bars. $1K sales ceiling per asset with 60% capacity warnings and settlement locks at $300/15 holders.
-- **Digital Order System**: "ACQUIRE POSITION" button generates a Digital Tracking Number as proof of ownership. Orders are recorded in the `orders` table with atomic transaction-based placement (race-condition-safe). Each order increments the track's `salesCount`. The Digital Photo Proof receipt modal displays "CERTIFIED AI-GENERATED ASSET" badge, OWNER ID as sole proof of ownership, AI Model/Generation ID tag, asset ticker, unit price, 16% originator credit disbursement, ledger gross, capacity %, and GSR FUND verification seal. Neural Network DNA aesthetic with emerald-on-black circuit grid background and Cpu watermark. No hard asset downloads — orders are ledger entries (paper trades).
-- **AI Data Tags**: Every asset carries an `ai_model` column (default: `AITIFY-GEN-1`) in the `tracks` table. The AI Model ID is displayed on every receipt certificate.
-- **Release Types (March 17th Architecture Lock)**: `native` (LIME GREEN, paper trade minting with $1K cap — shown on front page/radio, `royaltiesEnabled: false`) and `global` (BOLD GOLD, royalty-bearing trust vault exclusive — only accessible to Asset Trustees, `royaltiesEnabled: true`). Set via `release_type` and `royalties_enabled` columns in `tracks` table. Native assets get MNT-977-xxx Mint IDs; Global assets get TRST-977-xxx Trust IDs. `/api/tracks/featured` and `/api/autopilot/pool` filter to native-only. `/api/tracks/trust-vault` returns global assets (403 for non-trustees). Native revenue = 100% Front Page Trading (no royalties). Global revenue triggers the royalty engine via Spotify stats.
-- **Global Royalty Split (18%-50% Trust Vault Routing)**: `computeGlobalRoyaltySplit()` in `server/market-governor.ts` routes Global asset royalties to the Trust Vault. After the 16% Minter Fee is deducted, the remaining revenue is split: volatility ≥ 40 → 50%, volatility 30-39 → 42%, volatility 15-29 → 42%, volatility < 15 → 18% to Trust Vault. `/api/royalty-pool` returns `trustVaultRate`, `trustVaultAmount`, `platformAmount`, `minterFeeAmount`, `currentTrustValuation`, and per-trustee `userShare`.
-- **Trust Vault**: Dedicated page at `/trust-vault` showing global yield assets exclusively for Asset Trustees. Features royalty pool dashboard (global assets count, gross sales, trust vault rate, trust vault amount, trust units, user share). Non-trustees see a locked gate redirecting to `/membership`. Sidebar link: bold gold "Trust Vault" with Globe icon.
-- **Trust Certificate (TRST-977)**: Downloadable certificate at `/dashboard` for trustees. Shows TRST-977-[FNV-hash] identifier, trust holder name, Owner ID, issue date, AI Model, terms ($25 down / $19.79/mo × 24 / 0% interest / $500 total), 16% Minter Credit schedule, and **Current Trust Valuation** (live from `/api/royalty-pool`). Exportable as PNG (via html-to-image) or printable PDF. Sidebar link: bold gold "Trust Certificate" with ScrollText icon.
-- **Asset Classes**: `standard` (emerald styling) and `inspirational` (violet styling with yield band 30%-45%). Set via `asset_class` column in `tracks` table.
-- **Autopilot Radio**: AUTOPILOT toggle in the MusicPlayer DJ console. When ON, the player automatically queues the next high-velocity asset from the pool when the current track ends, prioritizing 2-week pre-release (early) assets. Pool loaded from `/api/autopilot/pool` endpoint (sorted: prerelease first, then by play count). Global Trust Playlist (`autopilot_playlists` table) allows CEOs to save priority rotation. Player context manages `autopilot`, `autopilotPool` state and `toggleAutopilot`/`setAutopilotPool` methods.
-- **2-Week Early Trading Edge**: Pre-release assets are tradeable 2 weeks before retail distribution (Spotify, Amazon, YouTube). Autopilot prioritizes these assets. Landing page hero and features section reflect this positioning. "Asset Architects" (formerly "AI Artists") mint high-velocity assets.
-- **Free Tier Gating**: Front Page Investors (free tier) can see the asset ticker and market data on cards but cannot "Acquire Position" — they see a "PREMIUM TRADING ACCOUNT REQUIRED" lock linking to /membership. Only paid tiers can place orders.
-- **Music Streaming**: Core functionality for browsing and playing tracks.
-- **Dual-Stream Revenue Model**: Two paid streams — MINTOR (Mint Factory CEO, $9.99/mo via Bluevine, lime green, can mint & trade assets) and TRUST INVESTOR (Asset Trustee, $500 total / $25 down / 0% interest / $19.79/mo × 24 via Bluevine, bold gold, trust certificates). Users can hold BOTH statuses simultaneously (`tier` + `trustInvestor` boolean). `checkIsPremium()` in App.tsx accepts either stream as premium. Checkout URLs centralized in `client/src/lib/checkout-config.ts` (`BLUEVINE_MINT_URL`, `BLUEVINE_TRUST_URL`). Free tier = "Front Page Investor".
-- **CEO CLASS — 12-Step Business Credit Program**: Full interactive checklist at `/dashboard`. Steps: (1) Entity Setup, (2) EIN/DUNS Registration, (3) Tier 1 Trade Lines, (4) Business Bank Account, (5) Credit Monitoring, (6) Tier 2 Trade Lines, (7) Business Insurance, (8) Fleet & Fuel Cards, (9) Business Credit Cards, (10) Business Line of Credit, (11) SBA Loan Readiness, (12) Credit Portfolio Optimization. Progress tracked in `credit_steps` table (per-user, status: locked/in_progress/completed). Completed = bold lime green checkmarks, In Progress = bold gold. Admin users bypass isMintor/isTrustee checks for testing. Sidebar nav: "CEO Class" link with GraduationCap icon.
-- **PremiumGate Access Control**: `PremiumGate` component in App.tsx enforces tier-based access. Unauthenticated and free-tier ("Front Page Investor") users see LandingPage only. All inside-app routes (/, /search, /library, /radio, /leaderboard, /artist/:id, /admin, /artist-portal, /liked, /playlist/:id, /browse/:section) require a paid tier. `/membership` remains public for upgrades. Sidebar and header chrome only render for premium users. The `useIsPremiumUser` hook checks `/api/user/membership` to determine tier status.
-- **Artist Portal**: Allows artists to manage profiles, upload tracks, set pre-release dates, and access features like an AI Lyrics Generator (using OpenAI) and an Audio Mastering Engine (utilizing ffmpeg for processing).
-- **Admin Portal**: A comprehensive dashboard for platform analytics, user and artist management, content moderation, managing radio playlists (97.7 THE FLAME), radio shows, membership oversight, tracking Spotify stream qualifiers, and the Spotify Royalty Tracker (paste Spotify URLs to auto-load stream counts and track 1K qualification for royalties).
-- **JAM Console**: Bloomberg Terminal-reskinned Radio & Jam Sessions page with Spotify remote controls, engagement tracking, and live session management. All Spotify mutations (play, pause, skip, shuffle, repeat) intact.
-- **Distribution System**: Facilitates artists submitting music for distribution, with admin review and approval workflows.
-- **Leaderboard**: Displays ranked tracks based on engagement scores, with a badging system (Bronze/Silver/Gold/Platinum) and promotional features.
-- **Google Sheets Logging Hook**: Radio Stats & Market Engagement data logging via `server/sheets-logger.ts`. Every track completion and heartbeat ping sends a JSON payload (Timestamp, UserID, TrackName/ISRC, ShowName, Status, Duration) to a Google Apps Script webhook. Market events (every buy-in — both Native AND Global — and pool close) log to a separate Market Stats sheet (Timestamp, UserID, EventType, Ticker, UnitPrice, GrossSales, PoolSize, CapacityPct, MintId, HouseCut, PayoutPot). **Listening Party / Jam Session streams**: Every Spotify "play" action in a Jam Session engagement logs to the Radio sheet via `logRadioEvent()` with status `SPOTIFY_STREAM` and show name `JAM SESSION: [session name]` for royalty auditing. APIs: `POST /api/logs/radio` (track events), `POST /api/logs/heartbeat` (30s pings during broadcast), `GET /api/logs/signal` (sync health), `POST /api/logs/webhook-config` (admin sets Google Apps Script URLs). Signal Strength indicator in the MusicPlayer: GREEN dot when data syncs successfully, RED pulsing dot when log fails, IDLE gray when no webhook configured.
-- **Continuous Broadcast Engine**: Applet-style automation for the Global Radio Station in `client/src/lib/player-context.tsx`. BROADCAST toggle in the MusicPlayer DJ console activates: (1) Polling Trigger — detects track end via `handleEnded` and autonomously starts next market asset, (2) Time-Based Shows — auto-switches show name at set times (Morning Market Open 6-12, Midday Exchange 12-17, Evening Trade Floor 17-22, Late Night Vault 22-6), (3) Ad-Bridge — detects unexpected audio pauses (non-user-initiated) and auto-resumes within 3 seconds, (4) Market-Only Feed — restricted to assets currently on the market earning royalties via `/api/autopilot/pool`, (5) Background Persistence — music keeps playing across page navigation since PlayerProvider wraps the entire app. Broadcast status bar shows live indicators for all active systems. Auto-refreshes market pool every 2 minutes.
-- **Market Intelligence Module (Living Market Engine)**: Autonomous "CEO Hands-Off" system powered by `server/market-governor.ts`. **Fill-to-Close Model**: Pools remain OPEN until cumulative buy-ins reach exactly $1,000 — no time-based closing. Pool volume (`salesCount` × `unitPrice`) and pricing persist in the database across days/weeks/months. **Dynamic Buy-Ins**: Each asset gets a random price between $0.99–$9.99, persisted in `unitPrice` column, only re-rolled on settlement. **Fluctuating Buy-Back**: Returns alternate between 18%, 42%, or 50% based on volatility, persisted in `buyBackRate` column. **16% Minter Fee** fixed on every trade. **Paper Trade Cap**: Limited to exactly 50% of $1K pool ($500). **Settle & Re-Roll**: When a pool hits $1K, salesCount resets to 0 and new price + buy-back are generated and saved. 70/30 Liquidity Split (30% House Reserve / 70% Payout Pot). Frontend shows **Market Progress** bar (0 to $1,000) with percentage overlay. API: `/api/market/session`, `/api/market/pool/:trackId`. Backend `POST /api/orders` enforces fill-to-close ceiling, paper trade cap, and settle-reopen. `initTrackPricing()` runs on startup to seed any tracks missing dynamic pricing.
-- **File Storage**: All uploaded files (audio, images) are stored in Replit Object Storage (GCS-backed) for persistence and scalability. Files are uploaded via Multer, then transferred to object storage, and served via a `/cloud/uploads/` route.
+
+-   **Sovereign Exchange / Trading Floor**: A Bloomberg Terminal-style interface (emerald-on-black) where music tracks are presented as tradeable assets. Each asset card displays market data, sales, unit price, yield, and capacity. Assets have a $1K sales ceiling with warnings and settlement locks.
+-   **Digital Order System**: Allows users to "ACQUIRE POSITION" on tracks, generating a Digital Tracking Number as proof of ownership. Orders are atomically recorded, incrementing `salesCount`. A digital receipt modal provides proof of ownership, AI model details, and transaction specifics. Asset ownership is ledger-based, with no direct downloads.
+-   **AI Data Tags**: Tracks include an `ai_model` identifier (default: `AITIFY-GEN-1`), displayed on all receipt certificates.
+-   **Release Types**: `native` (lime green, $1K cap, no royalties, shown on front page/radio) and `global` (bold gold, royalty-bearing, exclusive to Asset Trustees). Native assets receive MNT-977-xxx IDs; Global assets receive TRST-977-xxx IDs. `/api/tracks/featured` and `/api/autopilot/pool` filter for native assets, while `/api/tracks/trust-vault` serves global assets to trustees.
+-   **Global Royalty Split**: A dynamic royalty engine routes Global asset royalties to a Trust Vault based on volatility. After a 16% Minter Fee, the remaining revenue is split: volatility ≥ 40 → 50%, volatility 30-39 → 42%, volatility 15-29 → 42%, volatility < 15 → 18% to the Trust Vault.
+-   **Trust Vault**: A dedicated page for Asset Trustees displaying global yield assets, a royalty pool dashboard, and an embedded **Global Radio** component.
+-   **Global Radio (Spotify Verified Streaming)**: Integrates Spotify SDK for remote playback, enabling verified streaming for royalty tracking. It features a curated rotation of matured assets, Spotify logo, "VERIFIED STREAMING" badge, and live royalty stats.
+-   **Trust Certificate (TRST-977)**: Downloadable certificate for trustees, displaying unique identifier, holder name, AI Model, financial terms, Minter Credit schedule, and live Current Trust Valuation. Exportable as PNG or PDF.
+-   **Asset Classes**: Tracks can be `standard` (emerald styling) or `inspirational` (violet styling with higher yield bands).
+-   **Autopilot Radio**: A DJ console feature that automatically queues high-velocity assets from the pool, prioritizing 2-week pre-release tracks. CEOs can save priority rotations.
+-   **2-Week Early Trading Edge**: Pre-release assets are tradeable two weeks before general retail distribution, incentivizing early adoption.
+-   **Free Tier Gating**: Free-tier users can view market data but require a premium membership to "Acquire Position" (trade assets).
+-   **Dual-Stream Revenue Model**: Offers two paid tiers: MINTOR ($9.99/mo, for minting and trading) and TRUST INVESTOR ($500 total, for trust certificates). Users can hold both statuses.
+-   **CEO CLASS — 12-Step Business Credit Program**: An interactive checklist on the dashboard guiding users through business credit development steps, with progress tracking.
+-   **PremiumGate Access Control**: A core component (`PremiumGate`) restricts access to most in-app routes to premium users only, ensuring paid content exclusivity.
+-   **Artist Portal**: Provides artists with tools for profile management, track uploads, pre-release scheduling, AI Lyrics Generation (using OpenAI), and Audio Mastering (using ffmpeg).
+-   **Admin Portal**: A comprehensive dashboard for analytics, user/artist/content management, radio playlist oversight, and Spotify royalty tracking.
+-   **JAM Console**: A Bloomberg Terminal-reskinned page for radio and jam sessions, featuring Spotify remote controls and live session management.
+-   **Google Sheets Logging Hook**: Logs Radio Stats & Market Engagement data (track completions, heartbeats, market events) to Google Sheets via webhooks for analytics and royalty auditing.
+-   **Continuous Broadcast Engine**: An automated system for Global Radio, featuring polling for track ends, time-based show switching, ad-bridge auto-resumes, market-only feeds, and background persistence of music playback.
+-   **Market Intelligence Module (Living Market Engine)**: An autonomous "CEO Hands-Off" system for managing market dynamics. It uses a "Fill-to-Close" model where pools close when cumulative buy-ins reach $1,000. Dynamic pricing and fluctuating buy-back rates are core to this system, with a fixed 16% Minter Fee and a paper trade cap.
+-   **File Storage**: All uploaded media (audio, images) are stored in Replit Object Storage (GCS-backed) for persistence, accessed via a `/cloud/uploads/` route.
 
 ## External Dependencies
 
-- **Vite**: Frontend build tool.
-- **Tailwind CSS**: Utility-first CSS framework.
-- **shadcn/ui**: UI component library.
-- **Express.js**: Backend web application framework.
-- **PostgreSQL**: Relational database.
-- **Drizzle ORM**: TypeScript ORM for database interaction.
-- **OpenAI API**: Used for the AI Lyrics Generator feature in the Artist Portal.
-- **FFmpeg**: Utilized by the Audio Mastering Engine for audio processing.
-- **PayPal Web SDK**: Integrated for payment processing for memberships and artist tipping.
-- **Spotify OAuth 2.0 API**: For user authentication and enabling Spotify-specific features like playback controls and jam sessions.
-- **Replit Object Storage (GCS-backed)**: Persistent cloud storage for all media files.
-- **html-to-image**: Client-side PNG export for Trust Certificate downloads.
-- **Replit Auth**: Manages user accounts for primary authentication.
+-   **Vite**: Frontend build tool.
+-   **Tailwind CSS**: Utility-first CSS framework.
+-   **shadcn/ui**: UI component library.
+-   **Express.js**: Backend web application framework.
+-   **PostgreSQL**: Relational database.
+-   **Drizzle ORM**: TypeScript ORM.
+-   **OpenAI API**: For AI Lyrics Generator.
+-   **FFmpeg**: For Audio Mastering Engine.
+-   **PayPal Web SDK**: For payment processing.
+-   **Spotify OAuth 2.0 API**: For authentication and Spotify features.
+-   **Replit Object Storage (GCS-backed)**: Cloud storage for media files.
+-   **html-to-image**: For client-side image exports.
+-   **Replit Auth**: For primary user authentication.

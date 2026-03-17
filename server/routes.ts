@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -390,7 +390,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/logs/radio", async (req: any, res) => {
+  app.post("/api/logs/radio", isAuthenticated, async (req: any, res) => {
     try {
       const { trackName, isrc, showName, status, duration, poolCapacity } = req.body;
       const userId = req.user?.claims?.sub || "anonymous";
@@ -2534,6 +2534,19 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   });
 
   // === Spotify Playback (Spotify is now the primary auth — tokens stored at login) ===
+
+  app.get("/api/spotify/token", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [token] = await db.select().from(spotifyTokens).where(eq(spotifyTokens.userId, userId));
+      if (!token) return res.status(401).json({ message: "Spotify not connected" });
+      const spotify = await getSpotifyClientForUser(userId);
+      const freshToken = await spotify.getAccessToken();
+      res.json({ accessToken: freshToken?.access_token || token.accessToken });
+    } catch (error: any) {
+      res.status(401).json({ message: "Spotify not connected or token expired" });
+    }
+  });
 
   app.get("/api/spotify/me", isAuthenticated, requireSpotify, async (req: any, res) => {
     try {

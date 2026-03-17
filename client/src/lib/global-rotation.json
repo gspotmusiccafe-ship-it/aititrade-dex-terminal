@@ -1,0 +1,73 @@
+{
+  "rotation": [
+    {
+      "ticker": "AIGEN-01",
+      "title": "AI Genesis Vol. 1",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DXcBWIGoYBM5M",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
+      "assetClass": "global",
+      "matured": true
+    },
+    {
+      "ticker": "SYNTH-02",
+      "title": "Synthetic Futures",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DX4JAvHpjipBk",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DX4JAvHpjipBk",
+      "assetClass": "global",
+      "matured": true
+    },
+    {
+      "ticker": "NRLNK-03",
+      "title": "Neural Link Sessions",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DX0XUsuxWHRQd",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DX0XUsuxWHRQd",
+      "assetClass": "global",
+      "matured": true
+    },
+    {
+      "ticker": "DWAVE-04",
+      "title": "Deep Wave Alpha",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DX3rxVfibe1L0",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DX3rxVfibe1L0",
+      "assetClass": "global",
+      "matured": true
+    },
+    {
+      "ticker": "QNTM-05",
+      "title": "Quantum Frequency",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DWZeKCadgRdKQ",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DWZeKCadgRdKQ",
+      "assetClass": "global",
+      "matured": true
+    },
+    {
+      "ticker": "XNODE-06",
+      "title": "X-Node Protocol",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DX5trt9i14X7j",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DX5trt9i14X7j",
+      "assetClass": "global",
+      "matured": true
+    },
+    {
+      "ticker": "VLTGE-07",
+      "title": "Voltage Yield Fund",
+      "type": "playlist",
+      "spotifyUri": "spotify:playlist:37i9dQZF1DX1s9knjP51Oa",
+      "spotifyUrl": "https://open.spotify.com/playlist/37i9dQZF1DX1s9knjP51Oa",
+      "assetClass": "global",
+      "matured": true
+    }
+  ],
+  "meta": {
+    "version": "1.0.0",
+    "description": "Matured Global Assets — Spotify Verified Streaming Rotation",
+    "lastUpdated": "2026-03-17",
+    "note": "Replace spotifyUri and spotifyUrl with actual matured asset playlists/tracks"
+  }
+}
