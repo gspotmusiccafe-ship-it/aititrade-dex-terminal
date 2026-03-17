@@ -209,6 +209,19 @@ export default function DashboardPage() {
   const isMintor = isAdmin || membership?.tier === "mintor" || membership?.tier === "mint_factory_ceo";
   const isTrustee = isAdmin || !!membership?.trustInvestor;
 
+  interface RoyaltyPoolData {
+    currentTrustValuation: number;
+    trustVaultRate: string;
+    userShare: number;
+    totalGlobalSales: number;
+    trustVaultAmount: number;
+  }
+
+  const { data: royaltyPool } = useQuery<RoyaltyPoolData>({
+    queryKey: ["/api/royalty-pool"],
+    enabled: !!user && isTrustee,
+  });
+
   const { data: stepData, isLoading } = useQuery<CreditStep[]>({
     queryKey: ["/api/credit-steps"],
     enabled: !!user,
@@ -481,6 +494,9 @@ export default function DashboardPage() {
           userName={`${(user as any).firstName || ""} ${(user as any).lastName || ""}`.trim()}
           userEmail={(user as any).email || ""}
           membershipDate={membership?.startDate || membership?.createdAt || new Date().toISOString()}
+          trustValuation={royaltyPool?.currentTrustValuation}
+          trustVaultRate={royaltyPool?.trustVaultRate}
+          userShare={royaltyPool?.userShare}
           onClose={() => setShowCertificate(false)}
         />
       )}

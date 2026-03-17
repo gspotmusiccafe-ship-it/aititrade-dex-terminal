@@ -239,4 +239,37 @@ export function computeLiquiditySplit(grossSales: number): {
   };
 }
 
-export { POOL_CEILING, MINTER_FEE };
+const TRUST_VAULT_SPLIT_TIERS = [0.18, 0.42, 0.50];
+
+export function computeGlobalRoyaltySplit(
+  grossGlobalSales: number,
+  volatility: number,
+): {
+  trustVaultRate: number;
+  trustVaultAmount: number;
+  platformAmount: number;
+  minterFeeAmount: number;
+} {
+  let trustVaultRate: number;
+  if (volatility >= 30) {
+    trustVaultRate = volatility >= 40 ? 0.50 : 0.42;
+  } else if (volatility >= 15) {
+    trustVaultRate = 0.42;
+  } else {
+    trustVaultRate = 0.18;
+  }
+
+  const minterFeeAmount = parseFloat((grossGlobalSales * MINTER_FEE).toFixed(2));
+  const afterMinterFee = grossGlobalSales - minterFeeAmount;
+  const trustVaultAmount = parseFloat((afterMinterFee * trustVaultRate).toFixed(2));
+  const platformAmount = parseFloat((afterMinterFee - trustVaultAmount).toFixed(2));
+
+  return {
+    trustVaultRate,
+    trustVaultAmount,
+    platformAmount,
+    minterFeeAmount,
+  };
+}
+
+export { POOL_CEILING, MINTER_FEE, TRUST_VAULT_SPLIT_TIERS };

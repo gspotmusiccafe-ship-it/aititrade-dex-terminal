@@ -14,7 +14,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, computeLiquiditySplit, generateRecycleValues, invalidateCache, POOL_CEILING, MINTER_FEE, initTrackPricing } from "./market-governor";
+import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, MINTER_FEE, initTrackPricing } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -277,20 +277,29 @@ export async function registerRoutes(
         .where(and(eq(memberships.trustInvestor, true), eq(memberships.isActive, true)));
 
       const totalTrustUnits = allTrustees.length;
-      const royaltyRate = 0.16;
-      const totalRoyaltyPool = parseFloat((totalGlobalSales * royaltyRate).toFixed(2));
-      const perUnitShare = totalTrustUnits > 0 ? parseFloat((totalRoyaltyPool / totalTrustUnits).toFixed(4)) : 0;
+
+      const marketState = await getMarketState();
+      const royaltySplit = computeGlobalRoyaltySplit(totalGlobalSales, marketState.session.volatility);
+
+      const perUnitShare = totalTrustUnits > 0
+        ? parseFloat((royaltySplit.trustVaultAmount / totalTrustUnits).toFixed(4))
+        : 0;
 
       const userShare = allTrustees.find(t => t.userId === userId) ? perUnitShare : 0;
 
       res.json({
         totalGlobalAssets: globalTracks.length,
         totalGlobalSales: parseFloat(totalGlobalSales.toFixed(2)),
-        royaltyRate: `${(royaltyRate * 100).toFixed(0)}%`,
-        totalRoyaltyPool,
+        minterFeeRate: "16%",
+        minterFeeAmount: royaltySplit.minterFeeAmount,
+        trustVaultRate: `${(royaltySplit.trustVaultRate * 100).toFixed(0)}%`,
+        trustVaultAmount: royaltySplit.trustVaultAmount,
+        platformAmount: royaltySplit.platformAmount,
         totalTrustUnits,
         perUnitShare,
         userShare,
+        currentTrustValuation: royaltySplit.trustVaultAmount,
+        volatility: marketState.session.volatility,
         distribution: allTrustees.map(t => ({
           userId: t.userId,
           share: perUnitShare,
@@ -602,6 +611,24 @@ export async function registerRoutes(
           mintId: r.mintId,
           houseCut: r.houseCut || 0,
           payoutPot: r.payoutPot || 0,
+        }).catch(() => {});
+      }
+
+      if (result.type === "global" && result.receipt) {
+        const r = result.receipt;
+        logMarketEvent({
+          timestamp: new Date().toISOString(),
+          userId: req.user?.claims?.sub || "anonymous",
+          eventType: "BUY_IN",
+          trackName: r.asset || "UNKNOWN",
+          ticker: r.ticker || "N/A",
+          unitPrice: r.unitPrice,
+          grossSales: r.unitPrice,
+          poolSize: 0,
+          capacityPct: 0,
+          mintId: r.trustId,
+          houseCut: 0,
+          payoutPot: r.positionValue,
         }).catch(() => {});
       }
 
@@ -2942,6 +2969,20 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         spotifyUri: spotifyUri || null,
         metadata: metadata || null,
       }).returning();
+
+      if (action === "play" && trackName) {
+        logRadioEvent({
+          timestamp: new Date().toISOString(),
+          userId,
+          trackName: trackName || "UNKNOWN",
+          isrc: spotifyUri || "N/A",
+          showName: `JAM SESSION: ${session[0].name}`,
+          status: "SPOTIFY_STREAM",
+          duration: metadata?.duration || undefined,
+          poolCapacity: undefined,
+        }).catch(() => {});
+      }
+
       res.json(engagement);
     } catch (error) {
       console.error("Error recording engagement:", error);

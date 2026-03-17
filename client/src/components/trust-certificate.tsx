@@ -7,6 +7,9 @@ interface TrustCertificateProps {
   userName: string;
   userEmail: string;
   membershipDate: string;
+  trustValuation?: number;
+  trustVaultRate?: string;
+  userShare?: number;
   onClose: () => void;
 }
 
@@ -20,7 +23,7 @@ function generateTrustId(userId: string): string {
   return `TRST-977-${suffix}`;
 }
 
-export function TrustCertificate({ userId, userName, userEmail, membershipDate, onClose }: TrustCertificateProps) {
+export function TrustCertificate({ userId, userName, userEmail, membershipDate, trustValuation, trustVaultRate, userShare, onClose }: TrustCertificateProps) {
   const certRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const trustId = generateTrustId(userId);
@@ -278,6 +281,38 @@ export function TrustCertificate({ userId, userName, userEmail, membershipDate, 
                     <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>DISBURSEMENT</div>
                     <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: 900 }}>PER GLOBAL ASSET SALE</div>
                   </div>
+                </div>
+              </div>
+
+              <div style={{
+                border: "1px solid rgba(34,197,94,0.3)",
+                padding: "12px",
+                marginBottom: "24px",
+                background: "rgba(34,197,94,0.05)",
+              }}>
+                <div style={{ fontSize: "9px", color: "#22c55e", fontWeight: 700, letterSpacing: "2px", marginBottom: "10px" }}>
+                  CURRENT TRUST VALUATION
+                </div>
+                <div style={{ display: "flex", gap: "16px", alignItems: "flex-end" }}>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>TRUST VAULT POOL</div>
+                    <div style={{ fontSize: "22px", color: "#22c55e", fontWeight: 900 }}>
+                      ${(trustValuation ?? 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>VAULT RATE</div>
+                    <div style={{ fontSize: "14px", color: "#fbbf24", fontWeight: 900 }}>{trustVaultRate || "18%"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>YOUR SHARE</div>
+                    <div style={{ fontSize: "14px", color: "#22c55e", fontWeight: 900 }}>
+                      ${(userShare ?? 0).toFixed(4)}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: "8px", color: "rgba(34,197,94,0.5)", marginTop: "6px", fontWeight: 700 }}>
+                  ACCUMULATED FROM GLOBAL ASSET ROYALTIES — LIVE VALUATION
                 </div>
               </div>
 

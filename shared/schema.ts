@@ -45,6 +45,7 @@ export const tracks = pgTable("tracks", {
   assetClass: varchar("asset_class").default("standard"),
   releaseType: varchar("release_type").default("native"),
   aiModel: varchar("ai_model").default("AITIFY-GEN-1"),
+  royaltiesEnabled: boolean("royalties_enabled").default(false),
   isPrerelease: boolean("is_prerelease").default(false),
   releaseDate: timestamp("release_date"),
   genre: varchar("genre"),
