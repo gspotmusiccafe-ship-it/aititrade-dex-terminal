@@ -16,11 +16,11 @@ import { useAuth } from "@/hooks/use-auth";
 import type { RadioShow, JamSession } from "@shared/schema";
 
 const SLOT_CONFIG: Record<string, { label: string; icon: any; gradient: string; time: string }> = {
-  morning: { label: "Morning Show", icon: Sunrise, gradient: "from-amber-500/20 to-yellow-500/20", time: "6 AM - 10 AM" },
-  midday: { label: "Mid-Day Vibes", icon: Sun, gradient: "from-orange-500/20 to-red-500/20", time: "10 AM - 2 PM" },
-  afternoon: { label: "Afternoon Drive", icon: CloudSun, gradient: "from-sky-500/20 to-blue-500/20", time: "2 PM - 6 PM" },
-  evening: { label: "Evening Sessions", icon: Sunset, gradient: "from-purple-500/20 to-pink-500/20", time: "6 PM - 10 PM" },
-  bedtime: { label: "Bedtime Music", icon: Moon, gradient: "from-indigo-500/20 to-violet-500/20", time: "10 PM - 6 AM" },
+  morning: { label: "MORNING SLOT", icon: Sunrise, gradient: "from-emerald-500/10 to-emerald-500/5", time: "6 AM - 10 AM" },
+  midday: { label: "MID-DAY SLOT", icon: Sun, gradient: "from-emerald-500/10 to-emerald-500/5", time: "10 AM - 2 PM" },
+  afternoon: { label: "AFTERNOON SLOT", icon: CloudSun, gradient: "from-emerald-500/10 to-emerald-500/5", time: "2 PM - 6 PM" },
+  evening: { label: "EVENING SLOT", icon: Sunset, gradient: "from-emerald-500/10 to-emerald-500/5", time: "6 PM - 10 PM" },
+  bedtime: { label: "BEDTIME SLOT", icon: Moon, gradient: "from-emerald-500/10 to-emerald-500/5", time: "10 PM - 6 AM" },
 };
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -232,11 +232,10 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
   const RepeatIcon = repeatMode === "track" ? Repeat1 : Repeat;
 
   return (
-    <div className="border-t border-border/30" data-testid={`spotify-controls-${showId}`}>
+    <div className="border-t border-emerald-500/20 bg-black" data-testid={`spotify-controls-${showId}`}>
       <div className="flex items-center justify-center gap-1 py-2 px-4">
-        <Button
-          size="sm"
-          className="gap-1.5 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0 rounded-full h-8 px-4"
+        <button
+          className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-4 py-1.5 flex items-center transition-colors disabled:opacity-50"
           onClick={() => {
             if (isPlaying) {
               pausePlayback.mutate();
@@ -247,32 +246,32 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
           disabled={playInApp.isPending || pausePlayback.isPending}
           data-testid={`button-play-app-${showId}`}
         >
-          <SiSpotify className="h-3.5 w-3.5" />
-          {isPlaying ? "Pause" : "Play in Spotify App"}
-        </Button>
+          <SiSpotify className="h-3.5 w-3.5 mr-1.5" />
+          {isPlaying ? "PAUSE" : "PLAY IN SPOTIFY"}
+        </button>
       </div>
 
       {nowPlaying && (
         <div className="px-4 pb-1" data-testid={`now-playing-show-${showId}`}>
           <div className="flex items-center gap-3">
             {nowPlaying.albumArt ? (
-              <img src={nowPlaying.albumArt} alt="" className="h-10 w-10 rounded shadow-md flex-shrink-0" />
+              <img src={nowPlaying.albumArt} alt="" className="h-10 w-10 border border-emerald-500/20 flex-shrink-0" />
             ) : (
-              <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                <Music2 className="h-5 w-5 text-muted-foreground" />
+              <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                <Music2 className="h-5 w-5 text-emerald-500/40" />
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" data-testid={`now-playing-show-track-${showId}`}>{nowPlaying.trackName}</p>
-              <p className="text-[10px] text-muted-foreground truncate" data-testid={`now-playing-show-artist-${showId}`}>{nowPlaying.artistName}</p>
+              <p className="text-xs font-bold text-emerald-400 truncate font-mono" data-testid={`now-playing-show-track-${showId}`}>{nowPlaying.trackName}</p>
+              <p className="text-[10px] text-emerald-500/50 truncate font-mono" data-testid={`now-playing-show-artist-${showId}`}>{nowPlaying.artistName}</p>
             </div>
-            <div className="text-[10px] text-muted-foreground font-mono flex-shrink-0" data-testid={`now-playing-show-time-${showId}`}>
+            <div className="text-[10px] text-emerald-500/60 font-mono flex-shrink-0" data-testid={`now-playing-show-time-${showId}`}>
               {formatMs(displayProgress)} / {formatMs(nowPlaying.durationMs)}
             </div>
           </div>
-          <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
+          <div className="mt-1.5 h-1 bg-zinc-900 overflow-hidden">
             <div
-              className="h-full bg-[#1DB954] rounded-full transition-all duration-1000 ease-linear"
+              className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
               style={{ width: `${nowPlaying.durationMs > 0 ? Math.min((displayProgress / nowPlaying.durationMs) * 100, 100) : 0}%` }}
             />
           </div>
@@ -280,34 +279,28 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
       )}
 
       <div className="flex items-center justify-center gap-3 py-2 px-4 pb-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-9 w-9 rounded-full ${shuffleOn ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+        <button
+          className={`h-8 w-8 flex items-center justify-center transition-colors ${shuffleOn ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" : "text-emerald-500/40 hover:text-emerald-400 border border-transparent"}`}
           onClick={() => toggleShuffle.mutate(!shuffleOn)}
           disabled={toggleShuffle.isPending}
           data-testid={`button-shuffle-${showId}`}
           title={shuffleOn ? "Shuffle ON" : "Shuffle OFF"}
         >
           <Shuffle className="h-4 w-4" />
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+        <button
+          className="h-8 w-8 flex items-center justify-center text-emerald-500/40 hover:text-emerald-400 transition-colors"
           onClick={() => skipPrev.mutate()}
           disabled={skipPrev.isPending}
           data-testid={`button-previous-${showId}`}
           title="Previous"
         >
           <SkipBack className="h-4 w-4" />
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-10 w-10 rounded-full bg-white text-black hover:bg-white/90"
+        <button
+          className="h-9 w-9 flex items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
           onClick={() => {
             if (isPlaying) pausePlayback.mutate();
             else playInApp.mutate();
@@ -317,36 +310,32 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
           title={isPlaying ? "Pause" : "Play"}
         >
           {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+        <button
+          className="h-8 w-8 flex items-center justify-center text-emerald-500/40 hover:text-emerald-400 transition-colors"
           onClick={() => skipNext.mutate()}
           disabled={skipNext.isPending}
           data-testid={`button-skip-${showId}`}
           title="Next"
         >
           <SkipForward className="h-4 w-4" />
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-9 w-9 rounded-full ${repeatMode !== "off" ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+        <button
+          className={`h-8 w-8 flex items-center justify-center transition-colors ${repeatMode !== "off" ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" : "text-emerald-500/40 hover:text-emerald-400 border border-transparent"}`}
           onClick={cycleRepeat}
           disabled={setRepeat.isPending}
           data-testid={`button-repeat-${showId}`}
           title={repeatMode === "off" ? "Repeat OFF" : repeatMode === "context" ? "Repeat ALL" : "Repeat ONE"}
         >
           <RepeatIcon className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
-      <p className="text-[10px] text-muted-foreground text-center pb-2">
-        {repeatMode !== "off" && <span className="text-[#1DB954] font-medium mr-2">{repeatMode === "track" ? "Repeat 1" : "Repeat All"}</span>}
-        {shuffleOn && <span className="text-[#1DB954] font-medium mr-2">Shuffle</span>}
-        Controls your Spotify app
+      <p className="text-[9px] text-emerald-500/30 text-center pb-2 font-mono">
+        {repeatMode !== "off" && <span className="text-emerald-400 font-bold mr-2">{repeatMode === "track" ? "RPT 1" : "RPT ALL"}</span>}
+        {shuffleOn && <span className="text-emerald-400 font-bold mr-2">SHFL</span>}
+        SPOTIFY REMOTE
       </p>
     </div>
   );
@@ -359,30 +348,28 @@ function ShowCard({ show }: { show: RadioShow }) {
   const openUrl = extractSpotifyOpenUrl(show.spotifyPlaylistUrl);
 
   return (
-    <Card className="overflow-hidden border-border/50 hover:border-[#1DB954]/30 transition-colors" data-testid={`radio-show-${show.id}`}>
-      <CardContent className="p-0">
+    <div className="overflow-hidden border border-emerald-500/20 bg-black hover:border-emerald-500/40 transition-colors font-mono" data-testid={`radio-show-${show.id}`}>
+      <div>
         <div className={`p-4 bg-gradient-to-r ${config.gradient}`}>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-background/80 flex items-center justify-center">
-              <Icon className="h-5 w-5 text-[#1DB954]" />
+            <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <Icon className="h-5 w-5 text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg truncate" data-testid={`text-show-name-${show.id}`}>{show.name}</h3>
+              <h3 className="font-bold text-sm text-emerald-400 truncate" data-testid={`text-show-name-${show.id}`}>{show.name.toUpperCase()}</h3>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">{config.label}</Badge>
-                <span className="text-xs text-muted-foreground">{config.time}</span>
+                <span className="text-[9px] text-emerald-500/60 border border-emerald-500/20 px-1.5 py-0.5">{config.label}</span>
+                <span className="text-[9px] text-emerald-500/40">{config.time}</span>
               </div>
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5 border-[#1DB954]/30 hover:bg-[#1DB954]/10 shrink-0" asChild data-testid={`button-open-spotify-${show.id}`}>
-              <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer">
-                <SiSpotify className="h-4 w-4 text-[#1DB954]" />
-                Open in Spotify
-                <ExternalLink className="h-3 w-3" />
-              </a>
-            </Button>
+            <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold px-2 py-1 hover:bg-emerald-500/10 transition-colors" data-testid={`button-open-spotify-${show.id}`}>
+              <SiSpotify className="h-3.5 w-3.5" />
+              SPOTIFY
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
           </div>
           {show.description && (
-            <p className="text-sm text-muted-foreground mt-2 ml-[52px]">{show.description}</p>
+            <p className="text-[10px] text-emerald-500/50 mt-2 ml-[52px]">{show.description}</p>
           )}
         </div>
 
@@ -404,28 +391,24 @@ function ShowCard({ show }: { show: RadioShow }) {
         {embedUrl && <SpotifyControls showId={show.id} spotifyUrl={show.spotifyPlaylistUrl} />}
 
         {!embedUrl && openUrl && (
-          <div className="p-6 text-center">
-            <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" asChild data-testid={`button-listen-${show.id}`}>
-              <a href={openUrl} target="_blank" rel="noopener noreferrer">
-                <Play className="h-4 w-4" />
-                Listen on Spotify
-              </a>
-            </Button>
+          <div className="p-4 text-center">
+            <a href={openUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-4 py-2 transition-colors" data-testid={`button-listen-${show.id}`}>
+              <Play className="h-3.5 w-3.5" />
+              STREAM ON SPOTIFY
+            </a>
           </div>
         )}
 
         {!embedUrl && !openUrl && (
-          <div className="p-6 text-center">
-            <Button className="bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2" asChild data-testid={`button-listen-${show.id}`}>
-              <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer">
-                <Play className="h-4 w-4" />
-                Listen on Spotify
-              </a>
-            </Button>
+          <div className="p-4 text-center">
+            <a href={show.spotifyPlaylistUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-4 py-2 transition-colors" data-testid={`button-listen-${show.id}`}>
+              <Play className="h-3.5 w-3.5" />
+              STREAM ON SPOTIFY
+            </a>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -673,252 +656,233 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
   ];
 
   return (
-    <Card className="overflow-hidden border-border/50 hover:border-primary/30 transition-colors" data-testid={`jam-session-${session.id}`}>
-      <CardContent className="p-0">
-        <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5">
+    <div className="overflow-hidden border border-emerald-500/20 bg-black hover:border-emerald-500/40 transition-colors font-mono" data-testid={`jam-session-${session.id}`}>
+      <div>
+        <div className="p-4 bg-gradient-to-r from-emerald-500/10 to-emerald-500/5 border-b border-emerald-500/20">
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <Headphones className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Headphones className="h-5 w-5 text-emerald-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-lg truncate" data-testid={`text-jam-name-${session.id}`}>{session.name}</h3>
+              <h3 className="font-bold text-sm text-emerald-400 truncate" data-testid={`text-jam-name-${session.id}`}>{session.name.toUpperCase()}</h3>
               <div className="flex flex-wrap items-center gap-2 mt-1">
                 {session.spotifyName && (
-                  <Badge variant="secondary" className="text-xs gap-1">
-                    <SiSpotify className="h-3 w-3 text-[#1DB954]" />
+                  <span className="text-[9px] text-emerald-500/60 border border-emerald-500/20 px-1.5 py-0.5 flex items-center gap-1">
+                    <SiSpotify className="h-3 w-3 text-emerald-400" />
                     {session.spotifyName}
-                  </Badge>
+                  </span>
                 )}
-                <Badge variant="outline" className="text-xs capitalize">{session.spotifyType}</Badge>
-                {isOwner && <Badge className="text-xs bg-primary/20 text-primary border-primary/30">Your Session</Badge>}
+                <span className="text-[9px] text-emerald-500/40 border border-emerald-500/10 px-1.5 py-0.5 uppercase">{session.spotifyType}</span>
+                {isOwner && <span className="text-[8px] text-yellow-400 border border-yellow-500/20 bg-yellow-500/5 px-1.5 py-0.5 font-bold">OWNER</span>}
               </div>
-              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-4 mt-2 text-[10px] text-emerald-500/40">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatTime12(session.scheduledTime)} · {scheduleDays}
                 </span>
                 <span className="flex items-center gap-1" data-testid={`text-listeners-${session.id}`}>
                   <Users className="h-3 w-3" />
-                  {session.activeListeners} listening
+                  {session.activeListeners} LIVE
                 </span>
                 <span className="flex items-center gap-1" data-testid={`text-engagements-${session.id}`}>
                   <BarChart3 className="h-3 w-3" />
-                  {session.totalEngagements} actions
+                  {session.totalEngagements} ACTIONS
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">Hosted by {session.ownerName}</p>
+              <p className="text-[9px] text-emerald-500/30 mt-1">HOST: {session.ownerName.toUpperCase()}</p>
             </div>
           </div>
         </div>
 
         <div className="p-4 space-y-3">
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:flex-wrap">
-            <Button
-              size="sm"
-              className="gap-1.5 bg-[#1DB954] hover:bg-[#1DB954]/90 text-white border-0 col-span-2"
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-1 sm:flex-wrap">
+            <button
+              className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-bold px-3 py-1.5 flex items-center justify-center col-span-2 transition-colors disabled:opacity-50"
               onClick={() => playNowMutation.mutate()}
               disabled={playNowMutation.isPending}
               data-testid={`button-play-spotify-${session.id}`}
             >
-              <Play className="h-3.5 w-3.5" />
-              Play on Spotify
-            </Button>
-            <Button
-              size="sm"
-              variant="default"
-              className="gap-1.5"
+              <Play className="h-3 w-3 mr-1" />
+              PLAY ON SPOTIFY
+            </button>
+            <button
+              className="gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold px-3 py-1.5 flex items-center justify-center hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
               onClick={() => joinMutation.mutate()}
               disabled={joinMutation.isPending}
               data-testid={`button-join-${session.id}`}
             >
-              <LogIn className="h-3.5 w-3.5" />
-              Join
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
+              <LogIn className="h-3 w-3 mr-1" />
+              JOIN
+            </button>
+            <button
+              className="gap-1.5 border border-emerald-500/20 text-emerald-500/50 text-[9px] font-bold px-3 py-1.5 flex items-center justify-center hover:text-emerald-400 transition-colors disabled:opacity-50"
               onClick={() => leaveMutation.mutate()}
               disabled={leaveMutation.isPending}
               data-testid={`button-leave-${session.id}`}
             >
-              <LogOut className="h-3.5 w-3.5" />
-              Leave
-            </Button>
+              <LogOut className="h-3 w-3 mr-1" />
+              LEAVE
+            </button>
             {isOwner && (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="gap-1.5 col-span-2 sm:ml-auto"
+              <button
+                className="gap-1.5 border border-yellow-500/20 text-yellow-400 text-[9px] font-bold px-3 py-1.5 flex items-center justify-center col-span-2 sm:ml-auto hover:bg-yellow-500/10 transition-colors"
                 onClick={() => { setShowStats(!showStats); if (!showStats) refetchEngagement(); }}
                 data-testid={`button-stats-${session.id}`}
               >
-                <Eye className="h-3.5 w-3.5" />
-                {showStats ? "Hide Stats" : "View Stats"}
-              </Button>
+                <Eye className="h-3 w-3 mr-1" />
+                {showStats ? "HIDE STATS" : "VIEW STATS"}
+              </button>
             )}
           </div>
 
-          <div className="border border-border/30 rounded-lg p-2">
+          <div className="border border-emerald-500/20 p-2">
             {nowPlaying && (
               <div className="mb-2 px-2" data-testid={`now-playing-${session.id}`}>
                 <div className="flex items-center gap-3">
                   {nowPlaying.albumArt ? (
-                    <img src={nowPlaying.albumArt} alt="" className="h-10 w-10 rounded shadow-md flex-shrink-0" />
+                    <img src={nowPlaying.albumArt} alt="" className="h-10 w-10 border border-emerald-500/20 flex-shrink-0" />
                   ) : (
-                    <div className="h-10 w-10 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                      <Music2 className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                      <Music2 className="h-5 w-5 text-emerald-500/40" />
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold truncate" data-testid={`now-playing-track-${session.id}`}>{nowPlaying.trackName}</p>
-                    <p className="text-[10px] text-muted-foreground truncate" data-testid={`now-playing-artist-${session.id}`}>{nowPlaying.artistName}</p>
+                    <p className="text-xs font-bold text-emerald-400 truncate" data-testid={`now-playing-track-${session.id}`}>{nowPlaying.trackName}</p>
+                    <p className="text-[10px] text-emerald-500/50 truncate" data-testid={`now-playing-artist-${session.id}`}>{nowPlaying.artistName}</p>
                   </div>
-                  <div className="text-[10px] text-muted-foreground font-mono flex-shrink-0" data-testid={`now-playing-time-${session.id}`}>
+                  <div className="text-[10px] text-emerald-500/60 font-mono flex-shrink-0" data-testid={`now-playing-time-${session.id}`}>
                     {formatMs(displayProgress)} / {formatMs(nowPlaying.durationMs)}
                   </div>
                 </div>
-                <div className="mt-1.5 h-1 bg-muted rounded-full overflow-hidden">
+                <div className="mt-1.5 h-1 bg-zinc-900 overflow-hidden">
                   <div
-                    className="h-full bg-[#1DB954] rounded-full transition-all duration-1000 ease-linear"
+                    className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
                     style={{ width: `${nowPlaying.durationMs > 0 ? Math.min((displayProgress / nowPlaying.durationMs) * 100, 100) : 0}%` }}
                   />
                 </div>
               </div>
             )}
             <div className="flex items-center justify-center gap-3 py-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 rounded-full ${shuffleOn ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+              <button
+                className={`h-8 w-8 flex items-center justify-center transition-colors ${shuffleOn ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" : "text-emerald-500/40 hover:text-emerald-400 border border-transparent"}`}
                 onClick={() => toggleShuffleMutation.mutate(!shuffleOn)}
                 disabled={toggleShuffleMutation.isPending}
                 data-testid={`button-jam-shuffle-${session.id}`}
                 title={shuffleOn ? "Shuffle ON" : "Shuffle OFF"}
               >
                 <Shuffle className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+              </button>
+              <button
+                className="h-8 w-8 flex items-center justify-center text-emerald-500/40 hover:text-emerald-400 transition-colors"
                 onClick={() => skipPrevMutation.mutate()}
                 disabled={skipPrevMutation.isPending}
                 data-testid={`button-jam-previous-${session.id}`}
                 title="Previous"
               >
                 <SkipBack className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full bg-white text-black hover:bg-white/90"
+              </button>
+              <button
+                className="h-9 w-9 flex items-center justify-center bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                 onClick={() => { if (isPlaying) pauseMutation.mutate(); else playNowMutation.mutate(); }}
                 disabled={playNowMutation.isPending || pauseMutation.isPending}
                 data-testid={`button-jam-playpause-${session.id}`}
                 title={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 rounded-full text-muted-foreground hover:text-foreground"
+              </button>
+              <button
+                className="h-8 w-8 flex items-center justify-center text-emerald-500/40 hover:text-emerald-400 transition-colors"
                 onClick={() => { skipMutation.mutate(); engageMutation.mutate({ action: "skip", trackName: session.spotifyName || session.name }); }}
                 disabled={skipMutation.isPending}
                 data-testid={`button-jam-skip-${session.id}`}
                 title="Next"
               >
                 <SkipForward className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-8 w-8 rounded-full ${repeatMode !== "off" ? "text-[#1DB954] bg-[#1DB954]/10" : "text-muted-foreground hover:text-foreground"}`}
+              </button>
+              <button
+                className={`h-8 w-8 flex items-center justify-center transition-colors ${repeatMode !== "off" ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20" : "text-emerald-500/40 hover:text-emerald-400 border border-transparent"}`}
                 onClick={cycleRepeat}
                 disabled={setRepeatMutation.isPending}
                 data-testid={`button-jam-repeat-${session.id}`}
                 title={repeatMode === "off" ? "Repeat OFF" : repeatMode === "context" ? "Repeat ALL" : "Repeat ONE"}
               >
                 <JamRepeatIcon className="h-4 w-4" />
-              </Button>
+              </button>
             </div>
-            <p className="text-[10px] text-muted-foreground text-center">
-              {repeatMode !== "off" && <span className="text-[#1DB954] font-medium mr-2">{repeatMode === "track" ? "Repeat 1" : "Repeat All"}</span>}
-              {shuffleOn && <span className="text-[#1DB954] font-medium mr-2">Shuffle</span>}
-              Controls your Spotify app
+            <p className="text-[9px] text-emerald-500/30 text-center">
+              {repeatMode !== "off" && <span className="text-emerald-400 font-bold mr-2">{repeatMode === "track" ? "RPT 1" : "RPT ALL"}</span>}
+              {shuffleOn && <span className="text-emerald-400 font-bold mr-2">SHFL</span>}
+              SPOTIFY REMOTE
             </p>
           </div>
 
           <div>
-            <p className="text-xs font-medium text-muted-foreground mb-2">Track Your Engagement:</p>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <p className="text-[9px] text-emerald-500/40 mb-2 uppercase">Engagement Actions:</p>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
               {engagementActions.map(({ action, icon: Icon, label, color }) => (
-                <Button
+                <button
                   key={action}
-                  size="sm"
-                  variant="outline"
-                  className="flex flex-col items-center gap-1 h-auto py-2 hover:bg-primary/10"
+                  className="flex flex-col items-center gap-1 py-2 border border-emerald-500/10 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-colors disabled:opacity-50"
                   onClick={() => action === "share" ? handleShare() : engageMutation.mutate({ action, trackName: session.spotifyName || session.name })}
                   disabled={engageMutation.isPending}
                   data-testid={`button-engage-${action}-${session.id}`}
                 >
-                  <Icon className={`h-4 w-4 ${color}`} />
-                  <span className="text-[10px]">{label}</span>
-                </Button>
+                  <Icon className={`h-3.5 w-3.5 ${color}`} />
+                  <span className="text-[8px] text-emerald-500/50">{label.toUpperCase()}</span>
+                </button>
               ))}
             </div>
           </div>
 
           {showStats && isOwner && engagementData && (
-            <div className="border-t border-border/50 pt-3 space-y-3">
-              <h4 className="font-semibold text-sm flex items-center gap-1.5">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                Engagement Dashboard
+            <div className="border-t border-emerald-500/20 pt-3 space-y-3">
+              <h4 className="font-bold text-xs text-yellow-400 flex items-center gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5" />
+                ENGAGEMENT DASHBOARD
               </h4>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="bg-muted/50 rounded-lg p-2 text-center">
-                  <p className="text-lg font-bold" data-testid={`stat-listeners-${session.id}`}>{engagementData.stats.uniqueListeners}</p>
-                  <p className="text-[10px] text-muted-foreground">Unique Listeners</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-sm font-bold text-emerald-400" data-testid={`stat-listeners-${session.id}`}>{engagementData.stats.uniqueListeners}</p>
+                  <p className="text-[8px] text-emerald-500/40">UNIQUE LISTENERS</p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-2 text-center">
-                  <p className="text-lg font-bold" data-testid={`stat-total-${session.id}`}>{engagementData.stats.totalEngagements}</p>
-                  <p className="text-[10px] text-muted-foreground">Total Actions</p>
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-sm font-bold text-emerald-400" data-testid={`stat-total-${session.id}`}>{engagementData.stats.totalEngagements}</p>
+                  <p className="text-[8px] text-emerald-500/40">TOTAL ACTIONS</p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-2 text-center">
-                  <p className="text-lg font-bold">{engagementData.stats.actionCounts.play || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">Plays</p>
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-sm font-bold text-emerald-400">{engagementData.stats.actionCounts.play || 0}</p>
+                  <p className="text-[8px] text-emerald-500/40">PLAYS</p>
                 </div>
-                <div className="bg-muted/50 rounded-lg p-2 text-center">
-                  <p className="text-lg font-bold">{engagementData.stats.actionCounts.like || 0}</p>
-                  <p className="text-[10px] text-muted-foreground">Likes</p>
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-sm font-bold text-emerald-400">{engagementData.stats.actionCounts.like || 0}</p>
+                  <p className="text-[8px] text-emerald-500/40">LIKES</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                 {Object.entries(engagementData.stats.actionCounts).map(([action, total]) => (
-                  <div key={action} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1">
-                    <span className="text-xs capitalize">{action.replace("_", " ")}</span>
-                    <Badge variant="secondary" className="text-xs">{String(total)}</Badge>
+                  <div key={action} className="flex items-center justify-between bg-zinc-900 border border-emerald-500/10 px-2 py-1">
+                    <span className="text-[9px] text-emerald-500/50 capitalize">{action.replace("_", " ")}</span>
+                    <span className="text-[9px] text-emerald-400 font-bold">{String(total)}</span>
                   </div>
                 ))}
               </div>
 
               {engagementData.stats.topTracks.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium mb-1">Top Played Tracks:</p>
-                  <div className="space-y-1">
+                  <p className="text-[9px] text-emerald-500/40 mb-1 uppercase">Top Played:</p>
+                  <div className="space-y-0.5">
                     {engagementData.stats.topTracks.map((track, i) => (
-                      <div key={i} className="flex items-center justify-between bg-muted/30 rounded px-2 py-1.5">
+                      <div key={i} className="flex items-center justify-between bg-zinc-900 border border-emerald-500/10 px-2 py-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-xs font-bold text-primary w-4">{i + 1}</span>
+                          <span className="text-[9px] font-bold text-emerald-400 w-3">{i + 1}</span>
                           <div className="min-w-0">
-                            <p className="text-xs font-medium truncate">{track.trackName || "Unknown"}</p>
-                            <p className="text-[10px] text-muted-foreground truncate">{track.trackArtist || "Unknown"}</p>
+                            <p className="text-[10px] text-emerald-400 font-bold truncate">{track.trackName || "Unknown"}</p>
+                            <p className="text-[8px] text-emerald-500/40 truncate">{track.trackArtist || "Unknown"}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className="text-xs ml-2">{String(track.total)} plays</Badge>
+                        <span className="text-[9px] text-emerald-400 font-bold ml-2">{String(track.total)}</span>
                       </div>
                     ))}
                   </div>
@@ -927,13 +891,13 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
 
               {engagementData.listeners.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium mb-1">Listeners ({engagementData.listeners.length}):</p>
+                  <p className="text-[9px] text-emerald-500/40 mb-1 uppercase">Listeners ({engagementData.listeners.length}):</p>
                   <div className="flex flex-wrap gap-1">
                     {engagementData.listeners.map((listener: any) => (
-                      <Badge key={listener.id} variant="outline" className="text-xs">
+                      <span key={listener.id} className="text-[9px] border border-emerald-500/20 text-emerald-500/50 px-1.5 py-0.5 flex items-center gap-1">
                         {listener.userName || listener.userEmail || "Anonymous"}
-                        {!listener.leftAt && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />}
-                      </Badge>
+                        {!listener.leftAt && <span className="w-1.5 h-1.5 bg-emerald-400 inline-block" />}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -941,8 +905,8 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -984,11 +948,11 @@ function CreateJamSessionForm({ onCreated }: { onCreated: () => void }) {
   };
 
   return (
-    <Card className="border-[#1DB954]/30 bg-[#1DB954]/5">
-      <CardContent className="p-4 space-y-4">
-        <h3 className="font-bold text-sm flex items-center gap-2">
-          <Plus className="h-4 w-4 text-[#1DB954]" />
-          Create a Jam Session
+    <div className="border border-emerald-500/30 bg-emerald-500/5 font-mono">
+      <div className="p-4 space-y-4">
+        <h3 className="font-bold text-xs text-emerald-400 flex items-center gap-2">
+          <Plus className="h-3.5 w-3.5" />
+          CREATE JAM SESSION
         </h3>
 
         <div className="grid gap-3">
@@ -1064,17 +1028,17 @@ function CreateJamSessionForm({ onCreated }: { onCreated: () => void }) {
           </div>
         </div>
 
-        <Button
-          className="w-full bg-[#1DB954] hover:bg-[#1DB954]/90 gap-2"
+        <button
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-2 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
           onClick={() => createMutation.mutate()}
           disabled={!name.trim() || !spotifyUri.trim() || selectedDays.length === 0 || createMutation.isPending}
           data-testid="button-create-jam"
         >
-          <Plus className="h-4 w-4" />
-          {createMutation.isPending ? "Creating..." : "Create Jam Session"}
-        </Button>
-      </CardContent>
-    </Card>
+          <Plus className="h-3.5 w-3.5" />
+          {createMutation.isPending ? "CREATING..." : "CREATE JAM SESSION"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -1108,41 +1072,37 @@ function MyJamSessions() {
   if (!mySessions || mySessions.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-muted-foreground">Your Jam Sessions</h3>
+    <div className="space-y-1 font-mono">
+      <h3 className="text-[9px] text-emerald-500/40 uppercase mb-2">Your Jam Sessions</h3>
       {mySessions.map(session => {
         const scheduleDays = session.daysOfWeek ? session.daysOfWeek.split(",").map(d => DAY_NAMES[parseInt(d)]).join(", ") : "Every day";
         return (
-          <div key={session.id} className="flex items-center gap-3 bg-muted/30 rounded-lg p-3" data-testid={`my-session-${session.id}`}>
+          <div key={session.id} className="flex items-center gap-3 bg-zinc-900 border border-emerald-500/10 p-2" data-testid={`my-session-${session.id}`}>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{session.name}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-emerald-400 font-bold truncate">{session.name.toUpperCase()}</p>
+              <p className="text-[9px] text-emerald-500/40">
                 {formatTime12(session.scheduledTime)} · {scheduleDays}
               </p>
             </div>
-            <Badge variant={session.isActive ? "default" : "secondary"} className="text-xs">
-              {session.isActive ? "Active" : "Inactive"}
-            </Badge>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0"
+            <span className={`text-[8px] font-bold px-1.5 py-0.5 border ${session.isActive ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-zinc-500 border-zinc-700"}`}>
+              {session.isActive ? "ACTIVE" : "OFF"}
+            </span>
+            <button
+              className="h-7 w-7 flex items-center justify-center hover:bg-emerald-500/10 transition-colors"
               onClick={() => toggleMutation.mutate(session.id)}
               disabled={toggleMutation.isPending}
               data-testid={`button-toggle-${session.id}`}
             >
-              <Power className={`h-4 w-4 ${session.isActive ? "text-green-400" : "text-muted-foreground"}`} />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+              <Power className={`h-3.5 w-3.5 ${session.isActive ? "text-emerald-400" : "text-zinc-600"}`} />
+            </button>
+            <button
+              className="h-7 w-7 flex items-center justify-center text-red-500/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
               onClick={() => deleteMutation.mutate(session.id)}
               disabled={deleteMutation.isPending}
               data-testid={`button-delete-${session.id}`}
             >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         );
       })}
@@ -1176,51 +1136,49 @@ function SpotifyConnectionPanel() {
 
   if (!isConnected) {
     return (
-      <Card className="border-[#1DB954]/30 mb-6">
-        <CardContent className="py-6 text-center">
-          <SiSpotify className="h-12 w-12 mx-auto mb-3 text-[#1DB954]" />
-          <h3 className="font-bold text-lg mb-1">Spotify Connection Issue</h3>
-          <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
-            Your Spotify connection needs to be refreshed. Please log out and log back in to reconnect.
+      <div className="border border-emerald-500/20 bg-black mb-6 font-mono">
+        <div className="py-6 text-center">
+          <SiSpotify className="h-10 w-10 mx-auto mb-3 text-emerald-400" />
+          <h3 className="font-bold text-xs text-emerald-400 mb-1">SPOTIFY CONNECTION REQUIRED</h3>
+          <p className="text-[10px] text-emerald-500/50 mb-4 max-w-md mx-auto">
+            CONNECTION EXPIRED — LOG OUT AND RE-AUTHENTICATE TO REFRESH
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4 mb-6">
-      <Card className="border-[#1DB954]/20 bg-[#1DB954]/5">
-        <CardContent className="py-3 px-4">
+    <div className="space-y-4 mb-6 font-mono">
+      <div className="border border-emerald-500/20 bg-emerald-500/5">
+        <div className="py-3 px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-[#1DB954] flex items-center justify-center">
+              <div className="h-8 w-8 bg-emerald-600 flex items-center justify-center">
                 <SiSpotify className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-medium" data-testid="text-spotify-name">
-                  {spotifyProfile.name || spotifyProfile.display_name}
+                <p className="text-xs font-bold text-emerald-400" data-testid="text-spotify-name">
+                  {(spotifyProfile.name || spotifyProfile.display_name || "").toUpperCase()}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {spotifyProfile.product === "premium" || spotifyProfile.isPremium ? "Spotify Premium" : "Spotify Free"} · Connected
+                <p className="text-[9px] text-emerald-500/40">
+                  {spotifyProfile.product === "premium" || spotifyProfile.isPremium ? "PREMIUM" : "FREE"} · CONNECTED
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="gap-1.5 border-[#1DB954]/30"
+              <button
+                className="gap-1.5 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold px-3 py-1.5 flex items-center hover:bg-emerald-500/10 transition-colors"
                 onClick={() => setShowCreate(!showCreate)}
                 data-testid="button-toggle-create-jam"
               >
-                <Plus className="h-3.5 w-3.5" />
-                {showCreate ? "Cancel" : "New Jam Session"}
-              </Button>
+                <Plus className="h-3 w-3 mr-1" />
+                {showCreate ? "CANCEL" : "NEW SESSION"}
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {showCreate && <CreateJamSessionForm onCreated={() => setShowCreate(false)} />}
 
@@ -1263,112 +1221,113 @@ export default function RadioPage() {
   }
 
   return (
-    <div className="min-h-full pb-28">
-      <div className="relative overflow-hidden mb-6">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#1DB954]/10 via-[#1DB954]/3 to-transparent" />
-        <div className="relative px-6 py-8">
-          <div className="max-w-4xl mx-auto flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#1DB954]/20 to-[#1DB954]/5 flex items-center justify-center">
-              <RadioIcon className="h-7 w-7 text-[#1DB954]" />
+    <div className="min-h-full pb-28 bg-black">
+      <div className="relative overflow-hidden mb-0 border-b border-emerald-500/20">
+        <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent" />
+        <div className="relative px-6 py-6">
+          <div className="max-w-4xl mx-auto flex items-center gap-3 font-mono">
+            <div className="h-10 w-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+              <RadioIcon className="h-6 w-6 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight" data-testid="text-radio-title">Radio & Jam Sessions</h1>
-              <p className="text-muted-foreground font-medium">Radio shows & live jam sessions — Powered by Spotify</p>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-emerald-400" data-testid="text-radio-title">JAM CONTROL CENTER</h1>
+              <p className="text-[10px] text-emerald-500/50">&gt; RADIO SHOWS & LIVE JAM SESSIONS — SPOTIFY REMOTE TERMINAL</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-6 font-mono">
 
-        <Tabs defaultValue="shows" className="mt-6">
-          <TabsList className="mb-4">
-            <TabsTrigger value="shows" data-testid="tab-shows" className="gap-1.5">
-              <Music className="h-4 w-4" />
-              Radio Shows
-              {shows && shows.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{shows.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="jams" data-testid="tab-jams" className="gap-1.5">
-              <Headphones className="h-4 w-4" />
-              Jam Sessions
-              {activeSessions && activeSessions.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{activeSessions.length}</Badge>}
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex gap-1 mt-4 mb-4 border-b border-emerald-500/10 pb-2">
+          <Tabs defaultValue="shows" className="w-full">
+          <div className="flex gap-1 mb-4">
+            <TabsList className="bg-transparent border-0 p-0 gap-1">
+              <TabsTrigger value="shows" data-testid="tab-shows" className="gap-1.5 bg-transparent border border-emerald-500/20 text-emerald-500/50 data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400 data-[state=active]:border-emerald-500/40 text-[10px] font-bold px-3 py-1.5 rounded-none">
+                <Music className="h-3.5 w-3.5" />
+                RADIO SHOWS
+                {shows && shows.length > 0 && <span className="ml-1 text-[9px] text-emerald-400">[{shows.length}]</span>}
+              </TabsTrigger>
+              <TabsTrigger value="jams" data-testid="tab-jams" className="gap-1.5 bg-transparent border border-emerald-500/20 text-emerald-500/50 data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400 data-[state=active]:border-emerald-500/40 text-[10px] font-bold px-3 py-1.5 rounded-none">
+                <Headphones className="h-3.5 w-3.5" />
+                JAM SESSIONS
+                {activeSessions && activeSessions.length > 0 && <span className="ml-1 text-[9px] text-emerald-400">[{activeSessions.length}]</span>}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="shows">
-            <div className="flex items-center gap-2 mb-6">
-              <SiSpotify className="h-4 w-4 text-[#1DB954]" />
-              <span className="text-sm text-muted-foreground">
-                Click any show to stream directly on Spotify
+            <div className="flex items-center gap-2 mb-4">
+              <SiSpotify className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[10px] text-emerald-500/40">
+                SELECT SHOW TO STREAM VIA SPOTIFY REMOTE
               </span>
             </div>
 
             {shows && shows.length > 0 ? (
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {shows.map((show) => (
                   <ShowCard key={show.id} show={show} />
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <Music className="h-16 w-16 mx-auto mb-4 text-[#1DB954]/30" />
-                  <h2 className="text-xl font-bold mb-2">No Shows Scheduled</h2>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    Radio shows are being set up. Check back soon for Morning, Mid-Day, Afternoon, Evening, and Bedtime playlists.
+              <div className="border border-emerald-500/20 bg-black">
+                <div className="py-12 text-center">
+                  <Music className="h-12 w-12 mx-auto mb-3 text-emerald-500/20" />
+                  <h2 className="text-sm font-bold text-emerald-400 mb-1">NO SHOWS SCHEDULED</h2>
+                  <p className="text-[10px] text-emerald-500/40 max-w-md mx-auto">
+                    RADIO SHOWS PENDING — CHECK BACK FOR MORNING, MID-DAY, AFTERNOON, EVENING, AND BEDTIME SLOTS
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </TabsContent>
 
           <TabsContent value="jams">
             <div className="flex items-center gap-2 mb-4">
-              <Users className="h-4 w-4 text-primary" />
-              <span className="text-sm text-muted-foreground">
-                Join a jam session, interact with the music, and your engagement gets tracked
+              <Users className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="text-[10px] text-emerald-500/40">
+                JOIN SESSION — TRACK ENGAGEMENT — SPOTIFY REMOTE CONTROLS
               </span>
             </div>
 
             {user && <SpotifyConnectionPanel />}
 
             {!user && (
-              <Card className="mb-6 border-primary/20">
-                <CardContent className="py-6 text-center">
-                  <LogIn className="h-10 w-10 mx-auto mb-3 text-primary/50" />
-                  <p className="text-sm text-muted-foreground">Sign in to connect Spotify and create jam sessions</p>
-                </CardContent>
-              </Card>
+              <div className="mb-4 border border-emerald-500/20 bg-black">
+                <div className="py-4 text-center">
+                  <LogIn className="h-8 w-8 mx-auto mb-2 text-emerald-500/30" />
+                  <p className="text-[10px] text-emerald-500/40">AUTHENTICATE TO CREATE JAM SESSIONS</p>
+                </div>
+              </div>
             )}
 
-            <Card className="mb-6 border-primary/20 bg-primary/5">
-              <CardContent className="py-3 px-4">
-                <p className="text-sm">
-                  <span className="font-semibold">How it works:</span> Join a session, then use the action buttons (Play, Like, Save, Share, Skip, Add to Playlist) as you listen. 
-                  Session owners can see all engagement stats including who joined, what actions they took, and which tracks were most popular.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="mb-4 border border-emerald-500/10 bg-emerald-500/5 px-3 py-2">
+              <p className="text-[10px] text-emerald-500/50">
+                <span className="text-emerald-400 font-bold">PROTOCOL:</span> Join session → Use action buttons (Play, Like, Save, Share, Skip, Add to Playlist) → Session owners view engagement dashboard with full analytics.
+              </p>
+            </div>
 
             {activeSessions && activeSessions.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {activeSessions.map((session) => (
                   <JamSessionCard key={session.id} session={session} userId={user?.id || ""} />
                 ))}
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <Headphones className="h-16 w-16 mx-auto mb-4 text-primary/30" />
-                  <h2 className="text-xl font-bold mb-2">No Active Jam Sessions</h2>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    {user ? "Connect your Spotify account above to create your first jam session and start tracking engagement." : "Sign in and connect Spotify to create jam sessions."}
+              <div className="border border-emerald-500/20 bg-black">
+                <div className="py-12 text-center">
+                  <Headphones className="h-12 w-12 mx-auto mb-3 text-emerald-500/20" />
+                  <h2 className="text-sm font-bold text-emerald-400 mb-1">NO ACTIVE SESSIONS</h2>
+                  <p className="text-[10px] text-emerald-500/40 max-w-md mx-auto">
+                    {user ? "CONNECT SPOTIFY ABOVE TO CREATE YOUR FIRST JAM SESSION" : "AUTHENTICATE AND CONNECT SPOTIFY TO CREATE SESSIONS"}
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </TabsContent>
-        </Tabs>
+          </Tabs>
+        </div>
       </div>
     </div>
   );

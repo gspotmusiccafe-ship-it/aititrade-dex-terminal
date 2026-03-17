@@ -430,109 +430,107 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
   const isPending = signupMutation.isPending || loginMutation.isPending;
 
   return (
-    <Card className="bg-card/80 backdrop-blur-xl border-border/30 shadow-2xl shadow-primary/10 w-full max-w-sm">
-      <CardContent className="p-6">
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={mode === "login" ? "default" : "ghost"}
-            size="sm"
-            className="flex-1"
+    <div className="bg-black border border-emerald-500/30 w-full max-w-sm font-mono shadow-2xl shadow-emerald-500/10">
+      <div className="border-b border-emerald-500/20 px-4 py-2 flex items-center gap-2">
+        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="text-[10px] text-emerald-500 font-bold">AITIFY INSIDER ACCESS TERMINAL</span>
+      </div>
+      <div className="p-5">
+        <div className="flex gap-1 mb-5">
+          <button
+            className={`flex-1 text-[10px] font-bold py-1.5 transition-colors ${mode === "login" ? "bg-emerald-600 text-white" : "border border-emerald-500/20 text-emerald-500/50 hover:text-emerald-400"}`}
             onClick={() => { setMode("login"); setError(""); }}
             data-testid="tab-login"
           >
-            Log In
-          </Button>
-          <Button
-            variant={mode === "signup" ? "default" : "ghost"}
-            size="sm"
-            className="flex-1"
+            LOG IN
+          </button>
+          <button
+            className={`flex-1 text-[10px] font-bold py-1.5 transition-colors ${mode === "signup" ? "bg-emerald-600 text-white" : "border border-emerald-500/20 text-emerald-500/50 hover:text-emerald-400"}`}
             onClick={() => { setMode("signup"); setError(""); }}
             data-testid="tab-signup"
           >
-            Sign Up
-          </Button>
+            OPEN ACCOUNT
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "signup" && (
-            <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
+            <div className="space-y-1">
+              <label htmlFor="displayName" className="text-[9px] text-emerald-500/60 uppercase">Display Name</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-500/40" />
+                <input
                   id="displayName"
                   type="text"
                   placeholder="Your name"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="pl-10"
+                  className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-3 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
                   data-testid="input-display-name"
                 />
               </div>
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+          <div className="space-y-1">
+            <label htmlFor="email" className="text-[9px] text-emerald-500/60 uppercase">Email</label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-500/40" />
+              <input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="pl-10"
+                className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-3 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
                 required
                 data-testid="input-email"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+          <div className="space-y-1">
+            <label htmlFor="password" className="text-[9px] text-emerald-500/60 uppercase">Password</label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-500/40" />
+              <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 placeholder={mode === "signup" ? "At least 6 characters" : "Your password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="pl-10 pr-10"
+                className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-9 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
                 required
                 data-testid="input-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500/40 hover:text-emerald-400"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               </button>
             </div>
           </div>
 
           {error && (
-            <p className="text-sm text-red-500 font-medium" data-testid="text-auth-error">{error}</p>
+            <p className="text-[10px] text-red-400 font-bold border border-red-500/20 bg-red-500/5 px-2 py-1" data-testid="text-auth-error">{error}</p>
           )}
 
-          <Button type="submit" className="w-full" disabled={isPending} data-testid="button-auth-submit">
-            {isPending ? "Please wait..." : mode === "signup" ? "Create Account" : "Log In"}
-          </Button>
+          <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold py-2 transition-colors disabled:opacity-50" disabled={isPending} data-testid="button-auth-submit">
+            {isPending ? "AUTHENTICATING..." : mode === "signup" ? "OPEN ACCOUNT" : "LOG IN"}
+          </button>
         </form>
 
-        <div className="mt-4 pt-4 border-t border-border/30">
-          <p className="text-xs text-muted-foreground text-center mb-3">Or continue with</p>
-          <Button variant="outline" className="w-full gap-2 border-[#1DB954]/30 hover:bg-[#1DB954]/10 text-[#1DB954]" asChild data-testid="button-spotify-login">
-            <a href="/api/login/spotify">
-              <SiSpotify className="h-4 w-4" />
-              Log in with Spotify
-            </a>
-          </Button>
+        <div className="mt-4 pt-3 border-t border-emerald-500/10">
+          <p className="text-[9px] text-emerald-500/30 text-center mb-2">EXTERNAL AUTHENTICATION</p>
+          <a href="/api/login/spotify" className="w-full flex items-center justify-center gap-2 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold py-2 hover:bg-emerald-500/10 transition-colors" data-testid="button-spotify-login">
+            <SiSpotify className="h-3.5 w-3.5" />
+            AUTHENTICATE VIA SPOTIFY
+          </a>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
