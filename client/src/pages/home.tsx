@@ -224,7 +224,7 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
   );
 }
 
-function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string }) {
+function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string; dynamicPoolSize?: number }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -257,14 +257,17 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const releaseType = ((track as any).releaseType || "native").toLowerCase();
   const isGlobal = releaseType === "global";
   const isInspirational = assetClass === "inspirational";
+  const poolCeiling = dynamicPoolSize || CEILING;
   const grossSales = parseFloat((sales * price).toFixed(2));
-  const capacityPct = Math.min(100, parseFloat(((grossSales / CEILING) * 100).toFixed(1)));
-  const isFlashZone = !isGlobal && grossSales >= FLASH_THRESHOLD && grossSales < CEILING;
-  const isClosed = !isGlobal && (grossSales >= CEILING || (flashTimer !== null && flashTimer <= 0));
+  const capacityPct = Math.min(100, parseFloat(((grossSales / poolCeiling) * 100).toFixed(1)));
+  const flashThreshold = poolCeiling * 0.9;
+  const isFlashZone = !isGlobal && grossSales >= flashThreshold && grossSales < poolCeiling;
+  const isClosed = !isGlobal && (grossSales >= poolCeiling || (flashTimer !== null && flashTimer <= 0));
   const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed && !isFlashZone;
-  const remaining = Math.max(0, parseFloat((CEILING - grossSales).toFixed(2)));
+  const remaining = Math.max(0, parseFloat((poolCeiling - grossSales).toFixed(2)));
   const unitsRemaining = price > 0 ? Math.ceil(remaining / price) : 0;
-  const reconciliationPct = price > 0 ? parseFloat(((price / CEILING) * 100).toFixed(1)) : 0;
+  const reconciliationPct = price > 0 ? parseFloat(((price / poolCeiling) * 100).toFixed(1)) : 0;
+  const poolLabel = poolCeiling >= 1000 ? `$${(poolCeiling / 1000).toFixed(0)}K` : `$${poolCeiling}`;
   const yieldPct = capacityPct >= 45 ? "45%" : capacityPct >= 30 ? "30%" : "16%";
 
   useEffect(() => {
@@ -352,7 +355,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
       {isHighCapacity && !isFlashZone && (
         <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center gap-2 animate-pulse">
           <AlertTriangle className="h-3 w-3 text-yellow-400 flex-shrink-0" />
-          <span className="text-[9px] text-yellow-400 font-bold">{capacityPct.toFixed(0)}% CAPACITY — {unitsRemaining} UNITS TO $1K CEILING</span>
+          <span className="text-[9px] text-yellow-400 font-bold">{capacityPct.toFixed(0)}% CAPACITY — {unitsRemaining} UNITS TO {poolLabel} CEILING</span>
         </div>
       )}
 
@@ -428,7 +431,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
           <div className="mb-2">
             <div className="flex items-center justify-between mb-0.5">
               <span className={`text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-zinc-400"}`}>
-                POOL: ${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })} / ${CEILING.toLocaleString()} COLLECTED
+                POOL: ${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })} / ${poolCeiling.toLocaleString()} COLLECTED
               </span>
               <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>{capacityPct}%</span>
             </div>
@@ -528,16 +531,43 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   );
 }
 
+interface MarketSession {
+  sessionId: string;
+  date: string;
+  tradingRate: number;
+  volatility: number;
+  marketSentiment: "BULL" | "BEAR" | "NEUTRAL";
+  totalPools: number;
+  activePools: number;
+  nextFlashTarget: string | null;
+  nextFlashAt: number | null;
+  pools: Array<{
+    trackId: string;
+    poolSize: number;
+    seats: number;
+    rushMultiplier: number;
+    isFlashScheduled: boolean;
+    liquiditySplit: { house: number; payout: number };
+  }>;
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const { playTrack, currentTrack, setAutopilotPool } = usePlayer();
   const autoPlayedRef = useRef(false);
+  const [showIntel, setShowIntel] = useState(false);
 
   const { data: membership } = useQuery<{ tier: string }>({
     queryKey: ["/api/user/membership"],
     enabled: !!user,
   });
   const userTier = membership?.tier || "free";
+
+  const { data: marketSession } = useQuery<MarketSession>({
+    queryKey: ["/api/market/session"],
+    refetchInterval: 60000,
+    staleTime: 30000,
+  });
 
   const { data: featuredTracks, isLoading: loadingTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/featured"],
@@ -578,7 +608,9 @@ export default function HomePage() {
   const closedCount = displayTracks.filter(t => {
     const p = parseFloat((t as any).unitPrice || "0.99");
     const s = (t as any).salesCount || 0;
-    return (s * p) >= CEILING;
+    const trackPool = marketSession?.pools?.find(pl => pl.trackId === t.id);
+    const ceil = trackPool?.poolSize || CEILING;
+    return (s * p) >= ceil;
   }).length;
   const openCount = displayTracks.length - closedCount;
 
@@ -622,6 +654,97 @@ export default function HomePage() {
         </div>
       </div>
 
+      {marketSession && (
+        <div className="border-b border-emerald-500/20 bg-black">
+          <button
+            onClick={() => setShowIntel(!showIntel)}
+            className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] hover:bg-zinc-900/50 transition-colors"
+            data-testid="button-toggle-intel"
+          >
+            <div className="flex items-center gap-2">
+              <Zap className="h-3 w-3 text-lime-400" />
+              <span className="text-lime-400 font-extrabold tracking-widest">MARKET INTELLIGENCE — CEO HANDS-OFF MODE</span>
+              <span className={`px-1.5 py-0.5 font-extrabold text-[8px] border ${
+                marketSession.marketSentiment === "BULL"
+                  ? "text-lime-400 border-lime-500/40 bg-lime-500/10"
+                  : marketSession.marketSentiment === "BEAR"
+                  ? "text-red-400 border-red-500/40 bg-red-500/10"
+                  : "text-zinc-400 border-zinc-600 bg-zinc-800"
+              }`}>
+                {marketSession.marketSentiment === "BULL" ? "▲ BULL" : marketSession.marketSentiment === "BEAR" ? "▼ BEAR" : "— NEUTRAL"}
+              </span>
+            </div>
+            <span className="text-zinc-600">{showIntel ? "▲ COLLAPSE" : "▼ EXPAND"}</span>
+          </button>
+
+          {showIntel && (
+            <div className="px-4 pb-3 space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">SESSION ID</p>
+                  <p className="text-[10px] text-lime-400 font-bold" data-testid="text-session-id">{marketSession.sessionId}</p>
+                </div>
+                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">TODAY'S TRADING RATE</p>
+                  <p className="text-sm text-lime-400 font-extrabold" data-testid="text-trading-rate">{marketSession.tradingRate}%</p>
+                  <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-lime-500 rounded-full" style={{ width: `${((marketSession.tradingRate - 35) / 20) * 100}%` }} />
+                  </div>
+                </div>
+                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">MARKET VOLATILITY</p>
+                  <p className={`text-sm font-extrabold ${marketSession.volatility > 30 ? "text-red-400" : marketSession.volatility > 20 ? "text-amber-400" : "text-lime-400"}`} data-testid="text-volatility">
+                    {marketSession.volatility}%
+                  </p>
+                  <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${marketSession.volatility > 30 ? "bg-red-500" : marketSession.volatility > 20 ? "bg-amber-500" : "bg-lime-500"}`} style={{ width: `${(marketSession.volatility / 45) * 100}%` }} />
+                  </div>
+                </div>
+                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">LIQUIDITY SPLIT</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[10px] text-emerald-400 font-bold">70% PAYOUT</span>
+                    <span className="text-[10px] text-zinc-600">|</span>
+                    <span className="text-[10px] text-amber-400 font-bold">30% HOUSE</span>
+                  </div>
+                  <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden flex">
+                    <div className="h-full bg-emerald-500 rounded-l-full" style={{ width: "70%" }} />
+                    <div className="h-full bg-amber-500 rounded-r-full" style={{ width: "30%" }} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <div className="bg-zinc-900/80 border border-zinc-800 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">ACTIVE POOLS</p>
+                  <p className="text-sm text-white font-bold">{marketSession.activePools} <span className="text-zinc-600 text-[9px]">/ {marketSession.totalPools}</span></p>
+                </div>
+                <div className="bg-zinc-900/80 border border-zinc-800 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">POOL TIERS TODAY</p>
+                  <div className="flex gap-2 mt-0.5">
+                    <span className="text-[9px] text-zinc-400 font-bold">$500: {marketSession.pools?.filter(p => p.poolSize === 500).length || 0}</span>
+                    <span className="text-[9px] text-lime-400 font-bold">$1K: {marketSession.pools?.filter(p => p.poolSize === 1000).length || 0}</span>
+                    <span className="text-[9px] text-amber-400 font-bold">$2K: {marketSession.pools?.filter(p => p.poolSize === 2000).length || 0}</span>
+                  </div>
+                </div>
+                <div className="bg-zinc-900/80 border border-zinc-800 p-2">
+                  <p className="text-[8px] text-zinc-600 tracking-widest">FLASH WARNINGS TODAY</p>
+                  <p className="text-sm text-red-400 font-bold">
+                    {marketSession.pools?.filter(p => p.isFlashScheduled).length || 0}
+                    <span className="text-[9px] text-zinc-600 ml-1">SCHEDULED</span>
+                  </p>
+                  {marketSession.nextFlashAt && (
+                    <p className="text-[8px] text-red-400 animate-pulse mt-0.5">
+                      ⚡ NEXT FLASH: {new Date(marketSession.nextFlashAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-4 text-[10px]">
           <span className="text-zinc-600">VARIANTS:</span>
@@ -634,7 +757,7 @@ export default function HomePage() {
           <span className="text-violet-400">INSP</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">CEILING:</span>
-          <span className="text-emerald-400">${CEILING.toLocaleString()}</span>
+          <span className="text-emerald-400">DYNAMIC</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">SETTLEMENT:</span>
           <span className="text-emerald-400">${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS</span>
@@ -663,6 +786,7 @@ export default function HomePage() {
                 track={track}
                 onPlay={(t) => playTrack(t, displayTracks)}
                 userTier={userTier}
+                dynamicPoolSize={marketSession?.pools?.find(p => p.trackId === track.id)?.poolSize}
               />
             ))}
           </div>
@@ -678,7 +802,7 @@ export default function HomePage() {
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
           <span>AITIFY SOVEREIGN MINT | 97.7 THE FLAME | AityPay ENGINE</span>
-          <span>CEILING: ${CEILING.toLocaleString()} | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS</span>
+          <span>CEILING: DYNAMIC | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 70/30</span>
         </div>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
+import { getMarketState, computeLiquiditySplit } from "./market-governor";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -297,6 +298,63 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/market/session", async (_req: any, res) => {
+    try {
+      const state = await getMarketState();
+      const { session, nextFlashTarget, nextFlashAt } = state;
+      const poolSummary = state.pools.map((p) => ({
+        trackId: p.trackId,
+        poolSize: p.poolSize,
+        seats: p.seats,
+        rushMultiplier: p.rushMultiplier,
+        isFlashScheduled: p.flashTriggerMinute !== null,
+        liquiditySplit: p.liquiditySplit,
+      }));
+      res.json({
+        ...session,
+        nextFlashTarget,
+        nextFlashAt,
+        pools: poolSummary,
+        totalPools: poolSummary.length,
+        activePools: state.activePoolCount,
+      });
+    } catch (error) {
+      console.error("Error fetching market session:", error);
+      res.status(500).json({ message: "Failed to fetch market session" });
+    }
+  });
+
+  app.get("/api/market/pool/:trackId", async (req: any, res) => {
+    try {
+      const state = await getMarketState();
+      const pool = state.pools.find((p) => p.trackId === req.params.trackId);
+      if (!pool) return res.status(404).json({ message: "Pool not found" });
+
+      const [track] = await db.select().from(tracks).where(eq(tracks.id, req.params.trackId));
+      if (!track) return res.status(404).json({ message: "Track not found" });
+
+      const price = parseFloat(track.unitPrice || "0.99");
+      const grossSales = (track.salesCount || 0) * price;
+      const split = computeLiquiditySplit(grossSales);
+      const poolPct = Math.min(100, (grossSales / pool.poolSize) * 100);
+      const unitsRemaining = Math.max(0, Math.ceil((pool.poolSize - grossSales) / price));
+
+      res.json({
+        ...pool,
+        grossSales: parseFloat(grossSales.toFixed(2)),
+        poolFillPct: parseFloat(poolPct.toFixed(1)),
+        unitsRemaining,
+        houseCut: split.houseCut,
+        payoutPot: split.payoutPot,
+        reconciliationPct: parseFloat(((price / pool.poolSize) * 100).toFixed(2)),
+        session: state.session,
+      });
+    } catch (error) {
+      console.error("Error fetching pool:", error);
+      res.status(500).json({ message: "Failed to fetch pool data" });
+    }
+  });
+
   app.post("/api/orders", async (req: any, res) => {
     try {
       const { trackId } = req.body;
@@ -368,8 +426,15 @@ export async function registerRoutes(
           };
         }
 
+        const marketState = await getMarketState();
+        const trackPool = marketState.pools.find(p => p.trackId === trackId);
+        const poolCeiling = trackPool?.poolSize || 1000;
+        const poolLabel = poolCeiling >= 1000 ? `$${(poolCeiling / 1000).toFixed(0)}K` : `$${poolCeiling}`;
+
         const currentGross = currentSales * price;
-        if (currentGross >= 1000) throw new Error("CEILING_REACHED");
+        if (currentGross >= poolCeiling) throw new Error("CEILING_REACHED");
+
+        const split = computeLiquiditySplit(currentGross + price);
 
         const seq = String(currentSales + 1).padStart(3, "0");
         const mintId = `MNT-977-${ticker}-${seq}`;
@@ -391,7 +456,7 @@ export async function registerRoutes(
 
         const newSales = updated.salesCount || currentSales + 1;
         const newGross = parseFloat((newSales * price).toFixed(2));
-        const capacityPct = Math.min(100, parseFloat(((newGross / 1000) * 100).toFixed(1)));
+        const capacityPct = Math.min(100, parseFloat(((newGross / poolCeiling) * 100).toFixed(1)));
 
         return {
           type: "native" as const,
@@ -406,10 +471,13 @@ export async function registerRoutes(
             aiModel: track.aiModel || "AITIFY-GEN-1",
             grossSales: newGross,
             totalMints: newSales,
-            mintCap: 1000,
+            mintCap: poolCeiling,
             capacityPct,
             releaseType: "native",
-            status: newGross >= 1000 ? "CLOSED" : "MINTED",
+            status: newGross >= poolCeiling ? "CLOSED" : "MINTED",
+            poolSize: poolCeiling,
+            houseCut: split.houseCut,
+            payoutPot: split.payoutPot,
             timestamp: new Date().toISOString(),
           },
         };
@@ -418,7 +486,7 @@ export async function registerRoutes(
       res.json(result);
     } catch (error: any) {
       if (error.message === "NOT_FOUND") return res.status(404).json({ message: "Asset not found" });
-      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "TRADE CLOSED — $1K CEILING REACHED" });
+      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "TRADE CLOSED — POOL CEILING REACHED" });
       if (error.message === "INVALID_PRICE") return res.status(400).json({ message: "Invalid asset price" });
       console.error("Order placement error:", error);
       res.status(500).json({ message: "Order failed" });
