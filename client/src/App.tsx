@@ -29,36 +29,17 @@ import { useEffect } from "react";
 
 const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee"];
 
-function AppRouter() {
-  const { isAuthenticated, isLoading } = useAuth();
+interface MembershipData {
+  tier: string;
+  isActive: boolean;
+  trustInvestor?: boolean;
+}
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-primary animate-pulse" />
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <LandingPage />;
-  }
-
-  return (
-    <Switch>
-      <Route path="/" component={HomePage} />
-      <Route path="/search" component={SearchPage} />
-      <Route path="/library" component={LibraryPage} />
-      <Route path="/membership" component={MembershipPage} />
-      <Route path="/artist-portal" component={ArtistPortalPage} />
-      <Route path="/liked" component={LikedSongsPage} />
-      <Route path="/artist/:id" component={ArtistPage} />
-      <Route component={NotFound} />
-    </Switch>
-  );
+function checkIsPremium(membership: MembershipData | null | undefined): boolean {
+  if (!membership) return false;
+  if (membership.isActive === false) return false;
+  if (membership.trustInvestor) return true;
+  return PREMIUM_TIERS.includes(membership.tier);
 }
 
 function UpgradeRedirect() {
@@ -81,7 +62,7 @@ function UpgradeRedirect() {
 
 function PremiumGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
-  const { data: membership, isLoading: membershipLoading } = useQuery<{ tier: string; isActive: boolean }>({
+  const { data: membership, isLoading: membershipLoading } = useQuery<MembershipData>({
     queryKey: ["/api/user/membership"],
     enabled: isAuthenticated,
   });
@@ -99,22 +80,18 @@ function PremiumGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const tier = membership?.tier || "free";
-  const isPremium = PREMIUM_TIERS.includes(tier) && membership?.isActive !== false;
-
-  if (!isPremium) return <UpgradeRedirect />;
+  if (!checkIsPremium(membership)) return <UpgradeRedirect />;
 
   return <>{children}</>;
 }
 
 function useIsPremiumUser() {
   const { isAuthenticated } = useAuth();
-  const { data: membership } = useQuery<{ tier: string; isActive: boolean }>({
+  const { data: membership } = useQuery<MembershipData>({
     queryKey: ["/api/user/membership"],
     enabled: isAuthenticated,
   });
-  const tier = membership?.tier || "free";
-  return isAuthenticated && PREMIUM_TIERS.includes(tier) && membership?.isActive !== false;
+  return isAuthenticated && checkIsPremium(membership);
 }
 
 function AuthenticatedLayout() {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Crown, Check, Star, Zap, Headphones, Download, Loader2, ShieldCheck, X } from "lucide-react";
+import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -88,7 +89,7 @@ const plans = [
     stream: "trust",
     description: "$25 Down / 0% Interest — full exchange + trust certificates",
     features: [
-      { text: "$25 DOWN / 0% INTEREST", included: true },
+      { text: "$25 DOWN / 0% INTEREST / $19.79 MO FOR 24 MONTHS", included: true },
       { text: "Full Sovereign Exchange access", included: true },
       { text: "All assets + pre-release papers", included: true },
       { text: "Priority settlement queue", included: true },
@@ -513,7 +514,7 @@ export default function MembershipPage() {
                     <p className="text-[10px] text-lime-400/60 font-bold mt-1">BLUEVINE RECURRING — CANCEL ANYTIME</p>
                   )}
                   {isTrust && (
-                    <p className="text-[10px] text-amber-400/60 font-bold mt-1">$25 DOWN / 0% INTEREST — $500 TOTAL</p>
+                    <p className="text-[10px] text-amber-400/60 font-bold mt-1">$25 DOWN / 0% INTEREST / $19.79 MO × 24</p>
                   )}
                 </CardHeader>
                 <CardContent>
@@ -530,7 +531,7 @@ export default function MembershipPage() {
                             feature.included ? checkCls : "text-muted-foreground/30"
                           }`}
                         />
-                        <span className={`${!feature.included ? "line-through" : ""} ${feature.text.includes("$25 DOWN") ? "font-extrabold text-amber-400" : ""}`}>
+                        <span className={`${!feature.included ? "line-through" : ""} ${feature.text.includes("$25 DOWN") || feature.text.includes("$19.79") ? "font-extrabold text-amber-400" : ""}`}>
                           {feature.text}
                         </span>
                       </li>
@@ -562,7 +563,7 @@ export default function MembershipPage() {
                     </Button>
                   ) : isMintor ? (
                     <a
-                      href="https://www.bluevine.com"
+                      href={BLUEVINE_MINT_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block w-full"
@@ -574,7 +575,7 @@ export default function MembershipPage() {
                     </a>
                   ) : isTrust ? (
                     <a
-                      href="https://www.bluevine.com"
+                      href={BLUEVINE_TRUST_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="block w-full"

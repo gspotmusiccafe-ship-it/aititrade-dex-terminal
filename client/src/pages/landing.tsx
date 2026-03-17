@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
@@ -372,7 +373,7 @@ const membershipTiers = [
     period: " total",
     stream: "trust",
     features: [
-      "$25 DOWN / 0% INTEREST",
+      "$25 DOWN / 0% INTEREST / $19.79 MO FOR 24 MONTHS",
       "Full Sovereign Exchange access",
       "All assets + pre-release papers",
       "Priority settlement queue",
@@ -750,7 +751,7 @@ export default function LandingPage() {
                         <p className="text-[10px] text-lime-400/60 mt-1 font-bold">BLUEVINE RECURRING — CANCEL ANYTIME</p>
                       )}
                       {isTrust && (
-                        <p className="text-[10px] text-amber-400/60 mt-1 font-bold">$25 DOWN / 0% INTEREST — $500 TOTAL</p>
+                        <p className="text-[10px] text-amber-400/60 mt-1 font-bold">$25 DOWN / 0% INTEREST / $19.79 MO × 24</p>
                       )}
                     </div>
 
@@ -758,7 +759,7 @@ export default function LandingPage() {
                       {tier.features.map((feature, i) => (
                         <li key={i} className={`flex items-start gap-2 text-[11px] ${featureCls}`}>
                           <span className={`mt-0.5 ${isFree && feature.includes("No ") ? "text-red-400" : bulletCls}`}>▸</span>
-                          <span className={`${isFree && feature.includes("No ") ? "text-red-400/60" : ""} ${feature.includes("$25 DOWN") ? "font-extrabold text-amber-400" : ""}`}>{feature}</span>
+                          <span className={`${isFree && feature.includes("No ") ? "text-red-400/60" : ""} ${feature.includes("$25 DOWN") || feature.includes("$19.79") ? "font-extrabold text-amber-400" : ""}`}>{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -769,7 +770,7 @@ export default function LandingPage() {
 
                     {isMintor ? (
                       <a
-                        href="https://www.bluevine.com"
+                        href={BLUEVINE_MINT_URL}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
@@ -779,7 +780,7 @@ export default function LandingPage() {
                       </a>
                     ) : isTrust ? (
                       <a
-                        href="https://www.bluevine.com"
+                        href={BLUEVINE_TRUST_URL}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-amber-600 text-white hover:bg-amber-700 transition-colors"

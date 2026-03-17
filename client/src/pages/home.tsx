@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayer } from "@/lib/player-context";
@@ -397,7 +398,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
 
         <div className="flex gap-1 mb-1">
           <a
-            href="https://www.bluevine.com"
+            href={BLUEVINE_MINT_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-lime-500/20 transition-colors"
@@ -406,7 +407,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             MINTOR $9.99/MO
           </a>
           <a
-            href="https://www.bluevine.com"
+            href={BLUEVINE_TRUST_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-amber-600/20 transition-colors"

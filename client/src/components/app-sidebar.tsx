@@ -83,8 +83,14 @@ export function AppSidebar() {
     mintor: "Mint Factory CEO",
     asset_trustee: "Asset Trustee",
   };
-  const planLabel = membership?.tier && TIER_LABELS[membership.tier]
+  const isMintor = membership?.tier === "mintor" || membership?.tier === "mint_factory_ceo";
+  const isTrustee = !!membership?.trustInvestor;
+  const planLabel = isMintor && isTrustee
+    ? "MINTOR + TRUSTEE"
+    : membership?.tier && TIER_LABELS[membership.tier]
     ? TIER_LABELS[membership.tier]
+    : isTrustee
+    ? "Asset Trustee"
     : "Free";
 
   const roleLabel = adminCheck?.isAdmin
@@ -278,7 +284,18 @@ export function AppSidebar() {
               <p className="text-sm font-medium truncate" data-testid="text-user-name">
                 {user.firstName ? `${user.firstName} ${user.lastName || ""}` : user.email}
               </p>
-              <p className="text-xs text-muted-foreground truncate">{roleLabel} · {planLabel}</p>
+              <p className="text-xs truncate">
+                <span className="text-muted-foreground">{roleLabel} · </span>
+                {isMintor && isTrustee ? (
+                  <><span className="text-lime-400 font-bold">MINTOR</span><span className="text-muted-foreground"> + </span><span className="text-amber-400 font-bold">TRUSTEE</span></>
+                ) : isMintor ? (
+                  <span className="text-lime-400 font-bold">{planLabel}</span>
+                ) : isTrustee ? (
+                  <span className="text-amber-400 font-bold">{planLabel}</span>
+                ) : (
+                  <span className="text-muted-foreground">{planLabel}</span>
+                )}
+              </p>
             </div>
             <Button
               variant="ghost"
