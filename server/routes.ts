@@ -241,6 +241,9 @@ export async function registerRoutes(
           trackId,
           trackingNumber: mintId,
           unitPrice: price.toString(),
+          creatorCredit: "0.16",
+          creatorCreditAmount: originatorCredit.toString(),
+          positionHolderAmount: positionValue.toString(),
           status: "confirmed",
         }).returning();
 

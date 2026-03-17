@@ -56,6 +56,9 @@ export const orders = pgTable("orders", {
   buyerEmail: varchar("buyer_email"),
   buyerName: varchar("buyer_name"),
   unitPrice: text("unit_price").notNull().default("0.99"),
+  creatorCredit: text("creator_credit").notNull().default("0.16"),
+  creatorCreditAmount: text("creator_credit_amount"),
+  positionHolderAmount: text("position_holder_amount"),
   status: varchar("status").default("confirmed"),
   createdAt: timestamp("created_at").defaultNow(),
 });
