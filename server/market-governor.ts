@@ -8,16 +8,21 @@ interface MarketSession {
   tradingRate: number;
   volatility: number;
   marketSentiment: "BULL" | "BEAR" | "NEUTRAL";
+  buyBackRate: number;
   generatedAt: number;
 }
 
 interface PoolConfig {
   trackId: string;
   poolSize: number;
+  dynamicPrice: number;
+  buyBackRate: number;
+  paperTradeCap: number;
   seats: number;
   rushMultiplier: number;
   flashTriggerMinute: number | null;
   liquiditySplit: { house: number; payout: number };
+  minterFee: number;
 }
 
 interface MarketState {
@@ -41,6 +46,22 @@ function getDaySeed(): number {
   return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
 }
 
+function generateDynamicPrice(rng: () => number): number {
+  const raw = 0.99 + rng() * (9.99 - 0.99);
+  return parseFloat(raw.toFixed(2));
+}
+
+function selectBuyBackRate(volatility: number, rng: () => number): number {
+  if (volatility >= 30) {
+    const roll = rng();
+    return roll > 0.5 ? 0.50 : 0.42;
+  } else if (volatility >= 15) {
+    const roll = rng();
+    return roll > 0.6 ? 0.42 : 0.18;
+  }
+  return 0.18;
+}
+
 function generateSession(): MarketSession {
   const seed = getDaySeed();
   const rng = seededRandom(seed);
@@ -52,6 +73,8 @@ function generateSession(): MarketSession {
   const sentiment: "BULL" | "BEAR" | "NEUTRAL" =
     sentimentRoll > 0.6 ? "BULL" : sentimentRoll > 0.3 ? "NEUTRAL" : "BEAR";
 
+  const buyBackRate = selectBuyBackRate(volatility, rng);
+
   const sessionId = `MKT-${seed}-${tradingRate}`;
 
   return {
@@ -60,6 +83,7 @@ function generateSession(): MarketSession {
     tradingRate,
     volatility,
     marketSentiment: sentiment,
+    buyBackRate,
     generatedAt: Date.now(),
   };
 }
@@ -67,11 +91,12 @@ function generateSession(): MarketSession {
 function computePoolConfig(
   trackId: string,
   salesCount: number,
-  price: number,
   session: MarketSession,
   rng: () => number
 ): PoolConfig {
-  const grossVolume = salesCount * price;
+  const dynamicPrice = generateDynamicPrice(rng);
+
+  const grossVolume = salesCount * dynamicPrice;
   const velocity = salesCount > 0 ? grossVolume / Math.max(salesCount, 1) : 0;
 
   let poolSize: number;
@@ -83,7 +108,11 @@ function computePoolConfig(
     poolSize = 500;
   }
 
-  const baseSeats = Math.floor(poolSize / price);
+  const paperTradeCap = parseFloat((poolSize * 0.50).toFixed(2));
+
+  const buyBackRate = selectBuyBackRate(session.volatility, rng);
+
+  const baseSeats = Math.floor(poolSize / dynamicPrice);
   const rushMultiplier = 1 + (session.volatility / 100) * (0.5 + rng() * 0.5);
   const seats = Math.max(5, Math.floor(baseSeats * (session.tradingRate / 50)));
 
@@ -93,10 +122,14 @@ function computePoolConfig(
   return {
     trackId,
     poolSize,
+    dynamicPrice,
+    buyBackRate: parseFloat(buyBackRate.toFixed(2)),
+    paperTradeCap,
     seats,
     rushMultiplier: parseFloat(rushMultiplier.toFixed(3)),
     flashTriggerMinute,
     liquiditySplit: { house: 0.30, payout: 0.70 },
+    minterFee: 0.16,
   };
 }
 
@@ -125,15 +158,14 @@ export async function getMarketState(): Promise<MarketState> {
     .orderBy(desc(tracks.playCount));
 
   const pools: PoolConfig[] = allTracks.map((t) => {
-    const price = parseFloat(t.unitPrice || "0.99");
-    return computePoolConfig(t.id, t.salesCount || 0, price, session, rng);
+    return computePoolConfig(t.id, t.salesCount || 0, session, rng);
   });
 
   const activePools = allTracks.filter((t) => {
-    const price = parseFloat(t.unitPrice || "0.99");
-    const gross = (t.salesCount || 0) * price;
     const pool = pools.find((p) => p.trackId === t.id);
-    return pool ? gross < pool.poolSize : true;
+    if (!pool) return true;
+    const gross = (t.salesCount || 0) * pool.dynamicPrice;
+    return gross < pool.poolSize;
   });
 
   const flashPools = pools.filter((p) => p.flashTriggerMinute !== null);
@@ -160,6 +192,37 @@ export async function getMarketState(): Promise<MarketState> {
   cachedState = { session, pools, nextFlashTarget, nextFlashAt, activePoolCount: activePools.length };
   cachedDay = today;
   return cachedState;
+}
+
+export function recyclePool(state: MarketState, trackId: string): PoolConfig {
+  const seed = getDaySeed() + parseInt(trackId.replace(/\D/g, "").slice(0, 8) || "1", 10) + Date.now() % 100000;
+  const rng = seededRandom(seed);
+
+  const newPrice = generateDynamicPrice(rng);
+  const newBuyBack = selectBuyBackRate(state.session.volatility, rng);
+
+  const oldPool = state.pools.find(p => p.trackId === trackId);
+  const poolSize = oldPool?.poolSize || 1000;
+
+  const newPool: PoolConfig = {
+    trackId,
+    poolSize,
+    dynamicPrice: newPrice,
+    buyBackRate: parseFloat(newBuyBack.toFixed(2)),
+    paperTradeCap: parseFloat((poolSize * 0.50).toFixed(2)),
+    seats: Math.max(5, Math.floor(poolSize / newPrice)),
+    rushMultiplier: oldPool?.rushMultiplier || 1.0,
+    flashTriggerMinute: rng() < 0.25 ? Math.floor(rng() * 1440) : null,
+    liquiditySplit: { house: 0.30, payout: 0.70 },
+    minterFee: 0.16,
+  };
+
+  const idx = state.pools.findIndex(p => p.trackId === trackId);
+  if (idx >= 0) {
+    state.pools[idx] = newPool;
+  }
+
+  return newPool;
 }
 
 export function getPoolForTrack(state: MarketState, trackId: string): PoolConfig | undefined {

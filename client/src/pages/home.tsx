@@ -224,7 +224,7 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
   );
 }
 
-function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string; dynamicPoolSize?: number }) {
+function AssetCard({ track, onPlay, userTier, dynamicPoolSize, dynamicPrice, buyBackRate, paperTradeCap }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string; dynamicPoolSize?: number; dynamicPrice?: number; buyBackRate?: number; paperTradeCap?: number }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -251,18 +251,24 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackW
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
 
-  const price = parseFloat((track as any).unitPrice || "3.50");
+  const price = dynamicPrice || parseFloat((track as any).unitPrice || "3.50");
   const sales = (track as any).salesCount || 0;
   const assetClass = ((track as any).assetClass || "standard").toLowerCase();
   const releaseType = ((track as any).releaseType || "native").toLowerCase();
   const isGlobal = releaseType === "global";
   const isInspirational = assetClass === "inspirational";
   const poolCeiling = dynamicPoolSize || CEILING;
+  const ptCap = paperTradeCap || (poolCeiling * 0.50);
+  const bbRate = buyBackRate || 0.18;
+  const bbLabel = `${Math.round(bbRate * 100)}%`;
+  const minterFeeLabel = "16%";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / poolCeiling) * 100).toFixed(1)));
+  const paperTradePct = Math.min(100, parseFloat(((grossSales / ptCap) * 100).toFixed(1)));
   const flashThreshold = poolCeiling * 0.9;
   const isFlashZone = !isGlobal && grossSales >= flashThreshold && grossSales < poolCeiling;
   const isClosed = !isGlobal && (grossSales >= poolCeiling || (flashTimer !== null && flashTimer <= 0));
+  const isPaperCapHit = !isGlobal && grossSales >= ptCap && !isClosed;
   const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed && !isFlashZone;
   const remaining = Math.max(0, parseFloat((poolCeiling - grossSales).toFixed(2)));
   const unitsRemaining = price > 0 ? Math.ceil(remaining / price) : 0;
@@ -299,7 +305,7 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackW
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
-  const priceLabel = price === 0.99 ? "$0.99" : price === 2.50 ? "$2.50" : price === 5.00 ? "$5.00" : `$${price.toFixed(2)}`;
+  const priceLabel = `$${price.toFixed(2)}`;
   const priceClass = price >= 5 ? "text-amber-400" : price >= 2.50 ? "text-yellow-300" : "text-lime-400";
 
   const borderColor = isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : isGlobal ? "border-amber-500/40 hover:border-amber-400/70" : isInspirational ? "border-violet-500/40 hover:border-violet-500/70" : "border-emerald-500/20 hover:border-emerald-500/60";
@@ -400,22 +406,32 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackW
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 mb-2 text-center">
+        <div className="grid grid-cols-3 gap-1 mb-1 text-center">
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[10px] text-zinc-400 font-bold">GROSS SALES</p>
+            <p className="text-[10px] text-zinc-400 font-bold">GROSS</p>
             <p className={`text-xs font-extrabold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-lime-400" : "text-zinc-500"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[10px] text-zinc-400 font-bold">UNITS SOLD</p>
+            <p className="text-[10px] text-zinc-400 font-bold">UNITS</p>
             <p className="text-xs text-white font-extrabold">{sales.toLocaleString()}</p>
           </div>
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[10px] text-zinc-400 font-bold">UNIT PRICE</p>
+            <p className="text-[10px] text-zinc-400 font-bold">BUY-IN</p>
             <p className={`text-xs font-extrabold ${priceClass}`}>{priceLabel}</p>
           </div>
-          <div className={`bg-zinc-900/80 p-1.5 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
-            <p className="text-[10px] text-zinc-400 font-bold">YIELD</p>
-            <p className={`text-xs font-extrabold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-amber-400" : capacityPct >= 30 ? "text-lime-400" : "text-zinc-300"}`}>▲ {yieldPct}</p>
+        </div>
+        <div className="grid grid-cols-3 gap-1 mb-2 text-center">
+          <div className="bg-zinc-900/80 p-1 border border-zinc-800">
+            <p className="text-[9px] text-zinc-500 font-bold">BUY-BACK</p>
+            <p className={`text-[11px] font-extrabold ${bbRate >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
+          </div>
+          <div className="bg-zinc-900/80 p-1 border border-zinc-800">
+            <p className="text-[9px] text-zinc-500 font-bold">MINTER FEE</p>
+            <p className="text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
+          </div>
+          <div className={`bg-zinc-900/80 p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
+            <p className="text-[9px] text-zinc-500 font-bold">YIELD</p>
+            <p className={`text-[11px] font-extrabold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-amber-400" : capacityPct >= 30 ? "text-lime-400" : "text-zinc-300"}`}>▲ {yieldPct}</p>
           </div>
         </div>
 
@@ -506,6 +522,13 @@ function AssetCard({ track, onPlay, userTier, dynamicPoolSize }: { track: TrackW
             >
               <Shield className="h-3 w-3" /> TRUST CERTIFICATE REQUIRED — $25 DOWN
             </a>
+          ) : isPaperCapHit ? (
+            <div
+              className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-2 text-center flex items-center justify-center gap-1"
+              data-testid={`button-paper-cap-${track.id}`}
+            >
+              <AlertTriangle className="h-3 w-3" /> PAPER TRADE CAP — 50% POOL LIMIT HIT
+            </div>
           ) : (
             <button
               onClick={() => orderMutation.mutate()}
@@ -541,9 +564,14 @@ interface MarketSession {
   activePools: number;
   nextFlashTarget: string | null;
   nextFlashAt: number | null;
+  buyBackRate: number;
   pools: Array<{
     trackId: string;
     poolSize: number;
+    dynamicPrice: number;
+    buyBackRate: number;
+    paperTradeCap: number;
+    minterFee: number;
     seats: number;
     rushMultiplier: number;
     isFlashScheduled: boolean;
@@ -787,6 +815,9 @@ export default function HomePage() {
                 onPlay={(t) => playTrack(t, displayTracks)}
                 userTier={userTier}
                 dynamicPoolSize={marketSession?.pools?.find(p => p.trackId === track.id)?.poolSize}
+                dynamicPrice={marketSession?.pools?.find(p => p.trackId === track.id)?.dynamicPrice}
+                buyBackRate={marketSession?.pools?.find(p => p.trackId === track.id)?.buyBackRate}
+                paperTradeCap={marketSession?.pools?.find(p => p.trackId === track.id)?.paperTradeCap}
               />
             ))}
           </div>
