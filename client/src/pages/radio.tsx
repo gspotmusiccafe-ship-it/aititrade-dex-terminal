@@ -438,6 +438,13 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
   const [isPlaying, setIsPlaying] = useState(false);
   const isOwner = session.userId === userId;
 
+  const { data: mintStats } = useQuery<{ totalMints: number; mintCap: number; totalGross: number; assets: { id: string; title: string; mints: number; gross: number }[] }>({
+    queryKey: ["/api/mints/total"],
+    enabled: showStats,
+    refetchInterval: 15000,
+    staleTime: 0,
+  });
+
   const { data: engagementData, refetch: refetchEngagement } = useQuery<EngagementStats>({
     queryKey: ["/api/jam-sessions", session.id, "engagement"],
     enabled: showStats && isOwner,
@@ -900,6 +907,52 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                       </span>
                     ))}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {showStats && mintStats && (
+            <div className="border-t border-emerald-500/20 pt-3 space-y-3">
+              <h4 className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5" />
+                MINT LEDGER — SOVEREIGN EXCHANGE
+              </h4>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-lg font-black text-emerald-400" data-testid="stat-total-mints">{mintStats.totalMints}</p>
+                  <p className="text-[8px] text-emerald-500/40">TOTAL MINTS</p>
+                </div>
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-lg font-black text-yellow-400" data-testid="stat-mint-cap">{mintStats.mintCap}</p>
+                  <p className="text-[8px] text-yellow-400/40">MINT CAP</p>
+                </div>
+                <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">
+                  <p className="text-lg font-black text-white" data-testid="stat-total-gross">${mintStats.totalGross.toFixed(2)}</p>
+                  <p className="text-[8px] text-emerald-500/40">GROSS LEDGER</p>
+                </div>
+              </div>
+              <div className="w-full bg-zinc-900 border border-emerald-500/10 h-4 relative overflow-hidden">
+                <div
+                  className={`h-full transition-all ${mintStats.totalMints >= mintStats.mintCap * 0.6 ? "bg-yellow-500" : "bg-emerald-500"}`}
+                  style={{ width: `${Math.min(100, (mintStats.totalMints / mintStats.mintCap) * 100)}%` }}
+                />
+                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white">
+                  {mintStats.totalMints} / {mintStats.mintCap} MINTED ({((mintStats.totalMints / mintStats.mintCap) * 100).toFixed(1)}%)
+                </span>
+              </div>
+              {mintStats.assets.filter(a => a.mints > 0).length > 0 && (
+                <div className="space-y-0.5">
+                  <p className="text-[9px] text-emerald-500/40 uppercase">Asset Breakdown:</p>
+                  {mintStats.assets.filter(a => a.mints > 0).map(asset => (
+                    <div key={asset.id} className="flex items-center justify-between bg-zinc-900 border border-emerald-500/10 px-2 py-1">
+                      <span className="text-[10px] text-emerald-400 font-bold">${(asset.title || "").replace(/\s+/g, "").toUpperCase().slice(0, 8)}</span>
+                      <div className="flex gap-3">
+                        <span className="text-[9px] text-emerald-500/50">{asset.mints} MINTS</span>
+                        <span className="text-[9px] text-white font-bold">${asset.gross.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

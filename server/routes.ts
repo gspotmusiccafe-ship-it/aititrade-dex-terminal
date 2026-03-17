@@ -230,13 +230,16 @@ export async function registerRoutes(
         const currentGross = currentSales * price;
         if (currentGross >= 1000) throw new Error("CEILING_REACHED");
 
-        const ts = Date.now().toString(36).toUpperCase();
-        const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-        const trackingNumber = `ATFY-${ts}-${rand}`;
+        const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
+        const seq = String(currentSales + 1).padStart(3, "0");
+        const mintId = `MNT-977-${ticker}-${seq}`;
+
+        const originatorCredit = parseFloat((price * 0.16).toFixed(4));
+        const positionValue = parseFloat((price - originatorCredit).toFixed(4));
 
         const [order] = await tx.insert(orders).values({
           trackId,
-          trackingNumber,
+          trackingNumber: mintId,
           unitPrice: price.toString(),
           status: "confirmed",
         }).returning();
@@ -251,14 +254,19 @@ export async function registerRoutes(
         const capacityPct = Math.min(100, parseFloat(((newGross / 1000) * 100).toFixed(1)));
 
         return {
-          order: { id: order.id, trackingNumber: order.trackingNumber, status: order.status, createdAt: order.createdAt },
+          order: { id: order.id, mintId: order.trackingNumber, status: order.status, createdAt: order.createdAt },
           receipt: {
-            trackingNumber: order.trackingNumber,
+            mintId: order.trackingNumber,
             asset: track.title,
+            ticker,
             unitPrice: price,
+            originatorCredit,
+            positionValue,
             grossSales: newGross,
+            totalMints: newSales,
+            mintCap: 1000,
             capacityPct,
-            status: newGross >= 1000 ? "CLOSED" : "CONFIRMED",
+            status: newGross >= 1000 ? "CLOSED" : "MINTED",
             timestamp: new Date().toISOString(),
           },
         };
@@ -274,13 +282,29 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/orders/:trackId/count", async (req, res) => {
+  app.get("/api/mints/total", async (req, res) => {
     try {
-      const [result] = await db.select({ total: count() }).from(orders)
-        .where(eq(orders.trackId, req.params.trackId));
-      res.json({ trackId: req.params.trackId, totalOrders: result?.total || 0 });
+      const [result] = await db.select({ total: count() }).from(orders);
+      const allTracks = await db.select({
+        id: tracks.id,
+        title: tracks.title,
+        salesCount: tracks.salesCount,
+        unitPrice: tracks.unitPrice,
+      }).from(tracks);
+      const totalGross = allTracks.reduce((sum, t) => sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "0.99")), 0);
+      res.json({
+        totalMints: result?.total || 0,
+        mintCap: 1000,
+        totalGross: parseFloat(totalGross.toFixed(2)),
+        assets: allTracks.map(t => ({
+          id: t.id,
+          title: t.title,
+          mints: t.salesCount || 0,
+          gross: parseFloat(((t.salesCount || 0) * parseFloat(t.unitPrice || "0.99")).toFixed(2)),
+        })),
+      });
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch order count" });
+      res.status(500).json({ message: "Failed to fetch mint stats" });
     }
   });
 

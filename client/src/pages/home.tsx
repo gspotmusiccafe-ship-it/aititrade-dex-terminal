@@ -13,44 +13,68 @@ const SETTLEMENT_PAYOUT = 300.00;
 const HOLDER_COUNT = 15;
 const PAYHIP_STORE = "https://payhip.com/aitifymusicstore";
 
-interface OrderReceipt {
-  trackingNumber: string;
+interface MintReceipt {
+  mintId: string;
   asset: string;
+  ticker: string;
   unitPrice: number;
+  originatorCredit: number;
+  positionValue: number;
   grossSales: number;
+  totalMints: number;
+  mintCap: number;
   capacityPct: number;
   status: string;
   timestamp: string;
 }
 
-function DigitalReceipt({ receipt, onClose }: { receipt: OrderReceipt; onClose: () => void }) {
+function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-black border border-emerald-500/40 font-mono max-w-sm w-full shadow-2xl shadow-emerald-500/10" onClick={e => e.stopPropagation()} data-testid="digital-receipt">
-        <div className="border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between">
+      <div className="bg-black border border-emerald-500/40 font-mono max-w-sm w-full shadow-2xl shadow-emerald-500/10" onClick={e => e.stopPropagation()} data-testid="mint-certificate">
+        <div className="border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between bg-emerald-500/5">
           <div className="flex items-center gap-2">
             <FileCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-[10px] text-emerald-400 font-bold">DIGITAL ORDER CONFIRMED</span>
+            <span className="text-[10px] text-emerald-400 font-bold">DIGITAL MINT CONFIRMED</span>
           </div>
           <button onClick={onClose} className="text-emerald-500/40 hover:text-emerald-400"><X className="h-3.5 w-3.5" /></button>
         </div>
         <div className="p-4 space-y-3">
-          <div className="border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
-            <p className="text-[8px] text-emerald-500/40 mb-1">TRACKING NUMBER / CERTIFICATE ID</p>
-            <p className="text-sm text-emerald-400 font-black tracking-wider" data-testid="text-tracking-number">{receipt.trackingNumber}</p>
+          <div className="border-2 border-emerald-400/40 bg-emerald-500/5 p-3 text-center">
+            <p className="text-[8px] text-emerald-500/40 mb-1">MINT ID — PROOF OF OWNERSHIP</p>
+            <p className="text-base text-emerald-400 font-black tracking-widest" data-testid="text-mint-id">{receipt.mintId}</p>
           </div>
           <div className="grid grid-cols-2 gap-1 text-center">
             <div className="bg-zinc-900 border border-emerald-500/10 p-2">
-              <p className="text-[8px] text-emerald-500/40">ASSET</p>
-              <p className="text-[10px] text-emerald-400 font-bold">{receipt.asset.toUpperCase()}</p>
+              <p className="text-[8px] text-emerald-500/40">ASSET / TICKER</p>
+              <p className="text-[10px] text-emerald-400 font-bold">${receipt.ticker}</p>
             </div>
             <div className="bg-zinc-900 border border-emerald-500/10 p-2">
               <p className="text-[8px] text-emerald-500/40">UNIT PRICE</p>
               <p className="text-[10px] text-emerald-400 font-bold">${receipt.unitPrice.toFixed(2)}</p>
             </div>
+          </div>
+          <div className="border border-yellow-500/20 bg-yellow-500/5 p-2">
+            <p className="text-[8px] text-yellow-400/60 mb-1 text-center">DISBURSEMENT BREAKDOWN</p>
+            <div className="grid grid-cols-2 gap-1 text-center">
+              <div className="bg-black/40 border border-yellow-500/10 p-1.5">
+                <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
+                <p className="text-[11px] text-yellow-400 font-bold" data-testid="text-originator-credit">${receipt.originatorCredit.toFixed(4)}</p>
+              </div>
+              <div className="bg-black/40 border border-emerald-500/10 p-1.5">
+                <p className="text-[8px] text-emerald-500/50">POSITION HOLDER</p>
+                <p className="text-[11px] text-emerald-400 font-bold" data-testid="text-position-value">${receipt.positionValue.toFixed(4)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-1 text-center">
             <div className="bg-zinc-900 border border-emerald-500/10 p-2">
               <p className="text-[8px] text-emerald-500/40">LEDGER GROSS</p>
               <p className="text-[10px] text-white font-bold">${receipt.grossSales.toFixed(2)}</p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
+              <p className="text-[8px] text-emerald-500/40">TOTAL MINTS</p>
+              <p className="text-[10px] text-emerald-400 font-bold" data-testid="text-total-mints">{receipt.totalMints} / {receipt.mintCap}</p>
             </div>
             <div className="bg-zinc-900 border border-emerald-500/10 p-2">
               <p className="text-[8px] text-emerald-500/40">CAPACITY</p>
@@ -60,12 +84,12 @@ function DigitalReceipt({ receipt, onClose }: { receipt: OrderReceipt; onClose: 
           <div className="border border-emerald-500/10 bg-zinc-900 p-2 text-center">
             <p className="text-[8px] text-emerald-500/40">STATUS</p>
             <p className={`text-xs font-black ${receipt.status === "CLOSED" ? "text-red-400" : "text-emerald-400"}`}>
-              {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "POSITION ACQUIRED — PROOF OF OWNERSHIP"}
+              {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "POSITION MINTED — PROOF OF OWNERSHIP"}
             </p>
           </div>
           <div className="text-center">
             <p className="text-[8px] text-emerald-500/30">{receipt.timestamp}</p>
-            <p className="text-[8px] text-emerald-500/20 mt-1">AITIFY SOVEREIGN EXCHANGE — DIGITAL ORDER RECEIPT</p>
+            <p className="text-[8px] text-emerald-500/20 mt-1">AITIFY SOVEREIGN EXCHANGE — DIGITAL MINT CERTIFICATE</p>
           </div>
         </div>
       </div>
@@ -76,7 +100,7 @@ function DigitalReceipt({ receipt, onClose }: { receipt: OrderReceipt; onClose: 
 function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
-  const [receipt, setReceipt] = useState<OrderReceipt | null>(null);
+  const [receipt, setReceipt] = useState<MintReceipt | null>(null);
 
   const orderMutation = useMutation({
     mutationFn: async () => {
@@ -260,7 +284,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           </button>
         </div>
       </div>
-      {receipt && <DigitalReceipt receipt={receipt} onClose={() => setReceipt(null)} />}
+      {receipt && <MintCertificate receipt={receipt} onClose={() => setReceipt(null)} />}
     </div>
   );
 }
