@@ -317,18 +317,18 @@ function HeroPlayer() {
 const features = [
   {
     icon: Clock,
-    title: "2 Weeks Before Everyone",
-    description: "Discover new AI music 2 weeks before it drops on Spotify, Amazon Music, Deezer, YouTube, and Anghami",
+    title: "2-Week Early Trading Edge",
+    description: "Discover and trade new AI assets 2 weeks before they hit the retail stream (Spotify, Amazon, YouTube)",
   },
   {
     icon: Headphones,
-    title: "All-AI Music Catalog",
-    description: "A curated catalog of AI-generated music across every genre — discover the future of sound",
+    title: "All-AI Asset Catalog",
+    description: "A curated catalog of AI-generated high-velocity assets across every sector — the future of sovereign equity",
   },
   {
     icon: Users,
-    title: "Support AI Artists",
-    description: "AI artists earn more per stream while you enjoy exclusive content and early releases",
+    title: "Support Asset Architects",
+    description: "Asset Architects mint high-velocity assets and earn more per stream while you build positions in exclusive pre-market equity",
   },
 ];
 
@@ -612,7 +612,7 @@ export default function LandingPage() {
                 Positions
               </a>
               <a href="#artists" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
-                List Assets
+                Asset Architects
               </a>
             </nav>
 
@@ -641,7 +641,7 @@ export default function LandingPage() {
               <span className="text-yellow-400">97.7 THE FLAME</span>
             </h1>
             <p className="text-sm sm:text-base text-emerald-500/70 max-w-2xl font-mono">
-              &gt; SOVEREIGN MUSIC EXCHANGE | STREAM ASSETS 2 WEEKS PRE-MARKET |
+              &gt; DISCOVER AND TRADE NEW AI ASSETS 2 WEEKS BEFORE THEY HIT THE RETAIL STREAM (SPOTIFY, AMAZON, YOUTUBE) |
               SETTLEMENT RATE: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME
             </p>
             <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
@@ -772,18 +772,18 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Artists CTA Section */}
+      {/* Asset Architects CTA Section */}
       <section id="artists" className="py-20 px-4 sm:px-6 lg:px-8 bg-black border-t border-emerald-500/10">
         <div className="max-w-4xl mx-auto text-center font-mono">
           <Crown className="h-10 w-10 text-yellow-400 mx-auto mb-4" />
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
-            LIST YOUR ASSETS ON THE EXCHANGE
+            BECOME AN ASSET ARCHITECT
           </h2>
           <p className="text-emerald-500/50 mb-8 max-w-2xl mx-auto text-sm">
-            &gt; Upload sovereign music assets | Set pre-release dates | Earn settlement at $0.00025/stream
+            &gt; Mint high-velocity assets | Set 2-week pre-market dates | Earn settlement at $0.00025/stream | Autopilot priority rotation
           </p>
           <button onClick={() => openAuth("signup")} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 text-xs font-bold transition-colors">
-            APPLY FOR ARTIST LISTING
+            APPLY FOR ASSET ARCHITECT LISTING
           </button>
         </div>
       </section>

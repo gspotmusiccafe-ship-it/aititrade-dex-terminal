@@ -1137,7 +1137,7 @@ export async function registerRoutes(
         .select()
         .from(tracks)
         .innerJoin(artists, eq(tracks.artistId, artists.id))
-        .orderBy(desc(tracks.playCount));
+        .orderBy(desc(tracks.isPrerelease), desc(tracks.playCount));
       const allTracks = result.map(r => ({ ...r.tracks, artist: r.artists }));
       res.json(allTracks);
     } catch (error) {

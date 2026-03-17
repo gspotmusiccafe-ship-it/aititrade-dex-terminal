@@ -181,12 +181,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           progress: 0,
         };
       } else if (prev.autopilot && prev.autopilotPool.length > 0) {
-        const currentId = prev.currentTrack?.id;
-        const available = prev.autopilotPool.filter(t => t.id !== currentId && t.audioUrl);
-        if (available.length > 0) {
+        const playedIds = new Set(prev.queue.map(t => t.id));
+        const available = prev.autopilotPool.filter(t => !playedIds.has(t.id) && t.audioUrl);
+        const fallback = available.length > 0 ? available : prev.autopilotPool.filter(t => t.id !== prev.currentTrack?.id && t.audioUrl);
+        if (fallback.length > 0) {
+          const prerelease = fallback.filter(t => (t as any).isPrerelease);
+          const priorityPool = prerelease.length > 0 ? prerelease : fallback;
           const pick = prev.shuffle
-            ? available[Math.floor(Math.random() * available.length)]
-            : available[0];
+            ? priorityPool[Math.floor(Math.random() * priorityPool.length)]
+            : priorityPool[0];
           const newQueue = [...prev.queue, pick];
           const newIndex = newQueue.length - 1;
           if (audioRef.current && pick) {
@@ -403,12 +406,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         progress: 0,
       };
     } else if (prev.autopilot && prev.autopilotPool.length > 0) {
-      const currentId = prev.currentTrack?.id;
-      const available = prev.autopilotPool.filter(t => t.id !== currentId && t.audioUrl);
-      if (available.length > 0) {
+      const playedIds = new Set(prev.queue.map(t => t.id));
+      const available = prev.autopilotPool.filter(t => !playedIds.has(t.id) && t.audioUrl);
+      const fallback = available.length > 0 ? available : prev.autopilotPool.filter(t => t.id !== prev.currentTrack?.id && t.audioUrl);
+      if (fallback.length > 0) {
+        const prerelease = fallback.filter(t => (t as any).isPrerelease);
+        const priorityPool = prerelease.length > 0 ? prerelease : fallback;
         const pick = prev.shuffle
-          ? available[Math.floor(Math.random() * available.length)]
-          : available[0];
+          ? priorityPool[Math.floor(Math.random() * priorityPool.length)]
+          : priorityPool[0];
         const newQueue = [...prev.queue, pick];
         const newIdx = newQueue.length - 1;
         if (audioRef.current && pick) {

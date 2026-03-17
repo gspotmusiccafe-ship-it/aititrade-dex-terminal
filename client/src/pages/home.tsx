@@ -416,6 +416,14 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             <div className="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold py-1.5 text-center flex items-center justify-center gap-1 cursor-not-allowed">
               <Lock className="h-3 w-3" /> TRADE CLOSED
             </div>
+          ) : userTier === "free" ? (
+            <a
+              href="/membership"
+              className="flex-1 bg-zinc-800 border border-zinc-700 text-zinc-400 text-[10px] font-bold py-1.5 text-center flex items-center justify-center gap-1 hover:border-emerald-500/30 hover:text-emerald-400 transition-colors"
+              data-testid={`button-acquire-locked-${track.id}`}
+            >
+              <Lock className="h-3 w-3" /> PREMIUM TRADING ACCOUNT REQUIRED
+            </a>
           ) : isGlobal ? (
             <button
               onClick={() => orderMutation.mutate()}
@@ -452,7 +460,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { playTrack, currentTrack } = usePlayer();
+  const { playTrack, currentTrack, setAutopilotPool } = usePlayer();
   const autoPlayedRef = useRef(false);
 
   const { data: membership } = useQuery<{ tier: string }>({
@@ -466,6 +474,17 @@ export default function HomePage() {
     refetchInterval: 30000,
     staleTime: 0,
   });
+
+  const { data: autopilotPoolData } = useQuery<TrackWithArtist[]>({
+    queryKey: ["/api/autopilot/pool"],
+    staleTime: 60000,
+  });
+
+  useEffect(() => {
+    if (autopilotPoolData && autopilotPoolData.length > 0) {
+      setAutopilotPool(autopilotPoolData);
+    }
+  }, [autopilotPoolData, setAutopilotPool]);
 
   useEffect(() => {
     if (featuredTracks && featuredTracks.length > 0 && !autoPlayedRef.current && !currentTrack) {
