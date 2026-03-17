@@ -15,6 +15,7 @@ import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { getMarketState, computeLiquiditySplit } from "./market-governor";
+import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -355,6 +356,65 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/logs/radio", async (req: any, res) => {
+    try {
+      const { trackName, isrc, showName, status, duration, poolCapacity } = req.body;
+      const userId = req.user?.claims?.sub || "anonymous";
+      const success = await logRadioEvent({
+        timestamp: new Date().toISOString(),
+        userId,
+        trackName: trackName || "UNKNOWN",
+        isrc: isrc || "N/A",
+        showName: showName || "UNKNOWN",
+        status: status || "PLAYING",
+        duration,
+        poolCapacity,
+      });
+      res.json({ logged: success, signal: success ? "GREEN" : "RED" });
+    } catch (error) {
+      console.error("Radio log error:", error);
+      res.json({ logged: false, signal: "RED" });
+    }
+  });
+
+  app.post("/api/logs/heartbeat", async (req: any, res) => {
+    try {
+      const { trackName, isrc, showName, status, progress, duration } = req.body;
+      const userId = req.user?.claims?.sub || "anonymous";
+      const success = await logRadioEvent({
+        timestamp: new Date().toISOString(),
+        userId,
+        trackName: trackName || "UNKNOWN",
+        isrc: isrc || "N/A",
+        showName: showName || "HEARTBEAT",
+        status: status || "PLAYING",
+        duration: progress,
+      });
+      res.json({ logged: success, signal: success ? "GREEN" : "RED" });
+    } catch (error) {
+      res.json({ logged: false, signal: "RED" });
+    }
+  });
+
+  app.get("/api/logs/signal", async (_req: any, res) => {
+    const status = getSignalStatus();
+    res.json(status);
+  });
+
+  app.post("/api/logs/webhook-config", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { radioUrl, marketUrl } = req.body;
+      setWebhookUrls(radioUrl || null, marketUrl || null);
+      res.json({ configured: true, radioUrl: !!radioUrl, marketUrl: !!marketUrl });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to configure webhooks" });
+    }
+  });
+
   app.post("/api/orders", async (req: any, res) => {
     try {
       const { trackId } = req.body;
@@ -482,6 +542,25 @@ export async function registerRoutes(
           },
         };
       });
+
+      if (result.type === "native" && result.receipt) {
+        const r = result.receipt;
+        const isClosed = r.status === "CLOSED";
+        logMarketEvent({
+          timestamp: new Date().toISOString(),
+          userId: req.user?.claims?.sub || "anonymous",
+          eventType: isClosed ? "POOL_CLOSE" : "BUY_IN",
+          trackName: r.asset || "UNKNOWN",
+          ticker: r.ticker || "N/A",
+          unitPrice: r.unitPrice,
+          grossSales: r.grossSales,
+          poolSize: r.poolSize || r.mintCap,
+          capacityPct: r.capacityPct,
+          mintId: r.mintId,
+          houseCut: r.houseCut || 0,
+          payoutPot: r.payoutPot || 0,
+        }).catch(() => {});
+      }
 
       res.json(result);
     } catch (error: any) {

@@ -32,6 +32,7 @@ export function MusicPlayer() {
     broadcast,
     currentShow,
     broadcastUptime,
+    signalStrength,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -189,7 +190,22 @@ export function MusicPlayer() {
           <span className="text-[9px] text-zinc-600">|</span>
           <span className="text-[9px] text-lime-400 font-bold">AUTOPILOT LOCKED</span>
           <span className="text-[9px] text-zinc-600">|</span>
-          <span className="text-[9px] text-zinc-500">AD-BRIDGE ACTIVE</span>
+          <span className="text-[9px] text-zinc-500">AD-BRIDGE</span>
+          <span className="text-[9px] text-zinc-600">|</span>
+          <div className="flex items-center gap-1" data-testid="signal-strength-indicator">
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              signalStrength === "GREEN" ? "bg-lime-400 shadow-[0_0_6px_rgba(132,204,22,0.6)]" :
+              signalStrength === "RED" ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] animate-pulse" :
+              "bg-zinc-600"
+            }`} />
+            <span className={`text-[9px] font-extrabold ${
+              signalStrength === "GREEN" ? "text-lime-400" :
+              signalStrength === "RED" ? "text-red-400" :
+              "text-zinc-500"
+            }`}>
+              SIGNAL {signalStrength}
+            </span>
+          </div>
         </div>
       )}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-emerald-500/20 z-50 font-mono" data-testid="music-player">
@@ -217,6 +233,11 @@ export function MusicPlayer() {
                     {getShowLabel(currentShow)}
                   </span>
                 )}
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  signalStrength === "GREEN" ? "bg-lime-400" :
+                  signalStrength === "RED" ? "bg-red-500 animate-pulse" :
+                  "bg-zinc-600"
+                }`} title={`Signal: ${signalStrength}`} data-testid="signal-dot" />
               </div>
               <p className="font-extrabold text-xs truncate text-lime-400" data-testid="text-current-track-title">
                 {currentTrack.title.toUpperCase()}

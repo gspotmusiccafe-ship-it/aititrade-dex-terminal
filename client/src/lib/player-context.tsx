@@ -36,6 +36,8 @@ function getNextShowTime(): { show: BroadcastShow; at: Date } {
   return { show: "MORNING_MARKET", at: tomorrow };
 }
 
+type SignalStrength = "GREEN" | "RED" | "IDLE";
+
 interface PlayerState {
   currentTrack: TrackWithArtist | null;
   isPlaying: boolean;
@@ -52,6 +54,7 @@ interface PlayerState {
   broadcast: boolean;
   currentShow: BroadcastShow;
   broadcastUptime: number;
+  signalStrength: SignalStrength;
 }
 
 interface PlayerContextType extends PlayerState {
@@ -94,11 +97,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     broadcast: false,
     currentShow: getCurrentShow(),
     broadcastUptime: 0,
+    signalStrength: "IDLE",
   });
 
   const broadcastStartRef = useRef<number>(0);
   const adBridgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userPausedRef = useRef<boolean>(false);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastLoggedTrackRef = useRef<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -112,6 +118,33 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       fetch(`/api/tracks/${trackId}/play`, { method: "POST", credentials: "include" }).catch(() => {});
     }
   }, []);
+
+  const sendLog = useCallback((endpoint: string, payload: Record<string, unknown>) => {
+    fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    })
+      .then(res => res.json())
+      .then(data => {
+        const sig = data?.signal === "GREEN" ? "GREEN" : "RED";
+        setState(prev => ({ ...prev, signalStrength: sig as SignalStrength }));
+      })
+      .catch(() => {
+        setState(prev => ({ ...prev, signalStrength: "RED" as SignalStrength }));
+      });
+  }, []);
+
+  const logTrackEnd = useCallback((track: TrackWithArtist, show: BroadcastShow, dur: number) => {
+    sendLog("/api/logs/radio", {
+      trackName: track.title,
+      isrc: (track as any).isrc || `ATFY-${track.id}`,
+      showName: getShowLabel(show),
+      status: "COMPLETED",
+      duration: Math.round(dur),
+    });
+  }, [sendLog]);
 
   const getNextIndex = useCallback((currentIndex: number, queueLength: number, shuffleOn: boolean): number => {
     if (shuffleOn && queueLength > 1) {
@@ -290,6 +323,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     const handleEnded = () => {
       setState(prev => {
+        if (prev.currentTrack && prev.currentTrack.id !== lastLoggedTrackRef.current) {
+          lastLoggedTrackRef.current = prev.currentTrack.id;
+          logTrackEnd(prev.currentTrack, prev.currentShow, prev.duration);
+        }
+
         if (prev.repeat === "one") {
           if (audioRef.current) {
             audioRef.current.currentTime = 0;
@@ -647,6 +685,39 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, broadcast: false, broadcastUptime: 0 };
     });
   }, []);
+
+  useEffect(() => {
+    if (!state.broadcast || !state.currentTrack || !state.isPlaying) {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      return;
+    }
+
+    heartbeatRef.current = setInterval(() => {
+      setState(prev => {
+        if (prev.currentTrack && prev.isPlaying) {
+          sendLog("/api/logs/heartbeat", {
+            trackName: prev.currentTrack.title,
+            isrc: (prev.currentTrack as any).isrc || `ATFY-${prev.currentTrack.id}`,
+            showName: getShowLabel(prev.currentShow),
+            status: "PLAYING",
+            progress: Math.round(prev.progress),
+            duration: Math.round(prev.duration),
+          });
+        }
+        return prev;
+      });
+    }, 30000);
+
+    return () => {
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+    };
+  }, [state.broadcast, state.currentTrack?.id, state.isPlaying, sendLog]);
 
   useEffect(() => {
     if (!state.broadcast) return;
