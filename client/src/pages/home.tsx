@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X } from "lucide-react";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayer } from "@/lib/player-context";
@@ -97,10 +97,84 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
   );
 }
 
+interface TrustReceipt {
+  trustId: string;
+  asset: string;
+  ticker: string;
+  unitPrice: number;
+  originatorCredit: number;
+  positionValue: number;
+  storeUrl: string;
+  timestamp: string;
+}
+
+function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-black border border-blue-500/40 font-mono max-w-sm w-full shadow-2xl shadow-blue-500/10" onClick={e => e.stopPropagation()} data-testid="trust-certificate">
+        <div className="border-b border-blue-500/20 px-4 py-2 flex items-center justify-between bg-blue-500/5">
+          <div className="flex items-center gap-2">
+            <Globe className="h-3.5 w-3.5 text-blue-400" />
+            <span className="text-[10px] text-blue-400 font-bold">GLOBAL TRUST CERTIFICATE</span>
+          </div>
+          <button onClick={onClose} className="text-blue-500/40 hover:text-blue-400"><X className="h-3.5 w-3.5" /></button>
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="border-2 border-blue-400/40 bg-blue-500/5 p-3 text-center">
+            <p className="text-[8px] text-blue-500/40 mb-1">TRUST ID — VERIFIED GLOBAL RELEASE</p>
+            <p className="text-base text-blue-400 font-black tracking-widest" data-testid="text-trust-id">{receipt.trustId}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-1 text-center">
+            <div className="bg-zinc-900 border border-blue-500/10 p-2">
+              <p className="text-[8px] text-blue-500/40">ASSET / TICKER</p>
+              <p className="text-[10px] text-blue-400 font-bold">${receipt.ticker}</p>
+            </div>
+            <div className="bg-zinc-900 border border-blue-500/10 p-2">
+              <p className="text-[8px] text-blue-500/40">UNIT PRICE</p>
+              <p className="text-[10px] text-blue-400 font-bold">${receipt.unitPrice.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="border border-yellow-500/20 bg-yellow-500/5 p-2">
+            <p className="text-[8px] text-yellow-400/60 mb-1 text-center">DISBURSEMENT</p>
+            <div className="grid grid-cols-2 gap-1 text-center">
+              <div className="bg-black/40 border border-yellow-500/10 p-1.5">
+                <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
+                <p className="text-[11px] text-yellow-400 font-bold">${receipt.originatorCredit.toFixed(4)}</p>
+              </div>
+              <div className="bg-black/40 border border-blue-500/10 p-1.5">
+                <p className="text-[8px] text-blue-500/50">POSITION HOLDER</p>
+                <p className="text-[11px] text-blue-400 font-bold">${receipt.positionValue.toFixed(4)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="border border-blue-500/10 bg-zinc-900 p-2 text-center">
+            <p className="text-[8px] text-blue-500/40">STATUS</p>
+            <p className="text-xs font-black text-blue-400">VERIFIED GLOBAL RELEASE — TRUST CERTIFIED</p>
+          </div>
+          <a
+            href={receipt.storeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full bg-blue-600 text-white text-[10px] font-bold py-2 text-center hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
+            data-testid="link-store"
+          >
+            <ExternalLink className="h-3 w-3" /> PROCEED TO STORE / DOWNLOAD
+          </a>
+          <div className="text-center">
+            <p className="text-[8px] text-blue-500/30">{receipt.timestamp}</p>
+            <p className="text-[8px] text-blue-500/20 mt-1">AITIFY SOVEREIGN EXCHANGE — GLOBAL TRUST CERTIFICATE</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
-  const [receipt, setReceipt] = useState<MintReceipt | null>(null);
+  const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
+  const [trustReceipt, setTrustReceipt] = useState<TrustReceipt | null>(null);
 
   const orderMutation = useMutation({
     mutationFn: async () => {
@@ -108,7 +182,11 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
       return res.json();
     },
     onSuccess: (data: any) => {
-      setReceipt(data.receipt);
+      if (data.type === "global") {
+        setTrustReceipt(data.receipt);
+      } else {
+        setMintReceipt(data.receipt);
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
     },
   });
@@ -119,33 +197,45 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
   const price = parseFloat((track as any).unitPrice || "0.99");
   const sales = (track as any).salesCount || 0;
   const assetClass = ((track as any).assetClass || "standard").toLowerCase();
+  const releaseType = ((track as any).releaseType || "native").toLowerCase();
+  const isGlobal = releaseType === "global";
   const isInspirational = assetClass === "inspirational";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / CEILING) * 100).toFixed(1)));
-  const isClosed = grossSales >= CEILING;
-  const isHighCapacity = capacityPct >= 60 && !isClosed;
+  const isClosed = !isGlobal && grossSales >= CEILING;
+  const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed;
   const remaining = Math.max(0, parseFloat((CEILING - grossSales).toFixed(2)));
   const yieldPct = capacityPct >= 45 ? "45%" : capacityPct >= 30 ? "30%" : "16%";
 
   const priceLabel = price === 0.99 ? "$0.99" : price === 2.50 ? "$2.50" : price === 5.00 ? "$5.00" : `$${price.toFixed(2)}`;
   const priceClass = price >= 5 ? "text-yellow-400" : price >= 2.50 ? "text-blue-400" : "text-emerald-400";
 
-  const borderColor = isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : isInspirational ? "border-violet-500/40 hover:border-violet-500/70" : "border-emerald-500/20 hover:border-emerald-500/60";
-  const headerBg = isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : isInspirational ? "border-violet-500/20 bg-violet-500/5" : "border-emerald-500/10 bg-emerald-500/5";
+  const borderColor = isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : isGlobal ? "border-blue-500/30 hover:border-blue-500/60" : isInspirational ? "border-violet-500/40 hover:border-violet-500/70" : "border-emerald-500/20 hover:border-emerald-500/60";
+  const headerBg = isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : isGlobal ? "border-blue-500/20 bg-blue-500/5" : isInspirational ? "border-violet-500/20 bg-violet-500/5" : "border-emerald-500/10 bg-emerald-500/5";
 
   return (
     <div className={`bg-black border font-mono group transition-all ${borderColor}`} data-testid={`asset-card-${track.id}`}>
       <div className={`border-b px-3 py-1.5 flex items-center justify-between ${headerBg}`}>
         <div className="flex items-center gap-2">
-          <span className={`font-bold text-xs ${isClosed ? "text-red-400" : isInspirational ? "text-violet-400" : "text-emerald-400"}`}>{ticker}</span>
+          <span className={`font-bold text-xs ${isClosed ? "text-red-400" : isGlobal ? "text-blue-400" : isInspirational ? "text-violet-400" : "text-emerald-400"}`}>{ticker}</span>
           <span className="text-zinc-600 text-[9px]">{assetId}</span>
-          {isInspirational && (
+          {isGlobal && (
+            <span className="text-[8px] px-1 py-0.5 bg-blue-500/20 text-blue-300 border border-blue-500/30 font-bold flex items-center gap-0.5"><Globe className="h-2.5 w-2.5" /> GLOBAL</span>
+          )}
+          {isInspirational && !isGlobal && (
             <span className="text-[8px] px-1 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">INSPIRATIONAL</span>
+          )}
+          {!isGlobal && !isInspirational && (
+            <span className="text-[8px] px-1 py-0.5 bg-emerald-500/10 text-emerald-500/60 border border-emerald-500/20 font-bold">NATIVE</span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
           <span className={`text-[9px] font-bold ${priceClass}`}>{priceLabel}</span>
-          {isClosed ? (
+          {isGlobal ? (
+            <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 font-bold flex items-center gap-1">
+              <Shield className="h-2.5 w-2.5" /> VERIFIED
+            </span>
+          ) : isClosed ? (
             <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-bold flex items-center gap-1">
               <Lock className="h-2.5 w-2.5" /> CLOSED
             </span>
@@ -219,25 +309,35 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           </div>
         </div>
 
-        <div className="mb-2">
-          <div className="flex items-center justify-between mb-0.5">
-            <span className="text-[9px] text-zinc-600">SALES → $1K CEILING</span>
-            <span className={`text-[10px] font-bold ${isClosed ? "text-red-400" : isHighCapacity ? "text-yellow-400" : "text-emerald-400"}`}>{capacityPct}%</span>
+        {isGlobal ? (
+          <div className="mb-2 px-2 py-2 border border-blue-500/20 bg-blue-500/5">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] text-blue-400 font-bold flex items-center gap-1"><Globe className="h-3 w-3" /> VERIFIED GLOBAL RELEASE</span>
+              <span className="text-[9px] text-blue-300 font-bold flex items-center gap-1"><Shield className="h-3 w-3" /> TRUST CERTIFIED</span>
+            </div>
+            <p className="text-[8px] text-blue-500/40 text-center">NO CAP LIMIT — GLOBAL DISTRIBUTION — STORE FULFILLMENT</p>
           </div>
-          <div className="w-full bg-zinc-900 h-1.5">
-            <div
-              className={`h-1.5 transition-all ${isClosed ? "bg-red-500" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
-              style={{ width: `${capacityPct}%` }}
-            />
+        ) : (
+          <div className="mb-2">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[9px] text-zinc-600">SALES → $1K CEILING</span>
+              <span className={`text-[10px] font-bold ${isClosed ? "text-red-400" : isHighCapacity ? "text-yellow-400" : "text-emerald-400"}`}>{capacityPct}%</span>
+            </div>
+            <div className="w-full bg-zinc-900 h-1.5">
+              <div
+                className={`h-1.5 transition-all ${isClosed ? "bg-red-500" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
+                style={{ width: `${capacityPct}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-zinc-600 text-[9px]">@ {priceLabel}/UNIT</span>
+              {!isClosed && <span className="text-emerald-500/50 text-[9px]">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO CLOSE</span>}
+              {isClosed && <span className="text-red-400 text-[9px]">SETTLED</span>}
+            </div>
           </div>
-          <div className="flex items-center justify-between mt-1">
-            <span className="text-zinc-600 text-[9px]">@ {priceLabel}/UNIT</span>
-            {!isClosed && <span className="text-emerald-500/50 text-[9px]">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO CLOSE</span>}
-            {isClosed && <span className="text-red-400 text-[9px]">SETTLED</span>}
-          </div>
-        </div>
+        )}
 
-        {isInspirational && (
+        {isInspirational && !isGlobal && (
           <div className="mb-1 px-2 py-1 border border-violet-500/20 bg-violet-500/5 flex items-center justify-between">
             <span className="text-[8px] text-violet-400 font-bold">◆ INSPIRATIONAL CLASS</span>
             <span className="text-[8px] text-violet-300">YIELD BAND: 30%–45%</span>
@@ -265,6 +365,15 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
             <div className="flex-1 bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-bold py-1.5 text-center flex items-center justify-center gap-1 cursor-not-allowed">
               <Lock className="h-3 w-3" /> TRADE CLOSED
             </div>
+          ) : isGlobal ? (
+            <button
+              onClick={() => orderMutation.mutate()}
+              disabled={orderMutation.isPending}
+              className="flex-1 bg-blue-600 text-white text-[10px] font-bold py-1.5 text-center hover:bg-blue-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+              data-testid={`button-acquire-${track.id}`}
+            >
+              <Globe className="h-3 w-3" /> {orderMutation.isPending ? "VERIFYING..." : `ACQUIRE TRUST @ ${priceLabel}`}
+            </button>
           ) : (
             <button
               onClick={() => orderMutation.mutate()}
@@ -272,11 +381,11 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
               className="flex-1 bg-emerald-600 text-white text-[10px] font-bold py-1.5 text-center hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
               data-testid={`button-acquire-${track.id}`}
             >
-              <FileCheck className="h-3 w-3" /> {orderMutation.isPending ? "PLACING..." : `ACQUIRE POSITION @ ${priceLabel}`}
+              <FileCheck className="h-3 w-3" /> {orderMutation.isPending ? "MINTING..." : `ACQUIRE POSITION @ ${priceLabel}`}
             </button>
           )}
           <button
-            className="flex-1 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold py-1.5 text-center hover:bg-emerald-500/10 transition-colors"
+            className={`flex-1 border ${isGlobal ? "border-blue-500/30 text-blue-400 hover:bg-blue-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"} text-[10px] font-bold py-1.5 text-center transition-colors`}
             onClick={() => onPlay(track)}
             data-testid={`button-stream-${track.id}`}
           >
@@ -284,7 +393,8 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           </button>
         </div>
       </div>
-      {receipt && <MintCertificate receipt={receipt} onClose={() => setReceipt(null)} />}
+      {mintReceipt && <MintCertificate receipt={mintReceipt} onClose={() => setMintReceipt(null)} />}
+      {trustReceipt && <TrustCertificate receipt={trustReceipt} onClose={() => setTrustReceipt(null)} />}
     </div>
   );
 }

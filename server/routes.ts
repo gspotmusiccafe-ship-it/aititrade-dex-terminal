@@ -226,16 +226,55 @@ export async function registerRoutes(
         const price = parseFloat(track.unitPrice || "0.99");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
 
+        const releaseType = ((track as any).releaseType || "native").toLowerCase();
+        const isGlobal = releaseType === "global";
+        const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
         const currentSales = track.salesCount || 0;
+        const originatorCredit = parseFloat((price * 0.16).toFixed(4));
+        const positionValue = parseFloat((price - originatorCredit).toFixed(4));
+
+        if (isGlobal) {
+          const ts = Date.now().toString(36).toUpperCase();
+          const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+          const trustId = `TRS-977-${ticker}-${ts.slice(-4)}${rand.slice(0, 2)}`;
+
+          const [order] = await tx.insert(orders).values({
+            trackId,
+            trackingNumber: trustId,
+            unitPrice: price.toString(),
+            creatorCredit: "0.16",
+            creatorCreditAmount: originatorCredit.toString(),
+            positionHolderAmount: positionValue.toString(),
+            status: "verified",
+          }).returning();
+
+          await tx.update(tracks)
+            .set({ salesCount: sql`${tracks.salesCount} + 1` })
+            .where(eq(tracks.id, trackId));
+
+          return {
+            type: "global" as const,
+            order: { id: order.id, trustId: order.trackingNumber, status: order.status, createdAt: order.createdAt },
+            receipt: {
+              trustId: order.trackingNumber,
+              asset: track.title,
+              ticker,
+              unitPrice: price,
+              originatorCredit,
+              positionValue,
+              releaseType: "global",
+              status: "VERIFIED",
+              storeUrl: "https://payhip.com/aitifymusicstore",
+              timestamp: new Date().toISOString(),
+            },
+          };
+        }
+
         const currentGross = currentSales * price;
         if (currentGross >= 1000) throw new Error("CEILING_REACHED");
 
-        const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
         const seq = String(currentSales + 1).padStart(3, "0");
         const mintId = `MNT-977-${ticker}-${seq}`;
-
-        const originatorCredit = parseFloat((price * 0.16).toFixed(4));
-        const positionValue = parseFloat((price - originatorCredit).toFixed(4));
 
         const [order] = await tx.insert(orders).values({
           trackId,
@@ -257,6 +296,7 @@ export async function registerRoutes(
         const capacityPct = Math.min(100, parseFloat(((newGross / 1000) * 100).toFixed(1)));
 
         return {
+          type: "native" as const,
           order: { id: order.id, mintId: order.trackingNumber, status: order.status, createdAt: order.createdAt },
           receipt: {
             mintId: order.trackingNumber,
@@ -269,6 +309,7 @@ export async function registerRoutes(
             totalMints: newSales,
             mintCap: 1000,
             capacityPct,
+            releaseType: "native",
             status: newGross >= 1000 ? "CLOSED" : "MINTED",
             timestamp: new Date().toISOString(),
           },
