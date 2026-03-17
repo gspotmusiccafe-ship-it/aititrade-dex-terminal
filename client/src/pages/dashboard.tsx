@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Circle, Loader2, ChevronDown, ChevronUp, Crown, Shield, Building2, FileText, CreditCard, Landmark, TrendingUp, Award, Briefcase, Scale, BadgeCheck, Target } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, ChevronDown, ChevronUp, Crown, Shield, Building2, FileText, CreditCard, Landmark, TrendingUp, Award, Briefcase, Scale, BadgeCheck, Target, ScrollText } from "lucide-react";
 import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
+import { TrustCertificate } from "@/components/trust-certificate";
 import type { CreditStep } from "@shared/schema";
 
 const STEPS = [
@@ -182,13 +183,24 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [expandedStep, setExpandedStep] = useState<number | null>(1);
+  const [showCertificate, setShowCertificate] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("cert") === "1") {
+      setShowCertificate(true);
+      params.delete("cert");
+      const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, []);
 
   const { data: adminCheck } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
     enabled: !!user,
   });
 
-  const { data: membership } = useQuery<{ tier: string; isActive: boolean; trustInvestor?: boolean }>({
+  const { data: membership } = useQuery<{ tier: string; isActive: boolean; trustInvestor?: boolean; startDate?: string; createdAt?: string }>({
     queryKey: ["/api/user/membership"],
     enabled: !!user,
   });
@@ -417,6 +429,27 @@ export default function DashboardPage() {
           })}
         </div>
 
+        {isTrustee && (
+          <div className="mt-6 border border-amber-500/30 bg-amber-500/5 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <ScrollText className="h-4 w-4 text-amber-400" />
+                <p className="text-[10px] text-amber-400 font-extrabold tracking-wider">SOVEREIGN TRUST CERTIFICATE</p>
+              </div>
+              <div className="text-[8px] text-amber-400/60 font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5">TRUSTEE EXCLUSIVE</div>
+            </div>
+            <p className="text-[10px] text-zinc-400 mb-3">Download your official Trust Certificate as proof of sovereign asset ownership. Includes TRST-977 identifier, trust terms, and 16% Minter credit schedule.</p>
+            <button
+              onClick={() => setShowCertificate(true)}
+              className="w-full flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-mono text-[11px] font-extrabold py-2.5 hover:bg-amber-500/20 transition-colors"
+              data-testid="button-download-trust-certificate"
+            >
+              <ScrollText className="h-4 w-4" />
+              DOWNLOAD TRUST CERTIFICATE
+            </button>
+          </div>
+        )}
+
         <div className="mt-6 border border-zinc-800 bg-black p-4">
           <p className="text-[10px] text-zinc-500 font-bold mb-3">UPGRADE YOUR ACCESS</p>
           <div className="flex gap-3">
@@ -441,6 +474,16 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {showCertificate && isTrustee && user && (
+        <TrustCertificate
+          userId={user.id}
+          userName={`${(user as any).firstName || ""} ${(user as any).lastName || ""}`.trim()}
+          userEmail={(user as any).email || ""}
+          membershipDate={membership?.startDate || membership?.createdAt || new Date().toISOString()}
+          onClose={() => setShowCertificate(false)}
+        />
+      )}
     </div>
   );
 }

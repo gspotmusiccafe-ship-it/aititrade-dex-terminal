@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -66,7 +66,7 @@ export function AppSidebar() {
     enabled: isAuthenticated,
   });
 
-  const { data: membership } = useQuery<{ tier: string } | null>({
+  const { data: membership } = useQuery<{ tier: string; trustInvestor?: boolean } | null>({
     queryKey: ["/api/user/membership"],
     enabled: isAuthenticated,
   });
@@ -208,6 +208,16 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {(isTrustee || adminCheck?.isAdmin) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <Link href="/dashboard?cert=1" data-testid="nav-trust-certificate">
+                      <ScrollText className="h-5 w-5 text-amber-400" />
+                      <span className="text-amber-400 font-bold">Trust Certificate</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               {adminCheck?.isAdmin && (
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/admin"}>
