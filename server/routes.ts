@@ -134,10 +134,19 @@ export async function registerRoutes(
       res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
       res.set("Content-Disposition", "inline");
       res.set("X-Content-Type-Options", "nosniff");
+      res.set("Access-Control-Allow-Origin", "*");
       res.sendFile(filePath);
     } catch (error) {
       res.status(500).json({ message: "Failed to serve file" });
     }
+  });
+
+  app.options("/cloud/uploads/:filename", (req: any, res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Range");
+    res.set("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
+    res.status(204).end();
   });
 
   app.get("/cloud/uploads/:filename", async (req: any, res) => {
@@ -156,6 +165,9 @@ export async function registerRoutes(
 
       res.set("Accept-Ranges", "bytes");
       res.set("Content-Type", contentType);
+      res.set("Access-Control-Allow-Origin", "*");
+      res.set("Access-Control-Allow-Headers", "Range");
+      res.set("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges");
       if (req.query.download === "true") {
         res.set("Content-Disposition", `attachment; filename="${filename}"`);
       } else {
