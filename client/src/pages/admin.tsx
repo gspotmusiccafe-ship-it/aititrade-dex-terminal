@@ -2000,19 +2000,22 @@ function CeoVaultTab() {
     const t = theme.trim() || "Untitled Dynomite";
     const ticker = `$${t.toUpperCase().replace(/\s+/g, '').slice(0, 10)}`;
     const lyricsTemplate = `[Intro: 10s Instrumental Snap]\n[Chorus: Explosive Energy]\n(Enter your 70-word firecracker here...)\n[Verse: High-Velocity Bars]\n[Bridge: Tension]\n[Outro: Sudden Cut-off/Fade]`;
+    const assetId = `ATFY-${Math.random().toString(36).toUpperCase().substring(2, 7)}`;
     setBlueprint({
       theme: t,
       ticker,
+      assetId,
       structure: "Intro (10s) > Chorus (20s) > Verse (25s) > Bridge (15s) > Outro (20s)",
       wordConstraint: 70,
       durationTarget: "90 Seconds",
       sunoTags: "Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity",
+      distroTags: `R&B, Soul, High-Velocity, 90-Seconds, ${t}`,
       lyricsTemplate,
       lyricPrompt: `Write exactly 70 words. R&B/Soul. Theme: ${t}. Structure: [Intro][Chorus][Verse][Bridge][Outro]. High energy.`,
       sunoPrompt: `[Intro: Atmospheric, 4x4 Snap, 10s] [Chorus: Exploding energy, Soulful R&B, 20s] [Verse: Rapid fire, 70 words total, 25s] [Bridge: High tension, 15s] [Outro: Sudden Cut-off, 20s]. Theme: "${t}". Tags: Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity.`,
       ideogramPrompt: `Album cover, 1:1 aspect ratio, cinematic dynomite firecracker wrapped in gold foil, "AITIFY" embossed on gold, luxury R&B aesthetic, 8k render, emerald neon smoke, hyper-realistic lighting. Theme: "${t}".`,
-      youtubeTitle: `${t.toUpperCase()} (AITIFY DYNOMITE SERIES)`,
-      youtubeDescription: `TITLE: ${t.toUpperCase()} (AITIFY DYNOMITE SERIES)\nDESCRIPTION:\nOfficial high-velocity asset from AITIFY.\nSector: ${ticker} | Type: Firecracker (90s Burn)\nStream settlement verified at 97.7 THE FLAME.\n#Aitify #SovereignAsset #Dynomite`,
+      youtubeTitle: `${t.toUpperCase()} | 97.7 THE FLAME | AITIFY DYNOMITE`,
+      youtubeDescription: `\u{1F48E} ASSET CLASS: $MUSE (Musical Equity)\n\u{1F525} SERIES: DYNOMITE (90-Second High-Velocity)\n\u{1F194} ASSET ID: ${assetId}\n\nOfficial "Sonsation" release from the AITIFY Sovereign Mint.\nThis track is optimized for high-velocity trading and global streaming settlement.\n\n[OFFICIAL CHANNELS]\n97.7 THE FLAME: https://suno.com/@aitify\nEXCHANGE: https://aitify-music-stream.replit.app\n\n#Aitify #977TheFlame #SovereignMint #DynomiteSeries #AitiPay`,
     });
     toast({ title: `Blueprint generated: ${ticker}` });
   };
@@ -2078,12 +2081,13 @@ function CeoVaultTab() {
 
           {blueprint && (
             <div className="space-y-3 pt-2 border-t border-zinc-800">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 flex-wrap mb-2">
                 <Badge className="bg-orange-500/20 text-orange-400 border border-orange-500/40 font-mono">{blueprint.ticker}</Badge>
+                <Badge className="bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono text-[10px]">{blueprint.assetId}</Badge>
                 <span className="text-xs text-zinc-500">{blueprint.durationTarget} | {blueprint.wordConstraint} words max</span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs font-mono">
                 <div className="bg-black/40 rounded p-2 border border-zinc-800">
                   <span className="text-zinc-600">STRUCTURE:</span>
                   <p className="text-zinc-400 mt-1">{blueprint.structure}</p>
@@ -2091,6 +2095,10 @@ function CeoVaultTab() {
                 <div className="bg-black/40 rounded p-2 border border-zinc-800">
                   <span className="text-zinc-600">SUNO TAGS:</span>
                   <p className="text-orange-400 mt-1">{blueprint.sunoTags}</p>
+                </div>
+                <div className="bg-black/40 rounded p-2 border border-zinc-800">
+                  <span className="text-zinc-600">DISTRO TAGS:</span>
+                  <p className="text-blue-400 mt-1">{blueprint.distroTags}</p>
                 </div>
               </div>
 
