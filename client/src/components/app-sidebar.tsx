@@ -88,8 +88,8 @@ export function AppSidebar() {
   const roleLabel = adminCheck?.isAdmin
     ? "Admin"
     : artistProfile?.id
-    ? "Artist"
-    : "Fan";
+    ? "Asset Architect"
+    : "Trader";
 
   return (
     <Sidebar className="border-r border-border/30">
@@ -180,7 +180,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={location === "/artist-portal"}>
                   <Link href="/artist-portal" data-testid="nav-artist-portal">
                     <Upload className="h-5 w-5" />
-                    <span>Artist Portal</span>
+                    <span>Mint Factory</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

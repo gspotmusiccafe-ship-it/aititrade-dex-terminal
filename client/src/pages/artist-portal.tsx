@@ -391,7 +391,7 @@ function ArtistOnboarding() {
         "Aitify Music Store — 25% sales retention",
         "Tip Jar — fans tip you directly via PayPal",
         "Leaderboard — track streams, rank up, earn tier badges",
-        "Artist profile & bio page",
+        "Asset Architect profile & bio page",
         "Advanced analytics dashboard",
         "Lossless audio quality",
         "$9.99/month to stay active",
@@ -421,10 +421,10 @@ function ArtistOnboarding() {
             <Mic2 className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-2xl font-extrabold tracking-tight mb-2" data-testid="text-onboarding-title">
-            Become an Artist on AITIFY MUSIC RADIO
+            Become an Asset Architect on AITIFY MUSIC RADIO
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Choose your artist plan to start uploading music, building your fanbase, and earning from your art.
+            Choose your plan to start minting assets, building your trader base, and earning from your creations.
           </p>
         </div>
 
@@ -495,10 +495,10 @@ function ArtistOnboarding() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Music className="h-5 w-5 text-primary" />
-          Set Up Your Artist Profile
+          Set Up Your Asset Architect Profile
         </CardTitle>
         <CardDescription>
-          Create your artist identity — this is how fans will find and follow you.
+          Create your Asset Architect identity — this is how traders will find and follow you.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -523,17 +523,17 @@ function ArtistOnboarding() {
               )}
             </div>
             <div className="text-sm text-muted-foreground">
-              <p className="font-medium text-foreground">Artist Photo</p>
+              <p className="font-medium text-foreground">Architect Photo</p>
               <p>Click to upload (optional)</p>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="artistName">Artist / Band Name</Label>
+            <Label htmlFor="artistName">Asset Architect / Brand Name</Label>
             <Input
               id="artistName"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your artist name"
+              placeholder="Your architect name"
               required
               data-testid="input-artist-name"
             />
@@ -647,7 +647,7 @@ function EditProfileDialog({ artist }: { artist: Artist }) {
       queryClient.invalidateQueries({ queryKey: ["/api/user/artist-profile"] });
       queryClient.invalidateQueries({ queryKey: ["/api/artists/top"] });
       setOpen(false);
-      toast({ title: "Profile updated!", description: "Your artist profile has been saved." });
+      toast({ title: "Profile updated!", description: "Your Asset Architect profile has been saved." });
     },
     onError: (error: Error) => {
       toast({ title: "Update failed", description: error.message, variant: "destructive" });
@@ -690,9 +690,9 @@ function EditProfileDialog({ artist }: { artist: Artist }) {
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Artist Profile</DialogTitle>
+          <DialogTitle>Edit Asset Architect Profile</DialogTitle>
           <DialogDescription>
-            Update your artist name, bio, and images.
+            Update your Asset Architect name, bio, and images.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -718,7 +718,7 @@ function EditProfileDialog({ artist }: { artist: Artist }) {
                 )}
               </div>
               <p className="text-xs text-muted-foreground">
-                Click to upload your artist photo. Square images work best.
+                Click to upload your architect photo. Square images work best.
               </p>
             </div>
           </div>
@@ -747,7 +747,7 @@ function EditProfileDialog({ artist }: { artist: Artist }) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="editArtistName">Artist Name</Label>
+            <Label htmlFor="editArtistName">Asset Architect Name</Label>
             <Input
               id="editArtistName"
               value={name}
@@ -1944,9 +1944,9 @@ export default function ArtistPortalPage() {
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-6">
             <Upload className="h-10 w-10 text-primary" />
           </div>
-          <h2 className="text-3xl font-black tracking-tight mb-3">Artist Portal</h2>
+          <h2 className="text-3xl font-black tracking-tight mb-3">Mint Factory</h2>
           <p className="text-muted-foreground mb-6 font-medium">
-            Sign in to upload your music, set pre-release dates, and manage your artist profile
+            Sign in to mint assets, set pre-release dates, and manage your Asset Architect profile
           </p>
           <Button asChild className="bg-gradient-to-r from-primary to-emerald-500 border-0 shadow-lg shadow-primary/20" data-testid="button-login-artist">
             <a href="/api/login">Sign In to Continue</a>
@@ -1966,8 +1966,8 @@ export default function ArtistPortalPage() {
               <Mic2 className="h-7 w-7 text-primary" />
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Artist Portal</h1>
-              <p className="text-muted-foreground font-medium">Manage your music, analytics, and career</p>
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight">Mint Factory</h1>
+              <p className="text-muted-foreground font-medium">Manage your assets, analytics, and minting operations</p>
             </div>
           </div>
         </div>
@@ -2036,8 +2036,8 @@ function TipsTab({ artistId }: { artistId: string }) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Fans can send you tips directly from your artist page or while listening to your music. 
-            Tips are processed securely through PayPal. Your tip button appears on your artist profile 
+            Traders can send you tips directly from your Asset Architect page or while streaming your assets. 
+            Tips are processed securely through PayPal. Your tip button appears on your Asset Architect profile 
             and in the music player when your tracks are playing.
           </p>
         </CardContent>

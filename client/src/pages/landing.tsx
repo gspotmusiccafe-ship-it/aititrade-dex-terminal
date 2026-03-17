@@ -353,7 +353,7 @@ const membershipTiers = [
     features: [
       "Inside exchange access",
       "Acquire standard positions",
-      "Follow artists & create playlists",
+      "Follow Asset Architects & create playlists",
       "Standard audio quality",
     ],
     highlight: false,

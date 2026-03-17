@@ -181,12 +181,12 @@ export function MusicPlayer() {
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-bold text-emerald-500/50" data-testid="text-radio-station-label">97.7 THE FLAME</p>
-              <p className="font-bold text-[11px] truncate text-emerald-400" data-testid="text-current-track-title">
+              <p className="text-[10px] font-extrabold text-lime-400/70" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+              <p className="font-extrabold text-xs truncate text-lime-400" data-testid="text-current-track-title">
                 {currentTrack.title.toUpperCase()}
               </p>
-              <p className="text-[9px] text-zinc-600 truncate" data-testid="text-current-track-artist">
-                {currentTrack.artist?.name} <span className="text-emerald-500/30 ml-1">{ticker}</span>
+              <p className="text-[10px] text-zinc-400 font-semibold truncate" data-testid="text-current-track-artist">
+                {currentTrack.artist?.name} <span className="text-amber-400/60 font-bold ml-1">{ticker}</span>
               </p>
             </div>
           </div>
@@ -207,7 +207,7 @@ export function MusicPlayer() {
               </Button>
               <button
                 onClick={togglePlay}
-                className="h-8 w-8 rounded-full bg-emerald-500 hover:bg-emerald-400 text-black flex items-center justify-center transition-colors"
+                className="h-9 w-9 rounded-full bg-lime-500 hover:bg-lime-400 text-black flex items-center justify-center transition-colors shadow-lg shadow-lime-500/30"
                 data-testid="button-play-pause"
               >
                 {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
@@ -226,10 +226,10 @@ export function MusicPlayer() {
               </Button>
               <button
                 onClick={toggleAutopilot}
-                className={`hidden md:flex items-center gap-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider transition-all border ${
+                className={`hidden md:flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider transition-all border ${
                   autopilot
-                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                    : "border-zinc-700 text-zinc-600 hover:border-emerald-500/30 hover:text-emerald-500"
+                    ? "bg-lime-500/20 border-lime-500/50 text-lime-400 shadow-[0_0_12px_rgba(132,204,22,0.4)]"
+                    : "border-zinc-600 text-zinc-400 hover:border-lime-500/40 hover:text-lime-400"
                 }`}
                 data-testid="button-autopilot-toggle"
               >
@@ -238,7 +238,7 @@ export function MusicPlayer() {
               </button>
             </div>
             <div className="w-full flex items-center gap-2">
-              <span className="text-[9px] text-zinc-600 w-8 text-right">{formatTime(progress)}</span>
+              <span className="text-[10px] text-zinc-400 font-bold w-8 text-right">{formatTime(progress)}</span>
               <Slider
                 value={[progress]}
                 max={duration || 100}
@@ -247,7 +247,7 @@ export function MusicPlayer() {
                 className="flex-1"
                 data-testid="slider-progress"
               />
-              <span className="text-[9px] text-zinc-600 w-8">{formatTime(duration)}</span>
+              <span className="text-[10px] text-zinc-400 font-bold w-8">{formatTime(duration)}</span>
             </div>
           </div>
 
@@ -272,7 +272,7 @@ export function MusicPlayer() {
                 artistId={currentTrack.artist.id}
                 artistName={currentTrack.artist.name}
                 trigger={
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-yellow-400" title="Tip Artist" data-testid="button-tip-player">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-yellow-400" title="Tip Asset Architect" data-testid="button-tip-player">
                     <DollarSign className="h-3.5 w-3.5" />
                   </Button>
                 }
