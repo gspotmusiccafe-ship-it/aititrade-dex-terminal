@@ -41,6 +41,7 @@ export const tracks = pgTable("tracks", {
   playCount: integer("play_count").default(0),
   unitPrice: text("unit_price").default("0.99"),
   salesCount: integer("sales_count").default(0),
+  assetClass: varchar("asset_class").default("standard"),
   isPrerelease: boolean("is_prerelease").default(false),
   releaseDate: timestamp("release_date"),
   genre: varchar("genre"),

@@ -21,21 +21,30 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
 
   const price = parseFloat((track as any).unitPrice || "0.99");
   const sales = (track as any).salesCount || 0;
+  const assetClass = ((track as any).assetClass || "standard").toLowerCase();
+  const isInspirational = assetClass === "inspirational";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / CEILING) * 100).toFixed(1)));
   const isClosed = grossSales >= CEILING;
   const isHighCapacity = capacityPct >= 60 && !isClosed;
   const remaining = Math.max(0, parseFloat((CEILING - grossSales).toFixed(2)));
+  const yieldPct = capacityPct >= 45 ? "45%" : capacityPct >= 30 ? "30%" : "16%";
 
   const priceLabel = price === 0.99 ? "$0.99" : price === 2.50 ? "$2.50" : price === 5.00 ? "$5.00" : `$${price.toFixed(2)}`;
   const priceClass = price >= 5 ? "text-yellow-400" : price >= 2.50 ? "text-blue-400" : "text-emerald-400";
 
+  const borderColor = isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : isInspirational ? "border-violet-500/40 hover:border-violet-500/70" : "border-emerald-500/20 hover:border-emerald-500/60";
+  const headerBg = isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : isInspirational ? "border-violet-500/20 bg-violet-500/5" : "border-emerald-500/10 bg-emerald-500/5";
+
   return (
-    <div className={`bg-black border font-mono group transition-all ${isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : "border-emerald-500/20 hover:border-emerald-500/60"}`} data-testid={`asset-card-${track.id}`}>
-      <div className={`border-b px-3 py-1.5 flex items-center justify-between ${isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : "border-emerald-500/10 bg-emerald-500/5"}`}>
+    <div className={`bg-black border font-mono group transition-all ${borderColor}`} data-testid={`asset-card-${track.id}`}>
+      <div className={`border-b px-3 py-1.5 flex items-center justify-between ${headerBg}`}>
         <div className="flex items-center gap-2">
-          <span className={`font-bold text-xs ${isClosed ? "text-red-400" : "text-emerald-400"}`}>{ticker}</span>
+          <span className={`font-bold text-xs ${isClosed ? "text-red-400" : isInspirational ? "text-violet-400" : "text-emerald-400"}`}>{ticker}</span>
           <span className="text-zinc-600 text-[9px]">{assetId}</span>
+          {isInspirational && (
+            <span className="text-[8px] px-1 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">INSPIRATIONAL</span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <span className={`text-[9px] font-bold ${priceClass}`}>{priceLabel}</span>
@@ -48,7 +57,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
               {capacityPct.toFixed(0)}% CAP
             </span>
           ) : (
-            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500">OPEN</span>
+            <span className={`text-[9px] px-1.5 py-0.5 ${isInspirational ? "bg-violet-500/10 text-violet-400" : "bg-emerald-500/10 text-emerald-500"}`}>OPEN</span>
           )}
         </div>
       </div>
@@ -94,7 +103,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-1 mb-2 text-center">
+        <div className="grid grid-cols-4 gap-1 mb-2 text-center">
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
             <p className="text-[9px] text-zinc-600">GROSS SALES</p>
             <p className={`text-[11px] font-bold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-emerald-400" : "text-zinc-500"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
@@ -107,6 +116,10 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
             <p className="text-[9px] text-zinc-600">UNIT PRICE</p>
             <p className={`text-[11px] font-bold ${priceClass}`}>{priceLabel}</p>
           </div>
+          <div className={`bg-zinc-900/80 p-1.5 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
+            <p className="text-[9px] text-zinc-600">YIELD</p>
+            <p className={`text-[11px] font-bold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-yellow-400" : capacityPct >= 30 ? "text-emerald-400" : "text-zinc-400"}`}>▲ {yieldPct}</p>
+          </div>
         </div>
 
         <div className="mb-2">
@@ -116,7 +129,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           </div>
           <div className="w-full bg-zinc-900 h-1.5">
             <div
-              className={`h-1.5 transition-all ${isClosed ? "bg-red-500" : isHighCapacity ? "bg-yellow-500 animate-pulse" : "bg-emerald-500"}`}
+              className={`h-1.5 transition-all ${isClosed ? "bg-red-500" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
               style={{ width: `${capacityPct}%` }}
             />
           </div>
@@ -126,6 +139,13 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
             {isClosed && <span className="text-red-400 text-[9px]">SETTLED</span>}
           </div>
         </div>
+
+        {isInspirational && (
+          <div className="mb-1 px-2 py-1 border border-violet-500/20 bg-violet-500/5 flex items-center justify-between">
+            <span className="text-[8px] text-violet-400 font-bold">◆ INSPIRATIONAL CLASS</span>
+            <span className="text-[8px] text-violet-300">YIELD BAND: 30%–45%</span>
+          </div>
+        )}
 
         <div className="flex gap-1 mb-1">
           <a
@@ -251,6 +271,10 @@ export default function HomePage() {
           <span className="text-emerald-400">$0.99</span>
           <span className="text-blue-400">$2.50</span>
           <span className="text-yellow-400">$5.00</span>
+          <span className="text-zinc-800">|</span>
+          <span className="text-zinc-600">CLASS:</span>
+          <span className="text-emerald-400">STD</span>
+          <span className="text-violet-400">INSP</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">CEILING:</span>
           <span className="text-emerald-400">${CEILING.toLocaleString()}</span>
