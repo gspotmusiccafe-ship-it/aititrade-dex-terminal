@@ -361,6 +361,18 @@ export const insertSpotifyRoyaltyTrackSchema = createInsertSchema(spotifyRoyalty
 export type InsertSpotifyRoyaltyTrack = z.infer<typeof insertSpotifyRoyaltyTrackSchema>;
 export type SpotifyRoyaltyTrack = typeof spotifyRoyaltyTracks.$inferSelect;
 
+export const autopilotPlaylists = pgTable("autopilot_playlists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  trackId: varchar("track_id").notNull(),
+  position: integer("position").notNull().default(0),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export const insertAutopilotPlaylistSchema = createInsertSchema(autopilotPlaylists).omit({ id: true, addedAt: true });
+export type InsertAutopilotPlaylist = z.infer<typeof insertAutopilotPlaylistSchema>;
+export type AutopilotPlaylist = typeof autopilotPlaylists.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

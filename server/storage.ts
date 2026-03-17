@@ -40,6 +40,8 @@ import {
   type InsertMasteringRequest,
   type Tip,
   type InsertTip,
+  autopilotPlaylists,
+  type AutopilotPlaylist,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, ilike, or, sql, count } from "drizzle-orm";
@@ -151,6 +153,13 @@ export interface IStorage {
   getRadioTracks(): Promise<TrackWithArtist[]>;
   setTrackFeatured(trackId: string, isFeatured: boolean): Promise<void>;
   
+  // Autopilot Playlists
+  getAutopilotPlaylist(userId: string): Promise<AutopilotPlaylist[]>;
+  addToAutopilotPlaylist(userId: string, trackId: string, position: number): Promise<AutopilotPlaylist>;
+  removeFromAutopilotPlaylist(userId: string, trackId: string): Promise<void>;
+  reorderAutopilotPlaylist(userId: string, trackIds: string[]): Promise<void>;
+  clearAutopilotPlaylist(userId: string): Promise<void>;
+
   getAnalytics(): Promise<{
     totalUsers: number;
     totalArtists: number;
@@ -782,6 +791,31 @@ export class DatabaseStorage implements IStorage {
 
   async setTrackFeatured(trackId: string, isFeatured: boolean): Promise<void> {
     await db.update(tracks).set({ isFeatured }).where(eq(tracks.id, trackId));
+  }
+
+  async getAutopilotPlaylist(userId: string): Promise<AutopilotPlaylist[]> {
+    return db.select().from(autopilotPlaylists).where(eq(autopilotPlaylists.userId, userId)).orderBy(autopilotPlaylists.position);
+  }
+
+  async addToAutopilotPlaylist(userId: string, trackId: string, position: number): Promise<AutopilotPlaylist> {
+    const [entry] = await db.insert(autopilotPlaylists).values({ userId, trackId, position }).returning();
+    return entry;
+  }
+
+  async removeFromAutopilotPlaylist(userId: string, trackId: string): Promise<void> {
+    await db.delete(autopilotPlaylists).where(and(eq(autopilotPlaylists.userId, userId), eq(autopilotPlaylists.trackId, trackId)));
+  }
+
+  async reorderAutopilotPlaylist(userId: string, trackIds: string[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < trackIds.length; i++) {
+        await tx.update(autopilotPlaylists).set({ position: i }).where(and(eq(autopilotPlaylists.userId, userId), eq(autopilotPlaylists.trackId, trackIds[i])));
+      }
+    });
+  }
+
+  async clearAutopilotPlaylist(userId: string): Promise<void> {
+    await db.delete(autopilotPlaylists).where(eq(autopilotPlaylists.userId, userId));
   }
 }
 

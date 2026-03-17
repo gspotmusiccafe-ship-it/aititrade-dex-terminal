@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio } from "lucide-react";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -28,6 +28,7 @@ export function MusicPlayer() {
     queue,
     queueIndex,
     autoplayBlocked,
+    autopilot,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -39,6 +40,7 @@ export function MusicPlayer() {
     clearQueue,
     playFromQueue,
     resumeAutoplay,
+    toggleAutopilot,
   } = usePlayer();
 
   const { toast } = useToast();
@@ -222,6 +224,18 @@ export function MusicPlayer() {
               >
                 {repeat === "one" ? <Repeat1 className="h-3.5 w-3.5" /> : <Repeat className="h-3.5 w-3.5" />}
               </Button>
+              <button
+                onClick={toggleAutopilot}
+                className={`hidden md:flex items-center gap-1 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider transition-all border ${
+                  autopilot
+                    ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                    : "border-zinc-700 text-zinc-600 hover:border-emerald-500/30 hover:text-emerald-500"
+                }`}
+                data-testid="button-autopilot-toggle"
+              >
+                <Radio className="h-3 w-3" />
+                {autopilot ? "AUTOPILOT ON" : "AUTOPILOT"}
+              </button>
             </div>
             <div className="w-full flex items-center gap-2">
               <span className="text-[9px] text-zinc-600 w-8 text-right">{formatTime(progress)}</span>

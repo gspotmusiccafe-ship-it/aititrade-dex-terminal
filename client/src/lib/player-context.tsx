@@ -12,6 +12,8 @@ interface PlayerState {
   shuffle: boolean;
   repeat: "off" | "all" | "one";
   autoplayBlocked: boolean;
+  autopilot: boolean;
+  autopilotPool: TrackWithArtist[];
 }
 
 interface PlayerContextType extends PlayerState {
@@ -28,6 +30,8 @@ interface PlayerContextType extends PlayerState {
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   resumeAutoplay: () => void;
+  toggleAutopilot: () => void;
+  setAutopilotPool: (tracks: TrackWithArtist[]) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -44,6 +48,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     shuffle: false,
     repeat: "all",
     autoplayBlocked: false,
+    autopilot: false,
+    autopilotPool: [],
   });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -174,6 +180,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           isPlaying: true,
           progress: 0,
         };
+      } else if (prev.autopilot && prev.autopilotPool.length > 0) {
+        const currentId = prev.currentTrack?.id;
+        const available = prev.autopilotPool.filter(t => t.id !== currentId && t.audioUrl);
+        if (available.length > 0) {
+          const pick = prev.shuffle
+            ? available[Math.floor(Math.random() * available.length)]
+            : available[0];
+          const newQueue = [...prev.queue, pick];
+          const newIndex = newQueue.length - 1;
+          if (audioRef.current && pick) {
+            playCountedRef.current = null;
+            audioRef.current.src = pick.audioUrl;
+            const p = audioRef.current.play();
+            if (p !== undefined) {
+              p.then(() => reportPlay(pick.id))
+                .catch((err) => {
+                  console.error("Audio play failed:", err.message);
+                  setTimeout(() => setState(s => advanceQueue(s)), 500);
+                });
+            }
+          }
+          return {
+            ...prev,
+            currentTrack: pick,
+            queue: newQueue,
+            queueIndex: newIndex,
+            isPlaying: true,
+            progress: 0,
+          };
+        }
       } else if (prev.repeat === "all" && prev.queue.length > 0) {
         const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
         const firstTrack = prev.queue[firstIndex];
@@ -366,6 +402,36 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         isPlaying: true,
         progress: 0,
       };
+    } else if (prev.autopilot && prev.autopilotPool.length > 0) {
+      const currentId = prev.currentTrack?.id;
+      const available = prev.autopilotPool.filter(t => t.id !== currentId && t.audioUrl);
+      if (available.length > 0) {
+        const pick = prev.shuffle
+          ? available[Math.floor(Math.random() * available.length)]
+          : available[0];
+        const newQueue = [...prev.queue, pick];
+        const newIdx = newQueue.length - 1;
+        if (audioRef.current && pick) {
+          playCountedRef.current = null;
+          audioRef.current.src = pick.audioUrl;
+          const p = audioRef.current.play();
+          if (p !== undefined) {
+            p.then(() => reportPlay(pick.id))
+              .catch((err) => {
+                console.error("Audio play failed:", err.message);
+                setTimeout(() => setState(s => advanceQueueFn(s)), 500);
+              });
+          }
+        }
+        return {
+          ...prev,
+          currentTrack: pick,
+          queue: newQueue,
+          queueIndex: newIdx,
+          isPlaying: true,
+          progress: 0,
+        };
+      }
     } else if (prev.repeat === "all" && prev.queue.length > 0) {
       const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
       const firstTrack = prev.queue[firstIndex];
@@ -503,6 +569,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const toggleAutopilot = useCallback(() => {
+    setState(prev => ({ ...prev, autopilot: !prev.autopilot }));
+  }, []);
+
+  const setAutopilotPool = useCallback((tracks: TrackWithArtist[]) => {
+    setState(prev => ({ ...prev, autopilotPool: tracks }));
+  }, []);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -520,6 +594,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         toggleShuffle,
         toggleRepeat,
         resumeAutoplay,
+        toggleAutopilot,
+        setAutopilotPool,
       }}
     >
       {children}

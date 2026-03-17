@@ -1058,6 +1058,94 @@ export async function registerRoutes(
     }
   });
 
+  // Autopilot Playlist routes
+  app.get("/api/autopilot/playlist", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const entries = await storage.getAutopilotPlaylist(userId);
+      const trackIds = entries.map(e => e.trackId);
+      const trackResults = [];
+      for (const tid of trackIds) {
+        const t = await storage.getTrack(tid);
+        if (t) trackResults.push(t);
+      }
+      res.json(trackResults);
+    } catch (error) {
+      console.error("Error fetching autopilot playlist:", error);
+      res.status(500).json({ message: "Failed to fetch autopilot playlist" });
+    }
+  });
+
+  app.post("/api/autopilot/playlist/add", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId } = req.body;
+      if (!trackId) return res.status(400).json({ message: "trackId required" });
+      const existing = await storage.getAutopilotPlaylist(userId);
+      if (existing.some(e => e.trackId === trackId)) {
+        return res.status(409).json({ message: "Track already in autopilot playlist" });
+      }
+      const position = existing.length;
+      const entry = await storage.addToAutopilotPlaylist(userId, trackId, position);
+      res.json(entry);
+    } catch (error) {
+      console.error("Error adding to autopilot playlist:", error);
+      res.status(500).json({ message: "Failed to add to autopilot playlist" });
+    }
+  });
+
+  app.post("/api/autopilot/playlist/remove", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId } = req.body;
+      if (!trackId) return res.status(400).json({ message: "trackId required" });
+      await storage.removeFromAutopilotPlaylist(userId, trackId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing from autopilot playlist:", error);
+      res.status(500).json({ message: "Failed to remove from autopilot playlist" });
+    }
+  });
+
+  app.post("/api/autopilot/playlist/reorder", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackIds } = req.body;
+      if (!Array.isArray(trackIds)) return res.status(400).json({ message: "trackIds array required" });
+      await storage.reorderAutopilotPlaylist(userId, trackIds);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering autopilot playlist:", error);
+      res.status(500).json({ message: "Failed to reorder autopilot playlist" });
+    }
+  });
+
+  app.post("/api/autopilot/playlist/clear", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      await storage.clearAutopilotPlaylist(userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing autopilot playlist:", error);
+      res.status(500).json({ message: "Failed to clear autopilot playlist" });
+    }
+  });
+
+  app.get("/api/autopilot/pool", async (req, res) => {
+    try {
+      const result = await db
+        .select()
+        .from(tracks)
+        .innerJoin(artists, eq(tracks.artistId, artists.id))
+        .orderBy(desc(tracks.playCount));
+      const allTracks = result.map(r => ({ ...r.tracks, artist: r.artists }));
+      res.json(allTracks);
+    } catch (error) {
+      console.error("Error fetching autopilot pool:", error);
+      res.status(500).json({ message: "Failed to fetch autopilot pool" });
+    }
+  });
+
   // PayPal integration routes (required by PayPal Web SDK)
   app.get("/setup", async (req, res) => {
     await loadPaypalDefault(req, res);
