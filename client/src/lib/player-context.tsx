@@ -1,6 +1,41 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect } from "react";
 import type { TrackWithArtist } from "@shared/schema";
 
+type BroadcastShow = "MORNING_MARKET" | "MIDDAY_EXCHANGE" | "EVENING_TRADE" | "LATE_NIGHT_VAULT";
+
+function getCurrentShow(): BroadcastShow {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return "MORNING_MARKET";
+  if (hour >= 12 && hour < 17) return "MIDDAY_EXCHANGE";
+  if (hour >= 17 && hour < 22) return "EVENING_TRADE";
+  return "LATE_NIGHT_VAULT";
+}
+
+function getShowLabel(show: BroadcastShow): string {
+  switch (show) {
+    case "MORNING_MARKET": return "MORNING MARKET OPEN";
+    case "MIDDAY_EXCHANGE": return "MIDDAY EXCHANGE";
+    case "EVENING_TRADE": return "EVENING TRADE FLOOR";
+    case "LATE_NIGHT_VAULT": return "LATE NIGHT VAULT";
+  }
+}
+
+function getNextShowTime(): { show: BroadcastShow; at: Date } {
+  const now = new Date();
+  const hour = now.getHours();
+  const today = new Date(now);
+  today.setMinutes(0, 0, 0);
+
+  if (hour < 6) { today.setHours(6); return { show: "MORNING_MARKET", at: today }; }
+  if (hour < 12) { today.setHours(12); return { show: "MIDDAY_EXCHANGE", at: today }; }
+  if (hour < 17) { today.setHours(17); return { show: "EVENING_TRADE", at: today }; }
+  if (hour < 22) { today.setHours(22); return { show: "LATE_NIGHT_VAULT", at: today }; }
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(6, 0, 0, 0);
+  return { show: "MORNING_MARKET", at: tomorrow };
+}
+
 interface PlayerState {
   currentTrack: TrackWithArtist | null;
   isPlaying: boolean;
@@ -14,6 +49,9 @@ interface PlayerState {
   autoplayBlocked: boolean;
   autopilot: boolean;
   autopilotPool: TrackWithArtist[];
+  broadcast: boolean;
+  currentShow: BroadcastShow;
+  broadcastUptime: number;
 }
 
 interface PlayerContextType extends PlayerState {
@@ -32,6 +70,9 @@ interface PlayerContextType extends PlayerState {
   resumeAutoplay: () => void;
   toggleAutopilot: () => void;
   setAutopilotPool: (tracks: TrackWithArtist[]) => void;
+  toggleBroadcast: () => void;
+  getShowLabel: (show: BroadcastShow) => string;
+  getNextShowTime: () => { show: BroadcastShow; at: Date };
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -50,7 +91,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     autoplayBlocked: false,
     autopilot: false,
     autopilotPool: [],
+    broadcast: false,
+    currentShow: getCurrentShow(),
+    broadcastUptime: 0,
   });
+
+  const broadcastStartRef = useRef<number>(0);
+  const adBridgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userPausedRef = useRef<boolean>(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -365,9 +413,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     resumeAudioContext();
     if (audioRef.current && state.currentTrack) {
       if (state.isPlaying) {
+        userPausedRef.current = true;
         audioRef.current.pause();
         setState(prev => ({ ...prev, isPlaying: false }));
       } else {
+        userPausedRef.current = false;
         const p = audioRef.current.play();
         if (p !== undefined) {
           p.then(() => {
@@ -583,6 +633,94 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, autopilotPool: tracks }));
   }, []);
 
+  const toggleBroadcast = useCallback(() => {
+    setState(prev => {
+      const newBroadcast = !prev.broadcast;
+      if (newBroadcast) {
+        broadcastStartRef.current = Date.now();
+        return { ...prev, broadcast: true, autopilot: true, repeat: "all", currentShow: getCurrentShow() };
+      }
+      if (adBridgeTimerRef.current) {
+        clearInterval(adBridgeTimerRef.current);
+        adBridgeTimerRef.current = null;
+      }
+      return { ...prev, broadcast: false, broadcastUptime: 0 };
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!state.broadcast) return;
+
+    const showInterval = setInterval(() => {
+      const newShow = getCurrentShow();
+      setState(prev => {
+        if (prev.currentShow !== newShow) {
+          return { ...prev, currentShow: newShow };
+        }
+        return prev;
+      });
+    }, 60000);
+
+    const uptimeInterval = setInterval(() => {
+      if (broadcastStartRef.current > 0) {
+        setState(prev => ({
+          ...prev,
+          broadcastUptime: Math.floor((Date.now() - broadcastStartRef.current) / 1000),
+        }));
+      }
+    }, 1000);
+
+    const poolRefreshInterval = setInterval(() => {
+      fetch("/api/autopilot/pool", { credentials: "include" })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && Array.isArray(data) && data.length > 0) {
+            setState(prev => ({ ...prev, autopilotPool: data }));
+          }
+        })
+        .catch(() => {});
+    }, 120000);
+
+    return () => {
+      clearInterval(showInterval);
+      clearInterval(uptimeInterval);
+      clearInterval(poolRefreshInterval);
+    };
+  }, [state.broadcast]);
+
+  useEffect(() => {
+    if (!state.broadcast || !audioRef.current) return;
+    const audio = audioRef.current;
+
+    const handlePause = () => {
+      if (!state.broadcast || userPausedRef.current) return;
+
+      if (adBridgeTimerRef.current) clearTimeout(adBridgeTimerRef.current);
+      adBridgeTimerRef.current = setTimeout(() => {
+        if (audio.paused && state.broadcast && audio.src && !userPausedRef.current) {
+          console.log("[BROADCAST] Ad-Bridge: Resuming playback after interruption");
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              setState(prev => ({ ...prev, isPlaying: true }));
+            }).catch(() => {
+              setState(prev => advanceQueueFn(prev));
+            });
+          }
+        }
+      }, 3000);
+    };
+
+    audio.addEventListener("pause", handlePause);
+    return () => {
+      audio.removeEventListener("pause", handlePause);
+      if (adBridgeTimerRef.current) {
+        clearTimeout(adBridgeTimerRef.current);
+        adBridgeTimerRef.current = null;
+      }
+    };
+  }, [state.broadcast, advanceQueueFn]);
+
   return (
     <PlayerContext.Provider
       value={{
@@ -602,6 +740,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         resumeAutoplay,
         toggleAutopilot,
         setAutopilotPool,
+        toggleBroadcast,
+        getShowLabel,
+        getNextShowTime,
       }}
     >
       {children}

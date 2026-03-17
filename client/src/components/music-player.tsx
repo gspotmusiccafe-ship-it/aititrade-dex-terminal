@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock } from "lucide-react";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -29,6 +29,9 @@ export function MusicPlayer() {
     queueIndex,
     autoplayBlocked,
     autopilot,
+    broadcast,
+    currentShow,
+    broadcastUptime,
     togglePlay,
     nextTrack,
     prevTrack,
@@ -41,6 +44,8 @@ export function MusicPlayer() {
     playFromQueue,
     resumeAutoplay,
     toggleAutopilot,
+    toggleBroadcast,
+    getShowLabel,
   } = usePlayer();
 
   const { toast } = useToast();
@@ -168,6 +173,25 @@ export function MusicPlayer() {
         </div>
       )}
 
+      {broadcast && (
+        <div className="fixed bottom-16 left-0 right-0 h-6 bg-black/95 border-t border-red-500/20 z-50 font-mono flex items-center justify-center gap-4 px-4" data-testid="broadcast-status-bar">
+          <div className="flex items-center gap-2">
+            <Wifi className="h-3 w-3 text-red-400 animate-pulse" />
+            <span className="text-[9px] text-red-400 font-extrabold tracking-widest">CONTINUOUS BROADCAST</span>
+          </div>
+          <span className="text-[9px] text-zinc-600">|</span>
+          <div className="flex items-center gap-1">
+            <Clock className="h-2.5 w-2.5 text-amber-400/70" />
+            <span className="text-[9px] text-amber-400 font-bold">{getShowLabel(currentShow)}</span>
+          </div>
+          <span className="text-[9px] text-zinc-600">|</span>
+          <span className="text-[9px] text-zinc-500">MARKET-ONLY FEED</span>
+          <span className="text-[9px] text-zinc-600">|</span>
+          <span className="text-[9px] text-lime-400 font-bold">AUTOPILOT LOCKED</span>
+          <span className="text-[9px] text-zinc-600">|</span>
+          <span className="text-[9px] text-zinc-500">AD-BRIDGE ACTIVE</span>
+        </div>
+      )}
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-emerald-500/20 z-50 font-mono" data-testid="music-player">
         <div className="h-full px-3 flex items-center justify-between gap-3 max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-2 min-w-0 flex-1 max-w-[280px]">
@@ -181,12 +205,29 @@ export function MusicPlayer() {
               )}
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-extrabold text-lime-400/70" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] font-extrabold text-lime-400/70" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+                {broadcast && (
+                  <span className="text-[8px] font-extrabold text-red-400 bg-red-500/10 border border-red-500/30 px-1 py-0 animate-pulse" data-testid="badge-broadcast-live">
+                    ● LIVE
+                  </span>
+                )}
+                {broadcast && (
+                  <span className="text-[8px] font-bold text-amber-400/70" data-testid="text-show-name">
+                    {getShowLabel(currentShow)}
+                  </span>
+                )}
+              </div>
               <p className="font-extrabold text-xs truncate text-lime-400" data-testid="text-current-track-title">
                 {currentTrack.title.toUpperCase()}
               </p>
               <p className="text-[10px] text-zinc-400 font-semibold truncate" data-testid="text-current-track-artist">
                 {currentTrack.artist?.name} <span className="text-amber-400/60 font-bold ml-1">{ticker}</span>
+                {broadcast && broadcastUptime > 0 && (
+                  <span className="text-zinc-600 ml-2 text-[9px]">
+                    {Math.floor(broadcastUptime / 3600)}:{String(Math.floor((broadcastUptime % 3600) / 60)).padStart(2, "0")}:{String(broadcastUptime % 60).padStart(2, "0")}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -235,6 +276,18 @@ export function MusicPlayer() {
               >
                 <Radio className="h-3 w-3" />
                 {autopilot ? "AUTOPILOT ON" : "AUTOPILOT"}
+              </button>
+              <button
+                onClick={toggleBroadcast}
+                className={`hidden md:flex items-center gap-1 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider transition-all border ${
+                  broadcast
+                    ? "bg-red-500/20 border-red-500/50 text-red-400 shadow-[0_0_12px_rgba(239,68,68,0.4)] animate-pulse"
+                    : "border-zinc-600 text-zinc-400 hover:border-red-500/40 hover:text-red-400"
+                }`}
+                data-testid="button-broadcast-toggle"
+              >
+                <Wifi className="h-3 w-3" />
+                {broadcast ? "BROADCASTING" : "BROADCAST"}
               </button>
             </div>
             <div className="w-full flex items-center gap-2">
