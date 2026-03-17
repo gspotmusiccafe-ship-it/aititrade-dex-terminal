@@ -63,7 +63,7 @@ function UpgradeRedirect() {
 }
 
 function PremiumGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { data: membership, isLoading: membershipLoading } = useQuery<MembershipData>({
     queryKey: ["/api/user/membership"],
     enabled: isAuthenticated,
@@ -82,18 +82,19 @@ function PremiumGate({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if ((user as any)?.isAdmin) return <>{children}</>;
   if (!checkIsPremium(membership)) return <UpgradeRedirect />;
 
   return <>{children}</>;
 }
 
 function useIsPremiumUser() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { data: membership } = useQuery<MembershipData>({
     queryKey: ["/api/user/membership"],
     enabled: isAuthenticated,
   });
-  return isAuthenticated && checkIsPremium(membership);
+  return isAuthenticated && ((user as any)?.isAdmin || checkIsPremium(membership));
 }
 
 function AuthenticatedLayout() {
