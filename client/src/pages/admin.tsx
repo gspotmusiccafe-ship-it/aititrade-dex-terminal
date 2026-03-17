@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2 } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1991,6 +1991,37 @@ function RadioShowsTab() {
   );
 }
 
+function CeoVaultTab() {
+  return (
+    <div className="p-6 border-2 border-yellow-500/30 bg-black/40 rounded-xl space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-yellow-400 font-mono" data-testid="text-vault-title">SOVEREIGN TRUST VAULT</h2>
+        <Badge className="bg-yellow-500/20 text-yellow-400 border border-yellow-500/50" data-testid="badge-institutional">INSTITUTIONAL ACCESS</Badge>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-zinc-900 border-zinc-800 hover:border-yellow-500/40 transition-all" data-testid="card-ceo-blueprint">
+          <CardContent className="p-4">
+            <h3 className="text-white font-bold">12-Module CEO Blueprint</h3>
+            <p className="text-xs text-zinc-400 mt-1">Master the Mint Factory & Global Index</p>
+            <Button className="w-full mt-4 bg-yellow-600 hover:bg-yellow-700 text-black font-bold" data-testid="button-start-course">START COURSE</Button>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800 hover:border-yellow-500/40 transition-all" data-testid="card-trust-certificate">
+          <CardContent className="p-4 text-center">
+            <div className="h-20 w-full bg-yellow-500/10 rounded flex items-center justify-center mb-2">
+              <Trophy className="h-10 w-10 text-yellow-500" />
+            </div>
+            <h3 className="text-white font-bold">$500.00 Trust Certificate</h3>
+            <Button variant="outline" className="w-full mt-2 border-yellow-500/30 text-yellow-400" data-testid="button-download-certificate">DOWNLOAD STAMPED PROOF</Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 function SpotifyRoyaltyTab() {
   const { toast } = useToast();
   const [urlInput, setUrlInput] = useState("");
@@ -2947,6 +2978,10 @@ export default function AdminPage() {
                 <DollarSign className="h-4 w-4 mr-1.5 text-[#1DB954]" />
                 Royalty Tracker
               </TabsTrigger>
+              <TabsTrigger value="vault" data-testid="tab-vault" className="whitespace-nowrap data-[state=active]:bg-yellow-500/10 data-[state=active]:text-yellow-400">
+                <ShieldCheck className="h-4 w-4 mr-1.5" />
+                CEO Vault
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -3000,6 +3035,10 @@ export default function AdminPage() {
 
           <TabsContent value="royalty">
             <SpotifyRoyaltyTab />
+          </TabsContent>
+
+          <TabsContent value="vault">
+            <CeoVaultTab />
           </TabsContent>
         </Tabs>
         </div>
