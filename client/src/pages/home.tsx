@@ -7,7 +7,6 @@ import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { TrackWithArtist } from "@shared/schema";
 
-const UNIT_PRICE = 0.99;
 const CEILING = 1000.00;
 const SETTLEMENT_PAYOUT = 300.00;
 const HOLDER_COUNT = 15;
@@ -20,12 +19,16 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
 
-  const unitsSold = track.playCount || 0;
-  const grossSales = parseFloat((unitsSold * UNIT_PRICE).toFixed(2));
+  const price = parseFloat((track as any).unitPrice || "0.99");
+  const sales = (track as any).salesCount || 0;
+  const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / CEILING) * 100).toFixed(1)));
   const isClosed = grossSales >= CEILING;
   const isHighCapacity = capacityPct >= 60 && !isClosed;
   const remaining = Math.max(0, parseFloat((CEILING - grossSales).toFixed(2)));
+
+  const priceLabel = price === 0.99 ? "$0.99" : price === 2.50 ? "$2.50" : price === 5.00 ? "$5.00" : `$${price.toFixed(2)}`;
+  const priceClass = price >= 5 ? "text-yellow-400" : price >= 2.50 ? "text-blue-400" : "text-emerald-400";
 
   return (
     <div className={`bg-black border font-mono group transition-all ${isClosed ? "border-red-500/40" : isHighCapacity ? "border-yellow-500/40" : "border-emerald-500/20 hover:border-emerald-500/60"}`} data-testid={`asset-card-${track.id}`}>
@@ -34,17 +37,20 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           <span className={`font-bold text-xs ${isClosed ? "text-red-400" : "text-emerald-400"}`}>{ticker}</span>
           <span className="text-zinc-600 text-[9px]">{assetId}</span>
         </div>
-        {isClosed ? (
-          <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-bold flex items-center gap-1">
-            <Lock className="h-2.5 w-2.5" /> CLOSED
-          </span>
-        ) : isHighCapacity ? (
-          <span className="text-[9px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-bold animate-pulse">
-            {capacityPct.toFixed(0)}% CAPACITY
-          </span>
-        ) : (
-          <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500">OPEN</span>
-        )}
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[9px] font-bold ${priceClass}`}>{priceLabel}</span>
+          {isClosed ? (
+            <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-bold flex items-center gap-1">
+              <Lock className="h-2.5 w-2.5" /> CLOSED
+            </span>
+          ) : isHighCapacity ? (
+            <span className="text-[9px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-bold animate-pulse">
+              {capacityPct.toFixed(0)}% CAP
+            </span>
+          ) : (
+            <span className="text-[9px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-500">OPEN</span>
+          )}
+        </div>
       </div>
 
       {isHighCapacity && (
@@ -90,16 +96,16 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
 
         <div className="grid grid-cols-3 gap-1 mb-2 text-center">
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[9px] text-zinc-600">GROSS SALES ($)</p>
+            <p className="text-[9px] text-zinc-600">GROSS SALES</p>
             <p className={`text-[11px] font-bold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-emerald-400" : "text-zinc-500"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
           </div>
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
             <p className="text-[9px] text-zinc-600">UNITS SOLD</p>
-            <p className="text-[11px] text-white font-bold">{unitsSold.toLocaleString()}</p>
+            <p className="text-[11px] text-white font-bold">{sales.toLocaleString()}</p>
           </div>
           <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[9px] text-zinc-600">CEILING</p>
-            <p className="text-[11px] text-zinc-400 font-bold">${CEILING.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+            <p className="text-[9px] text-zinc-600">UNIT PRICE</p>
+            <p className={`text-[11px] font-bold ${priceClass}`}>{priceLabel}</p>
           </div>
         </div>
 
@@ -115,7 +121,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
             />
           </div>
           <div className="flex items-center justify-between mt-1">
-            <span className="text-zinc-600 text-[9px]">@ ${UNIT_PRICE}/UNIT</span>
+            <span className="text-zinc-600 text-[9px]">@ {priceLabel}/UNIT</span>
             {!isClosed && <span className="text-emerald-500/50 text-[9px]">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO CLOSE</span>}
             {isClosed && <span className="text-red-400 text-[9px]">SETTLED</span>}
           </div>
@@ -150,7 +156,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
               className="flex-1 bg-emerald-600 text-white text-[10px] font-bold py-1.5 text-center hover:bg-emerald-700 transition-colors flex items-center justify-center gap-1"
               data-testid={`button-buy-${track.id}`}
             >
-              <ShoppingCart className="h-3 w-3" /> BUY @ ${UNIT_PRICE}
+              <ShoppingCart className="h-3 w-3" /> BUY @ {priceLabel}
             </a>
           )}
           <button
@@ -186,9 +192,17 @@ export default function HomePage() {
 
   const displayTracks = featuredTracks || [];
 
-  const totalGrossSales = displayTracks.reduce((sum, t) => sum + ((t.playCount || 0) * UNIT_PRICE), 0);
-  const totalUnits = displayTracks.reduce((sum, t) => sum + (t.playCount || 0), 0);
-  const closedCount = displayTracks.filter(t => ((t.playCount || 0) * UNIT_PRICE) >= CEILING).length;
+  const totalGrossSales = displayTracks.reduce((sum, t) => {
+    const p = parseFloat((t as any).unitPrice || "0.99");
+    const s = (t as any).salesCount || 0;
+    return sum + (s * p);
+  }, 0);
+  const totalUnits = displayTracks.reduce((sum, t) => sum + ((t as any).salesCount || 0), 0);
+  const closedCount = displayTracks.filter(t => {
+    const p = parseFloat((t as any).unitPrice || "0.99");
+    const s = (t as any).salesCount || 0;
+    return (s * p) >= CEILING;
+  }).length;
   const openCount = displayTracks.length - closedCount;
 
   return (
@@ -224,7 +238,7 @@ export default function HomePage() {
               <p className="text-sm text-emerald-400 font-bold">{openCount}</p>
             </div>
             <div className="bg-zinc-900 border border-zinc-800 p-2">
-              <p className="text-[9px] text-zinc-600">CLOSED / SETTLED</p>
+              <p className="text-[9px] text-zinc-600">CLOSED / TOTAL</p>
               <p className="text-sm font-bold"><span className="text-red-400">{closedCount}</span><span className="text-zinc-600"> / {displayTracks.length}</span></p>
             </div>
           </div>
@@ -233,8 +247,10 @@ export default function HomePage() {
 
       <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-4 text-[10px]">
-          <span className="text-zinc-600">UNIT PRICE:</span>
-          <span className="text-emerald-400">${UNIT_PRICE}</span>
+          <span className="text-zinc-600">VARIANTS:</span>
+          <span className="text-emerald-400">$0.99</span>
+          <span className="text-blue-400">$2.50</span>
+          <span className="text-yellow-400">$5.00</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">CEILING:</span>
           <span className="text-emerald-400">${CEILING.toLocaleString()}</span>
@@ -243,7 +259,7 @@ export default function HomePage() {
           <span className="text-emerald-400">${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS</span>
         </div>
         <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-zinc-600">{user?.firstName || user?.email || "TRADER"}</span>
+          <span className="text-zinc-600">{user?.firstName || user?.email || "PUBLIC"}</span>
         </div>
       </div>
 
@@ -272,15 +288,15 @@ export default function HomePage() {
           <div className="text-center py-20 border border-zinc-800">
             <Zap className="h-8 w-8 text-emerald-500/30 mx-auto mb-3" />
             <p className="text-emerald-500/50 text-sm">NO ASSETS LISTED</p>
-            <p className="text-zinc-700 text-[10px] mt-1">Upload tracks via Artist Portal to list assets on the exchange</p>
+            <p className="text-zinc-700 text-[10px] mt-1">Add rows to the database to list assets</p>
           </div>
         )}
       </div>
 
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
-          <span>AITIFY SOVEREIGN MINT | 97.7 THE FLAME | AityPay SETTLEMENT ENGINE</span>
-          <span>UNIT: ${UNIT_PRICE} | CEILING: ${CEILING.toLocaleString()} | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS</span>
+          <span>AITIFY SOVEREIGN MINT | 97.7 THE FLAME | AityPay ENGINE</span>
+          <span>CEILING: ${CEILING.toLocaleString()} | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS</span>
         </div>
       </div>
     </div>
