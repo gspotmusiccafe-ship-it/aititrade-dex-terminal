@@ -19,11 +19,16 @@ interface TrackWithArtist {
 interface RoyaltyPool {
   totalGlobalAssets: number;
   totalGlobalSales: number;
-  royaltyRate: string;
-  totalRoyaltyPool: number;
+  trustVaultRate: string;
+  trustVaultAmount: number;
+  minterFeeRate: string;
+  minterFeeAmount: number;
+  platformAmount: number;
+  currentTrustValuation: number;
   totalTrustUnits: number;
   perUnitShare: number;
   userShare: number;
+  volatility: number;
 }
 
 export default function TrustVaultPage() {
@@ -103,12 +108,12 @@ export default function TrustVaultPage() {
               <p className="text-lg font-extrabold text-amber-400 font-mono">${royaltyPool.totalGlobalSales.toLocaleString()}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">ROYALTY RATE</p>
-              <p className="text-lg font-extrabold text-amber-400 font-mono">{royaltyPool.royaltyRate}</p>
+              <p className="text-[9px] text-zinc-500 font-mono">VAULT RATE</p>
+              <p className="text-lg font-extrabold text-amber-400 font-mono">{royaltyPool.trustVaultRate}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">ROYALTY POOL</p>
-              <p className="text-lg font-extrabold text-lime-400 font-mono">${royaltyPool.totalRoyaltyPool.toLocaleString()}</p>
+              <p className="text-[9px] text-zinc-500 font-mono">TRUST VAULT</p>
+              <p className="text-lg font-extrabold text-lime-400 font-mono">${royaltyPool.trustVaultAmount.toLocaleString()}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
               <p className="text-[9px] text-zinc-500 font-mono">TRUST UNITS</p>
