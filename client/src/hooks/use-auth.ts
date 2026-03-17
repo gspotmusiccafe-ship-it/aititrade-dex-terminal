@@ -37,6 +37,7 @@ export function useAuth() {
         : window.location.pathname;
       window.history.replaceState({}, "", newUrl);
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
     }
   }, [queryClient]);
 
@@ -54,6 +55,7 @@ export function useAuth() {
     mutationFn: logout,
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.removeQueries({ queryKey: ["/api/user/membership"] });
     },
   });
 

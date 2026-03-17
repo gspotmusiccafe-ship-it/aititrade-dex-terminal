@@ -406,6 +406,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
       toast({ title: "✦ ACCOUNT CREATED", description: "Welcome to the Sovereign Exchange — upgrade to start trading" });
       onSuccess?.();
     },
@@ -416,6 +417,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     mutationFn: () => apiRequest("POST", "/api/auth/login", { email, password }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
       toast({ title: "✦ LOGIN VERIFIED", description: "Access granted — loading exchange..." });
       onSuccess?.();
     },
