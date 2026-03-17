@@ -200,13 +200,14 @@ export async function registerRoutes(
   // Featured tracks (radio playlist - only tracks marked as featured by admin)
   app.get("/api/tracks/featured", async (req, res) => {
     try {
-      const radioTracks = await storage.getRadioTracks();
-      if (radioTracks.length > 0) {
-        res.json(radioTracks);
-      } else {
-        const tracks = await storage.getFeaturedTracks(20);
-        res.json(tracks);
-      }
+      res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+      const allResult = await db
+        .select()
+        .from(tracks)
+        .innerJoin(artists, eq(tracks.artistId, artists.id))
+        .orderBy(desc(tracks.playCount));
+      const allTracks = allResult.map(r => ({ ...r.tracks, artist: r.artists }));
+      res.json(allTracks);
     } catch (error) {
       console.error("Error fetching featured tracks:", error);
       res.status(500).json({ message: "Failed to fetch tracks" });
