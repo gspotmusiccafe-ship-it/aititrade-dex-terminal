@@ -91,11 +91,11 @@ export function MarketTicker() {
           return (
             <div key={`${asset.id}-${i}`} className="inline-flex items-center mx-5 space-x-2 text-xs font-mono uppercase flex-shrink-0">
               <span className={`font-extrabold ${isFlash ? "text-red-400" : "text-lime-400"}`}>${asset.ticker}</span>
-              <span className="text-white font-bold">{asset.title.slice(0, 16)}</span>
+              <span className="text-white font-bold">{asset.title.slice(0, 20)}</span>
               <span className="text-lime-400 font-extrabold">${asset.price.toFixed(2)}</span>
-              <span className="text-zinc-400">{asset.salesCount.toLocaleString()} UNITS</span>
+              <span className="text-emerald-300">ROI {((asset.salesCount * asset.price * 0.16) > 0 ? ((asset.salesCount * asset.price * 0.16) / asset.price * 100).toFixed(0) : "0")}%</span>
               <span className={`font-bold ${isFlash ? "text-red-400" : "text-lime-500"}`}>
-                {isPoolClosed ? "CLOSED" : `${poolPct.toFixed(0)}% POOL`}
+                {isPoolClosed ? "SETTLED" : `${poolPct.toFixed(1)}% TO 1K`}
               </span>
               {isFlash && (
                 <span className="text-red-400 font-extrabold text-[9px] border border-red-500/40 px-1 py-0 animate-pulse">⚡FLASH</span>

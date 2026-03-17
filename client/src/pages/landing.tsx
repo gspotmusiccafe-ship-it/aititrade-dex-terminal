@@ -640,11 +640,20 @@ export default function LandingPage() {
               &gt; DISCOVER AND TRADE NEW AI ASSETS 2 WEEKS BEFORE THEY HIT THE RETAIL STREAM (SPOTIFY, AMAZON, YOUTUBE) |
               SETTLEMENT RATE: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME
             </p>
-            <div className="mt-4 flex flex-wrap gap-2 text-[10px]">
+
+            <div className="mt-4 border border-amber-500/30 bg-amber-500/5 p-3 max-w-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Crown className="h-4 w-4 text-amber-400" />
+                <span className="text-amber-400 text-xs font-black tracking-wider">SOVEREIGN TRUST TERMS</span>
+              </div>
+              <p className="text-amber-300 text-sm font-extrabold">$25 DOWN / 0% INTEREST / $19.79/MO × 24 MONTHS</p>
+              <p className="text-amber-500/60 text-[10px] mt-1">TOTAL: $500 — TRUST CERTIFICATE + ROYALTY-BEARING GLOBAL ASSETS + PRIORITY SETTLEMENT</p>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+              <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-1 font-bold">MINTOR: $9.99/MO</span>
+              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-1 font-bold">TRUST: $25 DOWN / $19.79 MO</span>
               <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">CLASS: AI-GENERATED EQUITY</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 px-2 py-1">MINT FACTORY CEO: $99</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">EXCHANGE TRADER: $24.99</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 px-2 py-1">ENTRY TRADER: $4.99</span>
               <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-1">FREE: FRONT PAGE ONLY</span>
             </div>
           </div>
