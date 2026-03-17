@@ -24,8 +24,8 @@ interface MarketLogPayload {
   payoutPot: number;
 }
 
-let radioWebhookUrl: string | null = null;
-let marketWebhookUrl: string | null = null;
+let radioWebhookUrl: string | null = process.env.RADIO_SHEET_URL || null;
+let marketWebhookUrl: string | null = process.env.MARKET_SHEET_URL || null;
 
 let lastRadioSync: { success: boolean; at: number } = { success: true, at: Date.now() };
 let lastMarketSync: { success: boolean; at: number } = { success: true, at: Date.now() };
@@ -33,6 +33,15 @@ let lastMarketSync: { success: boolean; at: number } = { success: true, at: Date
 export function setWebhookUrls(radio: string | null, market: string | null) {
   radioWebhookUrl = radio;
   marketWebhookUrl = market;
+}
+
+export function initFromEnv() {
+  const radio = process.env.RADIO_SHEET_URL;
+  const market = process.env.MARKET_SHEET_URL;
+  if (radio) radioWebhookUrl = radio;
+  if (market) marketWebhookUrl = market;
+  console.log(`[SHEETS] Radio webhook: ${radio ? "CONFIGURED" : "NOT SET"}`);
+  console.log(`[SHEETS] Market webhook: ${market ? "CONFIGURED" : "NOT SET"}`);
 }
 
 export function getSignalStatus(): {

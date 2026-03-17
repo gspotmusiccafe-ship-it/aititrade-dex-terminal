@@ -15,7 +15,7 @@ import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
 import { getMarketState, computeLiquiditySplit } from "./market-governor";
-import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls } from "./sheets-logger";
+import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -105,6 +105,8 @@ export async function registerRoutes(
   // Setup Replit Auth
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  initSheetsFromEnv();
 
   app.get("/uploads/:filename", async (req: any, res) => {
     try {
