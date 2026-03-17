@@ -33,6 +33,7 @@ import {
   DollarSign,
   ShoppingBag,
   ExternalLink,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1068,6 +1069,10 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
               <DollarSign className="h-4 w-4 mr-1" />
               Tips
             </TabsTrigger>
+            <TabsTrigger value="creative-suite" className="text-lime-400 data-[state=active]:text-lime-300 data-[state=active]:bg-lime-500/10">
+              <Palette className="h-4 w-4 mr-1" />
+              Creative Suite
+            </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2">
             <Button
@@ -1333,7 +1338,90 @@ function ArtistDashboard({ artist }: { artist: Artist }) {
         <TabsContent value="tips">
           <TipsTab artistId={artist.id} />
         </TabsContent>
+
+        <TabsContent value="creative-suite">
+          <CreativeSuiteTab />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function CreativeSuiteTab() {
+  const tools = [
+    {
+      id: "suno",
+      name: "SUNO — AI AUDIO ENGINE",
+      description: "Generate high-fidelity audio assets. Create beats, instrumentals, and full tracks powered by AI.",
+      url: "https://suno.com",
+      icon: "🎵",
+    },
+    {
+      id: "jumpstr",
+      name: "JUMPSTR — DISTRIBUTION & VELOCITY",
+      description: "Handle distribution and social velocity of minted assets. Amplify reach across platforms.",
+      url: "https://jumpstr.io",
+      icon: "🚀",
+    },
+    {
+      id: "ideogram",
+      name: "IDEOGRAM — COVER ART GENERATOR",
+      description: "Generate bold gold and lime green cover art for Trust Certificates and asset thumbnails.",
+      url: "https://ideogram.ai",
+      icon: "🎨",
+    },
+  ];
+
+  return (
+    <div className="space-y-6 w-full">
+      <div>
+        <h3 className="text-2xl font-extrabold flex items-center gap-3 text-lime-400 font-mono">
+          <div className="h-10 w-10 rounded-lg bg-lime-500/15 flex items-center justify-center">
+            <Palette className="h-6 w-6 text-lime-400" />
+          </div>
+          CREATIVE SUITE — EXTERNAL TOOLS
+        </h3>
+        <p className="text-sm text-zinc-400 mt-2 font-mono">
+          Integrated creative tools for Asset Architects. Generate audio, distribute assets, and create cover art — all without leaving the dashboard.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 w-full">
+        {tools.map((tool) => (
+          <Card key={tool.id} className="bg-black border-2 border-lime-500/50 overflow-hidden w-full" data-testid={`creative-suite-${tool.id}`}>
+            <CardHeader className="pb-3 bg-lime-500/5 border-b border-lime-500/30">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-extrabold text-lime-400 font-mono flex items-center gap-3">
+                  <span className="text-2xl">{tool.icon}</span>
+                  {tool.name}
+                </CardTitle>
+                <a
+                  href={tool.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-zinc-400 hover:text-lime-400 transition-colors font-mono"
+                  data-testid={`link-open-${tool.id}`}
+                >
+                  OPEN IN NEW TAB
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              </div>
+              <CardDescription className="text-zinc-400 font-mono text-xs mt-1">{tool.description}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 w-full">
+              <iframe
+                src={tool.url}
+                title={tool.name}
+                className="w-full border-0"
+                style={{ minHeight: "800px", height: "800px" }}
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                loading="lazy"
+                data-testid={`iframe-${tool.id}`}
+              />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
