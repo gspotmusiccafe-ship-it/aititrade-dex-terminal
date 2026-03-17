@@ -236,7 +236,7 @@ export async function registerRoutes(
         if (isGlobal) {
           const ts = Date.now().toString(36).toUpperCase();
           const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-          const trustId = `TRS-977-${ticker}-${ts.slice(-4)}${rand.slice(0, 2)}`;
+          const trustId = `TRST-977-${ticker}-${ts.slice(-4)}${rand.slice(0, 2)}`;
 
           const [order] = await tx.insert(orders).values({
             trackId,

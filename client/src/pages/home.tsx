@@ -31,65 +31,76 @@ interface MintReceipt {
 function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-black border border-emerald-500/40 font-mono max-w-sm w-full shadow-2xl shadow-emerald-500/10" onClick={e => e.stopPropagation()} data-testid="mint-certificate">
-        <div className="border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between bg-emerald-500/5">
-          <div className="flex items-center gap-2">
-            <FileCheck className="h-3.5 w-3.5 text-emerald-400" />
-            <span className="text-[10px] text-emerald-400 font-bold">DIGITAL MINT CONFIRMED</span>
-          </div>
-          <button onClick={onClose} className="text-emerald-500/40 hover:text-emerald-400"><X className="h-3.5 w-3.5" /></button>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="border-2 border-emerald-400/40 bg-emerald-500/5 p-3 text-center">
-            <p className="text-[8px] text-emerald-500/40 mb-1">MINT ID — PROOF OF OWNERSHIP</p>
-            <p className="text-base text-emerald-400 font-black tracking-widest" data-testid="text-mint-id">{receipt.mintId}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1 text-center">
-            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
-              <p className="text-[8px] text-emerald-500/40">ASSET / TICKER</p>
-              <p className="text-[10px] text-emerald-400 font-bold">${receipt.ticker}</p>
-            </div>
-            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
-              <p className="text-[8px] text-emerald-500/40">UNIT PRICE</p>
-              <p className="text-[10px] text-emerald-400 font-bold">${receipt.unitPrice.toFixed(2)}</p>
-            </div>
-          </div>
-          <div className="border border-yellow-500/20 bg-yellow-500/5 p-2">
-            <p className="text-[8px] text-yellow-400/60 mb-1 text-center">DISBURSEMENT BREAKDOWN</p>
-            <div className="grid grid-cols-2 gap-1 text-center">
-              <div className="bg-black/40 border border-yellow-500/10 p-1.5">
-                <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
-                <p className="text-[11px] text-yellow-400 font-bold" data-testid="text-originator-credit">${receipt.originatorCredit.toFixed(4)}</p>
-              </div>
-              <div className="bg-black/40 border border-emerald-500/10 p-1.5">
-                <p className="text-[8px] text-emerald-500/50">POSITION HOLDER</p>
-                <p className="text-[11px] text-emerald-400 font-bold" data-testid="text-position-value">${receipt.positionValue.toFixed(4)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-1 text-center">
-            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
-              <p className="text-[8px] text-emerald-500/40">LEDGER GROSS</p>
-              <p className="text-[10px] text-white font-bold">${receipt.grossSales.toFixed(2)}</p>
-            </div>
-            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
-              <p className="text-[8px] text-emerald-500/40">TOTAL MINTS</p>
-              <p className="text-[10px] text-emerald-400 font-bold" data-testid="text-total-mints">{receipt.totalMints} / {receipt.mintCap}</p>
-            </div>
-            <div className="bg-zinc-900 border border-emerald-500/10 p-2">
-              <p className="text-[8px] text-emerald-500/40">CAPACITY</p>
-              <p className={`text-[10px] font-bold ${receipt.capacityPct >= 60 ? "text-yellow-400" : "text-emerald-400"}`}>{receipt.capacityPct}%</p>
-            </div>
-          </div>
-          <div className="border border-emerald-500/10 bg-zinc-900 p-2 text-center">
-            <p className="text-[8px] text-emerald-500/40">STATUS</p>
-            <p className={`text-xs font-black ${receipt.status === "CLOSED" ? "text-red-400" : "text-emerald-400"}`}>
-              {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "POSITION MINTED — PROOF OF OWNERSHIP"}
-            </p>
-          </div>
+      <div className="bg-black border-2 border-emerald-500/50 font-mono max-w-md w-full shadow-2xl shadow-emerald-500/20 relative overflow-hidden" onClick={e => e.stopPropagation()} data-testid="mint-certificate">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
           <div className="text-center">
-            <p className="text-[8px] text-emerald-500/30">{receipt.timestamp}</p>
-            <p className="text-[8px] text-emerald-500/20 mt-1">AITIFY SOVEREIGN EXCHANGE — DIGITAL MINT CERTIFICATE</p>
+            <Shield className="h-32 w-32 text-emerald-400 mx-auto" />
+            <p className="text-2xl font-black text-emerald-400 tracking-[0.3em] mt-2">GSR FUND</p>
+          </div>
+        </div>
+        <div className="relative z-10">
+          <div className="border-b border-emerald-500/30 px-4 py-2.5 flex items-center justify-between bg-emerald-500/5">
+            <div className="flex items-center gap-2">
+              <FileCheck className="h-4 w-4 text-emerald-400" />
+              <span className="text-[11px] text-emerald-400 font-bold tracking-wider">DIGITAL MINT CERTIFICATE</span>
+            </div>
+            <button onClick={onClose} className="text-emerald-500/40 hover:text-emerald-400"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="border-2 border-emerald-400/50 bg-emerald-500/5 p-4 text-center relative">
+              <p className="text-[9px] text-emerald-500/50 mb-1 tracking-widest">OWNER ID</p>
+              <p className="text-2xl text-emerald-400 font-black tracking-[0.15em] leading-tight" data-testid="text-mint-id">{receipt.mintId}</p>
+              <p className="text-[8px] text-emerald-500/30 mt-2 tracking-wider">DIGITAL PROOF OF OWNERSHIP — PAPER TRADE</p>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-center">
+              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+                <p className="text-[8px] text-emerald-500/40 tracking-wider">ASSET / TICKER</p>
+                <p className="text-sm text-emerald-400 font-bold mt-0.5">${receipt.ticker}</p>
+              </div>
+              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+                <p className="text-[8px] text-emerald-500/40 tracking-wider">UNIT PRICE</p>
+                <p className="text-sm text-emerald-400 font-bold mt-0.5">${receipt.unitPrice.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="border border-yellow-500/25 bg-yellow-500/5 p-2.5">
+              <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">DISBURSEMENT BREAKDOWN</p>
+              <div className="grid grid-cols-2 gap-1.5 text-center">
+                <div className="bg-black/50 border border-yellow-500/15 p-2">
+                  <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
+                  <p className="text-sm text-yellow-400 font-bold" data-testid="text-originator-credit">${receipt.originatorCredit.toFixed(4)}</p>
+                </div>
+                <div className="bg-black/50 border border-emerald-500/15 p-2">
+                  <p className="text-[8px] text-emerald-500/50">POSITION HOLDER (84%)</p>
+                  <p className="text-sm text-emerald-400 font-bold" data-testid="text-position-value">${receipt.positionValue.toFixed(4)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 text-center">
+              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
+                <p className="text-[8px] text-emerald-500/40">LEDGER GROSS</p>
+                <p className="text-xs text-white font-bold">${receipt.grossSales.toFixed(2)}</p>
+              </div>
+              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
+                <p className="text-[8px] text-emerald-500/40">TOTAL MINTS</p>
+                <p className="text-xs text-emerald-400 font-bold" data-testid="text-total-mints">{receipt.totalMints} / {receipt.mintCap}</p>
+              </div>
+              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
+                <p className="text-[8px] text-emerald-500/40">CAPACITY</p>
+                <p className={`text-xs font-bold ${receipt.capacityPct >= 60 ? "text-yellow-400" : "text-emerald-400"}`}>{receipt.capacityPct}%</p>
+              </div>
+            </div>
+            <div className="border border-emerald-500/20 bg-emerald-500/5 p-2.5 text-center">
+              <p className={`text-sm font-black ${receipt.status === "CLOSED" ? "text-red-400" : "text-emerald-400"}`}>
+                {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "POSITION MINTED — PROOF OF OWNERSHIP"}
+              </p>
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-[8px] text-emerald-500/25">{receipt.timestamp}</p>
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3 text-emerald-500/30" />
+                <p className="text-[8px] text-emerald-500/30 font-bold">VERIFIED BY GSR FUND</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -111,58 +122,69 @@ interface TrustReceipt {
 function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-black border border-blue-500/40 font-mono max-w-sm w-full shadow-2xl shadow-blue-500/10" onClick={e => e.stopPropagation()} data-testid="trust-certificate">
-        <div className="border-b border-blue-500/20 px-4 py-2 flex items-center justify-between bg-blue-500/5">
-          <div className="flex items-center gap-2">
-            <Globe className="h-3.5 w-3.5 text-blue-400" />
-            <span className="text-[10px] text-blue-400 font-bold">GLOBAL TRUST CERTIFICATE</span>
-          </div>
-          <button onClick={onClose} className="text-blue-500/40 hover:text-blue-400"><X className="h-3.5 w-3.5" /></button>
-        </div>
-        <div className="p-4 space-y-3">
-          <div className="border-2 border-blue-400/40 bg-blue-500/5 p-3 text-center">
-            <p className="text-[8px] text-blue-500/40 mb-1">TRUST ID — VERIFIED GLOBAL RELEASE</p>
-            <p className="text-base text-blue-400 font-black tracking-widest" data-testid="text-trust-id">{receipt.trustId}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-1 text-center">
-            <div className="bg-zinc-900 border border-blue-500/10 p-2">
-              <p className="text-[8px] text-blue-500/40">ASSET / TICKER</p>
-              <p className="text-[10px] text-blue-400 font-bold">${receipt.ticker}</p>
-            </div>
-            <div className="bg-zinc-900 border border-blue-500/10 p-2">
-              <p className="text-[8px] text-blue-500/40">UNIT PRICE</p>
-              <p className="text-[10px] text-blue-400 font-bold">${receipt.unitPrice.toFixed(2)}</p>
-            </div>
-          </div>
-          <div className="border border-yellow-500/20 bg-yellow-500/5 p-2">
-            <p className="text-[8px] text-yellow-400/60 mb-1 text-center">DISBURSEMENT</p>
-            <div className="grid grid-cols-2 gap-1 text-center">
-              <div className="bg-black/40 border border-yellow-500/10 p-1.5">
-                <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
-                <p className="text-[11px] text-yellow-400 font-bold">${receipt.originatorCredit.toFixed(4)}</p>
-              </div>
-              <div className="bg-black/40 border border-blue-500/10 p-1.5">
-                <p className="text-[8px] text-blue-500/50">POSITION HOLDER</p>
-                <p className="text-[11px] text-blue-400 font-bold">${receipt.positionValue.toFixed(4)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="border border-blue-500/10 bg-zinc-900 p-2 text-center">
-            <p className="text-[8px] text-blue-500/40">STATUS</p>
-            <p className="text-xs font-black text-blue-400">VERIFIED GLOBAL RELEASE — TRUST CERTIFIED</p>
-          </div>
-          <a
-            href={receipt.storeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full bg-blue-600 text-white text-[10px] font-bold py-2 text-center hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5"
-            data-testid="link-store"
-          >
-            <ExternalLink className="h-3 w-3" /> PROCEED TO STORE / DOWNLOAD
-          </a>
+      <div className="bg-black border-2 border-blue-500/50 font-mono max-w-md w-full shadow-2xl shadow-blue-500/20 relative overflow-hidden" onClick={e => e.stopPropagation()} data-testid="trust-certificate">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none opacity-[0.03]">
           <div className="text-center">
-            <p className="text-[8px] text-blue-500/30">{receipt.timestamp}</p>
-            <p className="text-[8px] text-blue-500/20 mt-1">AITIFY SOVEREIGN EXCHANGE — GLOBAL TRUST CERTIFICATE</p>
+            <Shield className="h-32 w-32 text-blue-400 mx-auto" />
+            <p className="text-2xl font-black text-blue-400 tracking-[0.3em] mt-2">GSR FUND</p>
+          </div>
+        </div>
+        <div className="relative z-10">
+          <div className="border-b border-blue-500/30 px-4 py-2.5 flex items-center justify-between bg-blue-500/5">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 text-blue-400" />
+              <span className="text-[11px] text-blue-400 font-bold tracking-wider">GLOBAL TRUST CERTIFICATE</span>
+            </div>
+            <button onClick={onClose} className="text-blue-500/40 hover:text-blue-400"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="p-5 space-y-4">
+            <div className="border-2 border-blue-400/50 bg-blue-500/5 p-4 text-center">
+              <p className="text-[9px] text-blue-500/50 mb-1 tracking-widest">OWNER ID</p>
+              <p className="text-2xl text-blue-400 font-black tracking-[0.15em] leading-tight" data-testid="text-trust-id">{receipt.trustId}</p>
+              <p className="text-[8px] text-blue-500/30 mt-2 tracking-wider">MONITORED TRUST — VERIFIED GLOBAL RELEASE</p>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 text-center">
+              <div className="bg-zinc-900/80 border border-blue-500/15 p-2.5">
+                <p className="text-[8px] text-blue-500/40 tracking-wider">ASSET / TICKER</p>
+                <p className="text-sm text-blue-400 font-bold mt-0.5">${receipt.ticker}</p>
+              </div>
+              <div className="bg-zinc-900/80 border border-blue-500/15 p-2.5">
+                <p className="text-[8px] text-blue-500/40 tracking-wider">UNIT PRICE</p>
+                <p className="text-sm text-blue-400 font-bold mt-0.5">${receipt.unitPrice.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="border border-yellow-500/25 bg-yellow-500/5 p-2.5">
+              <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">DISBURSEMENT</p>
+              <div className="grid grid-cols-2 gap-1.5 text-center">
+                <div className="bg-black/50 border border-yellow-500/15 p-2">
+                  <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
+                  <p className="text-sm text-yellow-400 font-bold">${receipt.originatorCredit.toFixed(4)}</p>
+                </div>
+                <div className="bg-black/50 border border-blue-500/15 p-2">
+                  <p className="text-[8px] text-blue-500/50">POSITION HOLDER (84%)</p>
+                  <p className="text-sm text-blue-400 font-bold">${receipt.positionValue.toFixed(4)}</p>
+                </div>
+              </div>
+            </div>
+            <div className="border border-blue-500/20 bg-blue-500/5 p-2.5 text-center">
+              <p className="text-sm font-black text-blue-400">VERIFIED GLOBAL RELEASE — TRUST CERTIFIED</p>
+            </div>
+            <a
+              href={receipt.storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full bg-blue-600 text-white text-xs font-bold py-2.5 text-center hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+              data-testid="link-store"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> PROCEED TO STORE / DOWNLOAD
+            </a>
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-[8px] text-blue-500/25">{receipt.timestamp}</p>
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3 text-blue-500/30" />
+                <p className="text-[8px] text-blue-500/30 font-bold">VERIFIED BY GSR FUND</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
