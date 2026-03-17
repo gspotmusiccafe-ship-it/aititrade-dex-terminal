@@ -103,8 +103,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const broadcastStartRef = useRef<number>(0);
   const adBridgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userPausedRef = useRef<boolean>(false);
+  const broadcastRef = useRef<boolean>(false);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastLoggedTrackRef = useRef<string | null>(null);
+  const errorRetryCountRef = useRef<number>(0);
+  const lastProgressRef = useRef<number>(0);
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -347,24 +351,49 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
 
     let errorSkipTimeout: ReturnType<typeof setTimeout> | null = null;
+    const MAX_RETRIES = 3;
+
     const handleError = () => {
-      console.warn("Audio load error — skipping to next track");
       if (errorSkipTimeout) clearTimeout(errorSkipTimeout);
-      errorSkipTimeout = setTimeout(() => {
-        setState(prev => {
-          if (prev.queue.length <= 1) return { ...prev, isPlaying: false };
-          return advanceQueue(prev);
-        });
-      }, 500);
+
+      if (errorRetryCountRef.current < MAX_RETRIES) {
+        errorRetryCountRef.current++;
+        const retryDelay = errorRetryCountRef.current * 1500;
+        console.warn(`[RADIO] Audio load error — retry ${errorRetryCountRef.current}/${MAX_RETRIES} in ${retryDelay}ms`);
+        errorSkipTimeout = setTimeout(() => {
+          if (audioRef.current && audioRef.current.src) {
+            const src = audioRef.current.src;
+            audioRef.current.src = "";
+            audioRef.current.src = src;
+            audioRef.current.load();
+            const p = audioRef.current.play();
+            if (p !== undefined) {
+              p.then(() => {
+                errorRetryCountRef.current = 0;
+                setState(prev => ({ ...prev, isPlaying: true }));
+              }).catch(() => handleError());
+            }
+          }
+        }, retryDelay);
+      } else {
+        console.warn("[RADIO] Audio load error — max retries reached, advancing queue");
+        errorRetryCountRef.current = 0;
+        errorSkipTimeout = setTimeout(() => {
+          setState(prev => advanceQueue(prev));
+        }, 500);
+      }
     };
 
     const handleStalled = () => {
-      console.warn("Audio stalled — attempting recovery");
+      console.warn("[RADIO] Audio stalled — attempting recovery");
       if (audioRef.current && audioRef.current.src) {
         const currentSrc = audioRef.current.src;
+        const currentTime = audioRef.current.currentTime;
         setTimeout(() => {
-          if (audioRef.current && !audioRef.current.paused && audioRef.current.currentTime === 0) {
+          if (audioRef.current && audioRef.current.paused && !userPausedRef.current) {
+            console.log("[RADIO] Stall recovery — reloading from", Math.floor(currentTime), "s");
             audioRef.current.src = currentSrc;
+            audioRef.current.currentTime = currentTime;
             audioRef.current.play().catch(() => {
               setState(prev => advanceQueue(prev));
             });
@@ -373,11 +402,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
+    const handleWaiting = () => {
+      setTimeout(() => {
+        if (audioRef.current && audioRef.current.readyState < 3 && !audioRef.current.paused) {
+          console.warn("[RADIO] Extended buffering — forcing reload");
+          const src = audioRef.current.src;
+          const time = audioRef.current.currentTime;
+          audioRef.current.src = src;
+          audioRef.current.currentTime = time;
+          audioRef.current.play().catch(() => {});
+        }
+      }, 10000);
+    };
+
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("error", handleError);
     audio.addEventListener("stalled", handleStalled);
+    audio.addEventListener("waiting", handleWaiting);
+
+    const handlePlaying = () => {
+      errorRetryCountRef.current = 0;
+    };
+    audio.addEventListener("playing", handlePlaying);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
@@ -385,6 +433,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("error", handleError);
       audio.removeEventListener("stalled", handleStalled);
+      audio.removeEventListener("waiting", handleWaiting);
+      audio.removeEventListener("playing", handlePlaying);
       if (errorSkipTimeout) clearTimeout(errorSkipTimeout);
       audio.pause();
       if (preloadRef.current) {
@@ -674,6 +724,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const toggleBroadcast = useCallback(() => {
     setState(prev => {
       const newBroadcast = !prev.broadcast;
+      broadcastRef.current = newBroadcast;
       if (newBroadcast) {
         broadcastStartRef.current = Date.now();
         return { ...prev, broadcast: true, autopilot: true, repeat: "all", currentShow: getCurrentShow() };
@@ -681,6 +732,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       if (adBridgeTimerRef.current) {
         clearInterval(adBridgeTimerRef.current);
         adBridgeTimerRef.current = null;
+      }
+      if (watchdogRef.current) {
+        clearInterval(watchdogRef.current);
+        watchdogRef.current = null;
       }
       return { ...prev, broadcast: false, broadcastUptime: 0 };
     });
@@ -764,11 +819,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     const audio = audioRef.current;
 
     const handlePause = () => {
-      if (!state.broadcast || userPausedRef.current) return;
+      if (!broadcastRef.current || userPausedRef.current) return;
 
       if (adBridgeTimerRef.current) clearTimeout(adBridgeTimerRef.current);
       adBridgeTimerRef.current = setTimeout(() => {
-        if (audio.paused && state.broadcast && audio.src && !userPausedRef.current) {
+        if (audio.paused && broadcastRef.current && audio.src && !userPausedRef.current) {
           console.log("[BROADCAST] Ad-Bridge: Resuming playback after interruption");
           const p = audio.play();
           if (p !== undefined) {
@@ -783,11 +838,41 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
 
     audio.addEventListener("pause", handlePause);
+
+    watchdogRef.current = setInterval(() => {
+      if (!broadcastRef.current || !audio.src || userPausedRef.current) return;
+
+      const currentProgress = audio.currentTime;
+      if (audio.paused && !userPausedRef.current) {
+        console.warn("[RADIO] Watchdog: Audio paused unexpectedly — forcing resume");
+        audio.play().then(() => {
+          setState(prev => ({ ...prev, isPlaying: true }));
+        }).catch(() => {
+          console.warn("[RADIO] Watchdog: Resume failed — advancing queue");
+          setState(prev => advanceQueueFn(prev));
+        });
+      } else if (currentProgress === lastProgressRef.current && !audio.paused && audio.readyState >= 1) {
+        console.warn("[RADIO] Watchdog: Playback stuck at", Math.floor(currentProgress), "s — reloading");
+        const src = audio.src;
+        audio.src = "";
+        audio.src = src;
+        audio.currentTime = currentProgress;
+        audio.play().catch(() => {
+          setState(prev => advanceQueueFn(prev));
+        });
+      }
+      lastProgressRef.current = currentProgress;
+    }, 15000);
+
     return () => {
       audio.removeEventListener("pause", handlePause);
       if (adBridgeTimerRef.current) {
         clearTimeout(adBridgeTimerRef.current);
         adBridgeTimerRef.current = null;
+      }
+      if (watchdogRef.current) {
+        clearInterval(watchdogRef.current);
+        watchdogRef.current = null;
       }
     };
   }, [state.broadcast, advanceQueueFn]);
