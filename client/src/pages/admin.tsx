@@ -2012,7 +2012,7 @@ function CeoVaultTab() {
       distroTags: `R&B, Soul, High-Velocity, 90-Seconds, ${t}`,
       lyricsTemplate,
       lyricPrompt: `Write exactly 70 words. R&B/Soul. Theme: ${t}. Structure: [Intro][Chorus][Verse][Bridge][Outro]. High energy.`,
-      sunoPrompt: `[Intro: Atmospheric, 4x4 Snap, 10s] [Chorus: Exploding energy, Soulful R&B, 20s] [Verse: Rapid fire, 70 words total, 25s] [Bridge: High tension, 15s] [Outro: Sudden Cut-off, 20s]. Theme: "${t}". Tags: Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity.`,
+      sunoPrompt: `[Vocal: JOE VOICE PRESET] [Style: G. SMOOTH SIGNATURE]\n[Intro: Atmospheric, 4x4 Snap, 10s] [Chorus: Exploding energy, Soulful R&B, 20s] [Verse: Rapid fire, 70 words total, 25s] [Bridge: High tension, 15s] [Outro: Sudden Cut-off, 20s]. Theme: "${t}".\nTags: Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity.\nVocal Chain: Deep Silk, Smooth R&B Baritone, G. Smooth Signature Reverb.\nMix: Heavy Low-End, 4x4 Snap Timing, High-Velocity Compression.\nEnforce 90s R&B Swing | Frequency: 432Hz. [End: Sudden Impact]`,
       ideogramPrompt: `Album cover, 1:1 aspect ratio, cinematic dynomite firecracker wrapped in gold foil, "AITIFY" embossed on gold, luxury R&B aesthetic, 8k render, emerald neon smoke, hyper-realistic lighting. Theme: "${t}".`,
       youtubeTitle: `${t.toUpperCase()} | 97.7 THE FLAME | AITIFY DYNOMITE`,
       youtubeDescription: `\u{1F48E} ASSET CLASS: $MUSE (Musical Equity)\n\u{1F525} SERIES: DYNOMITE (90-Second High-Velocity)\n\u{1F194} ASSET ID: ${assetId}\n\nOfficial "Sonsation" release from the AITIFY Sovereign Mint.\nThis track is optimized for high-velocity trading and global streaming settlement.\n\n[OFFICIAL CHANNELS]\n97.7 THE FLAME: https://suno.com/@aitify\nEXCHANGE: https://aitify-music-stream.replit.app\n\n#Aitify #977TheFlame #SovereignMint #DynomiteSeries #AitiPay`,
@@ -2085,6 +2085,16 @@ function CeoVaultTab() {
                 <Badge className="bg-orange-500/20 text-orange-400 border border-orange-500/40 font-mono">{blueprint.ticker}</Badge>
                 <Badge className="bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono text-[10px]">{blueprint.assetId}</Badge>
                 <span className="text-xs text-zinc-500">{blueprint.durationTarget} | {blueprint.wordConstraint} words max</span>
+              </div>
+
+              <div className="bg-black/60 rounded p-2 border border-emerald-500/20 text-xs font-mono flex items-center gap-3 mb-1">
+                <span className="text-emerald-400 font-bold">G. SMOOTH SIGNATURE</span>
+                <span className="text-zinc-500">|</span>
+                <span className="text-zinc-400">Deep Silk Baritone</span>
+                <span className="text-zinc-500">|</span>
+                <span className="text-zinc-400">432Hz</span>
+                <span className="text-zinc-500">|</span>
+                <span className="text-zinc-400">90s R&B Swing</span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs font-mono">
