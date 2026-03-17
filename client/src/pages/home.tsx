@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Play, Clock, TrendingUp, Star, Disc3, Music, Headphones, Mic2, Guitar, Radio } from "lucide-react";
+import { Play, Pause, Clock, TrendingUp, Star, Disc3, Music, Headphones, Mic2, Guitar, Radio, LayoutGrid, List, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { TrackCard } from "@/components/track-card";
@@ -87,11 +88,98 @@ function filterByGenre(tracks: TrackWithArtist[], genreId: string): TrackWithArt
   });
 }
 
+function PitCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
+  const { currentTrack, isPlaying, togglePlay } = usePlayer();
+  const isCurrentTrack = currentTrack?.id === track.id;
+  const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
+  const streamCount = track.plays || 0;
+  const isQualified = streamCount >= 1000;
+  const positions = Math.max(5, 50 - Math.floor(streamCount / 20));
+  const price = (0.99).toFixed(2);
+
+  return (
+    <Card className="bg-zinc-900 border-emerald-500/20 hover:border-emerald-500 transition-all group" data-testid={`pit-card-${track.id}`}>
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-3">
+          <Badge className={`text-[10px] font-mono ${isQualified ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"}`}>
+            {isQualified ? "QUALIFIED" : "90s DYNOMITE"}
+          </Badge>
+          <span className="text-zinc-500 text-[10px] font-mono">{positions} POSITIONS LEFT</span>
+        </div>
+
+        <div className="flex items-center gap-3 mb-3">
+          <div className="relative w-12 h-12 rounded bg-zinc-800 overflow-hidden flex-shrink-0">
+            {track.coverUrl ? (
+              <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Music className="h-5 w-5 text-zinc-600" />
+              </div>
+            )}
+            <button
+              className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => isCurrentTrack ? togglePlay() : onPlay(track)}
+              data-testid={`button-pit-play-${track.id}`}
+            >
+              {isCurrentTrack && isPlaying ? (
+                <Pause className="h-5 w-5 text-white" />
+              ) : (
+                <Play className="h-5 w-5 text-white" />
+              )}
+            </button>
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-white truncate">{track.title.toUpperCase()}</h3>
+            <p className="text-xs text-zinc-500 truncate">{track.artist?.name || "Unknown"}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between text-[10px] font-mono mb-3 px-1">
+          <span className="text-emerald-400">{ticker}</span>
+          <span className="text-zinc-500">{streamCount.toLocaleString()} VOL</span>
+          <span className={`${isQualified ? "text-yellow-400" : "text-emerald-600"}`}>▲ {isQualified ? "25%" : "16%"} YIELD</span>
+        </div>
+
+        <div className="flex gap-2">
+          {track.buyLink ? (
+            <Button
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold text-xs h-8"
+              asChild
+              data-testid={`button-pit-buy-${track.id}`}
+            >
+              <a href={track.buyLink} target="_blank" rel="noopener noreferrer">
+                <ShoppingCart className="h-3 w-3 mr-1" /> BUY @ {price}
+              </a>
+            </Button>
+          ) : (
+            <Button
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 font-bold text-xs h-8"
+              onClick={() => onPlay(track)}
+              data-testid={`button-pit-stream-${track.id}`}
+            >
+              <Play className="h-3 w-3 mr-1" /> STREAM
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-xs h-8 px-3"
+            onClick={() => onPlay(track)}
+            data-testid={`button-pit-trade-${track.id}`}
+          >
+            TRADE
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const { playTrack, currentTrack } = usePlayer();
   const autoPlayedRef = useRef(false);
   const [activeCategory, setActiveCategory] = useState("trending");
+  const [viewMode, setViewMode] = useState<"list" | "pit">("list");
 
   const { data: featuredTracks, isLoading: loadingTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/featured"],
@@ -198,18 +286,36 @@ export default function HomePage() {
                     </Badge>
                   )}
                 </div>
-                {displayTracks.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1"
-                    onClick={handlePlayCategory}
-                    data-testid="button-play-category"
-                  >
-                    <Play className="h-4 w-4" />
-                    Play All
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  <div className="flex bg-white/10 rounded-lg p-0.5">
+                    <button
+                      className={`p-1.5 rounded-md transition-colors ${viewMode === "list" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"}`}
+                      onClick={() => setViewMode("list")}
+                      data-testid="button-view-list"
+                    >
+                      <List className="h-4 w-4" />
+                    </button>
+                    <button
+                      className={`p-1.5 rounded-md transition-colors ${viewMode === "pit" ? "bg-white/20 text-white" : "text-white/50 hover:text-white/70"}`}
+                      onClick={() => setViewMode("pit")}
+                      data-testid="button-view-pit"
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {displayTracks.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="bg-white/20 hover:bg-white/30 text-white border-0 gap-1"
+                      onClick={handlePlayCategory}
+                      data-testid="button-play-category"
+                    >
+                      <Play className="h-4 w-4" />
+                      Play All
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div className="p-4">
@@ -226,17 +332,29 @@ export default function HomePage() {
                     ))}
                   </div>
                 ) : displayTracks.length > 0 ? (
-                  <div className="space-y-1">
-                    {displayTracks.slice(0, 10).map((track, index) => (
-                      <TrackCard
-                        key={track.id}
-                        track={track}
-                        index={index}
-                        queue={displayTracks}
-                        showCover={true}
-                      />
-                    ))}
-                  </div>
+                  viewMode === "pit" ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {displayTracks.slice(0, 12).map((track) => (
+                        <PitCard
+                          key={track.id}
+                          track={track}
+                          onPlay={(t) => playTrack(t, displayTracks)}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {displayTracks.slice(0, 10).map((track, index) => (
+                        <TrackCard
+                          key={track.id}
+                          track={track}
+                          index={index}
+                          queue={displayTracks}
+                          showCover={true}
+                        />
+                      ))}
+                    </div>
+                  )
                 ) : activeCategory === "early-access" ? (
                   <div className="text-center py-10">
                     <Star className="h-10 w-10 text-primary mx-auto mb-3 opacity-40" />
