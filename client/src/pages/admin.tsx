@@ -898,13 +898,13 @@ function MembershipsTab() {
             <p className="text-sm text-muted-foreground truncate">{membership.user?.email}</p>
           </div>
           <Badge variant={
-            membership.tier === "gold" ? "default" :
-            membership.tier === "bronze" ? "secondary" :
-            membership.tier === "silver" ? "secondary" : "outline"
+            membership.tier === "mint_factory_ceo" ? "default" :
+            membership.tier === "exchange_trader" ? "secondary" :
+            membership.tier === "entry_trader" ? "secondary" : "outline"
           }>
-            {membership.tier === "gold" ? "Gold (Artist Pro)" :
-             membership.tier === "bronze" ? "Bronze" :
-             membership.tier === "silver" ? "Silver" : membership.tier}
+            {membership.tier === "mint_factory_ceo" ? "Mint Factory CEO" :
+             membership.tier === "exchange_trader" ? "Exchange Trader" :
+             membership.tier === "entry_trader" ? "Entry Trader" : membership.tier}
           </Badge>
           <Badge variant={membership.isActive ? "default" : "destructive"}>
             {membership.isActive ? "Active" : "Inactive"}

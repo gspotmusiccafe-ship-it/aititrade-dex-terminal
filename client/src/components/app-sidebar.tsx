@@ -76,9 +76,14 @@ export function AppSidebar() {
     enabled: isAuthenticated,
   });
 
-  const planLabel = membership?.tier
-    ? membership.tier.charAt(0).toUpperCase() + membership.tier.slice(1) + " Plan"
-    : "Free Plan";
+  const TIER_LABELS: Record<string, string> = {
+    entry_trader: "Entry Trader",
+    exchange_trader: "Exchange Trader",
+    mint_factory_ceo: "Mint Factory CEO",
+  };
+  const planLabel = membership?.tier && TIER_LABELS[membership.tier]
+    ? TIER_LABELS[membership.tier]
+    : "Free";
 
   const roleLabel = adminCheck?.isAdmin
     ? "Admin"

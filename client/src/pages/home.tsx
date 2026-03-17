@@ -220,7 +220,7 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
   );
 }
 
-function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
+function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -397,17 +397,17 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
         <div className="flex gap-1 mb-1">
           <a
             href="/membership"
-            className="flex-1 bg-yellow-600/20 border border-yellow-600/30 text-yellow-300 text-[9px] font-bold py-1.5 text-center hover:bg-yellow-600/30 transition-colors"
+            className="flex-1 bg-emerald-600/10 border border-emerald-600/30 text-emerald-300 text-[9px] font-bold py-1.5 text-center hover:bg-emerald-600/20 transition-colors"
             data-testid={`button-ceo-${track.id}`}
           >
-            CEO $99 / $475 TERMS
+            MINT FACTORY CEO $99
           </a>
           <a
             href="/membership"
-            className="flex-1 bg-blue-600/20 border border-blue-600/30 text-blue-300 text-[9px] font-bold py-1.5 text-center hover:bg-blue-600/30 transition-colors"
-            data-testid={`button-investor-${track.id}`}
+            className="flex-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold py-1.5 text-center hover:bg-emerald-500/20 transition-colors"
+            data-testid={`button-exchange-${track.id}`}
           >
-            INVESTOR $25 / $475
+            EXCHANGE TRADER $25
           </a>
         </div>
         <div className="flex gap-1">
@@ -454,6 +454,12 @@ export default function HomePage() {
   const { playTrack, currentTrack } = usePlayer();
   const autoPlayedRef = useRef(false);
 
+  const { data: membership } = useQuery<{ tier: string }>({
+    queryKey: ["/api/user/membership"],
+    enabled: !!user,
+  });
+  const userTier = membership?.tier || "free";
+
   const { data: featuredTracks, isLoading: loadingTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/featured"],
     refetchInterval: 30000,
@@ -467,7 +473,11 @@ export default function HomePage() {
     }
   }, [featuredTracks]);
 
-  const displayTracks = featuredTracks || [];
+  const isEntryTrader = userTier === "entry_trader";
+  const allTracks = featuredTracks || [];
+  const displayTracks = isEntryTrader
+    ? allTracks.filter(t => !(t as any).isPrerelease)
+    : allTracks;
 
   const totalGrossSales = displayTracks.reduce((sum, t) => {
     const p = parseFloat((t as any).unitPrice || "0.99");
@@ -562,6 +572,7 @@ export default function HomePage() {
                 key={track.id}
                 track={track}
                 onPlay={(t) => playTrack(t, displayTracks)}
+                userTier={userTier}
               />
             ))}
           </div>

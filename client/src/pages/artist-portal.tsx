@@ -294,7 +294,7 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
 
 function ArtistOnboarding() {
   const [step, setStep] = useState<"plan" | "profile">("plan");
-  const [selectedPlan, setSelectedPlan] = useState<"gold" | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<"mint_factory_ceo" | null>(null);
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -306,7 +306,7 @@ function ArtistOnboarding() {
   });
 
   const currentTier = membership?.tier || "free";
-  const alreadyQualified = currentTier === "gold" || currentTier === "artist";
+  const alreadyQualified = currentTier === "mint_factory_ceo" || currentTier === "artist";
 
   const upgradeMutation = useMutation({
     mutationFn: async (tier: string) => {
@@ -372,20 +372,19 @@ function ArtistOnboarding() {
 
   const artistPlans = [
     {
-      id: "gold" as const,
-      name: "Gold",
-      price: "$49.99",
+      id: "mint_factory_ceo" as const,
+      name: "Mint Factory CEO",
+      price: "$99",
       period: " to join",
       icon: Crown,
-      color: "text-yellow-500",
-      borderColor: "border-yellow-500/50",
-      bgColor: "bg-yellow-500/10",
+      color: "text-emerald-400",
+      borderColor: "border-emerald-400/50",
+      bgColor: "bg-emerald-500/10",
       popular: true,
       features: [
-        "Unlimited track uploads",
-        "Upload music videos (MP3/YouTube)",
-        "AI Lyrics Generator — prompts to full song lyrics",
-        "Aitify Music Production Team for beat production",
+        "16% Daily Trading Credit on all positions",
+        "Minting rights — upload & mint AI-generated assets",
+        "AI Lyrics Generator — prompt-to-song engine",
         "Professional audio mastering (radio-ready, -14 LUFS)",
         "Distribution to Spotify, Amazon, Deezer, YouTube & Anghami",
         "In-house AI-music marketing & promotions",

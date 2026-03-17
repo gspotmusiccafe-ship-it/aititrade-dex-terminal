@@ -16,16 +16,16 @@ import {
 } from "@/components/ui/dialog";
 
 const TIER_PRICES: Record<string, string> = {
-  silver: "1.99",
-  bronze: "3.99",
-  gold: "49.99",
-  gold_monthly: "9.99",
+  entry_trader: "4.99",
+  exchange_trader: "24.99",
+  mint_factory_ceo: "99.00",
+  mint_factory_ceo_monthly: "9.99",
 };
 
 const TIER_NAMES: Record<string, string> = {
-  silver: "Silver",
-  bronze: "Bronze",
-  gold: "Gold",
+  entry_trader: "Entry Trader",
+  exchange_trader: "Exchange Trader",
+  mint_factory_ceo: "Mint Factory CEO",
 };
 
 const plans = [
@@ -34,113 +34,114 @@ const plans = [
     name: "Free",
     price: "$0",
     period: "forever",
-    description: "Listen on the landing page radio",
+    description: "Listen on 97.7 THE FLAME radio — no login required",
     features: [
-      { text: "Listen on 97.7 THE FLAME radio", included: true },
+      { text: "Stream on 97.7 THE FLAME radio", included: true },
       { text: "No login required", included: true },
       { text: "Inside app access", included: false },
-      { text: "Playlists", included: false },
-      { text: "Pre-release access", included: false },
+      { text: "Pre-release / High-Volatility assets", included: false },
+      { text: "Minting rights", included: false },
     ],
     popular: false,
     cta: "",
-    gradient: "from-zinc-600 to-zinc-700",
-    iconColor: "text-zinc-400",
-    borderColor: "border-zinc-500/20",
+    gradient: "from-zinc-700 to-zinc-800",
+    iconColor: "text-zinc-500",
+    borderColor: "border-zinc-700/30",
     glowColor: "",
   },
   {
-    id: "silver",
-    name: "Silver",
-    price: "$1.99",
+    id: "entry_trader",
+    name: "Entry Trader",
+    price: "$4.99",
     period: "/month",
-    description: "Playlists and more music features",
+    description: "Restricted access — standard assets only",
     features: [
-      { text: "Listen to released music", included: true },
-      { text: "Follow artists", included: true },
-      { text: "Create unlimited playlists", included: true },
+      { text: "Access the Sovereign Exchange", included: true },
+      { text: "Acquire standard asset positions", included: true },
+      { text: "Follow artists & create playlists", included: true },
       { text: "Standard audio quality", included: true },
-      { text: "Pre-release access", included: false },
+      { text: "Pre-release assets", included: false },
+      { text: "High-Volatility assets", included: false },
     ],
     popular: false,
-    cta: "Get Silver",
-    gradient: "from-gray-400 to-gray-500",
-    iconColor: "text-gray-400",
-    borderColor: "border-gray-400/20",
+    cta: "ENTER THE FLOOR",
+    gradient: "from-emerald-800 to-emerald-900",
+    iconColor: "text-emerald-500",
+    borderColor: "border-emerald-500/20",
     glowColor: "",
   },
   {
-    id: "bronze",
-    name: "Bronze",
-    price: "$3.99",
+    id: "exchange_trader",
+    name: "Exchange Trader",
+    price: "$24.99",
     period: "/month",
-    description: "Full access — AI pre-releases, playlists, and videos",
+    description: "Full market access — all assets + early pre-release papers",
     features: [
-      { text: "Listen to released music", included: true },
-      { text: "Pre-release music access", included: true },
-      { text: "Create unlimited playlists", included: true },
-      { text: "Watch music videos", included: true },
-      { text: "High quality audio", included: true },
+      { text: "Full Sovereign Exchange access", included: true },
+      { text: "Acquire ALL asset positions", included: true },
+      { text: "Early Pre-release paper access", included: true },
+      { text: "High-Volatility asset trading", included: true },
+      { text: "High quality audio streaming", included: true },
+      { text: "Priority settlement queue", included: true },
     ],
     popular: true,
-    cta: "Get Bronze",
-    gradient: "from-amber-600 to-amber-700",
-    iconColor: "text-amber-600",
-    borderColor: "border-amber-500/30",
-    glowColor: "shadow-amber-500/10",
+    cta: "UNLOCK FULL ACCESS",
+    gradient: "from-emerald-700 to-emerald-800",
+    iconColor: "text-emerald-400",
+    borderColor: "border-emerald-400/30",
+    glowColor: "shadow-emerald-500/10",
   },
   {
-    id: "gold",
-    name: "Gold",
-    price: "$49.99",
+    id: "mint_factory_ceo",
+    name: "Mint Factory CEO",
+    price: "$99",
     period: " to join",
-    description: "Artist Pro — upload, promote, and distribute your music",
+    description: "Full access + minting rights + 16% daily trading credit",
     features: [
-      { text: "Everything in Bronze", included: true },
+      { text: "Everything in Exchange Trader", included: true },
       { text: "$9.99/month to stay active", included: true },
-      { text: "Unlimited track uploads", included: true },
-      { text: "Upload music videos (MP3/YouTube)", included: true },
-      { text: "AI Lyrics Generator — enter a prompt and get full structured song lyrics", included: true },
-      { text: "Access to the Aitify Music Production Team for beat production", included: true },
-      { text: "Professional audio mastering engine (radio-ready, -14 LUFS)", included: true },
-      { text: "Music distribution to Spotify, Amazon Music, Deezer, YouTube & Anghami", included: true },
+      { text: "16% Daily Trading Credit on all positions", included: true },
+      { text: "Minting rights — upload & mint AI-generated assets", included: true },
+      { text: "AI Lyrics Generator — prompt-to-song engine", included: true },
+      { text: "Professional audio mastering (radio-ready, -14 LUFS)", included: true },
+      { text: "Distribution to Spotify, Amazon Music, Deezer, YouTube & Anghami", included: true },
       { text: "In-house AI-music marketing & promotions", included: true },
-      { text: "Aitify Music Store — 25% sales retention from your personal store link", included: true },
-      { text: "Tip Jar — fans send you tips directly via PayPal", included: true },
-      { text: "Leaderboard — track your streams, rank up, and earn tier badges", included: true },
+      { text: "Aitify Music Store — 25% sales retention", included: true },
+      { text: "Tip Jar — direct PayPal tips from fans", included: true },
+      { text: "Leaderboard rank tracking & tier badges", included: true },
       { text: "Advanced analytics dashboard", included: true },
       { text: "Artist profile & bio page", included: true },
       { text: "Lossless audio quality", included: true },
     ],
     popular: false,
-    cta: "Get Gold",
-    gradient: "from-yellow-500 to-amber-600",
-    iconColor: "text-yellow-500",
-    borderColor: "border-yellow-500/30",
-    glowColor: "shadow-yellow-500/10",
+    cta: "BECOME CEO",
+    gradient: "from-emerald-600 to-emerald-700",
+    iconColor: "text-emerald-300",
+    borderColor: "border-emerald-300/30",
+    glowColor: "shadow-emerald-400/10",
   },
 ];
 
 const benefits = [
   {
     icon: Star,
-    title: "2 Weeks Before Major Platforms",
-    description: "Bronze and Gold members hear new AI music before Spotify, Amazon Music, Deezer, YouTube & Anghami",
+    title: "Early Pre-release Papers",
+    description: "Exchange Traders and Mint Factory CEOs get early access to AI-generated assets before public listing",
   },
   {
     icon: Headphones,
-    title: "Premium Sound",
-    description: "Gold members enjoy lossless quality with crystal clear audio",
+    title: "Lossless Audio",
+    description: "Mint Factory CEOs stream in lossless quality with crystal clear AI-generated audio",
   },
   {
     icon: Zap,
-    title: "Artist Services",
-    description: "Gold members get uploads, distribution, marketing tools, and promotions",
+    title: "16% Daily Trading Credit",
+    description: "Mint Factory CEOs earn 16% originator credit on every position minted",
   },
   {
     icon: Crown,
-    title: "Follow & Playlist",
-    description: "Follow your favorite artists and build playlists starting from Silver",
+    title: "Full Market Access",
+    description: "Exchange Traders unlock all assets including High-Volatility and Pre-release positions",
   },
 ];
 
@@ -294,9 +295,9 @@ function PayPalCheckoutDialog({
             Upgrade to {tierName}
           </DialogTitle>
           <DialogDescription>
-            {tier === "gold"
-              ? `Complete your one-time payment of $${amount} via PayPal to join as a Gold (Artist Pro) member. After joining, it's $9.99/month to stay active.`
-              : `Complete your payment of $${amount}/month via PayPal to activate your ${tierName} membership.`}
+            {tier === "mint_factory_ceo"
+              ? `Complete your one-time payment of $${amount} via PayPal to join as a Mint Factory CEO. After joining, it's $9.99/month to stay active.`
+              : `Complete your payment of $${amount}/month via PayPal to activate your ${tierName} access.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -304,9 +305,9 @@ function PayPalCheckoutDialog({
           <div className="rounded-lg border border-border/30 p-4 bg-card/60">
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-semibold">{tierName} Membership</p>
+                <p className="font-semibold">{tierName}</p>
                 <p className="text-sm text-muted-foreground">
-                  {tier === "gold" ? "One-time join fee + $9.99/month" : "Monthly subscription"}
+                  {tier === "mint_factory_ceo" ? "One-time join fee + $9.99/month" : "Monthly subscription"}
                 </p>
               </div>
               <p className="text-2xl font-bold">${amount}</p>
@@ -351,7 +352,7 @@ export default function MembershipPage() {
 
   const { data: subscriptionStatus } = useQuery<{ hasSubscription: boolean; status?: string; nextBillingTime?: string }>({
     queryKey: ["/api/user/membership/subscription-status"],
-    enabled: isAuthenticated && membership?.tier === "gold",
+    enabled: isAuthenticated && membership?.tier === "mint_factory_ceo",
   });
 
   useEffect(() => {
@@ -361,7 +362,7 @@ export default function MembershipPage() {
       apiRequest("POST", "/api/user/membership/gold-subscription/activate", {}).then(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
         queryClient.invalidateQueries({ queryKey: ["/api/user/membership/subscription-status"] });
-        toast({ title: "Subscription activated!", description: "Your $9.99/month Gold subscription is set up. First charge in 30 days." });
+        toast({ title: "Subscription activated!", description: "Your $9.99/month Mint Factory CEO subscription is set up. First charge in 30 days." });
       }).catch(() => {
         toast({ title: "Subscription pending", description: "Your subscription may take a moment to activate. Check back shortly." });
       });
@@ -379,9 +380,9 @@ export default function MembershipPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
       setCheckoutTier(null);
 
-      if (variables.tier === "gold") {
+      if (variables.tier === "mint_factory_ceo") {
         toast({
-          title: "Gold joining fee paid!",
+          title: "Mint Factory CEO joining fee paid!",
           description: "Setting up your $9.99/month subscription...",
         });
         setSubscriptionLoading(true);
@@ -395,7 +396,7 @@ export default function MembershipPage() {
           setSubscriptionLoading(false);
           toast({
             title: "Subscription setup failed",
-            description: "Your $49.99 joining fee was paid. You can set up the monthly subscription later from this page.",
+            description: "Your $99 joining fee was paid. You can set up the monthly subscription later from this page.",
             variant: "destructive",
           });
         }
@@ -502,9 +503,9 @@ export default function MembershipPage() {
               <CardHeader className={plan.popular ? "pt-10" : ""}>
                 <CardTitle className={`flex items-center gap-2 ${plan.iconColor} font-extrabold tracking-tight`}>
                   {plan.name}
-                  {plan.id === "gold" && <Crown className="h-5 w-5 text-yellow-500" />}
-                  {plan.id === "bronze" && <Crown className="h-5 w-5 text-amber-600" />}
-                  {plan.id === "silver" && <Crown className="h-5 w-5 text-gray-400" />}
+                  {plan.id === "mint_factory_ceo" && <Crown className="h-5 w-5 text-emerald-300" />}
+                  {plan.id === "exchange_trader" && <Zap className="h-5 w-5 text-emerald-400" />}
+                  {plan.id === "entry_trader" && <ShieldCheck className="h-5 w-5 text-emerald-500" />}
                 </CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="pt-2">
@@ -539,9 +540,9 @@ export default function MembershipPage() {
                     <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
                       Current Plan
                     </Button>
-                    {plan.id === "gold" && subscriptionStatus && !subscriptionStatus.hasSubscription && (
+                    {plan.id === "mint_factory_ceo" && subscriptionStatus && !subscriptionStatus.hasSubscription && (
                       <Button
-                        className="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-500/90 hover:to-amber-500/90 text-black border-0 font-bold"
+                        className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-500/90 hover:to-emerald-600/90 text-black border-0 font-bold"
                         onClick={() => setupSubscriptionMutation.mutate()}
                         disabled={setupSubscriptionMutation.isPending || subscriptionLoading}
                         data-testid="button-setup-subscription"
@@ -551,7 +552,7 @@ export default function MembershipPage() {
                         ) : "Setup $9.99/mo Subscription"}
                       </Button>
                     )}
-                    {plan.id === "gold" && subscriptionStatus?.hasSubscription && (
+                    {plan.id === "mint_factory_ceo" && subscriptionStatus?.hasSubscription && (
                       <div className="w-full text-center">
                         <Badge
                           variant="secondary"
@@ -593,7 +594,7 @@ export default function MembershipPage() {
                     disabled={subscriptionLoading}
                     data-testid={`button-plan-${plan.id}`}
                   >
-                    {subscriptionLoading && plan.id === "gold" ? (
+                    {subscriptionLoading && plan.id === "mint_factory_ceo" ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing...</>
                     ) : plan.cta}
                   </Button>
@@ -606,8 +607,8 @@ export default function MembershipPage() {
         <div className="text-center mt-12 max-w-2xl mx-auto p-6 rounded-xl bg-card/30 border border-border/20">
           <h3 className="font-semibold mb-2">Have questions?</h3>
           <p className="text-sm text-muted-foreground">
-            All paid plans include a 7-day free trial. Cancel anytime.
-            Artists keep more of their earnings through AITIFY MUSIC RADIO's fair revenue sharing model.
+            All tiers include a 7-day free trial. Cancel anytime.
+            100% AI-powered platform — all assets are certified AI-generated.
           </p>
         </div>
       </div>

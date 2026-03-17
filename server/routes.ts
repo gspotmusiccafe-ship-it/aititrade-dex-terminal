@@ -82,12 +82,12 @@ const upload = multer({
 
 const MEMBERSHIP_LIMITS: Record<string, { downloads: number; previews: number }> = {
   free: { downloads: 0, previews: 0 },
-  silver: { downloads: 0, previews: 0 },
-  bronze: { downloads: 0, previews: -1 },
-  gold: { downloads: -1, previews: -1 },
+  entry_trader: { downloads: 0, previews: 0 },
+  exchange_trader: { downloads: 0, previews: -1 },
+  mint_factory_ceo: { downloads: -1, previews: -1 },
 };
 
-const PAID_TIERS = ["silver", "bronze", "gold"];
+const PAID_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo"];
 
 async function getUserTier(userId: string): Promise<string> {
   const membership = await storage.getUserMembership(userId);
@@ -365,9 +365,8 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const membership = await storage.getUserMembership(userId);
       
-      // Only active paid tier members can access prerelease tracks
-      if (!membership || membership.tier === "free" || !membership.isActive) {
-        return res.json([]); // Return empty for free tier users
+      if (!membership || membership.tier === "free" || membership.tier === "entry_trader" || !membership.isActive) {
+        return res.json([]);
       }
       
       const tracks = await storage.getPrereleaseTracks(10);
@@ -596,8 +595,8 @@ export async function registerRoutes(
 
       // Require Gold membership
       const membership = await storage.getUserMembership(userId);
-      if (!membership || !membership.isActive || membership.tier !== "gold") {
-        return res.status(403).json({ message: "Artist profile requires a Gold ($49.99 to join) subscription" });
+      if (!membership || !membership.isActive || membership.tier !== "mint_factory_ceo") {
+        return res.status(403).json({ message: "Artist profile requires a Mint Factory CEO ($99 to join) subscription" });
       }
 
       const validated = insertArtistSchema.parse({ ...req.body, userId });
@@ -842,7 +841,7 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const tier = await getUserTier(userId);
       if (!PAID_TIERS.includes(tier)) {
-        return res.status(403).json({ message: "Upgrade to Silver or higher to create playlists" });
+        return res.status(403).json({ message: "Upgrade to Exchange Trader or higher to create playlists" });
       }
       const validated = insertPlaylistSchema.parse({ ...req.body, userId });
       const playlist = await storage.createPlaylist(validated);
@@ -968,7 +967,7 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const tier = await getUserTier(userId);
       if (!PAID_TIERS.includes(tier)) {
-        return res.status(403).json({ message: "Upgrade to Silver or higher to like tracks" });
+        return res.status(403).json({ message: "Upgrade to Exchange Trader or higher to like tracks" });
       }
       await storage.likeTrack(userId, req.params.trackId);
       res.json({ liked: true });
@@ -1016,7 +1015,7 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const tier = await getUserTier(userId);
       if (!PAID_TIERS.includes(tier)) {
-        return res.status(403).json({ message: "Upgrade to Silver or higher to follow artists" });
+        return res.status(403).json({ message: "Upgrade to Exchange Trader or higher to follow artists" });
       }
       await storage.followArtist(userId, req.params.artistId);
       res.json({ followed: true });
@@ -1078,7 +1077,7 @@ export async function registerRoutes(
       const userId = req.user.claims.sub;
       const { tier, paypalOrderId } = req.body;
       
-      if (!["silver", "bronze", "gold"].includes(tier)) {
+      if (!["entry_trader", "exchange_trader", "mint_factory_ceo"].includes(tier)) {
         return res.status(400).json({ message: "Invalid tier" });
       }
 
@@ -1114,8 +1113,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const membership = await storage.getUserMembership(userId);
-      if (!membership || membership.tier !== "gold" || !membership.isActive) {
-        return res.status(400).json({ message: "You must complete the $49.99 Gold joining fee first" });
+      if (!membership || membership.tier !== "mint_factory_ceo" || !membership.isActive) {
+        return res.status(400).json({ message: "You must complete the $99 Mint Factory CEO joining fee first" });
       }
 
       const protocol = req.headers["x-forwarded-proto"] || req.protocol;
@@ -1144,8 +1143,8 @@ export async function registerRoutes(
       const { subscriptionId } = req.body;
       const membership = await storage.getUserMembership(userId);
 
-      if (!membership || membership.tier !== "gold") {
-        return res.status(400).json({ message: "Gold membership not found" });
+      if (!membership || membership.tier !== "mint_factory_ceo") {
+        return res.status(400).json({ message: "Mint Factory CEO membership not found" });
       }
 
       const details = await getSubscriptionDetails(subscriptionId || membership.paypalSubscriptionId);
@@ -1343,7 +1342,7 @@ export async function registerRoutes(
         const limits = MEMBERSHIP_LIMITS[tier] || MEMBERSHIP_LIMITS.free;
 
         if (limits.downloads === 0) {
-          return res.status(403).json({ message: "Downloads require a Gold membership" });
+          return res.status(403).json({ message: "Downloads require a Mint Factory CEO membership" });
         }
 
         if (limits.downloads > 0) {
