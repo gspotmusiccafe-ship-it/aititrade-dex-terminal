@@ -2002,11 +2002,13 @@ function CeoVaultTab() {
     setBlueprint({
       theme: t,
       ticker,
-      structure: "INTRO (8 bars) | CHORUS | VERSE (Short) | BRIDGE | OUTRO",
+      structure: "Intro (10s) > Chorus (20s) > Verse (25s) > Bridge (15s) > Outro (20s)",
       wordConstraint: 70,
       durationTarget: "90 Seconds",
-      sunoPrompt: `[Intro: Atmospheric, 4x4 Snap] [Chorus: Exploding energy, Soulful R&B] [Verse: Rapid fire, 70 words total] [Bridge: High tension] [Outro: Sudden Cut-off]. Theme: "${t}". Style: 75bpm, Heavy Bass, Silk Vocals.`,
-      ideogramPrompt: `Cinematic Dynomite, firecracker wrapped in gold foil, explosive R&B aesthetic, luxury 8k render, neon emerald lighting, "AITIFY" branding in smoke. Theme: "${t}".`,
+      sunoTags: "Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity",
+      lyricPrompt: `Write exactly 70 words. R&B/Soul. Theme: ${t}. Structure: [Intro][Chorus][Verse][Bridge][Outro]. High energy.`,
+      sunoPrompt: `[Intro: Atmospheric, 4x4 Snap, 10s] [Chorus: Exploding energy, Soulful R&B, 20s] [Verse: Rapid fire, 70 words total, 25s] [Bridge: High tension, 15s] [Outro: Sudden Cut-off, 20s]. Theme: "${t}". Tags: Slow Jam, 75bpm, Deep Bass, Silk Vocals, Sudden Ending, High Velocity.`,
+      ideogramPrompt: `Cinematic Dynomite, firecracker wrapped in gold foil, explosive R&B aesthetic, luxury 8k render, neon emerald lighting, "AITIFY" branding in smoke, no text on gold foil. Theme: "${t}".`,
       youtubeDescription: `AITIFY DYNOMITE SERIES — "${t}". High-Velocity Asset. 90-Second Burn. Sector: ${ticker}. Stream now on all platforms.`,
     });
     toast({ title: `Blueprint generated: ${ticker}` });
@@ -2078,14 +2080,31 @@ function CeoVaultTab() {
                 <span className="text-xs text-zinc-500">{blueprint.durationTarget} | {blueprint.wordConstraint} words max</span>
               </div>
 
-              <div className="text-xs font-mono text-zinc-400 bg-black/40 rounded p-2 border border-zinc-800">
-                <span className="text-zinc-600">STRUCTURE:</span> {blueprint.structure}
+              <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="bg-black/40 rounded p-2 border border-zinc-800">
+                  <span className="text-zinc-600">STRUCTURE:</span>
+                  <p className="text-zinc-400 mt-1">{blueprint.structure}</p>
+                </div>
+                <div className="bg-black/40 rounded p-2 border border-zinc-800">
+                  <span className="text-zinc-600">SUNO TAGS:</span>
+                  <p className="text-orange-400 mt-1">{blueprint.sunoTags}</p>
+                </div>
               </div>
 
               <div className="space-y-2">
                 <div className="bg-black/40 rounded p-3 border border-zinc-800">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-emerald-400 font-mono">SUNO PROMPT</span>
+                    <span className="text-xs font-bold text-yellow-400 font-mono">LYRIC PROMPT</span>
+                    <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.lyricPrompt, "Lyric prompt")} data-testid="button-copy-lyric">
+                      <Copy className="h-3 w-3 mr-1" /> Copy
+                    </Button>
+                  </div>
+                  <p className="text-xs text-zinc-300 leading-relaxed">{blueprint.lyricPrompt}</p>
+                </div>
+
+                <div className="bg-black/40 rounded p-3 border border-zinc-800">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-emerald-400 font-mono">SUNO PRODUCTION PROMPT</span>
                     <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500 hover:text-white" onClick={() => copyToClipboard(blueprint.sunoPrompt, "Suno prompt")} data-testid="button-copy-suno">
                       <Copy className="h-3 w-3 mr-1" /> Copy
                     </Button>
