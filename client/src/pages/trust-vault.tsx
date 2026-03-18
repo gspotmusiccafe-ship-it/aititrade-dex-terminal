@@ -3,7 +3,6 @@ import { Shield, Globe, Lock, TrendingUp, DollarSign, Users } from "lucide-react
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { usePlayer } from "@/lib/player-context";
-import GlobalRadio from "@/components/GlobalRadio";
 
 interface TrackWithArtist {
   id: string;
@@ -127,10 +126,6 @@ export default function TrustVaultPage() {
           </div>
         </div>
       )}
-
-      <div className="p-4 mb-4">
-        <GlobalRadio />
-      </div>
 
       <div className="p-4">
         {isLoading ? (

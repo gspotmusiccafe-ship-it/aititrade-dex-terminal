@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
+import GlobalRadio from "@/components/GlobalRadio";
 
 const CEILING = 1000.00;
 const FLASH_THRESHOLD = 900.00;
@@ -831,6 +832,10 @@ export default function HomePage() {
             <p className="text-zinc-700 text-[10px] mt-1">Add rows to the database to list assets</p>
           </div>
         )}
+      </div>
+
+      <div className="p-4">
+        <GlobalRadio />
       </div>
 
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">

@@ -1363,15 +1363,6 @@ function CreativeSuiteTab() {
       color: "lime",
     },
     {
-      id: "jumpstr",
-      name: "JUMPSTR",
-      subtitle: "DISTRIBUTION & VELOCITY",
-      description: "Distribute minted assets across platforms. Amplify social velocity and reach for maximum market penetration.",
-      url: "https://jumpstr.io",
-      icon: "🚀",
-      color: "lime",
-    },
-    {
       id: "ideogram",
       name: "IDEOGRAM",
       subtitle: "COVER ART GENERATOR",
