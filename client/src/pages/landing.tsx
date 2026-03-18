@@ -786,8 +786,6 @@ export default function LandingPage() {
                     {isMintor ? (
                       <a
                         href={BLUEVINE_MINT_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
                         data-testid="button-mintor-checkout"
                       >
@@ -796,8 +794,6 @@ export default function LandingPage() {
                     ) : isTrust ? (
                       <a
                         href={BLUEVINE_TRUST_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-amber-600 text-white hover:bg-amber-700 transition-colors"
                         data-testid="button-trust-checkout"
                       >

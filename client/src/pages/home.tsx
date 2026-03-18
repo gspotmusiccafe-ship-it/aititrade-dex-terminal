@@ -231,6 +231,7 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
   const paypalInitialized = useRef(false);
   const clickHandlerRef = useRef<(() => void) | null>(null);
   const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -265,11 +266,14 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
       const paypalCheckout = sdkInstance.createPayPalOneTimePaymentSession({
         onApprove: async (data: any) => {
           try {
-            await fetch(`/order/${data.orderId}/capture`, {
+            setProcessing(true);
+            setError(null);
+            const captureRes = await fetch(`/order/${data.orderId}/capture`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
             });
+            if (!captureRes.ok) throw new Error("Payment capture failed");
 
             const tradeRes = await fetch("/api/orders/paypal", {
               method: "POST",
@@ -283,16 +287,20 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
             queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
             toast({ title: "POSITION ACQUIRED", description: `PayPal verified — ${tradeData.receipt?.mintId || "Order confirmed"}` });
             onClose();
-          } catch {
-            setError("Failed to process trade. Please try again.");
+          } catch (e: any) {
+            setError(e.message || "Failed to process trade. Please try again.");
+          } finally {
+            setProcessing(false);
           }
         },
         onCancel: () => {
           setError("Payment was cancelled.");
+          setProcessing(false);
         },
         onError: (err: any) => {
           console.error("PayPal trade error:", err);
           setError("Payment error. Please try again.");
+          setProcessing(false);
         },
       });
 
@@ -389,6 +397,14 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
           {error && (
             <div className="border border-red-500/30 bg-red-500/10 p-2 text-center">
               <p className="text-[10px] text-red-400 font-bold">{error}</p>
+            </div>
+          )}
+          {processing && (
+            <div className="border border-lime-500/30 bg-lime-950/30 p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-[11px] text-lime-400 font-bold animate-pulse">PROCESSING TRADE...</p>
+              </div>
             </div>
           )}
           <div ref={buttonContainerRef} className="flex justify-center min-h-[50px] items-center">

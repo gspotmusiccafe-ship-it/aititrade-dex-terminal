@@ -4,7 +4,7 @@ import { Link } from "wouter";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background">
+    <div className="min-h-screen w-full flex items-center justify-center bg-black">
       <div className="text-center max-w-md mx-4">
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-6">
           <Music className="h-10 w-10 text-primary" />

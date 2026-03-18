@@ -123,8 +123,6 @@ export default function GlobalRadio() {
   const [crossfade, setCrossfade] = useState(50);
   const [vuLeft, setVuLeft] = useState(0);
   const [vuRight, setVuRight] = useState(0);
-  const [localTrackIndex, setLocalTrackIndex] = useState(0);
-
   const playerRef = useRef<any>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tokenRef = useRef<string | null>(null);
@@ -382,9 +380,8 @@ export default function GlobalRadio() {
 
   const isConnected = spotifyProfile?.connected;
 
-  const trackList = featuredTracks || [];
-  const deckATrack = trackList.length > 0 ? trackList[localTrackIndex % trackList.length] : null;
-  const deckBTrack = trackList.length > 1 ? trackList[(localTrackIndex + 1) % trackList.length] : null;
+  const deckAAsset = assets[currentAssetIndex % assets.length] || null;
+  const deckBAsset = assets.length > 1 ? assets[(currentAssetIndex + 1) % assets.length] : null;
 
   return (
     <div className="bg-black border border-lime-500/20 font-mono" data-testid="global-radio-container">
@@ -418,25 +415,9 @@ export default function GlobalRadio() {
 
       <div className="p-3 space-y-3">
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {featuredTracks && featuredTracks.length > 0 ? featuredTracks.map((t, i) => (
+            {assets.map((asset, i) => (
               <button
-                key={t.id}
-                onClick={() => { setCurrentAssetIndex(i % assets.length); setLocalTrackIndex(i); }}
-                className={`flex-shrink-0 px-2 py-1 border text-[8px] font-extrabold transition-all ${
-                  localTrackIndex === i
-                    ? "border-lime-400 bg-lime-500/10 text-lime-400 shadow-[0_0_8px_rgba(132,204,22,0.2)]"
-                    : "border-zinc-800 text-zinc-600 hover:border-lime-500/30 hover:text-lime-400"
-                }`}
-                data-testid={`button-rotation-track-${i}`}
-              >
-                ${(t.title || "ASSET").replace(/\s+/g, '').toUpperCase().slice(0, 8)}
-                {localTrackIndex === i && verifiedStreaming && (
-                  <Activity className="inline h-2 w-2 text-green-400 ml-1 animate-pulse" />
-                )}
-              </button>
-            )) : assets.map((asset, i) => (
-              <button
-                key={asset.ticker}
+                key={asset.ticker + i}
                 onClick={() => handleNextAsset(i)}
                 className={`flex-shrink-0 px-2 py-1 border text-[8px] font-extrabold transition-all ${
                   i === currentAssetIndex
@@ -446,6 +427,9 @@ export default function GlobalRadio() {
                 data-testid={`button-rotation-asset-${i}`}
               >
                 ${asset.ticker}
+                {i === currentAssetIndex && verifiedStreaming && (
+                  <Activity className="inline h-2 w-2 text-green-400 ml-1 animate-pulse" />
+                )}
               </button>
             ))}
           </div>
@@ -454,10 +438,10 @@ export default function GlobalRadio() {
             <Turntable
               isActive={true}
               isPlaying={tunedIn && !!playerState?.isPlaying}
-              albumArt={playerState?.albumArt || deckATrack?.coverImage || null}
+              albumArt={playerState?.albumArt || deckAAsset?.coverImage || null}
               deckLabel="DECK A"
-              trackName={playerState?.trackName || deckATrack?.title?.toUpperCase() || ""}
-              artistName={playerState?.artistName || deckATrack?.artist?.name || ""}
+              trackName={playerState?.trackName || deckAAsset?.title?.toUpperCase() || ""}
+              artistName={playerState?.artistName || deckAAsset?.artistName || ""}
               ticker={currentAsset.ticker}
             />
 
@@ -486,20 +470,20 @@ export default function GlobalRadio() {
             <Turntable
               isActive={false}
               isPlaying={false}
-              albumArt={deckBTrack?.coverImage || null}
+              albumArt={deckBAsset?.coverImage || null}
               deckLabel="DECK B"
-              trackName={deckBTrack?.title?.toUpperCase() || ""}
-              artistName={deckBTrack?.artist?.name || ""}
+              trackName={deckBAsset?.title?.toUpperCase() || ""}
+              artistName={deckBAsset?.artistName || ""}
               ticker={nextAsset.ticker}
             />
           </div>
 
-          {!tunedIn && deckATrack && (
+          {!tunedIn && deckAAsset && (
             <div className="border border-lime-500/10 bg-lime-500/5 p-2">
               <div className="flex items-center gap-2">
                 <Music className="h-3 w-3 text-lime-400" />
                 <span className="text-[9px] text-lime-400 font-extrabold flex-1 truncate">
-                  {deckATrack.title?.toUpperCase()} — {deckATrack.artist?.name || "UNKNOWN"}
+                  {deckAAsset.title?.toUpperCase()} — {deckAAsset.artistName || "UNKNOWN"}
                 </span>
                 <span className="text-[8px] text-zinc-600">QUEUED</span>
               </div>
@@ -563,7 +547,7 @@ export default function GlobalRadio() {
               )
             ) : (
               <a
-                href="/radio"
+                href="/api/login/spotify"
                 className="flex-1 flex items-center justify-center gap-2 py-3 border border-green-500/30 text-green-400 font-extrabold text-[11px] hover:bg-green-500/10 transition-colors"
                 data-testid="link-connect-spotify"
               >

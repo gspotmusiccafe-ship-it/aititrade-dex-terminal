@@ -468,8 +468,6 @@ export default function DashboardPage() {
           <div className="flex gap-3">
             <a
               href={BLUEVINE_MINT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
               className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-2 text-center hover:bg-lime-500/20 transition-colors"
               data-testid="button-dash-mintor"
             >
@@ -477,8 +475,6 @@ export default function DashboardPage() {
             </a>
             <a
               href={BLUEVINE_TRUST_URL}
-              target="_blank"
-              rel="noopener noreferrer"
               className="flex-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-2 text-center hover:bg-amber-500/20 transition-colors"
               data-testid="button-dash-trust"
             >

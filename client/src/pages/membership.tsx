@@ -564,8 +564,6 @@ export default function MembershipPage() {
                   ) : isMintor ? (
                     <a
                       href={BLUEVINE_MINT_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="block w-full"
                       data-testid="button-mintor-checkout"
                     >
@@ -576,8 +574,6 @@ export default function MembershipPage() {
                   ) : isTrust ? (
                     <a
                       href={BLUEVINE_TRUST_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
                       className="block w-full"
                       data-testid="button-trust-checkout"
                     >

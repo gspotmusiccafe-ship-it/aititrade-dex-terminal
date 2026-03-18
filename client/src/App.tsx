@@ -8,7 +8,6 @@ import { PlayerProvider } from "@/lib/player-context";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { MusicPlayer } from "@/components/music-player";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/hooks/use-auth";
 import { MarketTicker } from "@/components/market-ticker";
 import NotFound from "@/pages/not-found";
@@ -121,17 +120,16 @@ function AuthenticatedLayout() {
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
         {isPremium && <AppSidebar />}
-        <SidebarInset className="flex flex-col flex-1">
+        <SidebarInset className="flex flex-col flex-1 bg-black">
           <div className="sticky top-0 z-40">
             <MarketTicker />
             {isPremium && (
-              <header className="flex items-center justify-between p-2 border-b border-emerald-500/10 bg-black">
+              <header className="flex items-center p-2 border-b border-emerald-500/10 bg-black">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <ThemeToggle />
               </header>
             )}
           </div>
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto bg-black">
             <Switch>
               <Route path="/">{() => <PremiumGate><HomePage /></PremiumGate>}</Route>
               <Route path="/search">{() => <PremiumGate><SearchPage /></PremiumGate>}</Route>
