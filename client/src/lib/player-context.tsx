@@ -161,6 +161,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     return currentIndex + 1;
   }, []);
 
+  const isYTUrl = (url: string) => /(?:youtube\.com|youtu\.be)/.test(url);
+
   useEffect(() => {
     audioRef.current = new Audio();
     audioRef.current.volume = state.volume;
@@ -249,34 +251,37 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       setState(prev => ({ ...prev, duration: audio.duration }));
     };
 
+    const playAudioTrack = (track: TrackWithArtist) => {
+      if (!audioRef.current || isYTUrl(track.audioUrl)) return;
+      playCountedRef.current = null;
+      audioRef.current.src = track.audioUrl;
+      const p = audioRef.current.play();
+      if (p !== undefined) {
+        p.then(() => reportPlay(track.id))
+          .catch((err) => {
+            console.error("Audio play failed:", err.message);
+            setTimeout(() => setState(s => advanceQueue(s)), 500);
+          });
+      }
+    };
+
     const advanceQueue = (prev: PlayerState): PlayerState => {
       const nextIndex = getNextIndex(prev.queueIndex, prev.queue.length, prev.shuffle);
 
       if (nextIndex < prev.queue.length) {
         const nextT = prev.queue[nextIndex];
-        if (audioRef.current && nextT) {
-          playCountedRef.current = null;
-          audioRef.current.src = nextT.audioUrl;
-          const p = audioRef.current.play();
-          if (p !== undefined) {
-            p.then(() => reportPlay(nextT.id))
-              .catch((err) => {
-                console.error("Audio play failed:", err.message);
-                setTimeout(() => setState(s => advanceQueue(s)), 500);
-              });
-          }
-        }
+        if (nextT) playAudioTrack(nextT);
         return {
           ...prev,
           currentTrack: nextT,
           queueIndex: nextIndex,
-          isPlaying: true,
+          isPlaying: nextT ? !isYTUrl(nextT.audioUrl) : false,
           progress: 0,
         };
       } else if (prev.autopilot && prev.autopilotPool.length > 0) {
         const playedIds = new Set(prev.queue.map(t => t.id));
-        const available = prev.autopilotPool.filter(t => !playedIds.has(t.id) && t.audioUrl);
-        const fallback = available.length > 0 ? available : prev.autopilotPool.filter(t => t.id !== prev.currentTrack?.id && t.audioUrl);
+        const available = prev.autopilotPool.filter(t => !playedIds.has(t.id) && t.audioUrl && !isYTUrl(t.audioUrl));
+        const fallback = available.length > 0 ? available : prev.autopilotPool.filter(t => t.id !== prev.currentTrack?.id && t.audioUrl && !isYTUrl(t.audioUrl));
         if (fallback.length > 0) {
           const prerelease = fallback.filter(t => (t as any).isPrerelease);
           const priorityPool = prerelease.length > 0 ? prerelease : fallback;
@@ -285,18 +290,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
             : priorityPool[0];
           const newQueue = [...prev.queue, pick];
           const newIndex = newQueue.length - 1;
-          if (audioRef.current && pick) {
-            playCountedRef.current = null;
-            audioRef.current.src = pick.audioUrl;
-            const p = audioRef.current.play();
-            if (p !== undefined) {
-              p.then(() => reportPlay(pick.id))
-                .catch((err) => {
-                  console.error("Audio play failed:", err.message);
-                  setTimeout(() => setState(s => advanceQueue(s)), 500);
-                });
-            }
-          }
+          if (pick) playAudioTrack(pick);
           return {
             ...prev,
             currentTrack: pick,
@@ -309,23 +303,12 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       } else if (prev.repeat === "all" && prev.queue.length > 0) {
         const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
         const firstTrack = prev.queue[firstIndex];
-        if (audioRef.current && firstTrack) {
-          playCountedRef.current = null;
-          audioRef.current.src = firstTrack.audioUrl;
-          const p = audioRef.current.play();
-          if (p !== undefined) {
-            p.then(() => reportPlay(firstTrack.id))
-              .catch((err) => {
-                console.error("Audio play failed:", err.message);
-                setTimeout(() => setState(s => advanceQueue(s)), 500);
-              });
-          }
-        }
+        if (firstTrack) playAudioTrack(firstTrack);
         return {
           ...prev,
           currentTrack: firstTrack,
           queueIndex: firstIndex,
-          isPlaying: true,
+          isPlaying: firstTrack ? !isYTUrl(firstTrack.audioUrl) : false,
           progress: 0,
         };
       }
@@ -461,8 +444,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const isYouTubeUrl = useCallback((url: string): boolean => {
+    return /(?:youtube\.com|youtu\.be)/.test(url);
+  }, []);
+
   const playTrack = useCallback((track: TrackWithArtist, queue?: TrackWithArtist[]) => {
-    if (audioRef.current) {
+    const isYT = isYouTubeUrl(track.audioUrl);
+    if (audioRef.current && !isYT) {
       resumeAudioContext();
       playCountedRef.current = null;
       audioRef.current.src = track.audioUrl;
@@ -477,17 +465,20 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           setState(prev => ({ ...prev, isPlaying: false, autoplayBlocked: isAutoplayBlock }));
         });
       }
-      setState(prev => ({
-        ...prev,
-        currentTrack: track,
-        isPlaying: true,
-        progress: 0,
-        autoplayBlocked: false,
-        queue: queue || [track],
-        queueIndex: queue ? queue.findIndex(t => t.id === track.id) : 0,
-      }));
     }
-  }, [reportPlay, resumeAudioContext]);
+    if (isYT) {
+      reportPlay(track.id);
+    }
+    setState(prev => ({
+      ...prev,
+      currentTrack: track,
+      isPlaying: !isYT,
+      progress: 0,
+      autoplayBlocked: false,
+      queue: queue || [track],
+      queueIndex: queue ? queue.findIndex(t => t.id === track.id) : 0,
+    }));
+  }, [reportPlay, resumeAudioContext, isYouTubeUrl]);
 
   const resumeAutoplay = useCallback(() => {
     resumeAudioContext();
@@ -527,34 +518,37 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.isPlaying, state.currentTrack]);
 
+  const safePlayAudio = useCallback((track: TrackWithArtist, onError: () => void) => {
+    if (!audioRef.current || isYouTubeUrl(track.audioUrl)) return;
+    playCountedRef.current = null;
+    audioRef.current.src = track.audioUrl;
+    const p = audioRef.current.play();
+    if (p !== undefined) {
+      p.then(() => reportPlay(track.id))
+        .catch((err) => {
+          console.error("Audio play failed:", err.message);
+          setTimeout(onError, 500);
+        });
+    }
+  }, [reportPlay, isYouTubeUrl]);
+
   const advanceQueueFn = useCallback((prev: PlayerState): PlayerState => {
     const nextIndex = getNextIndex(prev.queueIndex, prev.queue.length, prev.shuffle);
 
     if (nextIndex < prev.queue.length) {
       const nextT = prev.queue[nextIndex];
-      if (audioRef.current && nextT) {
-        playCountedRef.current = null;
-        audioRef.current.src = nextT.audioUrl;
-        const p = audioRef.current.play();
-        if (p !== undefined) {
-          p.then(() => reportPlay(nextT.id))
-            .catch((err) => {
-              console.error("Audio play failed:", err.message);
-              setTimeout(() => setState(s => advanceQueueFn(s)), 500);
-            });
-        }
-      }
+      if (nextT) safePlayAudio(nextT, () => setState(s => advanceQueueFn(s)));
       return {
         ...prev,
         currentTrack: nextT,
         queueIndex: nextIndex,
-        isPlaying: true,
+        isPlaying: nextT ? !isYouTubeUrl(nextT.audioUrl) : false,
         progress: 0,
       };
     } else if (prev.autopilot && prev.autopilotPool.length > 0) {
       const playedIds = new Set(prev.queue.map(t => t.id));
-      const available = prev.autopilotPool.filter(t => !playedIds.has(t.id) && t.audioUrl);
-      const fallback = available.length > 0 ? available : prev.autopilotPool.filter(t => t.id !== prev.currentTrack?.id && t.audioUrl);
+      const available = prev.autopilotPool.filter(t => !playedIds.has(t.id) && t.audioUrl && !isYouTubeUrl(t.audioUrl));
+      const fallback = available.length > 0 ? available : prev.autopilotPool.filter(t => t.id !== prev.currentTrack?.id && t.audioUrl && !isYouTubeUrl(t.audioUrl));
       if (fallback.length > 0) {
         const prerelease = fallback.filter(t => (t as any).isPrerelease);
         const priorityPool = prerelease.length > 0 ? prerelease : fallback;
@@ -563,18 +557,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           : priorityPool[0];
         const newQueue = [...prev.queue, pick];
         const newIdx = newQueue.length - 1;
-        if (audioRef.current && pick) {
-          playCountedRef.current = null;
-          audioRef.current.src = pick.audioUrl;
-          const p = audioRef.current.play();
-          if (p !== undefined) {
-            p.then(() => reportPlay(pick.id))
-              .catch((err) => {
-                console.error("Audio play failed:", err.message);
-                setTimeout(() => setState(s => advanceQueueFn(s)), 500);
-              });
-          }
-        }
+        if (pick) safePlayAudio(pick, () => setState(s => advanceQueueFn(s)));
         return {
           ...prev,
           currentTrack: pick,
@@ -587,29 +570,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else if (prev.repeat === "all" && prev.queue.length > 0) {
       const firstIndex = prev.shuffle ? Math.floor(Math.random() * prev.queue.length) : 0;
       const firstTrack = prev.queue[firstIndex];
-      if (audioRef.current && firstTrack) {
-        playCountedRef.current = null;
-        audioRef.current.src = firstTrack.audioUrl;
-        const p = audioRef.current.play();
-        if (p !== undefined) {
-          p.then(() => reportPlay(firstTrack.id))
-            .catch((err) => {
-              console.error("Audio play failed:", err.message);
-              setTimeout(() => setState(s => advanceQueueFn(s)), 500);
-            });
-        }
-      }
+      if (firstTrack) safePlayAudio(firstTrack, () => setState(s => advanceQueueFn(s)));
       return {
         ...prev,
         currentTrack: firstTrack,
         queueIndex: firstIndex,
-        isPlaying: true,
+        isPlaying: firstTrack ? !isYouTubeUrl(firstTrack.audioUrl) : false,
         progress: 0,
       };
     }
 
     return { ...prev, isPlaying: false };
-  }, [getNextIndex, reportPlay]);
+  }, [getNextIndex, safePlayAudio, isYouTubeUrl]);
 
   const nextTrack = useCallback(() => {
     setState(prev => advanceQueueFn(prev));
@@ -626,27 +598,18 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (state.queue.length > 0 && state.queueIndex > 0) {
       const prevIndex = state.queueIndex - 1;
       const prevT = state.queue[prevIndex];
-      if (audioRef.current && prevT) {
-        playCountedRef.current = null;
-        audioRef.current.src = prevT.audioUrl;
-        const p = audioRef.current.play();
-        if (p !== undefined) {
-          p.then(() => reportPlay(prevT.id))
-            .catch((err) => {
-              console.error("Audio play failed:", err.message);
-              setState(s => ({ ...s, isPlaying: false }));
-            });
-        }
+      if (prevT) {
+        safePlayAudio(prevT, () => setState(s => ({ ...s, isPlaying: false })));
         setState(prev => ({
           ...prev,
           currentTrack: prevT,
           queueIndex: prevIndex,
-          isPlaying: true,
+          isPlaying: !isYouTubeUrl(prevT.audioUrl),
           progress: 0,
         }));
       }
     }
-  }, [state.queue, state.queueIndex, state.progress, reportPlay]);
+  }, [state.queue, state.queueIndex, state.progress, safePlayAudio, isYouTubeUrl]);
 
   const setVolume = useCallback((volume: number) => {
     if (audioRef.current) {
@@ -692,22 +655,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const playFromQueue = useCallback((index: number) => {
     setState(prev => {
       const track = prev.queue[index];
-      if (track && audioRef.current) {
-        playCountedRef.current = null;
-        audioRef.current.src = track.audioUrl;
-        const p = audioRef.current.play();
-        if (p !== undefined) {
-          p.then(() => reportPlay(track.id))
-            .catch((err) => {
-              console.error("Audio play failed:", err.message);
-              setState(s => ({ ...s, isPlaying: false }));
-            });
-        }
-        return { ...prev, currentTrack: track, queueIndex: index, isPlaying: true, progress: 0 };
+      if (track) {
+        safePlayAudio(track, () => setState(s => ({ ...s, isPlaying: false })));
+        return { ...prev, currentTrack: track, queueIndex: index, isPlaying: !isYouTubeUrl(track.audioUrl), progress: 0 };
       }
       return prev;
     });
-  }, [reportPlay]);
+  }, [safePlayAudio, isYouTubeUrl]);
 
   const toggleShuffle = useCallback(() => {
     setState(prev => ({ ...prev, shuffle: !prev.shuffle }));

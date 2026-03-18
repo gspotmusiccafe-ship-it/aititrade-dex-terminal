@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock, Video, VideoOff } from "lucide-react";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -14,6 +14,51 @@ function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs.toString().padStart(2, "0")}`;
+}
+
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/
+  );
+  return match ? match[1] : null;
+}
+
+function isYouTubeUrl(url: string): boolean {
+  return /(?:youtube\.com|youtu\.be)/.test(url);
+}
+
+function YouTubeVideoPanel({ videoUrl, onClose }: { videoUrl: string; onClose: () => void }) {
+  const videoId = extractYouTubeId(videoUrl);
+  if (!videoId) return null;
+
+  return (
+    <div className="fixed bottom-16 right-0 w-80 bg-black border border-lime-500/20 shadow-2xl z-50 font-mono" data-testid="youtube-video-panel">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-lime-500/10 bg-lime-500/5">
+        <div className="flex items-center gap-1.5">
+          <Video className="h-3 w-3 text-lime-400" />
+          <span className="text-[9px] text-lime-400 font-extrabold">VIDEO STREAM</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-zinc-500 hover:text-lime-400"
+          onClick={onClose}
+          data-testid="button-close-video"
+        >
+          <X className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      <div className="aspect-video w-full">
+        <iframe
+          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+          className="w-full h-full"
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          data-testid={`video-embed-${videoId}`}
+        />
+      </div>
+    </div>
+  );
 }
 
 export function MusicPlayer() {
@@ -51,8 +96,10 @@ export function MusicPlayer() {
 
   const { toast } = useToast();
   const [queueOpen, setQueueOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
 
   const upcomingTracks = queue.slice(queueIndex + 1);
+  const hasYouTubeVideo = currentTrack ? isYouTubeUrl(currentTrack.audioUrl) : false;
 
   if (!currentTrack) {
     return (
@@ -89,6 +136,9 @@ export function MusicPlayer() {
 
   return (
     <>
+      {videoOpen && hasYouTubeVideo && currentTrack && (
+        <YouTubeVideoPanel videoUrl={currentTrack.audioUrl} onClose={() => setVideoOpen(false)} />
+      )}
       {queueOpen && (
         <div className="fixed right-0 bottom-16 w-72 max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
           <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-500/10 bg-emerald-500/5">
@@ -341,6 +391,18 @@ export function MusicPlayer() {
                 </span>
               )}
             </Button>
+            {hasYouTubeVideo && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-7 w-7 ${videoOpen ? "text-lime-400" : "text-zinc-600"} hover:text-lime-400`}
+                onClick={() => setVideoOpen(!videoOpen)}
+                title="YouTube Video"
+                data-testid="button-toggle-video"
+              >
+                {videoOpen ? <VideoOff className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
+              </Button>
+            )}
             {currentTrack.artist && (
               <TipJarDialog
                 artistId={currentTrack.artist.id}
