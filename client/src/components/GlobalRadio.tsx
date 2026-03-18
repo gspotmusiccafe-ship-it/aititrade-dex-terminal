@@ -1,10 +1,36 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SiSpotify } from "react-icons/si";
-import { Pause, Play, SkipForward, SkipBack, Activity, Zap, Lock, Volume2, VolumeX, Radio, Music } from "lucide-react";
+import { Pause, Play, SkipForward, SkipBack, Activity, Zap, Lock, Volume2, VolumeX, Radio, Music, Power, Clock, Repeat } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist, GlobalRotation } from "@shared/schema";
 import rotation from "@/lib/global-rotation.json";
+
+type BroadcastShow = "MORNING_MARKET" | "MIDDAY_EXCHANGE" | "EVENING_TRADE" | "LATE_NIGHT_VAULT";
+
+function getCurrentShow(): BroadcastShow {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return "MORNING_MARKET";
+  if (hour >= 12 && hour < 17) return "MIDDAY_EXCHANGE";
+  if (hour >= 17 && hour < 22) return "EVENING_TRADE";
+  return "LATE_NIGHT_VAULT";
+}
+
+function getShowLabel(show: BroadcastShow): string {
+  switch (show) {
+    case "MORNING_MARKET": return "MORNING MARKET OPEN";
+    case "MIDDAY_EXCHANGE": return "MIDDAY EXCHANGE";
+    case "EVENING_TRADE": return "EVENING TRADE FLOOR";
+    case "LATE_NIGHT_VAULT": return "LATE NIGHT VAULT";
+  }
+}
+
+function formatUptime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
 
 declare global {
   interface Window {
@@ -123,10 +149,26 @@ export default function GlobalRadio() {
   const [crossfade, setCrossfade] = useState(50);
   const [vuLeft, setVuLeft] = useState(0);
   const [vuRight, setVuRight] = useState(0);
+  const [autopilot, setAutopilot] = useState(false);
+  const [broadcast, setBroadcast] = useState(false);
+  const [currentShow, setCurrentShow] = useState<BroadcastShow>(getCurrentShow());
+  const [broadcastUptime, setBroadcastUptime] = useState(0);
+  const [userPaused, setUserPaused] = useState(false);
   const playerRef = useRef<any>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tokenRef = useRef<string | null>(null);
   const vuIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const broadcastRef = useRef(false);
+  const broadcastStartRef = useRef(0);
+  const userPausedRef = useRef(false);
+  const adBridgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autopilotRef = useRef(false);
+  const assetsRef = useRef<typeof assets>([]);
+  const currentAssetIndexRef = useRef(0);
+  const deviceIdRef = useRef<string | null>(null);
+  const isAdvancingRef = useRef(false);
+  const nearEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: dbRotation } = useQuery<GlobalRotation[]>({
     queryKey: ["/api/global-rotation"],
@@ -150,6 +192,9 @@ export default function GlobalRadio() {
   const nextAsset = assets[nextAssetIndex];
   const currentAssetRef = useRef(currentAsset);
   currentAssetRef.current = currentAsset;
+  assetsRef.current = assets;
+  currentAssetIndexRef.current = currentAssetIndex;
+  deviceIdRef.current = deviceId;
 
   const { data: featuredTracks } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/tracks/featured"],
@@ -359,13 +404,139 @@ export default function GlobalRadio() {
     }
   }, [deviceId]);
 
-  const handlePause = () => { if (playerRef.current) playerRef.current.togglePlay(); };
+  const handlePause = () => {
+    userPausedRef.current = !playerState?.isPlaying ? false : true;
+    setUserPaused(userPausedRef.current);
+    if (playerRef.current) playerRef.current.togglePlay();
+  };
 
-  const handleNextAsset = (idx?: number) => {
+  const handleNextAsset = useCallback((idx?: number) => {
     const nextIdx = idx !== undefined ? idx : (currentAssetIndex + 1) % assets.length;
     setCurrentAssetIndex(nextIdx);
     if (tunedIn && deviceId) startPlayback(assets[nextIdx], deviceId);
-  };
+  }, [currentAssetIndex, assets, tunedIn, deviceId, startPlayback]);
+
+  const advanceToNextAsset = useCallback(() => {
+    if (isAdvancingRef.current) return;
+    isAdvancingRef.current = true;
+    const a = assetsRef.current;
+    const nextIdx = (currentAssetIndexRef.current + 1) % a.length;
+    setCurrentAssetIndex(nextIdx);
+    const dev = deviceIdRef.current;
+    if (dev) startPlayback(a[nextIdx], dev);
+    setTimeout(() => { isAdvancingRef.current = false; }, 2000);
+  }, [startPlayback]);
+
+  const toggleAutopilot = useCallback(() => {
+    if (broadcastRef.current) return;
+    setAutopilot(prev => {
+      autopilotRef.current = !prev;
+      return !prev;
+    });
+  }, []);
+
+  const toggleBroadcast = useCallback(() => {
+    setBroadcast(prev => {
+      const next = !prev;
+      broadcastRef.current = next;
+      if (next) {
+        broadcastStartRef.current = Date.now();
+        setAutopilot(true);
+        autopilotRef.current = true;
+        setCurrentShow(getCurrentShow());
+        userPausedRef.current = false;
+        setUserPaused(false);
+      } else {
+        broadcastStartRef.current = 0;
+        setBroadcastUptime(0);
+        if (adBridgeTimerRef.current) { clearTimeout(adBridgeTimerRef.current); adBridgeTimerRef.current = null; }
+        if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; }
+        if (nearEndTimerRef.current) { clearTimeout(nearEndTimerRef.current); nearEndTimerRef.current = null; }
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!broadcast) return;
+    const showInterval = setInterval(() => {
+      const newShow = getCurrentShow();
+      setCurrentShow(prev => prev !== newShow ? newShow : prev);
+    }, 60000);
+    const uptimeInterval = setInterval(() => {
+      if (broadcastStartRef.current > 0) {
+        setBroadcastUptime(Math.floor((Date.now() - broadcastStartRef.current) / 1000));
+      }
+    }, 1000);
+    return () => { clearInterval(showInterval); clearInterval(uptimeInterval); };
+  }, [broadcast]);
+
+  useEffect(() => {
+    if (!broadcast || !tunedIn || !playerRef.current) return;
+    const player = playerRef.current;
+
+    watchdogRef.current = setInterval(async () => {
+      if (!broadcastRef.current || userPausedRef.current) return;
+      try {
+        const state = await player.getCurrentState();
+        if (!state) return;
+
+        if (state.paused && !userPausedRef.current) {
+          console.log("[GLOBAL RADIO] Watchdog: Paused unexpectedly — resuming");
+          player.resume().catch(() => {
+            if (autopilotRef.current) advanceToNextAsset();
+          });
+        }
+
+        if (!state.paused && state.position > 0 && state.duration > 0 && state.position >= state.duration - 1500) {
+          if (autopilotRef.current) {
+            console.log("[GLOBAL RADIO] Autopilot: Track ending — advancing");
+            advanceToNextAsset();
+          }
+        }
+      } catch (e) {
+        console.warn("[GLOBAL RADIO] Watchdog error:", e);
+      }
+    }, 5000);
+
+    const handleStateChange = (state: any) => {
+      if (!state || !broadcastRef.current) return;
+
+      if (state.paused && !userPausedRef.current) {
+        if (adBridgeTimerRef.current) clearTimeout(adBridgeTimerRef.current);
+        adBridgeTimerRef.current = setTimeout(() => {
+          if (broadcastRef.current && !userPausedRef.current) {
+            console.log("[GLOBAL RADIO] Ad-Bridge: Resuming after interruption");
+            player.resume().catch(() => {
+              if (autopilotRef.current) advanceToNextAsset();
+            });
+          }
+        }, 3000);
+      }
+
+      const nextTracks = state.track_window?.next_tracks || [];
+      if (nextTracks.length === 0 && !state.paused && autopilotRef.current) {
+        const remaining = state.duration - state.position;
+        if (remaining > 0 && remaining < 3000) {
+          if (nearEndTimerRef.current) clearTimeout(nearEndTimerRef.current);
+          nearEndTimerRef.current = setTimeout(() => {
+            if (broadcastRef.current && autopilotRef.current) {
+              advanceToNextAsset();
+            }
+            nearEndTimerRef.current = null;
+          }, remaining);
+        }
+      }
+    };
+    player.addListener("player_state_changed", handleStateChange);
+
+    return () => {
+      if (watchdogRef.current) { clearInterval(watchdogRef.current); watchdogRef.current = null; }
+      if (adBridgeTimerRef.current) { clearTimeout(adBridgeTimerRef.current); adBridgeTimerRef.current = null; }
+      if (nearEndTimerRef.current) { clearTimeout(nearEndTimerRef.current); nearEndTimerRef.current = null; }
+      player.removeListener("player_state_changed", handleStateChange);
+    };
+  }, [broadcast, tunedIn, advanceToNextAsset]);
 
   const handleVolumeChange = (val: number) => {
     setVolumeState(val);
@@ -579,6 +750,78 @@ export default function GlobalRadio() {
             </div>
           )}
 
+          {tunedIn && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleAutopilot}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 border text-[10px] font-extrabold transition-all ${
+                  autopilot
+                    ? "border-lime-400 bg-lime-500/10 text-lime-400 shadow-[0_0_8px_rgba(132,204,22,0.15)]"
+                    : "border-zinc-800 text-zinc-600 hover:border-lime-500/30"
+                }`}
+                data-testid="button-autopilot-toggle"
+              >
+                <Repeat className="h-3 w-3" />
+                {autopilot ? "AUTOPILOT ON" : "AUTOPILOT OFF"}
+              </button>
+              <button
+                onClick={toggleBroadcast}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 border text-[10px] font-extrabold transition-all ${
+                  broadcast
+                    ? "border-red-400 bg-red-500/10 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse"
+                    : "border-zinc-800 text-zinc-600 hover:border-red-500/30"
+                }`}
+                data-testid="button-broadcast-toggle"
+              >
+                <Power className="h-3 w-3" />
+                {broadcast ? "BROADCAST LIVE" : "BROADCAST OFF"}
+              </button>
+            </div>
+          )}
+
+          {broadcast && (
+            <div className="border border-red-500/20 bg-red-500/5 p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                  <span className="text-[9px] text-red-400 font-extrabold">CONTINUOUS BROADCAST ENGINE</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-2.5 w-2.5 text-zinc-600" />
+                  <span className="text-[9px] text-lime-400 font-mono font-extrabold" data-testid="text-broadcast-uptime">
+                    {formatUptime(broadcastUptime)}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <div className="text-center px-1 py-0.5 border border-zinc-800">
+                  <p className="text-[6px] text-zinc-700 font-extrabold">SHOW</p>
+                  <p className="text-[8px] text-lime-400 font-extrabold" data-testid="text-current-show">{getShowLabel(currentShow)}</p>
+                </div>
+                <div className="text-center px-1 py-0.5 border border-zinc-800">
+                  <p className="text-[6px] text-zinc-700 font-extrabold">AUTOPILOT</p>
+                  <p className={`text-[8px] font-extrabold ${autopilot ? "text-lime-400" : "text-zinc-600"}`}>
+                    {autopilot ? "ENGAGED" : "MANUAL"}
+                  </p>
+                </div>
+                <div className="text-center px-1 py-0.5 border border-zinc-800">
+                  <p className="text-[6px] text-zinc-700 font-extrabold">WATCHDOG</p>
+                  <p className="text-[8px] text-lime-400 font-extrabold">ACTIVE</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[7px] text-zinc-700 font-extrabold">AD-BRIDGE:</span>
+                <span className="text-[7px] text-lime-400 font-extrabold">3s RESUME</span>
+                <span className="text-[7px] text-zinc-800">|</span>
+                <span className="text-[7px] text-zinc-700 font-extrabold">POLLING:</span>
+                <span className="text-[7px] text-lime-400 font-extrabold">5s INTERVAL</span>
+                <span className="text-[7px] text-zinc-800">|</span>
+                <span className="text-[7px] text-zinc-700 font-extrabold">SHOWS:</span>
+                <span className="text-[7px] text-lime-400 font-extrabold">60s SWITCH</span>
+              </div>
+            </div>
+          )}
+
           {royaltyPool && (
             <div className="grid grid-cols-3 gap-1">
               <div className="text-center p-2 border border-lime-500/10 bg-lime-500/5">
@@ -619,11 +862,11 @@ export default function GlobalRadio() {
           <div className="flex items-center justify-between px-2 py-1.5 border border-lime-500/10 bg-zinc-950">
             <div className="flex items-center gap-2">
               <Radio className="h-3.5 w-3.5 text-lime-400" />
-              <span className="text-[8px] text-lime-400 font-extrabold">97.7 THE FLAME</span>
+              <span className="text-[8px] text-lime-400 font-extrabold">GLOBAL RADIO — AITIFY</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="h-3 w-3 text-lime-400" />
-              <span className="text-[8px] text-lime-400 font-extrabold">18-50% ROYALTY CREDIT</span>
+              <span className="text-[8px] text-lime-400 font-extrabold">AUTOPILOT + BROADCAST ENGINE</span>
             </div>
           </div>
         </div>
