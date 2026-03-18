@@ -3,7 +3,7 @@ import { SiSpotify } from "react-icons/si";
 import { Pause, Play, SkipForward, SkipBack, Activity, Zap, Lock, Volume2, VolumeX, Radio, Music } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import type { TrackWithArtist } from "@shared/schema";
+import type { TrackWithArtist, GlobalRotation } from "@shared/schema";
 import rotation from "@/lib/global-rotation.json";
 
 declare global {
@@ -130,8 +130,24 @@ export default function GlobalRadio() {
   const tokenRef = useRef<string | null>(null);
   const vuIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const assets = rotation.rotation;
-  const currentAsset = assets[currentAssetIndex];
+  const { data: dbRotation } = useQuery<GlobalRotation[]>({
+    queryKey: ["/api/global-rotation"],
+    staleTime: 60000,
+  });
+
+  const assets = (dbRotation && dbRotation.length > 0)
+    ? dbRotation.map(item => ({
+        ticker: item.ticker,
+        title: item.title,
+        type: item.type,
+        spotifyUri: item.spotifyUri || "",
+        spotifyUrl: item.spotifyUrl || "",
+        audioUrl: item.audioUrl || "",
+        coverImage: item.coverImage || "",
+        artistName: item.artistName || "",
+      }))
+    : rotation.rotation;
+  const currentAsset = assets[currentAssetIndex % assets.length] || assets[0];
   const nextAssetIndex = (currentAssetIndex + 1) % assets.length;
   const nextAsset = assets[nextAssetIndex];
   const currentAssetRef = useRef(currentAsset);

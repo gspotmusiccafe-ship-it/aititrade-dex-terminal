@@ -391,6 +391,26 @@ export const insertCreditStepSchema = createInsertSchema(creditSteps).omit({ id:
 export type InsertCreditStep = z.infer<typeof insertCreditStepSchema>;
 export type CreditStep = typeof creditSteps.$inferSelect;
 
+export const globalRotation = pgTable("global_rotation", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticker: varchar("ticker").notNull(),
+  title: varchar("title").notNull(),
+  type: varchar("type").notNull().default("playlist"),
+  spotifyUri: text("spotify_uri"),
+  spotifyUrl: text("spotify_url"),
+  audioUrl: text("audio_url"),
+  coverImage: text("cover_image"),
+  artistName: varchar("artist_name"),
+  assetClass: varchar("asset_class").default("global"),
+  matured: boolean("matured").default(true),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGlobalRotationSchema = createInsertSchema(globalRotation).omit({ id: true, createdAt: true });
+export type InsertGlobalRotation = z.infer<typeof insertGlobalRotationSchema>;
+export type GlobalRotation = typeof globalRotation.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

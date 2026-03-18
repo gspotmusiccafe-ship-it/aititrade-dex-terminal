@@ -1735,6 +1735,303 @@ function RadioPlaylistTab() {
   );
 }
 
+function GlobalRotationTab() {
+  const { toast } = useToast();
+  const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({
+    ticker: "",
+    title: "",
+    type: "playlist",
+    spotifyUri: "",
+    spotifyUrl: "",
+    audioUrl: "",
+    coverImage: "",
+    artistName: "",
+    assetClass: "global",
+  });
+
+  const { data: items, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/global-rotation"],
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+
+  const addMutation = useMutation({
+    mutationFn: async (data: any) => apiRequest("POST", "/api/admin/global-rotation", data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/global-rotation"] });
+      toast({ title: "Asset added to rotation" });
+      resetForm();
+    },
+    onError: () => toast({ title: "Failed to add", variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => apiRequest("PUT", `/api/admin/global-rotation/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/global-rotation"] });
+      toast({ title: "Rotation item updated" });
+      resetForm();
+    },
+    onError: () => toast({ title: "Failed to update", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => apiRequest("DELETE", `/api/admin/global-rotation/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/global-rotation"] });
+      toast({ title: "Removed from rotation" });
+    },
+    onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
+  });
+
+  const resetForm = () => {
+    setForm({ ticker: "", title: "", type: "playlist", spotifyUri: "", spotifyUrl: "", audioUrl: "", coverImage: "", artistName: "", assetClass: "global" });
+    setShowAdd(false);
+    setEditingId(null);
+  };
+
+  const startEdit = (item: any) => {
+    setForm({
+      ticker: item.ticker || "",
+      title: item.title || "",
+      type: item.type || "playlist",
+      spotifyUri: item.spotifyUri || "",
+      spotifyUrl: item.spotifyUrl || "",
+      audioUrl: item.audioUrl || "",
+      coverImage: item.coverImage || "",
+      artistName: item.artistName || "",
+      assetClass: item.assetClass || "global",
+    });
+    setEditingId(item.id);
+    setShowAdd(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.ticker || !form.title) {
+      toast({ title: "Ticker and Title are required", variant: "destructive" });
+      return;
+    }
+    if (editingId) {
+      updateMutation.mutate({ id: editingId, data: form });
+    } else {
+      addMutation.mutate(form);
+    }
+  };
+
+  const count = items?.length || 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-black flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-lime-500/15 flex items-center justify-center">
+              <Disc3 className="h-4 w-4 text-lime-400" />
+            </div>
+            GLOBAL RADIO — Rotation Manager
+          </h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Self-load assets into the Global Radio DJ Console rotation. Add Spotify URIs, audio URLs, or cover art.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-sm bg-lime-500/10 text-lime-400" data-testid="badge-rotation-count">
+            {count} asset{count !== 1 ? "s" : ""} in rotation
+          </Badge>
+          <Button size="sm" onClick={() => { resetForm(); setShowAdd(true); }} className="bg-lime-600 hover:bg-lime-700 text-black font-bold" data-testid="button-add-rotation">
+            <Plus className="h-4 w-4 mr-1" />
+            ADD ASSET
+          </Button>
+        </div>
+      </div>
+
+      {showAdd && (
+        <Card className="border-lime-500/30 bg-card/80">
+          <div className="h-1 bg-gradient-to-r from-lime-500 via-emerald-500 to-lime-500" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-black text-lime-400">
+              {editingId ? "EDIT ROTATION ASSET" : "ADD NEW ROTATION ASSET"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-bold">TICKER *</Label>
+                <Input
+                  placeholder="e.g. AITF-01"
+                  value={form.ticker}
+                  onChange={(e) => setForm({ ...form, ticker: e.target.value })}
+                  data-testid="input-rotation-ticker"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-bold">TITLE *</Label>
+                <Input
+                  placeholder="e.g. THE LOVE"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  data-testid="input-rotation-title"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-bold">ARTIST NAME</Label>
+                <Input
+                  placeholder="e.g. AI FLAME"
+                  value={form.artistName}
+                  onChange={(e) => setForm({ ...form, artistName: e.target.value })}
+                  data-testid="input-rotation-artist"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-bold">ASSET CLASS</Label>
+                <Select value={form.assetClass} onValueChange={(v) => setForm({ ...form, assetClass: v })}>
+                  <SelectTrigger data-testid="select-rotation-class">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="global">Global</SelectItem>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="inspirational">Inspirational</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-bold">SPOTIFY URI</Label>
+              <Input
+                placeholder="spotify:playlist:xxxxx or spotify:album:xxxxx"
+                value={form.spotifyUri}
+                onChange={(e) => setForm({ ...form, spotifyUri: e.target.value })}
+                data-testid="input-rotation-spotify-uri"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Paste a Spotify URI to stream via Spotify Web Playback SDK</p>
+            </div>
+            <div>
+              <Label className="text-xs font-bold">AUDIO URL (Direct)</Label>
+              <Input
+                placeholder="https://... .mp3 or cloud storage URL"
+                value={form.audioUrl}
+                onChange={(e) => setForm({ ...form, audioUrl: e.target.value })}
+                data-testid="input-rotation-audio-url"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Direct audio file URL — plays without Spotify</p>
+            </div>
+            <div>
+              <Label className="text-xs font-bold">COVER IMAGE URL</Label>
+              <Input
+                placeholder="https://... album art or cover image"
+                value={form.coverImage}
+                onChange={(e) => setForm({ ...form, coverImage: e.target.value })}
+                data-testid="input-rotation-cover"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" onClick={resetForm} data-testid="button-rotation-cancel">CANCEL</Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={addMutation.isPending || updateMutation.isPending}
+                className="bg-lime-600 hover:bg-lime-700 text-black font-bold"
+                data-testid="button-rotation-save"
+              >
+                {addMutation.isPending || updateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                {editingId ? "UPDATE" : "ADD TO ROTATION"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+        </div>
+      ) : count > 0 ? (
+        <Card className="bg-card/60 border-lime-500/20 overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-lime-500 via-emerald-500 to-lime-500" />
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-black flex items-center gap-2 text-lime-400">
+              <Disc3 className="h-4 w-4" />
+              Current Rotation ({count})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {items?.map((item: any, index: number) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 p-3 rounded-md bg-lime-500/5 hover:bg-lime-500/10 border border-lime-500/10"
+                data-testid={`rotation-item-${item.id}`}
+              >
+                <span className="text-sm text-lime-400/60 w-6 text-center font-mono font-bold">{index + 1}</span>
+                <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-black border border-lime-500/20">
+                  {item.coverImage ? (
+                    <img src={item.coverImage} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Disc3 className="h-4 w-4 text-lime-400/40" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{item.title}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-lime-400 font-mono font-bold">{item.ticker}</span>
+                    {item.artistName && <span className="text-[10px] text-muted-foreground">— {item.artistName}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {item.spotifyUri && (
+                    <Badge variant="secondary" className="text-[9px] bg-green-500/10 text-green-400">
+                      <SiSpotify className="h-2.5 w-2.5 mr-0.5" /> SPOTIFY
+                    </Badge>
+                  )}
+                  {item.audioUrl && (
+                    <Badge variant="secondary" className="text-[9px] bg-blue-500/10 text-blue-400">
+                      AUDIO
+                    </Badge>
+                  )}
+                  <Badge variant="secondary" className="text-[9px]">{item.assetClass?.toUpperCase()}</Badge>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => startEdit(item)}
+                  data-testid={`button-edit-rotation-${item.id}`}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => deleteMutation.mutate(item.id)}
+                  disabled={deleteMutation.isPending}
+                  data-testid={`button-delete-rotation-${item.id}`}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-dashed border-lime-500/20">
+          <CardContent className="py-12 text-center">
+            <Disc3 className="h-12 w-12 mx-auto mb-3 text-lime-400/30" />
+            <p className="text-lime-400/60 font-bold text-sm">NO ASSETS IN ROTATION</p>
+            <p className="text-xs text-muted-foreground mt-1">Click "ADD ASSET" to load tracks into the Global Radio DJ Console</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 function RadioShowsTab() {
   const { toast } = useToast();
   const [showDialog, setShowDialog] = useState(false);
@@ -3348,6 +3645,10 @@ export default function AdminPage() {
                 <Flame className="h-4 w-4 mr-1.5 text-orange-500" />
                 97.7 FM
               </TabsTrigger>
+              <TabsTrigger value="global-rotation" data-testid="tab-global-rotation" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
+                <Disc3 className="h-4 w-4 mr-1.5 text-lime-400" />
+                Global Radio
+              </TabsTrigger>
               <TabsTrigger value="radio-shows" data-testid="tab-radio-shows" className="whitespace-nowrap">
                 <Radio className="h-4 w-4 mr-1.5" />
                 Radio
@@ -3409,6 +3710,10 @@ export default function AdminPage() {
 
           <TabsContent value="radio-playlist">
             <RadioPlaylistTab />
+          </TabsContent>
+
+          <TabsContent value="global-rotation">
+            <GlobalRotationTab />
           </TabsContent>
 
           <TabsContent value="radio-shows">

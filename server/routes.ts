@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -2644,6 +2644,82 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error) {
       console.error("Error fetching radio playlist:", error);
       res.status(500).json({ message: "Failed to fetch radio playlist" });
+    }
+  });
+
+  // === Global Radio Rotation (self-service management) ===
+
+  app.get("/api/global-rotation", async (_req, res) => {
+    try {
+      const items = await db.select().from(globalRotation).orderBy(globalRotation.position);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching global rotation:", error);
+      res.status(500).json({ message: "Failed to fetch global rotation" });
+    }
+  });
+
+  app.post("/api/admin/global-rotation", isAdmin, async (req: any, res) => {
+    try {
+      const body = req.body;
+      if (!body.ticker || !body.title) {
+        return res.status(400).json({ message: "Ticker and Title are required" });
+      }
+      const maxPos = await db.select({ max: sql<number>`COALESCE(MAX(position), -1)` }).from(globalRotation);
+      const nextPos = (maxPos[0]?.max ?? -1) + 1;
+      const [item] = await db.insert(globalRotation).values({
+        ticker: String(body.ticker).trim(),
+        title: String(body.title).trim(),
+        type: body.type || "playlist",
+        spotifyUri: body.spotifyUri || null,
+        spotifyUrl: body.spotifyUrl || null,
+        audioUrl: body.audioUrl || null,
+        coverImage: body.coverImage || null,
+        artistName: body.artistName || null,
+        assetClass: body.assetClass || "global",
+        matured: body.matured !== false,
+        position: nextPos,
+      }).returning();
+      res.json(item);
+    } catch (error) {
+      console.error("Error adding global rotation item:", error);
+      res.status(500).json({ message: "Failed to add rotation item" });
+    }
+  });
+
+  app.put("/api/admin/global-rotation/:id", isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const body = req.body;
+      const updates: any = {};
+      if (body.ticker !== undefined) updates.ticker = body.ticker;
+      if (body.title !== undefined) updates.title = body.title;
+      if (body.type !== undefined) updates.type = body.type;
+      if (body.spotifyUri !== undefined) updates.spotifyUri = body.spotifyUri;
+      if (body.spotifyUrl !== undefined) updates.spotifyUrl = body.spotifyUrl;
+      if (body.audioUrl !== undefined) updates.audioUrl = body.audioUrl;
+      if (body.coverImage !== undefined) updates.coverImage = body.coverImage;
+      if (body.artistName !== undefined) updates.artistName = body.artistName;
+      if (body.assetClass !== undefined) updates.assetClass = body.assetClass;
+      if (body.matured !== undefined) updates.matured = body.matured;
+      if (body.position !== undefined) updates.position = body.position;
+      const [item] = await db.update(globalRotation).set(updates).where(eq(globalRotation.id, id)).returning();
+      if (!item) return res.status(404).json({ message: "Rotation item not found" });
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating global rotation item:", error);
+      res.status(500).json({ message: "Failed to update rotation item" });
+    }
+  });
+
+  app.delete("/api/admin/global-rotation/:id", isAdmin, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(globalRotation).where(eq(globalRotation.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting global rotation item:", error);
+      res.status(500).json({ message: "Failed to delete rotation item" });
     }
   });
 
