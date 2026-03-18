@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
+import { useQuery } from "@tanstack/react-query";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 import GlobalRadio from "@/components/GlobalRadio";
+import { Link } from "wouter";
 
 const CEILING = 1000.00;
 const FLASH_THRESHOLD = 900.00;
@@ -225,6 +226,180 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
   );
 }
 
+function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: TrackWithArtist; open: boolean; onClose: () => void; onSuccess: (data: any) => void }) {
+  const buttonContainerRef = useRef<HTMLDivElement>(null);
+  const paypalInitialized = useRef(false);
+  const clickHandlerRef = useRef<(() => void) | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const initPayPal = useCallback(async () => {
+    if (paypalInitialized.current) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (!(window as any).paypal) {
+        await new Promise<void>((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = import.meta.env.PROD
+            ? "https://www.paypal.com/web-sdk/v6/core"
+            : "https://www.sandbox.paypal.com/web-sdk/v6/core";
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error("Failed to load PayPal"));
+          document.body.appendChild(script);
+        });
+      }
+
+      const clientToken: string = await fetch("/setup")
+        .then((res) => res.json())
+        .then((data) => data.clientToken);
+
+      const sdkInstance = await (window as any).paypal.createInstance({
+        clientToken,
+        components: ["paypal-payments"],
+      });
+
+      const paypalCheckout = sdkInstance.createPayPalOneTimePaymentSession({
+        onApprove: async (data: any) => {
+          try {
+            await fetch(`/order/${data.orderId}/capture`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+            });
+
+            const tradeRes = await fetch("/api/orders/paypal", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ trackId: track.id, paypalOrderId: data.orderId }),
+            });
+            if (!tradeRes.ok) throw new Error("Trade order failed");
+            const tradeData = await tradeRes.json();
+            onSuccess(tradeData);
+            queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+            toast({ title: "POSITION ACQUIRED", description: `PayPal verified — ${tradeData.receipt?.mintId || "Order confirmed"}` });
+            onClose();
+          } catch {
+            setError("Failed to process trade. Please try again.");
+          }
+        },
+        onCancel: () => {
+          setError("Payment was cancelled.");
+        },
+        onError: (err: any) => {
+          console.error("PayPal trade error:", err);
+          setError("Payment error. Please try again.");
+        },
+      });
+
+      const container = buttonContainerRef.current;
+      if (container) {
+        container.innerHTML = "";
+        const btn = document.createElement("paypal-button");
+        btn.id = `paypal-trade-btn-${track.id}`;
+        btn.setAttribute("data-testid", `button-paypal-trade-${track.id}`);
+        container.appendChild(btn);
+
+        const clickHandler = async () => {
+          try {
+            const orderRes = await fetch("/order", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ tier: "trade_position" }),
+            });
+            if (!orderRes.ok) throw new Error("Failed to create order");
+            const orderData = await orderRes.json();
+
+            await paypalCheckout.start(
+              { paymentFlow: "auto" },
+              Promise.resolve({ orderId: orderData.id })
+            );
+          } catch (e) {
+            console.error("PayPal trade checkout error:", e);
+            setError("Failed to start checkout.");
+          }
+        };
+
+        clickHandlerRef.current = clickHandler;
+        btn.addEventListener("click", clickHandler);
+      }
+
+      paypalInitialized.current = true;
+      setLoading(false);
+    } catch (e: any) {
+      console.error("PayPal trade init error:", e);
+      setError(e.message || "Failed to initialize payment");
+      setLoading(false);
+    }
+  }, [track.id, onSuccess, onClose, toast]);
+
+  useEffect(() => {
+    if (open) {
+      paypalInitialized.current = false;
+      const timer = setTimeout(initPayPal, 300);
+      return () => {
+        clearTimeout(timer);
+        const container = buttonContainerRef.current;
+        if (container && clickHandlerRef.current) {
+          const btn = container.querySelector("paypal-button");
+          if (btn) btn.removeEventListener("click", clickHandlerRef.current);
+          clickHandlerRef.current = null;
+        }
+      };
+    }
+  }, [open, initPayPal]);
+
+  if (!open) return null;
+
+  const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-black border-2 border-lime-500/60 font-mono max-w-sm w-full shadow-2xl shadow-lime-500/20 relative overflow-hidden" onClick={e => e.stopPropagation()} data-testid={`trade-paypal-dialog-${track.id}`}>
+        <div className="border-b border-lime-500/30 px-4 py-2.5 flex items-center justify-between bg-lime-950/80">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-lime-400" />
+            <span className="text-[11px] text-lime-400 font-bold tracking-wider">ACQUIRE POSITION — PAYPAL</span>
+          </div>
+          <button onClick={onClose} className="text-lime-500/40 hover:text-lime-400"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="border border-lime-400/20 bg-lime-950/30 p-3 text-center">
+            <p className="text-[10px] text-lime-400 font-black tracking-[0.25em]">SOVEREIGN EXCHANGE — POSITION ORDER</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
+              <p className="text-[8px] text-lime-500/40 tracking-wider">ASSET</p>
+              <p className="text-sm text-lime-400 font-bold mt-0.5">{ticker}</p>
+            </div>
+            <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
+              <p className="text-[8px] text-lime-500/40 tracking-wider">BUY-IN PRICE</p>
+              <p className="text-xl text-lime-400 font-black mt-0.5">$0.99</p>
+            </div>
+          </div>
+          <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
+            <p className="text-[9px] text-lime-500/50">16% ORIGINATOR CREDIT — 84% POSITION VALUE</p>
+            <p className="text-[8px] text-zinc-600 mt-1">PAYMENT PROCESSED VIA PAYPAL SECURE CHECKOUT</p>
+          </div>
+          {error && (
+            <div className="border border-red-500/30 bg-red-500/10 p-2 text-center">
+              <p className="text-[10px] text-red-400 font-bold">{error}</p>
+            </div>
+          )}
+          <div ref={buttonContainerRef} className="flex justify-center min-h-[50px] items-center">
+            {loading && <p className="text-[10px] text-lime-400/50 animate-pulse">INITIALIZING PAYPAL...</p>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
@@ -232,22 +407,8 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const [trustReceipt, setTrustReceipt] = useState<TrustReceipt | null>(null);
   const [flashTimer, setFlashTimer] = useState<number | null>(null);
   const [isReconciling, setIsReconciling] = useState(false);
+  const [showPayPal, setShowPayPal] = useState(false);
   const flashTriggeredRef = useRef(false);
-
-  const orderMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/orders", { trackId: track.id });
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      if (data.type === "global") {
-        setTrustReceipt(data.receipt);
-      } else {
-        setMintReceipt(data.receipt);
-      }
-      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
-    },
-  });
 
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
@@ -490,24 +651,20 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
         )}
 
         <div className="flex gap-1 mb-1">
-          <a
-            href={BLUEVINE_MINT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-lime-500/20 transition-colors"
-            data-testid={`button-mintor-${track.id}`}
+          <Link
+            href="/trust-vault"
+            className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-amber-600/20 transition-colors flex items-center justify-center gap-1"
+            data-testid={`button-trust-link-${track.id}`}
           >
-            MINTOR $99.99 + $9.99/MO
-          </a>
-          <a
-            href={BLUEVINE_TRUST_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-amber-600/20 transition-colors"
-            data-testid={`button-trust-${track.id}`}
+            <Shield className="h-3 w-3" /> TRUST VAULT
+          </Link>
+          <Link
+            href="/artist-portal"
+            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-violet-500/20 transition-colors flex items-center justify-center gap-1"
+            data-testid={`button-mentor-link-${track.id}`}
           >
-            TRUST $25 DOWN
-          </a>
+            <Users className="h-3 w-3" /> MENTOR
+          </Link>
         </div>
         <div className="flex gap-1">
           {isClosed || isReconciling ? (
@@ -539,12 +696,11 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             </div>
           ) : (
             <button
-              onClick={() => orderMutation.mutate()}
-              disabled={orderMutation.isPending}
-              className="flex-1 bg-lime-600 text-white text-[11px] font-extrabold py-2 text-center hover:bg-lime-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+              onClick={() => setShowPayPal(true)}
+              className="flex-1 bg-lime-600 text-white text-[11px] font-extrabold py-2 text-center hover:bg-lime-700 transition-colors flex items-center justify-center gap-1"
               data-testid={`button-acquire-${track.id}`}
             >
-              <FileCheck className="h-3 w-3" /> {orderMutation.isPending ? "MINTING..." : `ACQUIRE POSITION @ ${priceLabel}`}
+              <DollarSign className="h-3 w-3" /> ACQUIRE POSITION @ $0.99 — PAYPAL
             </button>
           )}
           <button
@@ -558,6 +714,18 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
       </div>
       {mintReceipt && <MintCertificate receipt={mintReceipt} onClose={() => setMintReceipt(null)} />}
       {trustReceipt && <TrustCertificate receipt={trustReceipt} onClose={() => setTrustReceipt(null)} />}
+      <TradePayPalCheckout
+        track={track}
+        open={showPayPal}
+        onClose={() => setShowPayPal(false)}
+        onSuccess={(data: any) => {
+          if (data.type === "global") {
+            setTrustReceipt(data.receipt);
+          } else {
+            setMintReceipt(data.receipt);
+          }
+        }}
+      />
     </div>
   );
 }

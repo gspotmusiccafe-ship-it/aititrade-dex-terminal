@@ -1486,6 +1486,120 @@ export async function registerRoutes(
     await capturePaypalOrder(req, res);
   });
 
+  app.post("/api/orders/paypal", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId, paypalOrderId } = req.body;
+      if (!trackId || !paypalOrderId) {
+        return res.status(400).json({ message: "trackId and paypalOrderId required" });
+      }
+
+      const [preCheck] = await db.select().from(tracks).where(eq(tracks.id, trackId));
+      if (!preCheck) return res.status(404).json({ message: "Track not found" });
+
+      const releaseType = ((preCheck as any).releaseType || "native").toLowerCase();
+      const isGlobal = releaseType === "global";
+      if (isGlobal) {
+        const membership = await storage.getUserMembership(userId);
+        const user = await storage.getUser(userId);
+        const isAdmin = user?.isAdmin === true;
+        if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
+          return res.status(403).json({ message: "GLOBAL ASSET — Trust Certificate Required." });
+        }
+      }
+
+      const existingOrder = await db.select().from(orders).where(eq(orders.trackingNumber, paypalOrderId)).limit(1);
+      if (existingOrder.length > 0) {
+        return res.status(400).json({ message: "PayPal order already used" });
+      }
+
+      const result = await db.transaction(async (tx) => {
+        const [track] = await tx.select().from(tracks).where(eq(tracks.id, trackId));
+        if (!track) throw new Error("NOT_FOUND");
+
+        const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
+        const currentSales = track.salesCount || 0;
+        const price = parseFloat(track.unitPrice || "0.99");
+        if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
+
+        if (!isGlobal) {
+          const currentGross = parseFloat((currentSales * price).toFixed(2));
+          if (currentGross >= POOL_CEILING) throw new Error("CEILING_REACHED");
+        }
+
+        const minterFeeAmt = parseFloat((price * MINTER_FEE).toFixed(4));
+        const positionValue = parseFloat((price - minterFeeAmt).toFixed(4));
+
+        const seq = String(currentSales + 1).padStart(3, "0");
+        const prefix = isGlobal ? "TRST" : "MNT";
+        const trackingNum = `${prefix}-977-${ticker}-${seq}`;
+
+        const [order] = await tx.insert(orders).values({
+          trackId,
+          trackingNumber: trackingNum,
+          unitPrice: price.toString(),
+          creatorCredit: "0.16",
+          creatorCreditAmount: minterFeeAmt.toString(),
+          positionHolderAmount: positionValue.toString(),
+          status: "verified",
+        }).returning();
+
+        await tx.update(tracks)
+          .set({ salesCount: sql`${tracks.salesCount} + 1` })
+          .where(eq(tracks.id, trackId));
+
+        const newGross = parseFloat(((currentSales + 1) * price).toFixed(2));
+
+        if (isGlobal) {
+          return {
+            type: "global" as const,
+            receipt: {
+              trustId: order.trackingNumber,
+              asset: track.title,
+              ticker,
+              unitPrice: price,
+              originatorCredit: minterFeeAmt,
+              positionValue,
+              aiModel: track.aiModel || "AITIFY-GEN-1",
+              releaseType: "global",
+              status: "PAYPAL VERIFIED",
+              storeUrl: "https://payhip.com/aitifymusicstore",
+              timestamp: new Date().toISOString(),
+            },
+          };
+        }
+
+        const capacityPct = Math.min(100, parseFloat(((newGross / POOL_CEILING) * 100).toFixed(1)));
+        return {
+          type: "native" as const,
+          receipt: {
+            mintId: order.trackingNumber,
+            asset: track.title,
+            ticker,
+            unitPrice: price,
+            originatorCredit: minterFeeAmt,
+            positionValue,
+            aiModel: track.aiModel || "AITIFY-GEN-1",
+            grossSales: newGross,
+            totalMints: currentSales + 1,
+            mintCap: POOL_CEILING,
+            capacityPct,
+            status: newGross >= POOL_CEILING ? "CLOSED" : "PAYPAL VERIFIED",
+            timestamp: new Date().toISOString(),
+          },
+        };
+      });
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("PayPal trade order error:", error);
+      if (error.message === "CEILING_REACHED") {
+        return res.status(400).json({ message: "Pool closed — ceiling reached" });
+      }
+      res.status(500).json({ message: "Failed to process trade order" });
+    }
+  });
+
   // Upgrade membership after PayPal payment is verified server-side
   app.post("/api/user/membership/upgrade", isAuthenticated, async (req: any, res) => {
     try {

@@ -8,6 +8,7 @@ const TIER_PRICES: Record<string, string> = {
   bronze: "3.99",
   gold: "49.99",
   gold_monthly: "9.99",
+  trade_position: "0.99",
 };
 
 const { PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET } = process.env;
@@ -67,7 +68,9 @@ export async function createPaypalOrder(req: Request, res: Response) {
               currencyCode: "USD",
               value: amount,
             },
-            description: `AITIFY ${tier.charAt(0).toUpperCase() + tier.slice(1)} Membership`,
+            description: tier === "trade_position"
+              ? "AITIFY Sovereign Exchange — Position Acquisition"
+              : `AITIFY ${tier.charAt(0).toUpperCase() + tier.slice(1)} Membership`,
           },
         ],
       },
