@@ -3,6 +3,7 @@ import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star,
 import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
+import GlobalRadio from "@/components/GlobalRadio";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -661,6 +662,10 @@ export default function LandingPage() {
 
           <div className="max-w-lg mx-auto mb-8">
             <HeroPlayer />
+          </div>
+
+          <div className="max-w-3xl mx-auto mb-10">
+            <GlobalRadio />
           </div>
 
           <div className="flex flex-wrap gap-3 justify-center">
