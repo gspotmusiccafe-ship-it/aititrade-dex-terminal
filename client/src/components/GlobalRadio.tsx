@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { SiSpotify } from "react-icons/si";
-import { Pause, Play, SkipForward, SkipBack, Activity, Zap, Lock, Volume2, VolumeX, Radio } from "lucide-react";
+import { Pause, Play, SkipForward, SkipBack, Activity, Zap, Lock, Volume2, VolumeX, Radio, Music } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import type { TrackWithArtist } from "@shared/schema";
 import rotation from "@/lib/global-rotation.json";
 
 declare global {
@@ -122,6 +123,7 @@ export default function GlobalRadio() {
   const [crossfade, setCrossfade] = useState(50);
   const [vuLeft, setVuLeft] = useState(0);
   const [vuRight, setVuRight] = useState(0);
+  const [localTrackIndex, setLocalTrackIndex] = useState(0);
 
   const playerRef = useRef<any>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -134,6 +136,11 @@ export default function GlobalRadio() {
   const nextAsset = assets[nextAssetIndex];
   const currentAssetRef = useRef(currentAsset);
   currentAssetRef.current = currentAsset;
+
+  const { data: featuredTracks } = useQuery<TrackWithArtist[]>({
+    queryKey: ["/api/tracks/featured"],
+    staleTime: 60000,
+  });
 
   const { data: spotifyProfile } = useQuery<{ connected: boolean; isPremium?: boolean }>({
     queryKey: ["/api/spotify/me"],
@@ -359,6 +366,10 @@ export default function GlobalRadio() {
 
   const isConnected = spotifyProfile?.connected;
 
+  const trackList = featuredTracks || [];
+  const deckATrack = trackList.length > 0 ? trackList[localTrackIndex % trackList.length] : null;
+  const deckBTrack = trackList.length > 1 ? trackList[(localTrackIndex + 1) % trackList.length] : null;
+
   return (
     <div className="bg-black border border-lime-500/20 font-mono" data-testid="global-radio-container">
       {deviceId && <span data-device-id={deviceId} className="hidden" />}
@@ -389,19 +400,25 @@ export default function GlobalRadio() {
         </div>
       </div>
 
-      {!isConnected ? (
-        <div className="text-center py-8 px-4">
-          <Lock className="h-8 w-8 text-lime-400/30 mx-auto mb-3" />
-          <p className="text-lime-400 font-extrabold text-sm mb-1">SPOTIFY PREMIUM REQUIRED</p>
-          <p className="text-zinc-600 text-[10px] mb-4">Connect Spotify Premium from Radio & Jam to unlock the DJ Console</p>
-          <a href="/radio" className="inline-block px-6 py-2.5 border border-green-500/30 text-green-400 text-[10px] font-extrabold hover:bg-green-500/10 transition-colors" data-testid="link-connect-spotify">
-            <SiSpotify className="inline h-3 w-3 mr-1.5" /> CONNECT SPOTIFY →
-          </a>
-        </div>
-      ) : (
-        <div className="p-3 space-y-3">
+      <div className="p-3 space-y-3">
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {assets.map((asset, i) => (
+            {featuredTracks && featuredTracks.length > 0 ? featuredTracks.map((t, i) => (
+              <button
+                key={t.id}
+                onClick={() => { setCurrentAssetIndex(i % assets.length); setLocalTrackIndex(i); }}
+                className={`flex-shrink-0 px-2 py-1 border text-[8px] font-extrabold transition-all ${
+                  localTrackIndex === i
+                    ? "border-lime-400 bg-lime-500/10 text-lime-400 shadow-[0_0_8px_rgba(132,204,22,0.2)]"
+                    : "border-zinc-800 text-zinc-600 hover:border-lime-500/30 hover:text-lime-400"
+                }`}
+                data-testid={`button-rotation-track-${i}`}
+              >
+                ${(t.title || "ASSET").replace(/\s+/g, '').toUpperCase().slice(0, 8)}
+                {localTrackIndex === i && verifiedStreaming && (
+                  <Activity className="inline h-2 w-2 text-green-400 ml-1 animate-pulse" />
+                )}
+              </button>
+            )) : assets.map((asset, i) => (
               <button
                 key={asset.ticker}
                 onClick={() => handleNextAsset(i)}
@@ -413,9 +430,6 @@ export default function GlobalRadio() {
                 data-testid={`button-rotation-asset-${i}`}
               >
                 ${asset.ticker}
-                {i === currentAssetIndex && verifiedStreaming && (
-                  <Activity className="inline h-2 w-2 text-green-400 ml-1 animate-pulse" />
-                )}
               </button>
             ))}
           </div>
@@ -424,10 +438,10 @@ export default function GlobalRadio() {
             <Turntable
               isActive={true}
               isPlaying={tunedIn && !!playerState?.isPlaying}
-              albumArt={playerState?.albumArt || null}
+              albumArt={playerState?.albumArt || deckATrack?.coverImage || null}
               deckLabel="DECK A"
-              trackName={playerState?.trackName || ""}
-              artistName={playerState?.artistName || ""}
+              trackName={playerState?.trackName || deckATrack?.title?.toUpperCase() || ""}
+              artistName={playerState?.artistName || deckATrack?.artist?.name || ""}
               ticker={currentAsset.ticker}
             />
 
@@ -456,13 +470,25 @@ export default function GlobalRadio() {
             <Turntable
               isActive={false}
               isPlaying={false}
-              albumArt={null}
+              albumArt={deckBTrack?.coverImage || null}
               deckLabel="DECK B"
-              trackName=""
-              artistName=""
+              trackName={deckBTrack?.title?.toUpperCase() || ""}
+              artistName={deckBTrack?.artist?.name || ""}
               ticker={nextAsset.ticker}
             />
           </div>
+
+          {!tunedIn && deckATrack && (
+            <div className="border border-lime-500/10 bg-lime-500/5 p-2">
+              <div className="flex items-center gap-2">
+                <Music className="h-3 w-3 text-lime-400" />
+                <span className="text-[9px] text-lime-400 font-extrabold flex-1 truncate">
+                  {deckATrack.title?.toUpperCase()} — {deckATrack.artist?.name || "UNKNOWN"}
+                </span>
+                <span className="text-[8px] text-zinc-600">QUEUED</span>
+              </div>
+            </div>
+          )}
 
           {playerState && tunedIn && (
             <div className="border border-lime-500/10 bg-lime-500/5 p-2">
@@ -482,41 +508,51 @@ export default function GlobalRadio() {
           )}
 
           <div className="flex items-center gap-2">
-            {!tunedIn ? (
-              <button
-                onClick={handleTuneIn}
-                disabled={connecting}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-lime-600 hover:bg-lime-700 text-black font-extrabold text-sm transition-colors disabled:opacity-50"
-                data-testid="button-tune-in"
-              >
-                <SiSpotify className="h-5 w-5" />
-                {connecting ? "CONNECTING SDK..." : "GO LIVE"}
-              </button>
+            {isConnected ? (
+              !tunedIn ? (
+                <button
+                  onClick={handleTuneIn}
+                  disabled={connecting}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-lime-600 hover:bg-lime-700 text-black font-extrabold text-sm transition-colors disabled:opacity-50"
+                  data-testid="button-tune-in"
+                >
+                  <SiSpotify className="h-5 w-5" />
+                  {connecting ? "CONNECTING SDK..." : "GO LIVE — SPOTIFY"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleNextAsset((currentAssetIndex - 1 + assets.length) % assets.length)}
+                    className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
+                    data-testid="button-prev-asset"
+                  >
+                    <SkipBack className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handlePause}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-lime-500/30 text-lime-400 hover:bg-lime-500/10 font-extrabold text-sm transition-colors"
+                    data-testid="button-pause-stream"
+                  >
+                    {playerState?.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    {playerState?.isPlaying ? "PAUSE" : "RESUME"}
+                  </button>
+                  <button
+                    onClick={() => handleNextAsset()}
+                    className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
+                    data-testid="button-next-asset"
+                  >
+                    <SkipForward className="h-4 w-4" />
+                  </button>
+                </>
+              )
             ) : (
-              <>
-                <button
-                  onClick={() => handleNextAsset((currentAssetIndex - 1 + assets.length) % assets.length)}
-                  className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
-                  data-testid="button-prev-asset"
-                >
-                  <SkipBack className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={handlePause}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-lime-500/30 text-lime-400 hover:bg-lime-500/10 font-extrabold text-sm transition-colors"
-                  data-testid="button-pause-stream"
-                >
-                  {playerState?.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  {playerState?.isPlaying ? "PAUSE" : "RESUME"}
-                </button>
-                <button
-                  onClick={() => handleNextAsset()}
-                  className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
-                  data-testid="button-next-asset"
-                >
-                  <SkipForward className="h-4 w-4" />
-                </button>
-              </>
+              <a
+                href="/radio"
+                className="flex-1 flex items-center justify-center gap-2 py-3 border border-green-500/30 text-green-400 font-extrabold text-[11px] hover:bg-green-500/10 transition-colors"
+                data-testid="link-connect-spotify"
+              >
+                <SiSpotify className="h-4 w-4" /> CONNECT SPOTIFY TO GO LIVE
+              </a>
             )}
           </div>
 
@@ -582,8 +618,8 @@ export default function GlobalRadio() {
 
           <div className="flex items-center justify-between px-2 py-1.5 border border-lime-500/10 bg-zinc-950">
             <div className="flex items-center gap-2">
-              <SiSpotify className="h-3.5 w-3.5 text-green-500" />
-              <span className="text-[8px] text-green-400 font-extrabold">WEB PLAYBACK SDK</span>
+              <Radio className="h-3.5 w-3.5 text-lime-400" />
+              <span className="text-[8px] text-lime-400 font-extrabold">97.7 THE FLAME</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="h-3 w-3 text-lime-400" />
@@ -591,7 +627,6 @@ export default function GlobalRadio() {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 }
