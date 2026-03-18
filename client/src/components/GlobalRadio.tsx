@@ -361,7 +361,7 @@ export default function GlobalRadio() {
           body: JSON.stringify({
             trackName: track.name,
             isrc: `GLBL-${asset.ticker}`,
-            showName: "97.7 THE FLAME — SPOTIFY VERIFIED STREAMING",
+            showName: "97.7 THE FLAME GLOBAL — SPOTIFY VERIFIED STREAMING",
             status: "SPOTIFY_STREAM",
             duration: 30,
             spotifyContext: contextUri,
@@ -400,7 +400,7 @@ export default function GlobalRadio() {
       setConnecting(false);
       setTunedIn(true);
       startPlayback(currentAsset, deviceId);
-      toast({ title: "97.7 THE FLAME — ON AIR", description: `Deck A loaded: ${currentAsset.ticker}` });
+      toast({ title: "97.7 THE FLAME GLOBAL — ON AIR", description: `Deck A loaded: ${currentAsset.ticker}` });
     }
   }, [deviceId]);
 
@@ -482,7 +482,7 @@ export default function GlobalRadio() {
         if (!state) return;
 
         if (state.paused && !userPausedRef.current) {
-          console.log("[97.7 THE FLAME] Watchdog: Paused unexpectedly — resuming");
+          console.log("[97.7 THE FLAME GLOBAL] Watchdog: Paused unexpectedly — resuming");
           player.resume().catch(() => {
             if (autopilotRef.current) advanceToNextAsset();
           });
@@ -490,12 +490,12 @@ export default function GlobalRadio() {
 
         if (!state.paused && state.position > 0 && state.duration > 0 && state.position >= state.duration - 1500) {
           if (autopilotRef.current) {
-            console.log("[97.7 THE FLAME] Autopilot: Track ending — advancing");
+            console.log("[97.7 THE FLAME GLOBAL] Autopilot: Track ending — advancing");
             advanceToNextAsset();
           }
         }
       } catch (e) {
-        console.warn("[97.7 THE FLAME] Watchdog error:", e);
+        console.warn("[97.7 THE FLAME GLOBAL] Watchdog error:", e);
       }
     }, 5000);
 
@@ -506,7 +506,7 @@ export default function GlobalRadio() {
         if (adBridgeTimerRef.current) clearTimeout(adBridgeTimerRef.current);
         adBridgeTimerRef.current = setTimeout(() => {
           if (broadcastRef.current && !userPausedRef.current) {
-            console.log("[97.7 THE FLAME] Ad-Bridge: Resuming after interruption");
+            console.log("[97.7 THE FLAME GLOBAL] Ad-Bridge: Resuming after interruption");
             player.resume().catch(() => {
               if (autopilotRef.current) advanceToNextAsset();
             });
@@ -563,8 +563,8 @@ export default function GlobalRadio() {
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-lime-400" />
             <div>
-              <h2 className="text-lime-400 font-extrabold text-sm tracking-widest">97.7 THE FLAME</h2>
-              <p className="text-[8px] text-zinc-600">GLOBAL RADIO — DUAL-DECK BROADCAST CONSOLE</p>
+              <h2 className="text-lime-400 font-extrabold text-sm tracking-widest">97.7 THE FLAME GLOBAL</h2>
+              <p className="text-[8px] text-zinc-600">DUAL-DECK BROADCAST CONSOLE</p>
             </div>
           </div>
         </div>
@@ -862,7 +862,7 @@ export default function GlobalRadio() {
           <div className="flex items-center justify-between px-2 py-1.5 border border-lime-500/10 bg-zinc-950">
             <div className="flex items-center gap-2">
               <Radio className="h-3.5 w-3.5 text-lime-400" />
-              <span className="text-[8px] text-lime-400 font-extrabold">97.7 THE FLAME — GLOBAL RADIO</span>
+              <span className="text-[8px] text-lime-400 font-extrabold">97.7 THE FLAME GLOBAL</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="h-3 w-3 text-lime-400" />
