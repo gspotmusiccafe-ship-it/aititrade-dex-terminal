@@ -399,6 +399,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const [flashTimer, setFlashTimer] = useState<number | null>(null);
   const [isReconciling, setIsReconciling] = useState(false);
   const [showPayPal, setShowPayPal] = useState(false);
+  const [showP2P, setShowP2P] = useState(false);
   const flashTriggeredRef = useRef(false);
 
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
@@ -701,8 +702,42 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
           >
             <Play className="h-3 w-3 inline mr-1" />STREAM
           </button>
+          <button
+            onClick={() => setShowP2P(!showP2P)}
+            className={`border text-[10px] font-bold py-1.5 px-2 text-center transition-colors ${showP2P ? "border-green-500/50 text-green-400 bg-green-500/10" : "border-zinc-700 text-zinc-500 hover:border-green-500/30 hover:text-green-400"}`}
+            data-testid={`button-p2p-toggle-${track.id}`}
+          >
+            <Users className="h-3 w-3 inline mr-0.5" />P2P
+          </button>
         </div>
       </div>
+      {showP2P && (
+        <div className="border-t-2 border-green-600 bg-black p-4 shadow-[0_0_15px_rgba(0,255,0,0.1)]" data-testid={`p2p-terminal-${track.id}`}>
+          <h3 className="text-white font-black italic text-lg mb-2 uppercase truncate">
+            {track.title} <span className="text-green-500 text-sm not-italic">P2P FLOOR</span>
+          </h3>
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <p className="text-zinc-500 text-[9px] font-bold tracking-wider">CURRENT TBI (BUY-IN)</p>
+              <p className="text-white text-2xl font-black">${price.toFixed(2)}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-zinc-500 text-[9px] font-bold tracking-wider">MBB TARGET</p>
+              <p className="text-green-400 text-lg font-bold">$21.00</p>
+            </div>
+          </div>
+          <button
+            onClick={() => window.open("https://cash.app/$AITITRADEBROKERAGE", "_blank", "noopener,noreferrer")}
+            className="w-full bg-green-600 hover:bg-green-400 text-white py-3 font-black text-sm transition-all border-b-4 border-green-900 active:border-b-0 flex items-center justify-center gap-2"
+            data-testid={`button-p2p-execute-${track.id}`}
+          >
+            <DollarSign className="h-4 w-4" /> EXECUTE P2P TRADE — $AITITRADEBROKERAGE
+          </button>
+          <p className="text-[9px] text-zinc-600 mt-2 text-center uppercase tracking-widest">
+            No PayPal • Direct Peer-to-Peer Settlement • 54% Floor Protected
+          </p>
+        </div>
+      )}
       {mintReceipt && <MintCertificate receipt={mintReceipt} onClose={() => setMintReceipt(null)} />}
       {trustReceipt && <TrustCertificate receipt={trustReceipt} onClose={() => setTrustReceipt(null)} />}
       <TradeCashAppCheckout
