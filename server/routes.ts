@@ -3239,6 +3239,62 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/trust/settle-yield", isAdmin, async (req: any, res) => {
+    try {
+      const { assetId, trustId, totalYield } = req.body;
+
+      if (!trustId || !totalYield) {
+        return res.status(400).json({ message: "trustId and totalYield required" });
+      }
+
+      const yieldAmount = parseFloat(totalYield);
+      if (isNaN(yieldAmount) || yieldAmount <= 0) {
+        return res.status(400).json({ message: "Invalid totalYield" });
+      }
+
+      const trust = await db.select().from(trusts).where(eq(trusts.id, trustId)).limit(1);
+      if (trust.length === 0) {
+        return res.status(404).json({ message: "Trust not found" });
+      }
+
+      const members = await db.select().from(trustMembers).where(eq(trustMembers.trustId, trustId));
+      if (members.length === 0) {
+        return res.status(400).json({ message: "No beneficiaries in this trust" });
+      }
+
+      const ceoSplit = parseFloat((yieldAmount * 0.50).toFixed(4));
+      const trustGift = parseFloat((yieldAmount * 0.50).toFixed(4));
+      const perMemberShare = parseFloat((trustGift / members.length).toFixed(4));
+
+      console.log(`[YIELD SETTLE] Trust: ${trustId} | Asset: ${assetId || "N/A"} | Total: $${yieldAmount.toFixed(2)}`);
+      console.log(`[YIELD SETTLE] CEO Vault: $${ceoSplit.toFixed(2)} | Trust Gift: $${trustGift.toFixed(2)} | Per Member: $${perMemberShare.toFixed(2)} (${members.length} beneficiaries)`);
+
+      for (const member of members) {
+        await db.update(trustMembers)
+          .set({ giftedYield: sql`CAST(${trustMembers.giftedYield} AS DECIMAL) + ${perMemberShare}` })
+          .where(eq(trustMembers.id, member.id));
+      }
+
+      console.log(`[YIELD SETTLE] Distribution complete — ${members.length} members credited $${perMemberShare.toFixed(2)} each`);
+
+      res.json({
+        status: "YIELD_SETTLED",
+        trustId,
+        assetId: assetId || null,
+        totalYield: yieldAmount,
+        ceoVault: ceoSplit,
+        trustGift,
+        beneficiaries: members.length,
+        perMemberShare,
+        message: `$${trustGift.toFixed(2)} distributed to ${members.length} beneficiaries ($${perMemberShare.toFixed(2)} each)`,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("[YIELD SETTLE] Error:", error);
+      res.status(500).json({ message: "Failed to settle yield" });
+    }
+  });
+
   app.get("/api/admin/trusts", isAdmin, async (req: any, res) => {
     try {
       const allTrusts = await db.select().from(trusts).orderBy(desc(trusts.createdAt));
