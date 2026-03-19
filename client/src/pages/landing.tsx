@@ -682,6 +682,19 @@ export default function LandingPage() {
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
+
+          <div className="flex flex-col gap-4 mt-8 max-w-xl mx-auto">
+            <button
+              onClick={() => openAuth("signup")}
+              className="w-full py-6 bg-green-600 hover:bg-green-500 text-white text-xl font-black border-b-4 border-green-800 transition-all transform active:scale-95"
+              data-testid="button-24hr-trader"
+            >
+              CREATE 24HR TRADER (STIMULATION)
+            </button>
+            <p className="text-center text-gray-400 text-sm font-bold uppercase tracking-widest">
+              No Simulation • 24HR Live Market Access • Feel The Heat
+            </p>
+          </div>
         </div>
       </section>
 
