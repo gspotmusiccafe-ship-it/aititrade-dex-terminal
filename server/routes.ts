@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -3125,6 +3125,134 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error: any) {
       console.error("[DIRECT_PUSH] Pipeline error:", error);
       res.status(500).json({ message: "Failed to execute direct push distribution" });
+    }
+  });
+
+  app.post("/api/trust/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = parseInt(req.user.claims.sub);
+
+      const existingMember = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
+      if (existingMember.length > 0) {
+        return res.status(409).json({ message: "Already a trust member", trustId: existingMember[0].trustId });
+      }
+
+      let activeTrust = await db.select().from(trusts).where(eq(trusts.status, "OPEN")).limit(1);
+
+      if (activeTrust.length === 0) {
+        const seedId = `ALPHA-50`;
+        await db.insert(trusts).values({ id: seedId, status: "OPEN", maxMembers: 50 });
+        activeTrust = [{ id: seedId, status: "OPEN", maxMembers: 50, parentTrustId: null, createdAt: new Date() }];
+        console.log(`[TRUST] Seeded initial trust: ${seedId}`);
+      }
+
+      const currentTrust = activeTrust[0];
+
+      const [memberCountResult] = await db.select({ value: count() }).from(trustMembers).where(eq(trustMembers.trustId, currentTrust.id));
+      const memberCount = memberCountResult?.value || 0;
+
+      if (memberCount >= (currentTrust.maxMembers || 50)) {
+        await db.update(trusts).set({ status: "CLOSED" }).where(eq(trusts.id, currentTrust.id));
+        const newTrustId = `TRUST-${Date.now()}`;
+        await db.insert(trusts).values({ id: newTrustId, status: "OPEN", maxMembers: 50, parentTrustId: currentTrust.id });
+        console.log(`[TRUST] ${currentTrust.id} CLOSED at ${memberCount} members. Spawned ${newTrustId}`);
+
+        const [newMember] = await db.insert(trustMembers).values({
+          userId,
+          trustId: newTrustId,
+          promissoryNoteAmount: 500,
+          outstandingBalance: "475.00",
+          monthlyCommitment: "19.79",
+          monthsRemaining: 24,
+          isBeneficiary: true,
+          giftedYield: "0.00",
+        }).returning();
+
+        return res.json({
+          status: "TRUST_JOINED",
+          trustId: newTrustId,
+          member: newMember,
+          note: "Sub-trust spawned — previous trust closed at capacity",
+          activation: 25.00,
+          promissoryNote: 500,
+          outstandingBalance: 475.00,
+          monthlyCommitment: 19.79,
+          months: 24,
+        });
+      }
+
+      const [newMember] = await db.insert(trustMembers).values({
+        userId,
+        trustId: currentTrust.id,
+        promissoryNoteAmount: 500,
+        outstandingBalance: "475.00",
+        monthlyCommitment: "19.79",
+        monthsRemaining: 24,
+        isBeneficiary: true,
+        giftedYield: "0.00",
+      }).returning();
+
+      console.log(`[TRUST] User ${userId} joined ${currentTrust.id} — seat ${memberCount + 1}/50`);
+
+      res.json({
+        status: "TRUST_JOINED",
+        trustId: currentTrust.id,
+        seat: memberCount + 1,
+        member: newMember,
+        activation: 25.00,
+        promissoryNote: 500,
+        outstandingBalance: 475.00,
+        monthlyCommitment: 19.79,
+        months: 24,
+        message: `SEAT ${memberCount + 1}/50 LOCKED IN ${currentTrust.id}`,
+      });
+    } catch (error: any) {
+      console.error("[TRUST] Join error:", error);
+      res.status(500).json({ message: "Failed to join trust" });
+    }
+  });
+
+  app.get("/api/trust/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = parseInt(req.user.claims.sub);
+      const member = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
+
+      if (member.length === 0) {
+        return res.json({ isMember: false });
+      }
+
+      const trust = await db.select().from(trusts).where(eq(trusts.id, member[0].trustId)).limit(1);
+      const [seatCount] = await db.select({ value: count() }).from(trustMembers).where(eq(trustMembers.trustId, member[0].trustId));
+
+      res.json({
+        isMember: true,
+        member: member[0],
+        trust: trust[0] || null,
+        seats: {
+          filled: seatCount?.value || 0,
+          max: trust[0]?.maxMembers || 50,
+        },
+      });
+    } catch (error: any) {
+      console.error("[TRUST] Status error:", error);
+      res.status(500).json({ message: "Failed to get trust status" });
+    }
+  });
+
+  app.get("/api/admin/trusts", isAdmin, async (req: any, res) => {
+    try {
+      const allTrusts = await db.select().from(trusts).orderBy(desc(trusts.createdAt));
+      const allMembers = await db.select().from(trustMembers);
+
+      const trustData = allTrusts.map(t => ({
+        ...t,
+        memberCount: allMembers.filter(m => m.trustId === t.id).length,
+      }));
+
+      res.json({ trusts: trustData, totalMembers: allMembers.length });
+    } catch (error: any) {
+      console.error("[TRUST] Admin list error:", error);
+      res.status(500).json({ message: "Failed to list trusts" });
     }
   });
 

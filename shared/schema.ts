@@ -411,6 +411,18 @@ export const insertGlobalRotationSchema = createInsertSchema(globalRotation).omi
 export type InsertGlobalRotation = z.infer<typeof insertGlobalRotationSchema>;
 export type GlobalRotation = typeof globalRotation.$inferSelect;
 
+export const trusts = pgTable("trusts", {
+  id: text("id").primaryKey(),
+  status: varchar("status", { length: 20 }).notNull().default("OPEN"),
+  maxMembers: integer("max_members").notNull().default(50),
+  parentTrustId: text("parent_trust_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTrustSchema = createInsertSchema(trusts).omit({ createdAt: true });
+export type InsertTrust = z.infer<typeof insertTrustSchema>;
+export type Trust = typeof trusts.$inferSelect;
+
 export const trustMembers = pgTable("trust_members", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
