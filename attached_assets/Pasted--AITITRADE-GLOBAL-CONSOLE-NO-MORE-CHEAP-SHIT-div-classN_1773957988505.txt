@@ -1,0 +1,45 @@
+/* AITITRADE GLOBAL CONSOLE - NO MORE CHEAP SHIT */
+<div className="bg-zinc-950 border-t-4 border-green-600 p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
+  <div className="max-w-7xl mx-auto flex items-center gap-6">
+    
+    {/* DECK A: THE ASSET ART */}
+    <div className="relative group w-24 h-24 border-2 border-zinc-800 rounded-sm overflow-hidden">
+      <img src={currentTrack.artwork} className="object-cover animate-spin-slow" />
+      <div className="absolute inset-0 bg-green-500/10 mix-blend-color"></div>
+    </div>
+
+    {/* THE HUD: SIGNAL & DATA */}
+    <div className="flex-1">
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h2 className="text-white font-black italic text-xl tracking-tighter uppercase">
+            {currentTrack.title} <span className="text-green-500">// ASSET_ACTIVE</span>
+          </h2>
+          <p className="text-zinc-500 font-mono text-xs uppercase tracking-widest">
+            ISRC: {currentTrack.isrc} | MARKET: GLOBAL_SPOTIFY
+          </p>
+        </div>
+        <div className="text-right font-mono text-green-400">
+          <p className="text-[10px]">97.7 THE FLAME</p>
+          <p className="text-lg font-black animate-pulse">SIGNAL: 100%</p>
+        </div>
+      </div>
+
+      {/* THE INTEGRATED APPLET: QUICK TRADE */}
+      <div className="grid grid-cols-3 gap-2 h-12">
+        <button className="bg-zinc-900 border border-zinc-700 text-green-500 font-bold text-[10px] hover:bg-green-900 hover:text-white transition-all uppercase">
+          Acquire Position
+        </button>
+        <button className="bg-zinc-900 border border-zinc-700 text-white font-bold text-[10px] hover:bg-zinc-800 transition-all uppercase">
+          View Floor Data
+        </button>
+        <div className="bg-black border border-green-900 flex items-center justify-center">
+          <span className="text-green-500 font-mono text-xs animate-marquee">
+            FLOOR_CEILING: $1,000.00 | LOAD: 54% | SPLIT: PROTECTED
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
