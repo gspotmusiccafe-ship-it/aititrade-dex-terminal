@@ -264,159 +264,68 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
   );
 }
 
-function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: TrackWithArtist; open: boolean; onClose: () => void; onSuccess: (data: any) => void }) {
-  const buttonContainerRef = useRef<HTMLDivElement>(null);
-  const paypalInitialized = useRef(false);
-  const clickHandlerRef = useRef<(() => void) | null>(null);
-  const [loading, setLoading] = useState(true);
+function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: TrackWithArtist; open: boolean; onClose: () => void; onSuccess: (data: any) => void }) {
   const [processing, setProcessing] = useState(false);
+  const [tradeData, setTradeData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const initPayPal = useCallback(async () => {
-    if (paypalInitialized.current) return;
-    setLoading(true);
-    setError(null);
+  const price = parseFloat(track.unitPrice || "0.99");
+  const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
 
+  const handleAcquire = async () => {
     try {
-      if (!(window as any).paypal) {
-        await new Promise<void>((resolve, reject) => {
-          const script = document.createElement("script");
-          script.src = import.meta.env.PROD
-            ? "https://www.paypal.com/web-sdk/v6/core"
-            : "https://www.sandbox.paypal.com/web-sdk/v6/core";
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load PayPal"));
-          document.body.appendChild(script);
-        });
-      }
+      setProcessing(true);
+      setError(null);
 
-      const clientToken: string = await fetch("/setup")
-        .then((res) => res.json())
-        .then((data) => data.clientToken);
-
-      const sdkInstance = await (window as any).paypal.createInstance({
-        clientToken,
-        components: ["paypal-payments"],
+      const res = await fetch("/api/exchange/trade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ trackId: track.id, amount: price }),
       });
 
-      const paypalCheckout = sdkInstance.createPayPalOneTimePaymentSession({
-        onApprove: async (data: any) => {
-          try {
-            setProcessing(true);
-            setError(null);
-            const captureRes = await fetch(`/order/${data.orderId}/capture`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-            });
-            if (!captureRes.ok) throw new Error("Payment capture failed");
-
-            const tradeRes = await fetch("/api/orders/paypal", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ trackId: track.id, paypalOrderId: data.orderId }),
-            });
-            if (!tradeRes.ok) throw new Error("Trade order failed");
-            const tradeData = await tradeRes.json();
-            onSuccess(tradeData);
-            queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
-            toast({ title: "POSITION ACQUIRED", description: `PayPal verified — ${tradeData.receipt?.mintId || "Order confirmed"}` });
-            onClose();
-          } catch (e: any) {
-            setError(e.message || "Failed to process trade. Please try again.");
-          } finally {
-            setProcessing(false);
-          }
-        },
-        onCancel: () => {
-          setError("Payment was cancelled.");
-          setProcessing(false);
-        },
-        onError: (err: any) => {
-          console.error("PayPal trade error:", err);
-          setError("Payment error. Please try again.");
-          setProcessing(false);
-        },
-      });
-
-      const container = buttonContainerRef.current;
-      if (container) {
-        container.innerHTML = "";
-        const btn = document.createElement("paypal-button");
-        btn.id = `paypal-trade-btn-${track.id}`;
-        btn.setAttribute("data-testid", `button-paypal-trade-${track.id}`);
-        container.appendChild(btn);
-
-        const clickHandler = async () => {
-          try {
-            const orderRes = await fetch("/order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ tier: "trade_position" }),
-            });
-            if (!orderRes.ok) throw new Error("Failed to create order");
-            const orderData = await orderRes.json();
-
-            await paypalCheckout.start(
-              { paymentFlow: "auto" },
-              Promise.resolve({ orderId: orderData.id })
-            );
-          } catch (e) {
-            console.error("PayPal trade checkout error:", e);
-            setError("Failed to start checkout.");
-          }
-        };
-
-        clickHandlerRef.current = clickHandler;
-        btn.addEventListener("click", clickHandler);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Trade failed");
       }
 
-      paypalInitialized.current = true;
-      setLoading(false);
+      const data = await res.json();
+      setTradeData(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+
+      window.open(data.url, "_blank");
+
+      toast({ title: "POSITION LOCKED", description: `${data.trackingNumber} — Send to ${data.cashtag}` });
+
+      const isGlobal = track.releaseType === "global";
+      if (isGlobal) {
+        onSuccess({ type: "global", receipt: { trustId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, blessingPool: data.blessingPool, aiModel: data.aiModel, priority: data.priority, indicator: data.indicator, storeUrl: "https://payhip.com/aitifymusicstore", timestamp: data.timestamp } });
+      } else {
+        onSuccess({ type: "native", receipt: { mintId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, blessingPool: data.blessingPool, aiModel: data.aiModel, grossSales: data.grossSales, totalMints: data.totalMints, mintCap: data.mintCap, capacityPct: data.capacityPct, priority: data.priority, indicator: data.indicator, status: data.status === "CLOSED" ? "CLOSED" : "TRADE_EXECUTED", timestamp: data.timestamp } });
+      }
     } catch (e: any) {
-      console.error("PayPal trade init error:", e);
-      setError(e.message || "Failed to initialize payment");
-      setLoading(false);
+      setError(e.message || "Failed to process trade");
+    } finally {
+      setProcessing(false);
     }
-  }, [track.id, onSuccess, onClose, toast]);
-
-  useEffect(() => {
-    if (open) {
-      paypalInitialized.current = false;
-      const timer = setTimeout(initPayPal, 300);
-      return () => {
-        clearTimeout(timer);
-        const container = buttonContainerRef.current;
-        if (container && clickHandlerRef.current) {
-          const btn = container.querySelector("paypal-button");
-          if (btn) btn.removeEventListener("click", clickHandlerRef.current);
-          clickHandlerRef.current = null;
-        }
-      };
-    }
-  }, [open, initPayPal]);
+  };
 
   if (!open) return null;
 
-  const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
-
   return (
     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-black border-2 border-lime-500/60 font-mono max-w-sm w-full shadow-2xl shadow-lime-500/20 relative overflow-hidden" onClick={e => e.stopPropagation()} data-testid={`trade-paypal-dialog-${track.id}`}>
+      <div className="bg-black border-2 border-lime-500/60 font-mono max-w-sm w-full shadow-2xl shadow-lime-500/20 relative overflow-hidden" onClick={e => e.stopPropagation()} data-testid={`trade-cashapp-dialog-${track.id}`}>
         <div className="border-b border-lime-500/30 px-4 py-2.5 flex items-center justify-between bg-lime-950/80">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-lime-400" />
-            <span className="text-[11px] text-lime-400 font-bold tracking-wider">ACQUIRE POSITION — PAYPAL</span>
+            <span className="text-[11px] text-lime-400 font-bold tracking-wider">ACQUIRE POSITION — CASH APP</span>
           </div>
           <button onClick={onClose} className="text-lime-500/40 hover:text-lime-400"><X className="h-4 w-4" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div className="border border-lime-400/20 bg-lime-950/30 p-3 text-center">
-            <p className="text-[10px] text-lime-400 font-black tracking-[0.25em]">AITITRADE — POSITION ORDER</p>
+            <p className="text-[10px] text-lime-400 font-black tracking-[0.25em]">AITITRADE BROKERAGE — POSITION ORDER</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
@@ -425,29 +334,57 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
             </div>
             <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
               <p className="text-[8px] text-lime-500/40 tracking-wider">BUY-IN PRICE</p>
-              <p className="text-xl text-lime-400 font-black mt-0.5">$0.99</p>
+              <p className="text-xl text-lime-400 font-black mt-0.5">${price.toFixed(2)}</p>
             </div>
+          </div>
+          <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
+            <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
+            <p className="text-2xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
+            <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
           </div>
           <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
             <p className="text-[9px] text-lime-500/50">54% FLOOR RETAINED — 46% CEO GROSS (G. SMOOTH MANDATE)</p>
-            <p className="text-[8px] text-zinc-600 mt-1">PAYMENT PROCESSED VIA PAYPAL SECURE CHECKOUT</p>
+            <p className="text-[8px] text-zinc-600 mt-1">ONCE PAID, TRADE LOCKS — STIMULATION STARTING</p>
           </div>
+          {tradeData && (
+            <div className="border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-center">
+              <p className="text-[8px] text-emerald-500/50 tracking-wider">TRACKING NUMBER</p>
+              <p className="text-sm text-emerald-400 font-black">{tradeData.trackingNumber}</p>
+              <p className="text-[8px] text-emerald-500/30 mt-1">INCLUDE IN CASH APP NOTE</p>
+            </div>
+          )}
           {error && (
             <div className="border border-red-500/30 bg-red-500/10 p-2 text-center">
               <p className="text-[10px] text-red-400 font-bold">{error}</p>
             </div>
           )}
-          {processing && (
+          {processing ? (
             <div className="border border-lime-500/30 bg-lime-950/30 p-3 text-center">
               <div className="flex items-center justify-center gap-2">
                 <div className="w-3 h-3 border-2 border-lime-400 border-t-transparent rounded-full animate-spin" />
-                <p className="text-[11px] text-lime-400 font-bold animate-pulse">PROCESSING TRADE...</p>
+                <p className="text-[11px] text-lime-400 font-bold animate-pulse">LOCKING POSITION...</p>
               </div>
             </div>
+          ) : !tradeData ? (
+            <button
+              onClick={handleAcquire}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 text-sm tracking-wider transition-colors"
+              data-testid={`button-cashapp-trade-${track.id}`}
+            >
+              <DollarSign className="h-4 w-4 inline mr-1" />
+              ACQUIRE POSITION — OPEN CASH APP
+            </button>
+          ) : (
+            <a
+              href={tradeData.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 text-sm tracking-wider transition-colors text-center"
+              data-testid="link-cashapp-pay"
+            >
+              OPEN CASH APP — $AITITRADEBROKERAGE
+            </a>
           )}
-          <div ref={buttonContainerRef} className="flex justify-center min-h-[50px] items-center">
-            {loading && <p className="text-[10px] text-lime-400/50 animate-pulse">INITIALIZING PAYPAL...</p>}
-          </div>
         </div>
       </div>
     </div>
@@ -754,7 +691,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
               className="flex-1 bg-lime-600 text-white text-[11px] font-extrabold py-2 text-center hover:bg-lime-700 transition-colors flex items-center justify-center gap-1"
               data-testid={`button-acquire-${track.id}`}
             >
-              <DollarSign className="h-3 w-3" /> ACQUIRE POSITION @ $0.99 — PAYPAL
+              <DollarSign className="h-3 w-3" /> ACQUIRE POSITION — CASH APP
             </button>
           )}
           <button
@@ -768,7 +705,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
       </div>
       {mintReceipt && <MintCertificate receipt={mintReceipt} onClose={() => setMintReceipt(null)} />}
       {trustReceipt && <TrustCertificate receipt={trustReceipt} onClose={() => setTrustReceipt(null)} />}
-      <TradePayPalCheckout
+      <TradeCashAppCheckout
         track={track}
         open={showPayPal}
         onClose={() => setShowPayPal(false)}

@@ -1615,6 +1615,97 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/exchange/trade", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId, amount } = req.body;
+      if (!trackId || !amount) {
+        return res.status(400).json({ message: "trackId and amount required" });
+      }
+
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      const [track] = await db.select().from(tracks).where(eq(tracks.id, trackId));
+      if (!track) return res.status(404).json({ message: "Track not found" });
+
+      const isGlobal = track.releaseType === "global";
+      const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
+      const price = parseFloat(track.unitPrice || "0.99");
+      const currentSales = track.salesCount || 0;
+
+      const GLOBAL_CEILING = 1000.00;
+      if (!isGlobal) {
+        const currentGross = parseFloat((currentSales * price).toFixed(2));
+        if (currentGross >= GLOBAL_CEILING) {
+          return res.status(400).json({ message: "Pool closed — ceiling reached" });
+        }
+      }
+
+      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
+      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
+      const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+      const isPriority = parsedAmount < 21.00;
+
+      const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
+
+      console.log(`[CASH APP TRADE] Asset: ${ticker} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+
+      const seq = String(currentSales + 1).padStart(3, "0");
+      const prefix = isGlobal ? "TRST" : "MNT";
+      const trackingNum = `${prefix}-977-${ticker}-${seq}`;
+
+      const [order] = await db.insert(orders).values({
+        trackId,
+        trackingNumber: trackingNum,
+        unitPrice: price.toString(),
+        creatorCredit: "0.46",
+        creatorCreditAmount: ceoTake46.toString(),
+        positionHolderAmount: floor54.toString(),
+        status: "pending_cashapp",
+      }).returning();
+
+      await db.update(tracks)
+        .set({ salesCount: sql`${tracks.salesCount} + 1` })
+        .where(eq(tracks.id, trackId));
+
+      const newGross = parseFloat(((currentSales + 1) * price).toFixed(2));
+      const capacityPct = Math.min(100, parseFloat(((newGross / GLOBAL_CEILING) * 100).toFixed(1)));
+
+      res.json({
+        instruction: `SEND $${parsedAmount.toFixed(2)} TO CASH APP`,
+        url: cashAppUrl,
+        cashtag: "$AITITRADEBROKERAGE",
+        note: `AITITRADE ${trackingNum}`,
+        trackingNumber: trackingNum,
+        ticker,
+        asset: track.title,
+        unitPrice: price,
+        floorRetained: floor54,
+        ceoGross: ceoTake46,
+        trustTithe: trustTithe10,
+        blessingPool: blessingPool36,
+        priority: isPriority ? "HIGH" : "CYCLE_HOLD",
+        indicator: "STIMULATION_ACTIVE",
+        status: newGross >= GLOBAL_CEILING ? "CLOSED" : "STIMULATION_PENDING",
+        message: "PAYMENT TO $AITITRADEBROKERAGE LOCKS YOUR POSITION",
+        grossSales: newGross,
+        totalMints: currentSales + 1,
+        mintCap: GLOBAL_CEILING,
+        capacityPct,
+        aiModel: track.aiModel || "AITIFY-GEN-1",
+        releaseType: isGlobal ? "global" : "native",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Cash App trade error:", error);
+      res.status(500).json({ message: "Failed to process trade" });
+    }
+  });
+
   // Upgrade membership after PayPal payment is verified server-side
   app.post("/api/user/membership/upgrade", isAuthenticated, async (req: any, res) => {
     try {

@@ -20,7 +20,7 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Backend**: Express.js with TypeScript for API services.
 -   **Database**: PostgreSQL, managed with Drizzle ORM.
 -   **Authentication**: Primary authentication via email/password, with optional Spotify OAuth 2.0 integration for enhanced features.
--   **Payments**: PayPal Web SDK handles all subscription and artist tipping transactions.
+-   **Payments**: Cash App ($AITITRADEBROKERAGE) handles asset trading via `/api/exchange/trade`. PayPal Web SDK handles subscription and artist tipping transactions.
 
 **Key Features & Technical Implementations:**
 
@@ -58,7 +58,8 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Drizzle ORM**: TypeScript ORM.
 -   **OpenAI API**: For AI Lyrics Generator.
 -   **FFmpeg**: For Audio Mastering Engine.
--   **PayPal Web SDK**: For payment processing.
+-   **Cash App**: For asset trade payments ($AITITRADEBROKERAGE).
+-   **PayPal Web SDK**: For subscription and tipping payment processing.
 -   **Spotify OAuth 2.0 API**: For authentication and Spotify features.
 -   **Replit Object Storage (GCS-backed)**: Cloud storage for media files.
 -   **html-to-image**: For client-side image exports.
