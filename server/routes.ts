@@ -3005,6 +3005,129 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/distribute/direct-push", isAdmin, async (req: any, res) => {
+    try {
+      const { prompt, title, style, price, makeInstrumental, aspectRatio } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ message: "title required" });
+      }
+
+      const sunoKey = process.env.SUNO_API_KEY;
+      const ideogramKey = process.env.IDEOGRAM_API_KEY;
+
+      if (!sunoKey || !ideogramKey) {
+        const missing = [];
+        if (!sunoKey) missing.push("SUNO_API_KEY");
+        if (!ideogramKey) missing.push("IDEOGRAM_API_KEY");
+        return res.status(503).json({ message: `Missing keys: ${missing.join(", ")}` });
+      }
+
+      console.log(`[DIRECT_PUSH] Initiating full asset pipeline: "${title}"`);
+
+      const audioPrompt = prompt || title;
+      const artPrompt = `Cinematic trading floor style album art for "${title}", neon green and obsidian, high-tech digital asset style`;
+
+      const [sunoResponse, ideogramResponse] = await Promise.all([
+        fetch("https://api.suno.ai/v1/generate", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${sunoKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: audioPrompt,
+            tags: style || "Global Trade Beat",
+            mv: "chirp-v3.5",
+            make_instrumental: !!makeInstrumental,
+          }),
+        }),
+        fetch("https://api.ideogram.ai/generate", {
+          method: "POST",
+          headers: {
+            "Api-Key": ideogramKey,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            prompt: artPrompt,
+            aspect_ratio: aspectRatio || "1:1",
+            model: "v-2",
+          }),
+        }),
+      ]);
+
+      let audioAsset = { suno_id: null as string | null, status: "FAILED" };
+      let visualAsset = { imageUrl: null as string | null, status: "FAILED" };
+
+      if (sunoResponse.ok) {
+        const sunoData = await sunoResponse.json();
+        audioAsset = { suno_id: sunoData.id || null, status: "MINTING_PENDING" };
+        console.log(`[DIRECT_PUSH] Audio generated: ${audioAsset.suno_id || "pending"}`);
+      } else {
+        console.error(`[DIRECT_PUSH] Suno failed: ${sunoResponse.status}`);
+      }
+
+      if (ideogramResponse.ok) {
+        const artData = await ideogramResponse.json();
+        visualAsset = {
+          imageUrl: artData.data?.[0]?.url || artData.url || null,
+          status: "ART_READY",
+        };
+        console.log(`[DIRECT_PUSH] Artwork generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
+      } else {
+        console.error(`[DIRECT_PUSH] Ideogram failed: ${ideogramResponse.status}`);
+      }
+
+      const ticker = title.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6);
+      const unitPrice = parseFloat(String(price || 25.00));
+      const wholesaleCost = 0.35 + 0.03;
+      const floor54 = parseFloat((unitPrice * 0.54).toFixed(4));
+      const ceoGross46 = parseFloat((unitPrice * 0.46).toFixed(4));
+      const trustTithe10 = parseFloat((ceoGross46 * 0.10).toFixed(4));
+      const blessing36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
+
+      console.log(`[DIRECT_PUSH] $${ticker} | Price: $${unitPrice} | Wholesale: $${wholesaleCost}`);
+      console.log(`[DIRECT_PUSH] Split — Floor: $${floor54} | Blessing: $${blessing36} | Trust: $${trustTithe10}`);
+
+      res.json({
+        status: "ASSET_LIVE",
+        ticker: `$${ticker}`,
+        title,
+        audio: {
+          suno_id: audioAsset.suno_id,
+          status: audioAsset.status,
+          engine: "chirp-v3.5",
+        },
+        artwork: {
+          imageUrl: visualAsset.imageUrl,
+          status: visualAsset.status,
+          engine: "ideogram-v2",
+        },
+        pricing: {
+          unitPrice,
+          wholesaleCost,
+          margin: parseFloat((unitPrice - wholesaleCost).toFixed(2)),
+          floorSupport: 1000.00,
+        },
+        split: {
+          floor: floor54,
+          ceoGross: ceoGross46,
+          trustTithe: trustTithe10,
+          blessing: blessing36,
+          mandate: "54/46",
+        },
+        settlement: "https://cash.app/$AITITRADEBROKERAGE",
+        cashtag: "$AITITRADEBROKERAGE",
+        priority: unitPrice < 21 ? "HIGH" : "STANDARD",
+        message: "ASSET DISTRIBUTED TO FLOOR. STIMULATION READY.",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("[DIRECT_PUSH] Pipeline error:", error);
+      res.status(500).json({ message: "Failed to execute direct push distribution" });
+    }
+  });
+
   // Toggle track featured status for radio playlist
   app.patch("/api/admin/tracks/:id/featured", isAdmin, async (req: any, res) => {
     try {
