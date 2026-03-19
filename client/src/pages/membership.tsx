@@ -433,13 +433,14 @@ export default function MembershipPage() {
   return (
     <div className="min-h-full pb-28">
       {isAuthenticated && (
-        <div className="flex justify-end px-4 pt-3">
+        <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-black/90 backdrop-blur border-b border-zinc-800">
+          <span className="text-lime-400 font-mono font-extrabold text-sm tracking-widest">AITIFY MUSIC RADIO</span>
           <button
             onClick={() => logout()}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-800 text-zinc-400 hover:text-red-400 hover:border-red-500/30 text-xs font-mono font-bold transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 text-sm font-mono font-extrabold transition-colors"
             data-testid="button-membership-logout"
           >
-            <LogOut className="h-3 w-3" />
+            <LogOut className="h-4 w-4" />
             LOG OUT
           </button>
         </div>
