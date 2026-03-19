@@ -1798,6 +1798,57 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/exchange/p2p-settle", isAuthenticated, async (req: any, res) => {
+    try {
+      const { amount, assetId, spotifyTrackId } = req.body;
+
+      if (!amount) {
+        return res.status(400).json({ message: "amount required" });
+      }
+
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
+      const ceoGross46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const trustTithe10 = parseFloat((ceoGross46 * 0.10).toFixed(4));
+      const yourBlessing36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
+
+      const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
+      const ref = assetId || spotifyTrackId || "SPOT_ASSET";
+
+      console.log(`[P2P SETTLE] Asset: ${ref} | Amount: $${parsedAmount.toFixed(2)}`);
+      console.log(`[LEDGER] Floor: $${floor54} | CEO Blessing: $${yourBlessing36} | Trust Tithe: $${trustTithe10}`);
+
+      res.json({
+        status: "STIMULATION_READY",
+        instruction: "SEND TO CASH APP TO LOCK POSITION",
+        url: cashAppUrl,
+        cashtag: "$AITITRADEBROKERAGE",
+        ref,
+        split: {
+          floor: floor54,
+          ceoGross: ceoGross46,
+          trustTithe: trustTithe10,
+          blessing: yourBlessing36,
+        },
+        indicators: {
+          floor: "STABLE",
+          load: "54%",
+          signal: "97.7 THE FLAME",
+        },
+        priority: parsedAmount < 21 ? "HIGH" : "STANDARD",
+        message: `TRANSFER $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE. USE REF: ${ref}`,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("P2P settle error:", error);
+      res.status(500).json({ message: "Failed to initiate P2P settlement" });
+    }
+  });
+
   // Upgrade membership after PayPal payment is verified server-side
   app.post("/api/user/membership/upgrade", isAuthenticated, async (req: any, res) => {
     try {
