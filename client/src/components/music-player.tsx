@@ -32,7 +32,7 @@ function YouTubeVideoPanel({ videoUrl, onClose }: { videoUrl: string; onClose: (
   if (!videoId) return null;
 
   return (
-    <div className="fixed bottom-28 right-0 w-80 bg-black border border-lime-500/20 shadow-2xl z-50 font-mono" data-testid="youtube-video-panel">
+    <div className="fixed bottom-36 right-0 w-80 bg-black border border-lime-500/20 shadow-2xl z-50 font-mono" data-testid="youtube-video-panel">
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-lime-500/10 bg-lime-500/5">
         <div className="flex items-center gap-1.5">
           <Video className="h-3 w-3 text-lime-400" />
@@ -140,7 +140,7 @@ export function MusicPlayer() {
         <YouTubeVideoPanel videoUrl={currentTrack.audioUrl} onClose={() => setVideoOpen(false)} />
       )}
       {queueOpen && (
-        <div className="fixed right-0 bottom-28 w-72 max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
+        <div className="fixed right-0 bottom-36 w-72 max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
           <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-500/10 bg-emerald-500/5">
             <span className="text-[10px] text-emerald-400 font-bold">QUEUE</span>
             <div className="flex items-center gap-1">
@@ -225,7 +225,7 @@ export function MusicPlayer() {
       )}
 
       {broadcast && (
-        <div className="fixed bottom-28 left-0 right-0 h-6 bg-black/95 border-t border-red-500/20 z-50 font-mono flex items-center justify-center gap-4 px-4" data-testid="broadcast-status-bar">
+        <div className="fixed bottom-36 left-0 right-0 h-6 bg-black/95 border-t border-red-500/20 z-50 font-mono flex items-center justify-center gap-4 px-4" data-testid="broadcast-status-bar">
           <div className="flex items-center gap-2">
             <Wifi className="h-3 w-3 text-red-400 animate-pulse" />
             <span className="text-[9px] text-red-400 font-extrabold tracking-widest">CONTINUOUS BROADCAST</span>
@@ -258,7 +258,13 @@ export function MusicPlayer() {
           </div>
         </div>
       )}
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t-4 border-green-600 z-50 font-mono shadow-[0_-10px_40px_rgba(0,0,0,0.9)]" data-testid="music-player">
+      <div className="fixed bottom-0 left-0 right-0 z-50 font-mono" data-testid="music-player">
+        <div className="w-full bg-black border-y border-green-900 py-1.5 overflow-hidden whitespace-nowrap" data-testid="singing-ticker">
+          <div className="animate-marquee inline-block text-green-500 font-mono font-bold text-xs md:text-sm">
+            AITITRADE EXCHANGE :: GLOBAL FLOOR: $1,000.00 :: CURRENT LOAD: 54% :: STIMULATION ACTIVE :: TRADER POSITIONS LOCKING :: NO SIMULATION :: BLESSING POOL: ONLINE :: $AITITRADEBROKERAGE :: 54/46 G. SMOOTH MANDATE :: SPLIT: PROTECTED :: AITITRADE EXCHANGE :: GLOBAL FLOOR: $1,000.00 :: CURRENT LOAD: 54% :: STIMULATION ACTIVE :: TRADER POSITIONS LOCKING :: NO SIMULATION :: BLESSING POOL: ONLINE :: $AITITRADEBROKERAGE :: 54/46 G. SMOOTH MANDATE :: SPLIT: PROTECTED ::&nbsp;&nbsp;&nbsp;&nbsp;
+          </div>
+        </div>
+      <div className="bg-zinc-950 border-t-4 border-green-600 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
         <div className="px-4 py-3 flex items-center gap-4 max-w-screen-2xl mx-auto">
 
           <div className="relative group w-20 h-20 md:w-24 md:h-24 border-2 border-zinc-800 rounded-sm overflow-hidden flex-shrink-0" data-testid="deck-a-art">
@@ -413,6 +419,7 @@ export function MusicPlayer() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </>
   );
