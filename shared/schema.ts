@@ -425,7 +425,7 @@ export type Trust = typeof trusts.$inferSelect;
 
 export const trustMembers = pgTable("trust_members", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  userId: text("user_id").notNull(),
   trustId: text("trust_id").notNull(),
   promissoryNoteAmount: integer("note_amount").default(500),
   outstandingBalance: decimal("outstanding_balance").default("475.00"),

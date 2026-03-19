@@ -20,7 +20,8 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Backend**: Express.js with TypeScript for API services.
 -   **Database**: PostgreSQL, managed with Drizzle ORM.
 -   **Authentication**: Primary authentication via email/password, with optional Spotify OAuth 2.0 integration for enhanced features.
--   **Payments**: Cash App ($AITITRADEBROKERAGE) handles asset trading via `/api/exchange/trade`. PayPal Web SDK handles subscription and artist tipping transactions.
+-   **Payments**: Cash App ($AITITRADEBROKERAGE) handles ALL transactions — asset trading via `/api/exchange/trade` and account activation ($25 down + $19.79/mo). PayPal used only for artist tipping.
+-   **Access Control**: Single-tier model — users must be Sovereign Trust members (checked via `/api/trust/status`) to access the exchange. No free/minter/entry_trader tiers. PremiumGate checks trust membership.
 
 **Key Features & Technical Implementations:**
 

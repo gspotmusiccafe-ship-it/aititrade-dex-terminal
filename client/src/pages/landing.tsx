@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
-import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
+const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
 import GlobalRadio from "@/components/GlobalRadio";
@@ -794,25 +794,25 @@ export default function LandingPage() {
                       ))}
                     </ul>
 
-                    {isTrust && (
-                      <p className="text-[9px] text-amber-500/50 mb-3 text-center font-bold">DUAL ACCESS — HOLD WITH MINTOR TIER</p>
-                    )}
-
-                    {isMintor ? (
+                    {isTrust ? (
                       <a
-                        href={BLUEVINE_MINT_URL}
+                        href={CASH_APP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
-                        data-testid="button-mintor-checkout"
+                        data-testid="button-activate-cashapp"
                       >
-                        ACTIVATE MINTOR — $99.99 + $9.99/MO
+                        ACTIVATE — $25 DOWN VIA CASH APP
                       </a>
-                    ) : isTrust ? (
+                    ) : isMintor ? (
                       <a
-                        href={BLUEVINE_TRUST_URL}
-                        className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-amber-600 text-white hover:bg-amber-700 transition-colors"
-                        data-testid="button-trust-checkout"
+                        href={CASH_APP_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
+                        data-testid="button-activate-cashapp"
                       >
-                        ACQUIRE TRUST — $25 DOWN
+                        ACTIVATE — $25 DOWN VIA CASH APP
                       </a>
                     ) : (
                       <button

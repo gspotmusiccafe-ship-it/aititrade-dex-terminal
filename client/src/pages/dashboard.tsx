@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { CheckCircle2, Circle, Loader2, ChevronDown, ChevronUp, Crown, Shield, Building2, FileText, CreditCard, Landmark, TrendingUp, Award, Briefcase, Scale, BadgeCheck, Target, ScrollText } from "lucide-react";
-import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
+const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
 import { TrustCertificate } from "@/components/trust-certificate";
 import type { CreditStep } from "@shared/schema";
 
@@ -464,23 +464,16 @@ export default function DashboardPage() {
         )}
 
         <div className="mt-6 border border-zinc-800 bg-black p-4">
-          <p className="text-[10px] text-zinc-500 font-bold mb-3">UPGRADE YOUR ACCESS</p>
-          <div className="flex gap-3">
-            <a
-              href={BLUEVINE_MINT_URL}
-              className="flex-1 bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-2 text-center hover:bg-lime-500/20 transition-colors"
-              data-testid="button-dash-mintor"
-            >
-              ACTIVATE MINTOR — $9.99/MO
-            </a>
-            <a
-              href={BLUEVINE_TRUST_URL}
-              className="flex-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-2 text-center hover:bg-amber-500/20 transition-colors"
-              data-testid="button-dash-trust"
-            >
-              ACQUIRE TRUST — $25 DOWN
-            </a>
-          </div>
+          <p className="text-[10px] text-zinc-500 font-bold mb-3">ACTIVATE TRADING ACCOUNT</p>
+          <a
+            href={CASH_APP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full bg-lime-500/10 border border-lime-500/30 text-lime-400 text-[10px] font-extrabold py-3 text-center hover:bg-lime-500/20 transition-colors"
+            data-testid="button-dash-activate"
+          >
+            ACTIVATE — $25 DOWN + $19.79/MO VIA CASH APP
+          </a>
         </div>
       </div>
 

@@ -1,437 +1,50 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { Crown, Check, Star, Zap, Headphones, Download, Loader2, ShieldCheck, X, LogOut } from "lucide-react";
-import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
+import { useState } from "react";
+import { Crown, Check, Zap, Shield, DollarSign, LogOut, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
 
-const TIER_PRICES: Record<string, string> = {
-  mintor: "9.99",
-  asset_trustee: "25.00",
-  mint_factory_ceo: "9.99",
-  entry_trader: "4.99",
-  exchange_trader: "24.99",
-};
+const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
 
-const TIER_NAMES: Record<string, string> = {
-  mintor: "Mint Factory CEO",
-  asset_trustee: "Asset Trustee",
-  mint_factory_ceo: "Mint Factory CEO",
-  entry_trader: "Entry Trader",
-  exchange_trader: "Exchange Trader",
-};
-
-const plans = [
-  {
-    id: "free",
-    name: "Front Page Investor",
-    price: "FREE",
-    period: "",
-    stream: "free",
-    description: "Paper trading on the landing page — Spotify account required",
-    features: [
-      { text: "Paper trading on 97.7 THE FLAME", included: true },
-      { text: "Stream AI-generated assets", included: true },
-      { text: "Landing page access only", included: true },
-      { text: "Inside exchange access", included: false },
-      { text: "Pre-release / High-Volatility assets", included: false },
-      { text: "Minting rights", included: false },
-    ],
-    popular: false,
-    cta: "",
-    gradient: "from-zinc-700 to-zinc-800",
-    iconColor: "text-zinc-500",
-    borderColor: "border-zinc-700/30",
-    glowColor: "",
-  },
-  {
-    id: "mintor",
-    name: "Mint Factory CEO",
-    price: "$99.99",
-    period: " setup",
-    stream: "mintor",
-    description: "$99.99 set-up fee + $9.99/mo recurring — full exchange access",
-    features: [
-      { text: "Full Sovereign Exchange access", included: true },
-      { text: "Mint & trade all asset classes", included: true },
-      { text: "2-Week Early Pre-release trading", included: true },
-      { text: "16% Daily Trading Credit on all positions", included: true },
-      { text: "AI Lyrics Generator & Audio Mastering", included: true },
-      { text: "Distribution to Spotify, Amazon, YouTube", included: true },
-      { text: "Marketing & promotions", included: true },
-      { text: "Aitify Music Store — 25% retention", included: true },
-      { text: "Leaderboard, analytics & tier badges", included: true },
-      { text: "Lossless audio quality", included: true },
-    ],
-    popular: true,
-    cta: "ACTIVATE MINTOR — $99.99 + $9.99/MO",
-    gradient: "from-lime-800 to-lime-900",
-    iconColor: "text-lime-400",
-    borderColor: "border-lime-400/30",
-    glowColor: "shadow-lime-500/10",
-  },
-  {
-    id: "asset_trustee",
-    name: "Asset Trustee",
-    price: "$500",
-    period: " total",
-    stream: "trust",
-    description: "$25 Down / 0% Interest — full exchange + trust certificates",
-    features: [
-      { text: "$25 DOWN / 0% INTEREST / $19.79 MO FOR 24 MONTHS", included: true },
-      { text: "Full Sovereign Exchange access", included: true },
-      { text: "All assets + pre-release papers", included: true },
-      { text: "Priority settlement queue", included: true },
-      { text: "High-Volatility asset trading", included: true },
-      { text: "Dual-status — hold with MINTOR tier", included: true },
-      { text: "Trust certificate on all positions", included: true },
-      { text: "High quality audio streaming", included: true },
-    ],
-    popular: false,
-    cta: "ACQUIRE TRUST — $25 DOWN",
-    gradient: "from-amber-800 to-amber-900",
-    iconColor: "text-amber-400",
-    borderColor: "border-amber-400/30",
-    glowColor: "shadow-amber-500/10",
-  },
+const features = [
+  "Full Sovereign Exchange access",
+  "Trade ALL asset classes (native + global)",
+  "2-Week Early Pre-release trading edge",
+  "54/46 Floor Split on every position",
+  "Dynamic buy-in pricing ($3-$25 by rank)",
+  "Buy-back ROI: 80-133% per position",
+  "Trust Certificate on all positions",
+  "AI Lyrics Generator & Audio Mastering",
+  "Distribution to Spotify, Amazon, YouTube",
+  "97.7 THE FLAME + Global Radio access",
+  "CEO CLASS — 12-Step Business Credit Program",
+  "Leaderboard, analytics & sovereign badges",
+  "Priority settlement queue",
+  "Autopilot Radio DJ Console",
 ];
 
-const benefits = [
-  {
-    icon: Star,
-    title: "2-Week Early Pre-release",
-    description: "Mintors get early access to AI-generated assets before retail distribution",
-  },
-  {
-    icon: Headphones,
-    title: "Lossless Audio",
-    description: "Mint Factory CEOs stream in lossless quality with crystal clear AI-generated audio",
-  },
-  {
-    icon: Zap,
-    title: "16% Daily Trading Credit",
-    description: "Mintors earn 16% originator credit on every position minted",
-  },
-  {
-    icon: Crown,
-    title: "Dual-Stream Access",
-    description: "Hold both MINTOR and TRUST INVESTOR status simultaneously for maximum coverage",
-  },
+const terms = [
+  { label: "Activation Fee", value: "$25 DOWN" },
+  { label: "Monthly Commitment", value: "$19.79/MO" },
+  { label: "Term", value: "24 MONTHS" },
+  { label: "Interest", value: "0% APR" },
+  { label: "Total Note", value: "$500 PROMISSORY" },
+  { label: "Payment Method", value: "CASH APP ONLY" },
 ];
-
-function PayPalCheckoutDialog({
-  open,
-  onOpenChange,
-  tier,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  tier: string;
-  onSuccess: (tier: string, orderId: string) => void;
-}) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const paypalInitialized = useRef(false);
-  const buttonContainerRef = useRef<HTMLDivElement>(null);
-  const clickHandlerRef = useRef<((e: Event) => void) | null>(null);
-
-  const amount = TIER_PRICES[tier] || "0";
-  const tierName = TIER_NAMES[tier] || tier;
-
-  const initPayPal = useCallback(async () => {
-    if (!open || paypalInitialized.current) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const setupRes = await fetch("/setup", { credentials: "include" });
-      if (!setupRes.ok) throw new Error("Failed to initialize PayPal");
-      const { clientToken, sandbox } = await setupRes.json();
-
-      const loadScript = () =>
-        new Promise<void>((resolve, reject) => {
-          if ((window as any).paypal) {
-            resolve();
-            return;
-          }
-          const script = document.createElement("script");
-          script.src = sandbox
-            ? "https://www.sandbox.paypal.com/web-sdk/v6/core"
-            : "https://www.paypal.com/web-sdk/v6/core";
-          script.async = true;
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error("Failed to load PayPal SDK"));
-          document.body.appendChild(script);
-        });
-
-      await loadScript();
-
-      const sdkInstance = await (window as any).paypal.createInstance({
-        clientToken,
-        components: ["paypal-payments"],
-      });
-
-      const paypalCheckout = sdkInstance.createPayPalOneTimePaymentSession({
-        onApprove: async (data: any) => {
-          try {
-            const captureRes = await fetch(`/order/${data.orderId}/capture`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-            });
-            if (!captureRes.ok) throw new Error("Capture failed");
-            const captureData = await captureRes.json();
-
-            if (captureData.status === "COMPLETED") {
-              onSuccess(tier, data.orderId);
-            } else {
-              setError("Payment was not completed. Please try again.");
-            }
-          } catch {
-            setError("Failed to process payment. Please try again.");
-          }
-        },
-        onCancel: () => {
-          setError("Payment was cancelled.");
-        },
-        onError: (err: any) => {
-          console.error("PayPal error:", err);
-          setError("A payment error occurred. Please try again.");
-        },
-      });
-
-      const container = buttonContainerRef.current;
-      if (container) {
-        container.innerHTML = "";
-        const btn = document.createElement("paypal-button");
-        btn.id = `paypal-btn-${tier}`;
-        btn.setAttribute("data-testid", "button-paypal-checkout");
-        container.appendChild(btn);
-
-        const clickHandler = async () => {
-          try {
-            const orderRes = await fetch("/order", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ tier }),
-            });
-            if (!orderRes.ok) throw new Error("Failed to create order");
-            const orderData = await orderRes.json();
-
-            await paypalCheckout.start(
-              { paymentFlow: "auto" },
-              Promise.resolve({ orderId: orderData.id })
-            );
-          } catch (e) {
-            console.error("PayPal checkout error:", e);
-            setError("Failed to start checkout. Please try again.");
-          }
-        };
-
-        clickHandlerRef.current = clickHandler;
-        btn.addEventListener("click", clickHandler);
-      }
-
-      paypalInitialized.current = true;
-      setLoading(false);
-    } catch (e: any) {
-      console.error("PayPal init error:", e);
-      setError(e.message || "Failed to initialize payment system");
-      setLoading(false);
-    }
-  }, [open, tier, onSuccess]);
-
-  useEffect(() => {
-    if (open) {
-      paypalInitialized.current = false;
-      const timer = setTimeout(initPayPal, 300);
-      return () => {
-        clearTimeout(timer);
-        const container = buttonContainerRef.current;
-        if (container && clickHandlerRef.current) {
-          const btn = container.querySelector("paypal-button");
-          if (btn) btn.removeEventListener("click", clickHandlerRef.current);
-          clickHandlerRef.current = null;
-        }
-      };
-    }
-  }, [open, initPayPal]);
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-primary" />
-            Upgrade to {tierName}
-          </DialogTitle>
-          <DialogDescription>
-            {tier === "mint_factory_ceo"
-              ? `Complete your $99.99 set-up fee via PayPal to join as a Mint Factory CEO. After joining, it's $9.99/month recurring to stay active.`
-              : `Complete your payment of $${amount}/month via PayPal to activate your ${tierName} access.`}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <div className="rounded-lg border border-border/30 p-4 bg-card/60">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="font-semibold">{tierName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {tier === "mint_factory_ceo" ? "$99.99 set-up fee + $9.99/mo recurring" : "Monthly subscription"}
-                </p>
-              </div>
-              <p className="text-2xl font-bold">${amount}</p>
-            </div>
-          </div>
-
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive flex items-start gap-2">
-              <X className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <span className="ml-3 text-muted-foreground">Loading PayPal...</span>
-            </div>
-          )}
-
-          <div ref={buttonContainerRef} className={loading ? "hidden" : "flex justify-center"} />
-
-          <p className="text-xs text-muted-foreground text-center">
-            Secured by PayPal. You can cancel anytime from your account settings.
-          </p>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function MembershipPage() {
   const { isAuthenticated, logout } = useAuth();
-  const { toast } = useToast();
-  const [checkoutTier, setCheckoutTier] = useState<string | null>(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
 
-  const { data: membership } = useQuery<{ tier: string; isActive: boolean; downloadsUsed?: number; previewsUsed?: number }>({
-    queryKey: ["/api/user/membership"],
+  const { data: trustStatus } = useQuery<{ isMember: boolean; trustId?: number }>({
+    queryKey: ["/api/trust/status"],
     enabled: isAuthenticated,
   });
 
-  const { data: subscriptionStatus } = useQuery<{ hasSubscription: boolean; status?: string; nextBillingTime?: string }>({
-    queryKey: ["/api/user/membership/subscription-status"],
-    enabled: isAuthenticated && membership?.tier === "mint_factory_ceo",
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("subscription") === "success") {
-      window.history.replaceState({}, "", "/membership");
-      apiRequest("POST", "/api/user/membership/gold-subscription/activate", {}).then(() => {
-        queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-        queryClient.invalidateQueries({ queryKey: ["/api/user/membership/subscription-status"] });
-        toast({ title: "Subscription activated!", description: "Your $9.99/mo Mint Factory CEO recurring subscription is set up. First charge in 30 days." });
-      }).catch(() => {
-        toast({ title: "Subscription pending", description: "Your subscription may take a moment to activate. Check back shortly." });
-      });
-    } else if (params.get("subscription") === "cancelled") {
-      window.history.replaceState({}, "", "/membership");
-      toast({ title: "Subscription not completed", description: "You can set up your monthly subscription anytime from this page.", variant: "destructive" });
-    }
-  }, []);
-
-  const upgradeMutation = useMutation({
-    mutationFn: async ({ tier, paypalOrderId }: { tier: string; paypalOrderId: string }) => {
-      return apiRequest("POST", "/api/user/membership/upgrade", { tier, paypalOrderId });
-    },
-    onSuccess: async (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      setCheckoutTier(null);
-
-      if (variables.tier === "mint_factory_ceo") {
-        toast({
-          title: "Mint Factory CEO joining fee paid!",
-          description: "Setting up your $9.99/mo recurring subscription...",
-        });
-        setSubscriptionLoading(true);
-        try {
-          const subRes = await apiRequest("POST", "/api/user/membership/gold-subscription");
-          const subData = subRes as any;
-          if (subData.approvalUrl) {
-            window.location.href = subData.approvalUrl;
-          }
-        } catch (e) {
-          setSubscriptionLoading(false);
-          toast({
-            title: "Subscription setup failed",
-            description: "Your $99 joining fee was paid. You can set up the monthly subscription later from this page.",
-            variant: "destructive",
-          });
-        }
-      } else {
-        toast({
-          title: "Membership activated!",
-          description: `You are now a ${TIER_NAMES[variables.tier]} member. Enjoy your new benefits!`,
-        });
-      }
-    },
-    onError: () => {
-      toast({ title: "Activation failed", description: "Payment was received but activation failed. Please contact support.", variant: "destructive" });
-    },
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/user/membership/cancel");
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user/membership/subscription-status"] });
-      toast({ title: "Membership cancelled", description: "Your subscription has been cancelled. You are now on the Free plan." });
-    },
-  });
-
-  const setupSubscriptionMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/user/membership/gold-subscription");
-    },
-    onSuccess: (data: any) => {
-      if (data.approvalUrl) {
-        window.location.href = data.approvalUrl;
-      }
-    },
-    onError: () => {
-      toast({ title: "Subscription setup failed", description: "Please try again later.", variant: "destructive" });
-    },
-  });
-
-  const handlePaymentSuccess = (tier: string, orderId: string) => {
-    upgradeMutation.mutate({ tier, paypalOrderId: orderId });
-  };
-
-  const currentTier = membership?.tier || "free";
-
-  const isCurrent = (planId: string) => planId === currentTier;
+  const isMember = !!trustStatus?.isMember;
 
   return (
-    <div className="min-h-full pb-28">
+    <div className="min-h-full pb-28 bg-black">
       {isAuthenticated && (
         <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-black/90 backdrop-blur border-b border-zinc-800">
           <span className="text-lime-400 font-mono font-extrabold text-sm tracking-widest">AITITRADE</span>
@@ -445,189 +58,130 @@ export default function MembershipPage() {
           </button>
         </div>
       )}
+
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/10 via-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-lime-500/5 via-transparent to-transparent" />
         <div className="relative px-6 py-12 text-center">
-          <Badge variant="secondary" className="mb-4 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
-            <Crown className="h-3 w-3 mr-1" />
-            AITITRADE Membership
+          <Badge variant="secondary" className="mb-4 bg-lime-500/10 text-lime-400 border-lime-500/20 font-mono">
+            <Shield className="h-3 w-3 mr-1" />
+            SOVEREIGN TRADING ACCOUNT
           </Badge>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4" data-testid="text-membership-title">
-            Choose Your Plan
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4 text-white font-mono" data-testid="text-membership-title">
+            ACTIVATE YOUR POSITION
           </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto text-lg font-medium">
-            From previews to unlimited downloads — pick the tier that matches your vibe.
-            All plans include unlimited access to released music.
+          <p className="text-zinc-400 max-w-xl mx-auto text-sm font-mono">
+            One account. Full exchange access. $25 down payment activates your sovereign trading position.
+            $19.79/mo for 24 months via Cash App.
           </p>
-          {isAuthenticated && currentTier !== "free" && (
+          {isMember && (
             <div className="mt-4">
-              <Badge className="text-sm px-3 py-1 bg-gradient-to-r from-primary to-emerald-500 border-0" data-testid="badge-current-tier">
-                Current Plan: {TIER_NAMES[currentTier] || currentTier.charAt(0).toUpperCase() + currentTier.slice(1)}
+              <Badge className="text-sm px-4 py-1.5 bg-lime-500/20 text-lime-400 border border-lime-500/30 font-mono font-extrabold" data-testid="badge-current-tier">
+                TRADING ACCOUNT ACTIVE
               </Badge>
             </div>
           )}
         </div>
       </div>
 
-      <div className="px-6 py-8">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {benefits.map((benefit, index) => (
-            <div key={index} className="text-center p-5 rounded-xl bg-card/40 border border-border/20 hover:border-primary/20 transition-colors">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-                <benefit.icon className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-1">{benefit.title}</h3>
-              <p className="text-sm text-muted-foreground">{benefit.description}</p>
+      <div className="px-6 py-8 max-w-3xl mx-auto">
+        <div className="border border-lime-500/30 bg-black relative overflow-hidden">
+          <div className="bg-lime-500/10 border-b border-lime-500/20 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Crown className="h-5 w-5 text-lime-400" />
+              <span className="text-lime-400 font-mono font-extrabold text-sm tracking-wider">SOVEREIGN TRADER</span>
             </div>
-          ))}
+            <div className="text-right">
+              <span className="text-3xl font-black text-lime-400 font-mono">$25</span>
+              <span className="text-zinc-500 font-mono text-xs ml-1">DOWN</span>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {terms.map((term) => (
+                <div key={term.label} className="border border-zinc-800 bg-zinc-900/50 p-3 text-center">
+                  <p className="text-zinc-500 text-[10px] font-mono font-bold mb-1">{term.label}</p>
+                  <p className="text-lime-400 text-xs font-mono font-extrabold">{term.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-zinc-500 text-[10px] font-mono font-bold tracking-wider mb-3">FULL ACCESS INCLUDES:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {features.map((feature, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <Check className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-lime-400" />
+                    <span className="text-zinc-300 font-mono text-xs">{feature}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="border-t border-zinc-800 pt-6">
+              {isMember ? (
+                <div className="text-center space-y-3">
+                  <div className="flex items-center justify-center gap-2 text-lime-400 font-mono font-extrabold text-sm">
+                    <Shield className="h-4 w-4" />
+                    YOUR TRADING ACCOUNT IS ACTIVE
+                  </div>
+                  <p className="text-zinc-500 text-[10px] font-mono">
+                    Continue monthly payments via Cash App to maintain your position
+                  </p>
+                  <a
+                    href={CASH_APP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-lime-400/60 hover:text-lime-400 text-xs font-mono transition-colors"
+                    data-testid="link-cashapp-monthly"
+                  >
+                    <DollarSign className="h-3 w-3" />
+                    SEND $19.79 MONTHLY PAYMENT
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <a
+                    href={CASH_APP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full"
+                    data-testid="button-activate-cashapp"
+                  >
+                    <Button className="w-full bg-lime-600 hover:bg-lime-700 text-black border-0 font-extrabold shadow-lg shadow-lime-500/20 font-mono text-sm py-6">
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      ACTIVATE — $25 DOWN VIA CASH APP
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                    </Button>
+                  </a>
+                  <p className="text-center text-zinc-600 text-[10px] font-mono">
+                    SEND $25 TO $AITITRADEBROKERAGE ON CASH APP — YOUR ACCOUNT WILL BE ACTIVATED WITHIN 24 HOURS
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-zinc-900/50 border-t border-zinc-800 px-6 py-4">
+            <div className="flex items-center justify-between text-[10px] font-mono text-zinc-600">
+              <span>54/46 FLOOR SPLIT ON ALL TRADES</span>
+              <span>$1K SETTLEMENT CYCLE</span>
+              <span>FIFO QUEUE</span>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-5xl mx-auto">
-          {plans.map((plan) => {
-            const isMintor = plan.stream === "mintor";
-            const isTrust = plan.stream === "trust";
-            const isFree = plan.stream === "free";
-            const titleCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-zinc-400";
-            const priceCls = isTrust ? "text-amber-300" : isMintor ? "text-lime-300" : "";
-            const checkCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-primary";
-            const borderCls = isTrust
-              ? "border-amber-500/40 hover:border-amber-500/60"
-              : isMintor
-              ? "border-lime-500/40 hover:border-lime-500/60"
-              : plan.borderColor;
-
-            return (
-              <Card
-                key={plan.id}
-                className={`relative overflow-hidden transition-all duration-300 hover:-translate-y-1 ${borderCls} bg-card/60 hover:bg-card/90 ${plan.popular ? `shadow-xl ${plan.glowColor} scale-[1.02]` : ""}`}
-                data-testid={`membership-plan-${plan.id}`}
-              >
-                {isMintor && (
-                  <div className="bg-lime-500/20 text-lime-400 text-center py-1.5 text-xs font-extrabold uppercase tracking-wider">
-                    ◆ MINTOR — MINT & TRADE
-                  </div>
-                )}
-                {isTrust && (
-                  <div className="bg-amber-500/20 text-amber-400 text-center py-1.5 text-xs font-extrabold uppercase tracking-wider">
-                    ◆ TRUST INVESTOR — $25 DOWN
-                  </div>
-                )}
-                <CardHeader className={plan.popular ? "pt-6" : ""}>
-                  <CardTitle className={`flex items-center gap-2 ${titleCls} font-extrabold tracking-tight`}>
-                    {plan.name}
-                    {isMintor && <Crown className="h-5 w-5 text-lime-300" />}
-                    {isTrust && <Zap className="h-5 w-5 text-amber-300" />}
-                  </CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  <div className="pt-2">
-                    <span className={`text-4xl font-black tracking-tight ${priceCls || "text-foreground"}`}>{plan.price}</span>
-                    <span className="text-muted-foreground">{plan.period}</span>
-                  </div>
-                  {isMintor && (
-                    <p className="text-[10px] text-lime-400/60 font-bold mt-1">BLUEVINE RECURRING — CANCEL ANYTIME</p>
-                  )}
-                  {isTrust && (
-                    <p className="text-[10px] text-amber-400/60 font-bold mt-1">$25 DOWN / 0% INTEREST / $19.79 MO × 24</p>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {plan.features.map((feature, i) => (
-                      <li
-                        key={i}
-                        className={`flex items-start gap-2 text-sm ${
-                          !feature.included ? "text-muted-foreground/50" : ""
-                        }`}
-                      >
-                        <Check
-                          className={`h-4 w-4 flex-shrink-0 mt-0.5 ${
-                            feature.included ? checkCls : "text-muted-foreground/30"
-                          }`}
-                        />
-                        <span className={`${!feature.included ? "line-through" : ""} ${feature.text.includes("$25 DOWN") || feature.text.includes("$19.79") ? "font-extrabold text-amber-400" : ""}`}>
-                          {feature.text}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-                <CardFooter className="flex flex-col gap-2">
-                  {isCurrent(plan.id) ? (
-                    <>
-                      <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
-                        Current Plan
-                      </Button>
-                      {plan.id !== "free" && (
-                        <Button
-                          className="w-full"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => cancelMutation.mutate()}
-                          disabled={cancelMutation.isPending}
-                          data-testid="button-cancel-membership"
-                        >
-                          Cancel Plan
-                        </Button>
-                      )}
-                    </>
-                  ) : isFree ? (
-                    <Button className="w-full" variant="outline" disabled data-testid={`button-plan-${plan.id}`}>
-                      Free Plan
-                    </Button>
-                  ) : isMintor ? (
-                    <a
-                      href={BLUEVINE_MINT_URL}
-                      className="block w-full"
-                      data-testid="button-mintor-checkout"
-                    >
-                      <Button className="w-full bg-lime-600 hover:bg-lime-700 text-white border-0 font-extrabold shadow-lg shadow-lime-500/20">
-                        ACTIVATE MINTOR — $99.99 + $9.99/MO
-                      </Button>
-                    </a>
-                  ) : isTrust ? (
-                    <a
-                      href={BLUEVINE_TRUST_URL}
-                      className="block w-full"
-                      data-testid="button-trust-checkout"
-                    >
-                      <Button className="w-full bg-amber-600 hover:bg-amber-700 text-white border-0 font-extrabold shadow-lg shadow-amber-500/20">
-                        ACQUIRE TRUST — $25 DOWN
-                      </Button>
-                    </a>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      variant="outline"
-                      onClick={() => setCheckoutTier(plan.id)}
-                      disabled={subscriptionLoading}
-                      data-testid={`button-plan-${plan.id}`}
-                    >
-                      {plan.cta}
-                    </Button>
-                  )}
-                </CardFooter>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="text-center mt-12 max-w-2xl mx-auto p-6 rounded-xl bg-card/30 border border-border/20">
-          <p className="text-xs text-lime-400/60 font-bold mb-1">DUAL-STREAM REVENUE MODEL</p>
-          <p className="text-sm text-muted-foreground">
-            Hold both <span className="text-lime-400 font-bold">MINTOR</span> and <span className="text-amber-400 font-bold">TRUST INVESTOR</span> status simultaneously.
-            100% AI-powered platform — all assets are certified AI-generated.
+        <div className="text-center mt-8 p-6 border border-zinc-800 bg-zinc-900/30">
+          <Zap className="h-6 w-6 text-lime-400/40 mx-auto mb-3" />
+          <p className="text-zinc-400 text-xs font-mono mb-1">
+            ALL PAYMENTS PROCESSED VIA CASH APP
+          </p>
+          <p className="text-zinc-600 text-[10px] font-mono">
+            $AITITRADEBROKERAGE — SOVEREIGN DIGITAL ASSET EXCHANGE
           </p>
         </div>
       </div>
-
-      {checkoutTier && (
-        <PayPalCheckoutDialog
-          open={!!checkoutTier}
-          onOpenChange={(open) => { if (!open) setCheckoutTier(null); }}
-          tier={checkoutTier}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, MINTER_FEE, initTrackPricing } from "./market-governor";
+import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -237,15 +237,15 @@ export async function registerRoutes(
   app.get("/api/tracks/trust-vault", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const membership = await storage.getUserMembership(userId);
       const user = await storage.getUser(userId);
       const isAdmin = user?.isAdmin === true;
+      const trustMember = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
+      const isTrustMember = trustMember.length > 0;
 
-      if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
+      if (!isAdmin && !isTrustMember) {
         return res.status(403).json({
           message: "TRUST VAULT ACCESS DENIED",
           redirect: "/membership",
-          requiredTier: "asset_trustee",
         });
       }
 
@@ -266,12 +266,12 @@ export async function registerRoutes(
   app.get("/api/royalty-pool", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const membership = await storage.getUserMembership(userId);
       const user = await storage.getUser(userId);
       const isAdmin = user?.isAdmin === true;
+      const trustMemberCheck = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
 
-      if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
-        return res.status(403).json({ message: "Royalty pool access requires Trust Investor status" });
+      if (!isAdmin && trustMemberCheck.length === 0) {
+        return res.status(403).json({ message: "Royalty pool access requires Trust membership" });
       }
 
       const globalTracks = await db
@@ -285,8 +285,7 @@ export async function registerRoutes(
 
       const allTrustees = await db
         .select()
-        .from(memberships)
-        .where(and(eq(memberships.trustInvestor, true), eq(memberships.isActive, true)));
+        .from(trustMembers);
 
       const totalTrustUnits = allTrustees.length;
 
@@ -380,8 +379,10 @@ export async function registerRoutes(
         paperTradeUsedPct: parseFloat(paperTradeUsed.toFixed(1)),
         paperTradeCap,
         unitsRemaining,
-        houseCut: split.houseCut,
-        payoutPot: split.payoutPot,
+        floor54: split.floor54,
+        ceo46: split.ceo46,
+        trustTithe: split.trustTithe,
+        blessing: split.blessing,
         session: state.session,
       });
     } catch (error) {
@@ -460,11 +461,11 @@ export async function registerRoutes(
         if (!userId) {
           return res.status(403).json({ message: "TRUST VAULT — Authentication required for Global Assets", redirect: "/membership" });
         }
-        const membership = await storage.getUserMembership(userId);
         const user = await storage.getUser(userId);
         const isAdmin = user?.isAdmin === true;
-        if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
-          return res.status(403).json({ message: "GLOBAL ASSET — Trust Certificate Required. Only Asset Trustees can acquire Global positions.", redirect: "/membership" });
+        const tmCheck = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
+        if (!isAdmin && tmCheck.length === 0) {
+          return res.status(403).json({ message: "GLOBAL ASSET — Trust Membership Required. Activate your trading account to acquire Global positions.", redirect: "/membership" });
         }
       }
 
@@ -480,7 +481,7 @@ export async function registerRoutes(
         const price = parseFloat(track.unitPrice || "3.50");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
 
-        const minterFeeAmt = parseFloat((price * MINTER_FEE).toFixed(4));
+        const minterFeeAmt = parseFloat((price * FLOOR_SPLIT).toFixed(4));
         const positionValue = parseFloat((price - minterFeeAmt).toFixed(4));
 
         if (isGlobal) {
@@ -581,7 +582,7 @@ export async function registerRoutes(
             ticker,
             unitPrice: price,
             originatorCredit: minterFeeAmt,
-            minterFee: MINTER_FEE,
+            minterFee: FLOOR_SPLIT,
             buyBackRate,
             buyBackAmount: parseFloat((price * buyBackRate).toFixed(4)),
             positionValue,
@@ -594,8 +595,10 @@ export async function registerRoutes(
             releaseType: "native",
             status: poolRecycled ? "SETTLED_REOPENED" : "MINTED",
             poolSize: POOL_CEILING,
-            houseCut: split.houseCut,
-            payoutPot: split.payoutPot,
+            floor54: split.floor54,
+            ceo46: split.ceo46,
+            trustTithe: split.trustTithe,
+            blessing: split.blessing,
             timestamp: new Date().toISOString(),
             ...(poolRecycled && recycledData ? {
               recycled: {
@@ -621,8 +624,8 @@ export async function registerRoutes(
           poolSize: r.poolSize || r.mintCap,
           capacityPct: r.capacityPct,
           mintId: r.mintId,
-          houseCut: r.houseCut || 0,
-          payoutPot: r.payoutPot || 0,
+          houseCut: r.floor54 || 0,
+          payoutPot: r.ceo46 || 0,
         }).catch(() => {});
       }
 
@@ -1500,11 +1503,11 @@ export async function registerRoutes(
       const releaseType = ((preCheck as any).releaseType || "native").toLowerCase();
       const isGlobal = releaseType === "global";
       if (isGlobal) {
-        const membership = await storage.getUserMembership(userId);
         const user = await storage.getUser(userId);
         const isAdmin = user?.isAdmin === true;
-        if (!isAdmin && (!membership || membership.trustInvestor !== true)) {
-          return res.status(403).json({ message: "GLOBAL ASSET — Trust Certificate Required." });
+        const tmCheck2 = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
+        if (!isAdmin && tmCheck2.length === 0) {
+          return res.status(403).json({ message: "GLOBAL ASSET — Trust Membership Required." });
         }
       }
 
@@ -3130,7 +3133,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.post("/api/trust/join", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = parseInt(req.user.claims.sub);
+      const userId = req.user.claims.sub;
 
       const existingMember = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
       if (existingMember.length > 0) {
@@ -3214,7 +3217,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.get("/api/trust/status", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = parseInt(req.user.claims.sub);
+      const userId = req.user.claims.sub;
       const member = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
 
       if (member.length === 0) {

@@ -391,7 +391,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
   );
 }
 
-function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; userTier: string }) {
+function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -413,8 +413,9 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const isInspirational = assetClass === "inspirational";
   const poolCeiling = CEILING;
   const ptCap = poolCeiling * 0.50;
-  const bbRate = parseFloat((track as any).buyBackRate || "0.18");
-  const bbLabel = `${Math.round(bbRate * 100)}%`;
+  const bbPrice = parseFloat((track as any).buyBackRate || (price * 1.80).toFixed(2));
+  const roi = price > 0 ? parseFloat((((bbPrice - price) / price) * 100).toFixed(0)) : 0;
+  const bbLabel = `$${bbPrice.toFixed(2)} (${roi}% ROI)`;
   const minterFeeLabel = "54/46";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / poolCeiling) * 100).toFixed(1)));
@@ -663,22 +664,6 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             <div className={`flex-1 ${isReconciling ? "bg-amber-500/10 border border-amber-500/30 text-amber-400" : "bg-red-500/10 border border-red-500/30 text-red-400"} text-[10px] font-extrabold py-2 text-center flex items-center justify-center gap-1 cursor-not-allowed`} data-testid={`button-closed-${track.id}`}>
               <Lock className="h-3 w-3" /> {isReconciling ? "POOL CLOSED — RECONCILING" : "POOL CLOSED — SETTLED"}
             </div>
-          ) : userTier === "free" ? (
-            <a
-              href="/membership"
-              className="flex-1 bg-zinc-800 border border-zinc-600 text-amber-400 text-[11px] font-extrabold py-2 text-center flex items-center justify-center gap-1 hover:border-lime-500/50 hover:text-lime-400 transition-colors"
-              data-testid={`button-acquire-locked-${track.id}`}
-            >
-              <Lock className="h-3 w-3" /> PREMIUM TRADING ACCOUNT REQUIRED
-            </a>
-          ) : isGlobal ? (
-            <a
-              href="/membership"
-              className="flex-1 bg-amber-600/20 border border-amber-500/40 text-amber-400 text-[11px] font-extrabold py-2 text-center flex items-center justify-center gap-1 hover:border-amber-400/60 hover:bg-amber-600/30 transition-colors"
-              data-testid={`button-trust-gate-${track.id}`}
-            >
-              <Shield className="h-3 w-3" /> TRUST CERTIFICATE REQUIRED — $25 DOWN
-            </a>
           ) : isPaperCapHit ? (
             <div
               className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-2 text-center flex items-center justify-center gap-1"
@@ -787,11 +772,10 @@ export default function HomePage() {
   const autoPlayedRef = useRef(false);
   const [showIntel, setShowIntel] = useState(false);
 
-  const { data: membership } = useQuery<{ tier: string }>({
-    queryKey: ["/api/user/membership"],
+  const { data: trustStatus } = useQuery<{ isMember: boolean }>({
+    queryKey: ["/api/trust/status"],
     enabled: !!user,
   });
-  const userTier = membership?.tier || "free";
 
   const { data: marketSession } = useQuery<MarketSession>({
     queryKey: ["/api/market/session"],
@@ -823,11 +807,8 @@ export default function HomePage() {
     }
   }, [featuredTracks]);
 
-  const isEntryTrader = userTier === "entry_trader";
   const allTracks = featuredTracks || [];
-  const displayTracks = isEntryTrader
-    ? allTracks.filter(t => !(t as any).isPrerelease)
-    : allTracks;
+  const displayTracks = allTracks;
 
   const totalGrossSales = displayTracks.reduce((sum, t) => {
     const p = parseFloat((t as any).unitPrice || "3.50");
@@ -1048,7 +1029,6 @@ export default function HomePage() {
                 key={track.id}
                 track={track}
                 onPlay={(t) => playTrack(t, displayTracks)}
-                userTier={userTier}
               />
             ))}
           </div>

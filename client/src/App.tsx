@@ -28,22 +28,15 @@ import DashboardPage from "@/pages/dashboard";
 import TrustVaultPage from "@/pages/trust-vault";
 import { useEffect } from "react";
 
-const PREMIUM_TIERS = ["entry_trader", "exchange_trader", "mint_factory_ceo", "mintor", "asset_trustee", "gold"];
-
-interface MembershipData {
-  tier: string;
-  isActive: boolean;
-  trustInvestor?: boolean;
+interface TrustStatus {
+  isMember: boolean;
 }
 
-function checkIsPremium(membership: MembershipData | null | undefined): boolean {
-  if (!membership) return false;
-  if (membership.isActive === false) return false;
-  if (membership.trustInvestor) return true;
-  return PREMIUM_TIERS.includes(membership.tier);
+function checkIsTrader(trustStatus: TrustStatus | null | undefined): boolean {
+  return !!trustStatus?.isMember;
 }
 
-function UpgradeRedirect() {
+function ActivationRedirect() {
   const [, setLocation] = useLocation();
   useEffect(() => {
     setLocation("/membership");
@@ -54,8 +47,9 @@ function UpgradeRedirect() {
         <div className="w-16 h-16 bg-lime-500/20 flex items-center justify-center">
           <span className="text-lime-400 text-2xl font-extrabold">$</span>
         </div>
-        <p className="text-lime-400 text-sm font-extrabold" data-testid="text-upgrade-redirect">PREMIUM TRADING ACCOUNT REQUIRED</p>
-        <p className="text-zinc-400 text-xs">REDIRECTING TO MEMBERSHIP...</p>
+        <p className="text-lime-400 text-sm font-extrabold" data-testid="text-upgrade-redirect">TRADING ACCOUNT ACTIVATION REQUIRED</p>
+        <p className="text-zinc-400 text-xs">$25 DOWN + $19.79/MO VIA CASH APP</p>
+        <p className="text-zinc-500 text-[10px]">REDIRECTING...</p>
       </div>
     </div>
   );
@@ -63,37 +57,37 @@ function UpgradeRedirect() {
 
 function PremiumGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuth();
-  const { data: membership, isLoading: membershipLoading } = useQuery<MembershipData>({
-    queryKey: ["/api/user/membership"],
+  const { data: trustStatus, isLoading: trustLoading } = useQuery<TrustStatus>({
+    queryKey: ["/api/trust/status"],
     enabled: isAuthenticated,
   });
 
   if (!isAuthenticated) return <LandingPage />;
 
-  if (membershipLoading) {
+  if (trustLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 bg-lime-500/20 animate-pulse" />
-          <p className="text-lime-400 font-mono text-xs font-extrabold">VERIFYING ACCESS...</p>
+          <p className="text-lime-400 font-mono text-xs font-extrabold">VERIFYING TRADING ACCESS...</p>
         </div>
       </div>
     );
   }
 
   if ((user as any)?.isAdmin) return <>{children}</>;
-  if (!checkIsPremium(membership)) return <UpgradeRedirect />;
+  if (!checkIsTrader(trustStatus)) return <ActivationRedirect />;
 
   return <>{children}</>;
 }
 
 function useIsPremiumUser() {
   const { isAuthenticated, user } = useAuth();
-  const { data: membership } = useQuery<MembershipData>({
-    queryKey: ["/api/user/membership"],
+  const { data: trustStatus } = useQuery<TrustStatus>({
+    queryKey: ["/api/trust/status"],
     enabled: isAuthenticated,
   });
-  return isAuthenticated && ((user as any)?.isAdmin || checkIsPremium(membership));
+  return isAuthenticated && ((user as any)?.isAdmin || checkIsTrader(trustStatus));
 }
 
 function AuthenticatedLayout() {
