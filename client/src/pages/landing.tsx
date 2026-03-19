@@ -359,7 +359,7 @@ const membershipTiers = [
       "Full Sovereign Exchange access",
       "Mint & trade all asset classes",
       "2-Week Early Pre-release trading",
-      "16% Daily Trading Credit",
+      "54/46 G. Smooth Trade Split",
       "AI Lyrics Generator & Audio Mastering",
       "Distribution to Spotify, Amazon, YouTube",
       "Marketing & promotions",

@@ -1522,13 +1522,20 @@ export async function registerRoutes(
         const price = parseFloat(track.unitPrice || "0.99");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
 
+        const GLOBAL_CEILING = 1000.00;
+
         if (!isGlobal) {
           const currentGross = parseFloat((currentSales * price).toFixed(2));
-          if (currentGross >= POOL_CEILING) throw new Error("CEILING_REACHED");
+          if (currentGross >= GLOBAL_CEILING) throw new Error("CEILING_REACHED");
         }
 
-        const minterFeeAmt = parseFloat((price * MINTER_FEE).toFixed(4));
-        const positionValue = parseFloat((price - minterFeeAmt).toFixed(4));
+        const floor54 = parseFloat((price * 0.54).toFixed(4));
+        const ceoTake46 = parseFloat((price * 0.46).toFixed(4));
+        const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
+        const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+        const isPriority = price < 21.00;
+
+        console.log(`[AITITRADE] Trade $${price} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
         const seq = String(currentSales + 1).padStart(3, "0");
         const prefix = isGlobal ? "TRST" : "MNT";
@@ -1538,9 +1545,9 @@ export async function registerRoutes(
           trackId,
           trackingNumber: trackingNum,
           unitPrice: price.toString(),
-          creatorCredit: "0.16",
-          creatorCreditAmount: minterFeeAmt.toString(),
-          positionHolderAmount: positionValue.toString(),
+          creatorCredit: "0.46",
+          creatorCreditAmount: ceoTake46.toString(),
+          positionHolderAmount: floor54.toString(),
           status: "verified",
         }).returning();
 
@@ -1558,18 +1565,22 @@ export async function registerRoutes(
               asset: track.title,
               ticker,
               unitPrice: price,
-              originatorCredit: minterFeeAmt,
-              positionValue,
+              floorRetained: floor54,
+              ceoGross: ceoTake46,
+              trustTithe: trustTithe10,
+              blessingPool: blessingPool36,
               aiModel: track.aiModel || "AITIFY-GEN-1",
               releaseType: "global",
-              status: "PAYPAL VERIFIED",
+              priority: isPriority ? "HIGH" : "CYCLE_HOLD",
+              indicator: "STIMULATION_ACTIVE",
+              status: "TRADE_EXECUTED",
               storeUrl: "https://payhip.com/aitifymusicstore",
               timestamp: new Date().toISOString(),
             },
           };
         }
 
-        const capacityPct = Math.min(100, parseFloat(((newGross / POOL_CEILING) * 100).toFixed(1)));
+        const capacityPct = Math.min(100, parseFloat(((newGross / GLOBAL_CEILING) * 100).toFixed(1)));
         return {
           type: "native" as const,
           receipt: {
@@ -1577,14 +1588,18 @@ export async function registerRoutes(
             asset: track.title,
             ticker,
             unitPrice: price,
-            originatorCredit: minterFeeAmt,
-            positionValue,
+            floorRetained: floor54,
+            ceoGross: ceoTake46,
+            trustTithe: trustTithe10,
+            blessingPool: blessingPool36,
             aiModel: track.aiModel || "AITIFY-GEN-1",
             grossSales: newGross,
             totalMints: currentSales + 1,
-            mintCap: POOL_CEILING,
+            mintCap: GLOBAL_CEILING,
             capacityPct,
-            status: newGross >= POOL_CEILING ? "CLOSED" : "PAYPAL VERIFIED",
+            priority: isPriority ? "HIGH" : "CYCLE_HOLD",
+            indicator: "STIMULATION_ACTIVE",
+            status: newGross >= GLOBAL_CEILING ? "CLOSED" : "TRADE_EXECUTED",
             timestamp: new Date().toISOString(),
           },
         };

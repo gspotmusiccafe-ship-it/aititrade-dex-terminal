@@ -24,13 +24,17 @@ interface MintReceipt {
   asset: string;
   ticker: string;
   unitPrice: number;
-  originatorCredit: number;
-  positionValue: number;
+  floorRetained: number;
+  ceoGross: number;
+  trustTithe: number;
+  blessingPool: number;
   aiModel: string;
   grossSales: number;
   totalMints: number;
   mintCap: number;
   capacityPct: number;
+  priority: string;
+  indicator: string;
   status: string;
   timestamp: string;
 }
@@ -77,18 +81,33 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
               </div>
             </div>
             <div className="border border-yellow-500/25 bg-yellow-500/5 p-2.5">
-              <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">DISBURSEMENT BREAKDOWN</p>
-              <div className="grid grid-cols-2 gap-1.5 text-center">
-                <div className="bg-black/50 border border-yellow-500/15 p-2">
-                  <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
-                  <p className="text-sm text-yellow-400 font-bold" data-testid="text-originator-credit">${receipt.originatorCredit.toFixed(4)}</p>
-                </div>
+              <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">G. SMOOTH GLOBAL MANDATE — DISBURSEMENT</p>
+              <div className="grid grid-cols-2 gap-1.5 text-center mb-1.5">
                 <div className="bg-black/50 border border-emerald-500/15 p-2">
-                  <p className="text-[8px] text-emerald-500/50">POSITION HOLDER (84%)</p>
-                  <p className="text-sm text-emerald-400 font-bold" data-testid="text-position-value">${receipt.positionValue.toFixed(4)}</p>
+                  <p className="text-[8px] text-emerald-500/50">FLOOR RETAINED (54%)</p>
+                  <p className="text-sm text-emerald-400 font-bold" data-testid="text-floor-retained">${receipt.floorRetained.toFixed(4)}</p>
+                </div>
+                <div className="bg-black/50 border border-yellow-500/15 p-2">
+                  <p className="text-[8px] text-yellow-400/50">CEO GROSS (46%)</p>
+                  <p className="text-sm text-yellow-400 font-bold" data-testid="text-ceo-gross">${receipt.ceoGross.toFixed(4)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-center">
+                <div className="bg-black/50 border border-amber-500/15 p-2">
+                  <p className="text-[8px] text-amber-400/50">TRUST TITHE (10%)</p>
+                  <p className="text-sm text-amber-400 font-bold" data-testid="text-trust-tithe">${receipt.trustTithe.toFixed(4)}</p>
+                </div>
+                <div className="bg-black/50 border border-green-500/15 p-2">
+                  <p className="text-[8px] text-green-400/50">BLESSING POOL</p>
+                  <p className="text-sm text-green-400 font-bold" data-testid="text-blessing-pool">${receipt.blessingPool.toFixed(4)}</p>
                 </div>
               </div>
             </div>
+            {receipt.priority === "HIGH" && (
+              <div className="border border-lime-400/30 bg-lime-500/5 p-1.5 text-center">
+                <p className="text-[9px] text-lime-400 font-black tracking-wider">PRIORITY: HIGH — THIN SPREAD SETTLEMENT</p>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-1.5 text-center">
               <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
                 <p className="text-[8px] text-emerald-500/40">LEDGER GROSS</p>
@@ -105,7 +124,7 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
             </div>
             <div className="border border-emerald-500/20 bg-emerald-950/40 p-2.5 text-center">
               <p className={`text-sm font-black ${receipt.status === "CLOSED" ? "text-red-400" : "text-emerald-400"}`}>
-                {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "POSITION MINTED — PROOF OF OWNERSHIP"}
+                {receipt.status === "CLOSED" ? "TRADE CLOSED — SETTLEMENT PENDING" : "TRADE_EXECUTED — STIMULATION_ACTIVE"}
               </p>
             </div>
             <div className="flex items-center justify-between pt-1">
@@ -133,9 +152,13 @@ interface TrustReceipt {
   asset: string;
   ticker: string;
   unitPrice: number;
-  originatorCredit: number;
-  positionValue: number;
+  floorRetained: number;
+  ceoGross: number;
+  trustTithe: number;
+  blessingPool: number;
   aiModel: string;
+  priority: string;
+  indicator: string;
   storeUrl: string;
   timestamp: string;
 }
@@ -182,20 +205,35 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
               </div>
             </div>
             <div className="border border-yellow-500/25 bg-yellow-500/5 p-2.5">
-              <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">DISBURSEMENT</p>
-              <div className="grid grid-cols-2 gap-1.5 text-center">
-                <div className="bg-black/50 border border-yellow-500/15 p-2">
-                  <p className="text-[8px] text-yellow-400/50">ORIGINATOR CREDIT (16%)</p>
-                  <p className="text-sm text-yellow-400 font-bold">${receipt.originatorCredit.toFixed(4)}</p>
-                </div>
+              <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">G. SMOOTH GLOBAL MANDATE — DISBURSEMENT</p>
+              <div className="grid grid-cols-2 gap-1.5 text-center mb-1.5">
                 <div className="bg-black/50 border border-emerald-500/15 p-2">
-                  <p className="text-[8px] text-emerald-500/50">POSITION HOLDER (84%)</p>
-                  <p className="text-sm text-emerald-400 font-bold">${receipt.positionValue.toFixed(4)}</p>
+                  <p className="text-[8px] text-emerald-500/50">FLOOR RETAINED (54%)</p>
+                  <p className="text-sm text-emerald-400 font-bold">${receipt.floorRetained.toFixed(4)}</p>
+                </div>
+                <div className="bg-black/50 border border-yellow-500/15 p-2">
+                  <p className="text-[8px] text-yellow-400/50">CEO GROSS (46%)</p>
+                  <p className="text-sm text-yellow-400 font-bold">${receipt.ceoGross.toFixed(4)}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 text-center">
+                <div className="bg-black/50 border border-amber-500/15 p-2">
+                  <p className="text-[8px] text-amber-400/50">TRUST TITHE (10%)</p>
+                  <p className="text-sm text-amber-400 font-bold">${receipt.trustTithe.toFixed(4)}</p>
+                </div>
+                <div className="bg-black/50 border border-green-500/15 p-2">
+                  <p className="text-[8px] text-green-400/50">BLESSING POOL</p>
+                  <p className="text-sm text-green-400 font-bold">${receipt.blessingPool.toFixed(4)}</p>
                 </div>
               </div>
             </div>
+            {receipt.priority === "HIGH" && (
+              <div className="border border-lime-400/30 bg-lime-500/5 p-1.5 text-center">
+                <p className="text-[9px] text-lime-400 font-black tracking-wider">PRIORITY: HIGH — THIN SPREAD SETTLEMENT</p>
+              </div>
+            )}
             <div className="border border-emerald-500/20 bg-emerald-950/40 p-2.5 text-center">
-              <p className="text-sm font-black text-emerald-400">VERIFIED GLOBAL RELEASE — TRUST CERTIFIED</p>
+              <p className="text-sm font-black text-emerald-400">TRADE_EXECUTED — STIMULATION_ACTIVE</p>
             </div>
             <a
               href={receipt.storeUrl}
@@ -391,7 +429,7 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
             </div>
           </div>
           <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
-            <p className="text-[9px] text-lime-500/50">16% ORIGINATOR CREDIT — 84% POSITION VALUE</p>
+            <p className="text-[9px] text-lime-500/50">54% FLOOR RETAINED — 46% CEO GROSS (G. SMOOTH MANDATE)</p>
             <p className="text-[8px] text-zinc-600 mt-1">PAYMENT PROCESSED VIA PAYPAL SECURE CHECKOUT</p>
           </div>
           {error && (
@@ -439,7 +477,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
   const ptCap = poolCeiling * 0.50;
   const bbRate = parseFloat((track as any).buyBackRate || "0.18");
   const bbLabel = `${Math.round(bbRate * 100)}%`;
-  const minterFeeLabel = "16%";
+  const minterFeeLabel = "54/46";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / poolCeiling) * 100).toFixed(1)));
   const paperTradePct = Math.min(100, parseFloat(((grossSales / ptCap) * 100).toFixed(1)));
@@ -601,7 +639,7 @@ function AssetCard({ track, onPlay, userTier }: { track: TrackWithArtist; onPlay
             <p className={`text-[11px] font-extrabold ${bbRate >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
           </div>
           <div className="bg-zinc-900/80 p-1 border border-zinc-800">
-            <p className="text-[9px] text-zinc-500 font-bold">MINTER FEE</p>
+            <p className="text-[9px] text-zinc-500 font-bold">SPLIT</p>
             <p className="text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
           </div>
           <div className={`bg-zinc-900/80 p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
