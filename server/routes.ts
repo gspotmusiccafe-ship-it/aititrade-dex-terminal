@@ -1752,6 +1752,52 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/proxy/p2p-trade", isAuthenticated, async (req: any, res) => {
+    try {
+      const buyerId = req.user.claims.sub;
+      const { sellerTradeId, amount } = req.body;
+      if (!sellerTradeId || !amount) {
+        return res.status(400).json({ message: "sellerTradeId and amount required" });
+      }
+
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
+      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
+      const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+
+      const brokerageLink = "https://cash.app/$AITITRADEBROKERAGE";
+
+      console.log(`[P2P TRADE] Buyer: ${buyerId} | Seller Trade: ${sellerTradeId} | Total: $${parsedAmount}`);
+      console.log(`[LEDGER] Floor54: $${floor54} | CEO Blessing: $${blessingPool36} | Trust: $${trustTithe10}`);
+
+      res.json({
+        status: "P2P_INITIATED",
+        instruction: `TRANSFER $${parsedAmount.toFixed(2)} TO BROKERAGE TO SETTLE PEER TRADE`,
+        cashAppUrl: brokerageLink,
+        cashtag: "$AITITRADEBROKERAGE",
+        sellerTradeId,
+        buyerId,
+        split: {
+          floor: floor54,
+          ceoGross: ceoTake46,
+          trustTithe: trustTithe10,
+          blessing: blessingPool36,
+        },
+        indicator: "STIMULATION_ACTIVE",
+        message: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE — P2P SETTLEMENT`,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("P2P trade error:", error);
+      res.status(500).json({ message: "Failed to initiate P2P trade" });
+    }
+  });
+
   // Upgrade membership after PayPal payment is verified server-side
   app.post("/api/user/membership/upgrade", isAuthenticated, async (req: any, res) => {
     try {
