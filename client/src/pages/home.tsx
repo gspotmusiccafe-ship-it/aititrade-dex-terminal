@@ -883,6 +883,40 @@ export default function HomePage() {
         </div>
       </div>
 
+      <div className="flex gap-4 p-2 px-4 bg-black border-b border-zinc-800 items-center" data-testid="trade-indicators-bar">
+        <div className="flex flex-col">
+          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Market Floor</span>
+          <span className={`text-sm font-mono font-black ${closedCount === 0 ? "text-green-500" : closedCount >= displayTracks.length * 0.5 ? "text-red-500" : "text-amber-400"}`}>
+            $1,000.00 {closedCount === 0 ? "▲" : closedCount >= displayTracks.length * 0.5 ? "▼" : "—"}
+          </span>
+        </div>
+
+        <div className="flex flex-col border-l border-zinc-800 pl-4">
+          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">Liquidity Load (54%)</span>
+          <div className="w-24 h-1.5 bg-zinc-800 mt-1 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-green-500 transition-all duration-1000 rounded-full"
+              style={{ width: `${displayTracks.length > 0 ? Math.min(100, (totalGrossSales / (displayTracks.length * CEILING)) * 100) : 0}%` }}
+            />
+          </div>
+          <span className="text-[8px] text-zinc-600 mt-0.5">{displayTracks.length > 0 ? ((totalGrossSales / (displayTracks.length * CEILING)) * 100).toFixed(1) : "0.0"}%</span>
+        </div>
+
+        <div className="flex flex-col border-l border-zinc-800 pl-4">
+          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">54/46 Split</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-[10px] text-green-400 font-black">${(totalGrossSales * 0.54).toFixed(0)}</span>
+            <span className="text-zinc-700 text-[10px]">/</span>
+            <span className="text-[10px] text-zinc-400 font-bold">${(totalGrossSales * 0.46).toFixed(0)}</span>
+          </div>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+          <span className="text-[10px] text-white font-black italic" data-testid="text-live-signal">LIVE SIGNAL: 97.7 THE FLAME</span>
+        </div>
+      </div>
+
       {marketSession && (
         <div className="border-b border-emerald-500/20 bg-black">
           <button
