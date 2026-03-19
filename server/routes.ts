@@ -2873,6 +2873,75 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/suno-generate", isAdmin, async (req: any, res) => {
+    try {
+      const { prompt, style, makeInstrumental } = req.body;
+
+      if (!prompt) {
+        return res.status(400).json({ message: "prompt required" });
+      }
+
+      const sunoKey = process.env.SUNO_API_KEY;
+      if (!sunoKey) {
+        return res.status(503).json({ message: "SUNO_API_KEY not configured" });
+      }
+
+      console.log(`[SUNO_PUSH] Initiating Generation: ${prompt}`);
+      console.log(`[SUNO_PUSH] Style: ${style || "default"} | Instrumental: ${!!makeInstrumental}`);
+
+      const sunoResponse = await fetch("https://api.suno.ai/v1/generate", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${sunoKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          tags: style || "pop",
+          mv: "chirp-v3.5",
+          make_instrumental: !!makeInstrumental,
+        }),
+      });
+
+      if (!sunoResponse.ok) {
+        const errText = await sunoResponse.text();
+        console.error(`[SUNO_PUSH] API Error: ${sunoResponse.status} — ${errText}`);
+        return res.status(sunoResponse.status).json({
+          message: "Suno API error",
+          detail: errText,
+        });
+      }
+
+      const sunoData = await sunoResponse.json();
+
+      const wholesaleCost = 0.35;
+      const floor54 = parseFloat((wholesaleCost * 0.54).toFixed(4));
+      const ceoGross46 = parseFloat((wholesaleCost * 0.46).toFixed(4));
+
+      console.log(`[SUNO_PUSH] Generated: ${sunoData.id || "pending"} | Wholesale: $${wholesaleCost}`);
+
+      res.json({
+        status: "MINTING_PENDING",
+        suno_id: sunoData.id || null,
+        suno_data: sunoData,
+        asset_class: "AI_GENERATED_AUDIO",
+        wholesale_cost: wholesaleCost,
+        trade_status: "MINTING_PENDING",
+        split: {
+          floor: floor54,
+          ceoGross: ceoGross46,
+        },
+        prompt,
+        style: style || "pop",
+        engine: "chirp-v3.5",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("[SUNO_PUSH] Generation error:", error);
+      res.status(500).json({ message: "Failed to generate Suno asset" });
+    }
+  });
+
   // Toggle track featured status for radio playlist
   app.patch("/api/admin/tracks/:id/featured", isAdmin, async (req: any, res) => {
     try {
