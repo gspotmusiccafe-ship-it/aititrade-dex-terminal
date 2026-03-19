@@ -1283,8 +1283,8 @@ export default function RadioPage() {
               <RadioIcon className="h-6 w-6 text-emerald-400" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-emerald-400" data-testid="text-radio-title">AITITRADE GLOBAL TRADING & JAMS</h1>
-              <p className="text-[10px] text-emerald-500/50">&gt; RADIO SHOWS & LIVE JAM SESSIONS — SPOTIFY TRADING TERMINAL</p>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-emerald-400" data-testid="text-radio-title">JAM CONTROL CENTER</h1>
+              <p className="text-[10px] text-emerald-500/50">&gt; RADIO SHOWS & LIVE JAM SESSIONS — SPOTIFY REMOTE TERMINAL</p>
             </div>
           </div>
         </div>

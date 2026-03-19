@@ -172,7 +172,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={location === "/radio"}>
                   <Link href="/radio" data-testid="nav-radio">
                     <Radio className="h-5 w-5 text-[#1DB954]" />
-                    <span>AITITRADE Global Trading & Jams</span>
+                    <span>AITITRADE Global Trading</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
