@@ -290,9 +290,22 @@ export function MusicPlayer() {
         </div>
       )}
       <div className="fixed bottom-0 left-0 right-0 z-50 font-mono" data-testid="music-player">
-        <div className="w-full bg-black border-y border-green-900 py-1.5 overflow-hidden whitespace-nowrap" data-testid="singing-ticker">
-          <div className="animate-marquee inline-block text-green-500 font-mono font-bold text-xs md:text-sm">
-            AITITRADE EXCHANGE :: GLOBAL FLOOR: $1,000.00 :: CURRENT LOAD: 54% :: STIMULATION ACTIVE :: TRADER POSITIONS LOCKING :: NO SIMULATION :: BLESSING POOL: ONLINE :: $AITITRADEBROKERAGE :: 54/46 G. SMOOTH MANDATE :: SPLIT: PROTECTED :: AITITRADE EXCHANGE :: GLOBAL FLOOR: $1,000.00 :: CURRENT LOAD: 54% :: STIMULATION ACTIVE :: TRADER POSITIONS LOCKING :: NO SIMULATION :: BLESSING POOL: ONLINE :: $AITITRADEBROKERAGE :: 54/46 G. SMOOTH MANDATE :: SPLIT: PROTECTED ::&nbsp;&nbsp;&nbsp;&nbsp;
+        <div className="w-full bg-black border-y-2 border-green-600 py-1 overflow-hidden whitespace-nowrap select-none" data-testid="singing-ticker">
+          <div className="animate-marquee inline-flex items-center text-xs md:text-sm">
+            <span className="text-green-500 font-black px-4 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
+            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: 54% [STABLE]</span>
+            <span className="text-green-400 font-black px-4 border-l border-zinc-800 uppercase">CASH APP ONLY: $AITITRADEBROKERAGE</span>
+            <span className="text-red-600 font-bold px-4 border-l border-zinc-800 animate-pulse">SIGNAL: 97.7 THE FLAME LIVE</span>
+            <span className="text-zinc-600 px-4 border-l border-zinc-800">54/46 G. SMOOTH MANDATE</span>
+            <span className="text-green-500 font-black px-4 border-l border-zinc-800 uppercase italic">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
+            <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
+            <span className="text-green-500 font-black px-8 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
+            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: 54% [STABLE]</span>
+            <span className="text-green-400 font-black px-4 border-l border-zinc-800 uppercase">CASH APP ONLY: $AITITRADEBROKERAGE</span>
+            <span className="text-red-600 font-bold px-4 border-l border-zinc-800 animate-pulse">SIGNAL: 97.7 THE FLAME LIVE</span>
+            <span className="text-zinc-600 px-4 border-l border-zinc-800">54/46 G. SMOOTH MANDATE</span>
+            <span className="text-green-500 font-black px-4 border-l border-zinc-800 uppercase italic">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
+            <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
           </div>
         </div>
       <div className="bg-zinc-950 border-t-4 border-green-600 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
