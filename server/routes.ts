@@ -2942,6 +2942,69 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/ideogram-generate", isAdmin, async (req: any, res) => {
+    try {
+      const { trackTitle, customPrompt, aspectRatio } = req.body;
+
+      if (!trackTitle && !customPrompt) {
+        return res.status(400).json({ message: "trackTitle or customPrompt required" });
+      }
+
+      const ideogramKey = process.env.IDEOGRAM_API_KEY;
+      if (!ideogramKey) {
+        return res.status(503).json({ message: "IDEOGRAM_API_KEY not configured" });
+      }
+
+      const prompt = customPrompt || `Cinematic trading floor style album art for "${trackTitle}", neon green and obsidian, high-tech digital asset style`;
+
+      console.log(`[IDEOGRAM_PUSH] Generating art for: ${trackTitle || "custom"}`);
+      console.log(`[IDEOGRAM_PUSH] Prompt: ${prompt.slice(0, 80)}...`);
+
+      const ideogramResponse = await fetch("https://api.ideogram.ai/generate", {
+        method: "POST",
+        headers: {
+          "Api-Key": ideogramKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          aspect_ratio: aspectRatio || "1:1",
+          model: "v-2",
+        }),
+      });
+
+      if (!ideogramResponse.ok) {
+        const errText = await ideogramResponse.text();
+        console.error(`[IDEOGRAM_PUSH] API Error: ${ideogramResponse.status} — ${errText}`);
+        return res.status(ideogramResponse.status).json({
+          message: "Ideogram API error",
+          detail: errText,
+        });
+      }
+
+      const artData = await ideogramResponse.json();
+      const imageUrl = artData.data?.[0]?.url || artData.url || null;
+      const wholesaleCost = 0.03;
+
+      console.log(`[IDEOGRAM_PUSH] Generated: ${imageUrl ? "OK" : "NO_URL"} | Cost: $${wholesaleCost}`);
+
+      res.json({
+        status: "ART_READY",
+        imageUrl,
+        asset_class: "AI_GENERATED_ARTWORK",
+        wholesale_cost: wholesaleCost,
+        prompt,
+        model: "v-2",
+        aspect_ratio: aspectRatio || "1:1",
+        trackTitle: trackTitle || null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("[IDEOGRAM_PUSH] Generation error:", error);
+      res.status(500).json({ message: "Failed to generate Ideogram art" });
+    }
+  });
+
   // Toggle track featured status for radio playlist
   app.patch("/api/admin/tracks/:id/featured", isAdmin, async (req: any, res) => {
     try {
