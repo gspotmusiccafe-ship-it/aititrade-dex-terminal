@@ -140,7 +140,7 @@ export function TrustCertificate({ userId, userName, userEmail, membershipDate, 
                 </div>
                 <div>
                   <div style={{ fontSize: "14px", fontWeight: 900, color: "#fbbf24", letterSpacing: "2px" }}>
-                    AITIFY SOVEREIGN EXCHANGE
+                    AITITRADE DIGITAL ASSET EXCHANGE
                   </div>
                   <div style={{ fontSize: "9px", color: "rgba(217,119,6,0.6)", fontWeight: 700, letterSpacing: "3px" }}>
                     GLOBAL TRUST DIVISION

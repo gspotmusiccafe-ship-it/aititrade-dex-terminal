@@ -632,12 +632,14 @@ export default function LandingPage() {
           <div className="border border-emerald-500/30 bg-black p-6 sm:p-10 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-emerald-500 text-xs">SOVEREIGN EXCHANGE TERMINAL</span>
+              <span className="text-emerald-500 text-xs">DIGITAL ASSET EXCHANGE TERMINAL</span>
             </div>
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter mb-4 text-emerald-400" data-testid="text-radio-hero-title">
-              AITIFY MUSIC RADIO{" "}
-              <span className="text-yellow-400">97.7 THE FLAME</span>
-            </h1>
+            <div className="flex items-center gap-3 mb-4">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-white" data-testid="text-radio-hero-title">
+                AITITRADE <span className="text-green-500">DIGITAL ASSET EXCHANGE</span>
+              </h1>
+              <div className="bg-red-600 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full animate-pulse font-bold self-start mt-2">LIVE FLOOR</div>
+            </div>
             <p className="text-sm sm:text-base text-emerald-500/70 max-w-2xl font-mono">
               &gt; DISCOVER AND TRADE NEW AI ASSETS 2 WEEKS BEFORE THEY HIT THE RETAIL STREAM (SPOTIFY, AMAZON, YOUTUBE) |
               SETTLEMENT RATE: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME
@@ -688,7 +690,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto font-mono">
           <div className="text-center mb-16">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
-              SOVEREIGN EXCHANGE CAPABILITIES
+              AITITRADE EXCHANGE CAPABILITIES
             </h2>
             <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
               &gt; TRADE SOVEREIGN ASSETS | EARN SETTLEMENT | BUILD POSITIONS
@@ -837,13 +839,13 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src={logoImage} alt="AITIFY" className="w-6 h-6 object-cover" />
-              <span className="text-emerald-400 text-xs font-bold">AITIFY SOVEREIGN EXCHANGE</span>
+              <span className="text-emerald-400 text-xs font-bold">AITITRADE DIGITAL ASSET EXCHANGE</span>
             </div>
             <p className="text-[10px] text-emerald-500/40">
               SETTLEMENT: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME | 97.7 THE FLAME
             </p>
             <p className="text-[10px] text-emerald-500/30">
-              &copy; {new Date().getFullYear()} AITIFY MUSIC RADIO. ALL RIGHTS RESERVED.
+              &copy; {new Date().getFullYear()} AITITRADE DIGITAL ASSET EXCHANGE. ALL RIGHTS RESERVED.
             </p>
           </div>
         </div>

@@ -916,7 +916,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
             <div className="border-t border-emerald-500/20 pt-3 space-y-3">
               <h4 className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5" />
-                MINT LEDGER — SOVEREIGN EXCHANGE
+                MINT LEDGER — AITITRADE EXCHANGE
               </h4>
               <div className="grid grid-cols-3 gap-1">
                 <div className="bg-emerald-500/5 border border-emerald-500/10 p-2 text-center">

@@ -276,7 +276,7 @@ export default function DashboardPage() {
               <Crown className="h-6 w-6 text-lime-400" />
               <div>
                 <h1 className="text-lg font-extrabold text-lime-400 tracking-tight" data-testid="text-ceo-class-title">CEO CLASS — 12-STEP BUSINESS CREDIT PROGRAM</h1>
-                <p className="text-[10px] text-lime-400/60 font-bold">AITIFY SOVEREIGN EXCHANGE — CREDIT BUILDING MODULE</p>
+                <p className="text-[10px] text-lime-400/60 font-bold">AITITRADE DIGITAL ASSET EXCHANGE — CREDIT BUILDING MODULE</p>
               </div>
             </div>
             <div className="text-right">

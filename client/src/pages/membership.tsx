@@ -434,7 +434,7 @@ export default function MembershipPage() {
     <div className="min-h-full pb-28">
       {isAuthenticated && (
         <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-black/90 backdrop-blur border-b border-zinc-800">
-          <span className="text-lime-400 font-mono font-extrabold text-sm tracking-widest">AITIFY MUSIC RADIO</span>
+          <span className="text-lime-400 font-mono font-extrabold text-sm tracking-widest">AITITRADE</span>
           <button
             onClick={() => logout()}
             className="flex items-center gap-2 px-4 py-2 border border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 text-sm font-mono font-extrabold transition-colors"
@@ -450,7 +450,7 @@ export default function MembershipPage() {
         <div className="relative px-6 py-12 text-center">
           <Badge variant="secondary" className="mb-4 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
             <Crown className="h-3 w-3 mr-1" />
-            AITIFY MUSIC RADIO Membership
+            AITITRADE Membership
           </Badge>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4" data-testid="text-membership-title">
             Choose Your Plan

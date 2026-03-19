@@ -119,7 +119,7 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
               </div>
             </div>
             <div className="text-center border-t border-emerald-500/10 pt-2">
-              <p className="text-[7px] text-emerald-500/20 tracking-widest">AITIFY SOVEREIGN EXCHANGE — 100% AI-POWERED PLATFORM</p>
+              <p className="text-[7px] text-emerald-500/20 tracking-widest">AITITRADE DIGITAL ASSET EXCHANGE — 100% AI-POWERED PLATFORM</p>
             </div>
           </div>
         </div>
@@ -217,7 +217,7 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
               </div>
             </div>
             <div className="text-center border-t border-emerald-500/10 pt-2">
-              <p className="text-[7px] text-emerald-500/20 tracking-widest">AITIFY SOVEREIGN EXCHANGE — 100% AI-POWERED PLATFORM</p>
+              <p className="text-[7px] text-emerald-500/20 tracking-widest">AITITRADE DIGITAL ASSET EXCHANGE — 100% AI-POWERED PLATFORM</p>
             </div>
           </div>
         </div>
@@ -378,7 +378,7 @@ function TradePayPalCheckout({ track, open, onClose, onSuccess }: { track: Track
         </div>
         <div className="p-5 space-y-4">
           <div className="border border-lime-400/20 bg-lime-950/30 p-3 text-center">
-            <p className="text-[10px] text-lime-400 font-black tracking-[0.25em]">SOVEREIGN EXCHANGE — POSITION ORDER</p>
+            <p className="text-[10px] text-lime-400 font-black tracking-[0.25em]">AITITRADE — POSITION ORDER</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
@@ -840,16 +840,15 @@ export default function HomePage() {
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <Activity className="h-5 w-5 text-emerald-400" />
-              <h1 className="text-lg font-bold text-emerald-400 tracking-tight" data-testid="text-terminal-title">
-                AITIFY SOVEREIGN EXCHANGE
+              <Activity className="h-5 w-5 text-white" />
+              <h1 className="text-lg font-black tracking-tighter text-white" data-testid="text-terminal-title">
+                AITITRADE <span className="text-green-500">DIGITAL ASSET EXCHANGE</span>
               </h1>
-              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[9px]">97.7 THE FLAME</Badge>
+              <div className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold">LIVE FLOOR</div>
             </div>
             <div className="flex items-center gap-3 text-[10px]">
               <span className="text-zinc-600">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-              <span className="text-emerald-400">LIVE</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[9px]">97.7 THE FLAME</Badge>
             </div>
           </div>
 
@@ -1024,7 +1023,7 @@ export default function HomePage() {
 
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
-          <span>AITIFY SOVEREIGN MINT | 97.7 THE FLAME | AityPay ENGINE</span>
+          <span>AITITRADE DIGITAL ASSET EXCHANGE | 97.7 THE FLAME | AityPay ENGINE</span>
           <span>CEILING: $1K FILL-TO-CLOSE | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 70/30</span>
         </div>
       </div>

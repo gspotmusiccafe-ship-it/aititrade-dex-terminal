@@ -106,7 +106,7 @@ export function MusicPlayer() {
       <div className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-emerald-500/20 flex items-center justify-center gap-3 font-mono z-50">
         <img src={logoImage} alt="AITIFY" className="w-6 h-6 object-cover" />
         <div className="text-center">
-          <p className="text-xs font-bold text-emerald-400" data-testid="text-radio-station-name">97.7 THE FLAME | SOVEREIGN EXCHANGE</p>
+          <p className="text-xs font-bold text-emerald-400" data-testid="text-radio-station-name">97.7 THE FLAME | AITITRADE</p>
           <p className="text-[10px] text-emerald-500/40">AWAITING STREAM...</p>
         </div>
       </div>

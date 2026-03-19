@@ -68,7 +68,7 @@ export function MarketTicker() {
         style={{ height: "32px" }}
         data-testid="market-ticker-global"
       >
-        <span className="text-emerald-500/40 text-[10px] font-mono">AITIFY SOVEREIGN EXCHANGE — AWAITING MARKET DATA</span>
+        <span className="text-emerald-500/40 text-[10px] font-mono">AITITRADE DIGITAL ASSET EXCHANGE — AWAITING MARKET DATA</span>
       </div>
     );
   }

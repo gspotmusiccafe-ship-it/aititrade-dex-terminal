@@ -1,8 +1,8 @@
-# AITIFY MUSIC RADIO
+# AITITRADE DIGITAL ASSET EXCHANGE
 
 ## Overview
 
-AITIFY MUSIC RADIO is the world's first all-AI music streaming platform, offering premium subscribers early access to AI-generated music. It's a full-stack application designed to host AI artists, manage their content, and provide a rich streaming experience. The platform aims to establish a new market for AI-generated music, enabling artists to upload, distribute, and monetize their creations, while offering listeners exclusive content. Key features include music streaming, playlist management, artist interaction, premium subscriptions, and an Artist Portal with AI-powered lyrics generation and audio mastering. The business vision is to create a dynamic marketplace for AI-generated assets, fostering a new ecosystem for AI artists and investors.
+AITITRADE DIGITAL ASSET EXCHANGE is the world's first all-AI music digital asset exchange, offering premium subscribers early access to trade AI-generated music assets. It's a full-stack application designed to host AI artists, manage their content, and provide a rich trading and streaming experience. The platform establishes a new market for AI-generated music assets, enabling artists to upload, distribute, and monetize their creations, while offering traders exclusive early access. Key features include asset trading, music streaming, playlist management, artist interaction, premium subscriptions, and an Artist Portal with AI-powered lyrics generation and audio mastering. The business vision is to create a dynamic marketplace for AI-generated assets, fostering a new ecosystem for AI artists and investors. Native radio is **97.7 THE FLAME**, global radio is **97.7 THE FLAME GLOBAL**.
 
 ## User Preferences
 
