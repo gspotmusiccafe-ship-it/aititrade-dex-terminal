@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Crown, Check, Star, Zap, Headphones, Download, Loader2, ShieldCheck, X } from "lucide-react";
+import { Crown, Check, Star, Zap, Headphones, Download, Loader2, ShieldCheck, X, LogOut } from "lucide-react";
 import { BLUEVINE_MINT_URL, BLUEVINE_TRUST_URL } from "@/lib/checkout-config";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -325,7 +325,7 @@ function PayPalCheckoutDialog({
 }
 
 export default function MembershipPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const [checkoutTier, setCheckoutTier] = useState<string | null>(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
@@ -432,6 +432,18 @@ export default function MembershipPage() {
 
   return (
     <div className="min-h-full pb-28">
+      {isAuthenticated && (
+        <div className="flex justify-end px-4 pt-3">
+          <button
+            onClick={() => logout()}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-zinc-800 text-zinc-400 hover:text-red-400 hover:border-red-500/30 text-xs font-mono font-bold transition-colors"
+            data-testid="button-membership-logout"
+          >
+            <LogOut className="h-3 w-3" />
+            LOG OUT
+          </button>
+        </div>
+      )}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-yellow-500/10 via-primary/5 to-transparent" />
         <div className="relative px-6 py-12 text-center">
