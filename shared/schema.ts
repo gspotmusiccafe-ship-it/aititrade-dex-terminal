@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, jsonb, index, serial, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -410,6 +410,23 @@ export const globalRotation = pgTable("global_rotation", {
 export const insertGlobalRotationSchema = createInsertSchema(globalRotation).omit({ id: true, createdAt: true });
 export type InsertGlobalRotation = z.infer<typeof insertGlobalRotationSchema>;
 export type GlobalRotation = typeof globalRotation.$inferSelect;
+
+export const trustMembers = pgTable("trust_members", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  trustId: text("trust_id").notNull(),
+  promissoryNoteAmount: integer("note_amount").default(500),
+  outstandingBalance: decimal("outstanding_balance").default("475.00"),
+  monthlyCommitment: decimal("monthly_commitment").default("19.79"),
+  monthsRemaining: integer("months_remaining").default(24),
+  isBeneficiary: boolean("is_beneficiary").default(true),
+  giftedYield: decimal("gifted_yield").default("0.00"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTrustMemberSchema = createInsertSchema(trustMembers).omit({ id: true, createdAt: true });
+export type InsertTrustMember = z.infer<typeof insertTrustMemberSchema>;
+export type TrustMember = typeof trustMembers.$inferSelect;
 
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
