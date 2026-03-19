@@ -1706,6 +1706,52 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/exchange/trade-spotify", isAuthenticated, async (req: any, res) => {
+    try {
+      const { spotifyTrackId, amount } = req.body;
+      if (!spotifyTrackId || !amount) {
+        return res.status(400).json({ message: "spotifyTrackId and amount required" });
+      }
+
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+
+      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
+      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
+      const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+      const isPriority = parsedAmount < 21.00;
+
+      const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
+
+      console.log(`[SPOTIFY TRADE] Track: ${spotifyTrackId} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+
+      res.json({
+        instruction: `SEND $${parsedAmount.toFixed(2)} TO CASH APP`,
+        paymentLink: cashAppUrl,
+        cashtag: "$AITITRADEBROKERAGE",
+        assetClass: "SPOTIFY_GLOBAL",
+        spotifyTrackId,
+        split: {
+          floor: floor54,
+          ceoGross: ceoTake46,
+          trustTithe: trustTithe10,
+          blessing: blessingPool36,
+        },
+        priority: isPriority ? "HIGH" : "CYCLE_HOLD",
+        indicator: "STIMULATION_ACTIVE",
+        status: "STIMULATION_PENDING",
+        message: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE TO LOCK THIS SPOTIFY POSITION`,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Spotify trade error:", error);
+      res.status(500).json({ message: "Failed to process Spotify trade" });
+    }
+  });
+
   // Upgrade membership after PayPal payment is verified server-side
   app.post("/api/user/membership/upgrade", isAuthenticated, async (req: any, res) => {
     try {
