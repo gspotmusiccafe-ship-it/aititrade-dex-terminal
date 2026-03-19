@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock, Video, VideoOff } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock, Video, VideoOff, Zap } from "lucide-react";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -97,6 +97,7 @@ export function MusicPlayer() {
   const { toast } = useToast();
   const [queueOpen, setQueueOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
+  const [orderMakerOpen, setOrderMakerOpen] = useState(false);
 
   const upcomingTracks = queue.slice(queueIndex + 1);
   const hasYouTubeVideo = currentTrack ? isYouTubeUrl(currentTrack.audioUrl) : false;
@@ -136,6 +137,36 @@ export function MusicPlayer() {
 
   return (
     <>
+      {orderMakerOpen && currentTrack && (
+        <div className="fixed bottom-36 right-4 w-72 bg-zinc-950 border-2 border-green-500 p-4 shadow-2xl shadow-green-500/10 z-50 font-mono" data-testid="order-maker-panel">
+          <div className="flex justify-between items-center border-b border-green-900 pb-2 mb-3">
+            <span className="text-green-500 font-black text-xs uppercase italic">Direct Order Maker</span>
+            <div className="flex items-center gap-2">
+              <span className="text-red-600 text-[10px] font-bold animate-pulse">P2P_LIVE</span>
+              <button onClick={() => setOrderMakerOpen(false)} className="text-zinc-600 hover:text-green-400"><X className="h-3.5 w-3.5" /></button>
+            </div>
+          </div>
+          <div className="mb-3">
+            <p className="text-[9px] text-zinc-500 tracking-wider mb-1">ASSET</p>
+            <p className="text-white font-black text-sm uppercase truncate">{currentTrack.title}</p>
+            <p className="text-zinc-600 text-[9px]">{currentTrack.artist?.name} | {ticker}</p>
+          </div>
+          <div className="bg-black border border-green-900/50 p-2.5 mb-3">
+            <p className="text-white text-[10px] font-mono font-bold">STIMULATION: $7.00 FOR $21.00 MBB</p>
+            <p className="text-zinc-600 text-[9px] mt-1">54% FLOOR RETAINED • 46% CEO GROSS</p>
+          </div>
+          <a
+            href="https://cash.app/$AITITRADEBROKERAGE"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full bg-green-600 text-center py-3 text-white font-black text-sm hover:bg-green-400 transition-all shadow-[0_0_10px_rgba(34,197,94,0.4)]"
+            data-testid="button-order-maker-execute"
+          >
+            EXECUTE VIA CASH APP
+          </a>
+          <p className="text-[8px] text-zinc-700 mt-2 text-center">$AITITRADEBROKERAGE • NO PAYPAL</p>
+        </div>
+      )}
       {videoOpen && hasYouTubeVideo && currentTrack && (
         <YouTubeVideoPanel videoUrl={currentTrack.audioUrl} onClose={() => setVideoOpen(false)} />
       )}
@@ -407,6 +438,16 @@ export function MusicPlayer() {
                   }
                 />
               )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-7 w-7 ${orderMakerOpen ? "text-green-400" : "text-zinc-600"} hover:text-green-400`}
+                onClick={() => setOrderMakerOpen(!orderMakerOpen)}
+                title="Direct Order Maker"
+                data-testid="button-toggle-order-maker"
+              >
+                <Zap className="h-3.5 w-3.5" />
+              </Button>
               <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-emerald-400" title="Buy" onClick={() => window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer")} data-testid="button-buy-current">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </Button>
