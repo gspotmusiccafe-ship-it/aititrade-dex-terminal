@@ -65,7 +65,7 @@ export default function MembershipPage() {
         <div className="relative px-6 py-12 text-center">
           <Badge variant="secondary" className="mb-4 bg-lime-500/10 text-lime-400 border-lime-500/20 font-mono">
             <Shield className="h-3 w-3 mr-1" />
-            SOVEREIGN TRADING ACCOUNT
+            WELCOME TO AITITRADE — THE WORLD'S FIRST ALL AI-GENERATED DIGITAL AUDIO EXCHANGE
           </Badge>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4 text-white font-mono" data-testid="text-membership-title">
             ACTIVATE YOUR POSITION
