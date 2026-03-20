@@ -63,6 +63,11 @@ export const orders = pgTable("orders", {
   creatorCredit: text("creator_credit").notNull().default("0.16"),
   creatorCreditAmount: text("creator_credit_amount"),
   positionHolderAmount: text("position_holder_amount"),
+  poolCeiling: integer("pool_ceiling").default(1000),
+  portalName: varchar("portal_name").default("STANDARD"),
+  finalPayout: text("final_payout"),
+  houseTake: text("house_take"),
+  houseTakeAccumulated: decimal("house_take_accumulated", { precision: 10, scale: 2 }).default("0.00"),
   status: varchar("status").default("confirmed"),
   createdAt: timestamp("created_at").defaultNow(),
 });

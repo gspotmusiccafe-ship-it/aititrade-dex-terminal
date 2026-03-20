@@ -2,19 +2,56 @@ import { db } from "./db";
 import { tracks } from "@shared/schema";
 import { desc, sql, eq } from "drizzle-orm";
 
-const POOL_CEILING = 1000;
 const FLOOR_SPLIT = 0.54;
 const CEO_SPLIT = 0.46;
-const BASE_BUYIN = 5.00;
-const BASE_BUYBACK_MULTIPLIER = 1.80;
 
-const BUYIN_TIERS = [
-  { min: 3.00, max: 5.00, bbMultiplier: 2.33 },
-  { min: 5.00, max: 7.00, bbMultiplier: 1.80 },
-  { min: 7.00, max: 10.00, bbMultiplier: 1.57 },
-  { min: 10.00, max: 15.00, bbMultiplier: 1.40 },
-  { min: 15.00, max: 25.00, bbMultiplier: 1.27 },
-];
+const PORTALS = {
+  STANDARD:    { tbi: 2.00,  mbb: 3.00, early: 1.50, pool: 1000 },
+  MICRO_700:   { tbi: 5.00,  mbb: 3.35, early: 2.00, pool: 700 },
+  MID_2K:      { tbi: 10.00, mbb: 3.75, early: 2.85, pool: 2000 },
+  PRO_20:      { tbi: 20.00, mbb: 3.75, early: 2.85, pool: 2000 },
+  PRO_30:      { tbi: 30.00, mbb: 3.75, early: 2.85, pool: 3000 },
+  HIGH_50:     { tbi: 50.00, mbb: 3.75, early: 2.85, pool: 5000 },
+};
+
+type PortalName = keyof typeof PORTALS;
+
+export interface PortalConfig {
+  name: PortalName;
+  tbi: number;
+  mbb: number;
+  early: number;
+  pool: number;
+}
+
+export function getPortalForPrice(amount: number): PortalConfig {
+  if (amount >= 50) return { name: "HIGH_50", ...PORTALS.HIGH_50 };
+  if (amount >= 30) return { name: "PRO_30", ...PORTALS.PRO_30 };
+  if (amount >= 20) return { name: "PRO_20", ...PORTALS.PRO_20 };
+  if (amount >= 10) return { name: "MID_2K", ...PORTALS.MID_2K };
+  if (amount >= 5) return { name: "MICRO_700", ...PORTALS.MICRO_700 };
+  return { name: "STANDARD", ...PORTALS.STANDARD };
+}
+
+export function calculateTradeStatus(buyIn: number, currentFloorTotal: number) {
+  const portal = getPortalForPrice(buyIn);
+
+  const maxPayout = buyIn * portal.mbb;
+  const earlyOffer = buyIn * portal.early;
+  const houseTake = maxPayout - earlyOffer;
+
+  return {
+    portal: portal.name,
+    poolCeiling: portal.pool,
+    isReadyToClose: currentFloorTotal >= portal.pool,
+    earlyOffer: parseFloat(earlyOffer.toFixed(2)),
+    houseTake: parseFloat(houseTake.toFixed(2)),
+    maxPayout: parseFloat(maxPayout.toFixed(2)),
+    status: currentFloorTotal >= portal.pool ? "SETTLED" as const : "HOLDING" as const,
+  };
+}
+
+const POOL_CEILING = 1000;
 
 interface MarketSession {
   sessionId: string;
@@ -32,6 +69,7 @@ interface MarketSession {
 interface PoolConfig {
   trackId: string;
   poolSize: number;
+  portalName: PortalName;
   dynamicPrice: number;
   buyBackPrice: number;
   buyBackRate: number;
@@ -46,6 +84,9 @@ interface PoolConfig {
   status: "OPEN" | "RUSH" | "CLOSED" | "REOPENED";
   roi: number;
   leaderboardRank: number;
+  earlyOffer: number;
+  maxPayout: number;
+  houseTake: number;
 }
 
 interface MarketState {
@@ -71,27 +112,32 @@ function getDaySeed(): number {
   return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
 }
 
-function getBuyInForRank(rank: number, totalTracks: number, rng: () => number): { buyIn: number; buyBack: number; roi: number } {
+function getBuyInForRank(rank: number, totalTracks: number, rng: () => number): { buyIn: number; buyBack: number; roi: number; portal: PortalConfig } {
   const topPct = totalTracks > 0 ? rank / totalTracks : 1;
 
-  let tier;
-  if (topPct <= 0.1) {
-    tier = BUYIN_TIERS[4];
-  } else if (topPct <= 0.25) {
-    tier = BUYIN_TIERS[3];
-  } else if (topPct <= 0.5) {
-    tier = BUYIN_TIERS[2];
-  } else if (topPct <= 0.75) {
-    tier = BUYIN_TIERS[1];
+  let buyIn: number;
+  if (topPct <= 0.05) {
+    buyIn = PORTALS.HIGH_50.tbi;
+  } else if (topPct <= 0.10) {
+    buyIn = PORTALS.PRO_30.tbi;
+  } else if (topPct <= 0.20) {
+    buyIn = PORTALS.PRO_20.tbi;
+  } else if (topPct <= 0.40) {
+    buyIn = PORTALS.MID_2K.tbi;
+  } else if (topPct <= 0.70) {
+    buyIn = PORTALS.MICRO_700.tbi;
   } else {
-    tier = BUYIN_TIERS[0];
+    buyIn = PORTALS.STANDARD.tbi;
   }
 
-  const buyIn = parseFloat((tier.min + rng() * (tier.max - tier.min)).toFixed(2));
-  const buyBack = parseFloat((buyIn * tier.bbMultiplier).toFixed(2));
+  const portal = getPortalForPrice(buyIn);
+  const jitter = 0.95 + rng() * 0.10;
+  buyIn = parseFloat((buyIn * jitter).toFixed(2));
+
+  const buyBack = parseFloat((buyIn * portal.mbb).toFixed(2));
   const roi = parseFloat((((buyBack - buyIn) / buyIn) * 100).toFixed(1));
 
-  return { buyIn, buyBack, roi };
+  return { buyIn, buyBack, roi, portal };
 }
 
 function generateSession(): MarketSession {
@@ -105,7 +151,6 @@ function generateSession(): MarketSession {
   const sentiment: "BULL" | "BEAR" | "NEUTRAL" =
     sentimentRoll > 0.6 ? "BULL" : sentimentRoll > 0.3 ? "NEUTRAL" : "BEAR";
 
-  const buyBackRate = BASE_BUYBACK_MULTIPLIER;
   const sessionId = `MKT-${seed}-${tradingRate}`;
 
   return {
@@ -114,7 +159,7 @@ function generateSession(): MarketSession {
     tradingRate,
     volatility,
     marketSentiment: sentiment,
-    buyBackRate,
+    buyBackRate: 1.80,
     poolCeiling: POOL_CEILING,
     generatedAt: Date.now(),
     accumulatedIntake: 0,
@@ -156,9 +201,12 @@ export async function getMarketState(): Promise<MarketState> {
     const pricing = getBuyInForRank(rank, allTracks.length, rng);
 
     const price = parseFloat(t.unitPrice || pricing.buyIn.toString());
+    const portal = getPortalForPrice(price);
+    const poolCeil = portal.pool;
+
     const sales = t.salesCount || 0;
     const grossVolume = parseFloat((sales * price).toFixed(2));
-    const fillPct = Math.min(100, parseFloat(((grossVolume / POOL_CEILING) * 100).toFixed(1)));
+    const fillPct = Math.min(100, parseFloat(((grossVolume / poolCeil) * 100).toFixed(1)));
 
     systemIntake += grossVolume;
 
@@ -166,8 +214,10 @@ export async function getMarketState(): Promise<MarketState> {
     const shouldFlash = rng() < 0.25;
     const flashTriggerMinute = shouldFlash ? Math.floor(rng() * 1440) : null;
 
+    const tradeStatus = calculateTradeStatus(price, grossVolume);
+
     let status: "OPEN" | "RUSH" | "CLOSED" | "REOPENED" = "OPEN";
-    if (grossVolume >= POOL_CEILING) {
+    if (grossVolume >= poolCeil) {
       status = "CLOSED";
       settlementQueue.push(t.id);
     } else if (fillPct >= 90) {
@@ -176,14 +226,15 @@ export async function getMarketState(): Promise<MarketState> {
 
     return {
       trackId: t.id,
-      poolSize: POOL_CEILING,
+      poolSize: poolCeil,
+      portalName: portal.name,
       dynamicPrice: price,
       buyBackPrice: pricing.buyBack,
       buyBackRate: pricing.buyBack / price,
-      paperTradeCap: POOL_CEILING * 0.50,
+      paperTradeCap: poolCeil * 0.50,
       grossVolume,
       fillPct,
-      seats: Math.max(5, Math.floor(POOL_CEILING / price)),
+      seats: Math.max(5, Math.floor(poolCeil / price)),
       rushMultiplier: parseFloat(rushMultiplier.toFixed(3)),
       flashTriggerMinute,
       liquiditySplit: { floor: FLOOR_SPLIT, ceo: CEO_SPLIT },
@@ -191,6 +242,9 @@ export async function getMarketState(): Promise<MarketState> {
       status,
       roi: pricing.roi,
       leaderboardRank: rank,
+      earlyOffer: tradeStatus.earlyOffer,
+      maxPayout: tradeStatus.maxPayout,
+      houseTake: tradeStatus.houseTake,
     };
   });
 
@@ -237,17 +291,21 @@ export function invalidateCache() {
   cachedDay = 0;
 }
 
-export function generateRecycleValues(volatility: number): { newPrice: number; newBuyBackRate: number; newBuyBackPrice: number } {
+export function generateRecycleValues(volatility: number): { newPrice: number; newBuyBackRate: number; newBuyBackPrice: number; portalName: PortalName } {
   const seed = Date.now() + Math.floor(Math.random() * 1000000);
   const rng = seededRandom(seed);
-  const tierIndex = Math.floor(rng() * BUYIN_TIERS.length);
-  const tier = BUYIN_TIERS[tierIndex];
-  const newPrice = parseFloat((tier.min + rng() * (tier.max - tier.min)).toFixed(2));
-  const newBuyBackPrice = parseFloat((newPrice * tier.bbMultiplier).toFixed(2));
+
+  const portalEntries = Object.entries(PORTALS) as [PortalName, typeof PORTALS[PortalName]][];
+  const idx = Math.floor(rng() * portalEntries.length);
+  const [portalName, portalCfg] = portalEntries[idx];
+  const jitter = 0.90 + rng() * 0.20;
+  const newPrice = parseFloat((portalCfg.tbi * jitter).toFixed(2));
+  const newBuyBackPrice = parseFloat((newPrice * portalCfg.mbb).toFixed(2));
   return {
     newPrice,
-    newBuyBackRate: tier.bbMultiplier,
+    newBuyBackRate: portalCfg.mbb,
     newBuyBackPrice,
+    portalName,
   };
 }
 
@@ -329,4 +387,11 @@ export function computeGlobalRoyaltySplit(
   };
 }
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS };
+export function calculateEarlyExit(buyIn: number) {
+  const portal = getPortalForPrice(buyIn);
+  const earlyPayout = parseFloat((buyIn * portal.early).toFixed(2));
+  const houseProfit = parseFloat(((buyIn * portal.mbb) - earlyPayout).toFixed(2));
+  return { earlyPayout, houseProfit, portal };
+}
+
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS };

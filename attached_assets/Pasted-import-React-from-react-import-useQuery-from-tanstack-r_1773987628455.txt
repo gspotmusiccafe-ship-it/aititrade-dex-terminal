@@ -1,0 +1,51 @@
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+export const TreasuryDashboard = () => {
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['/api/admin/treasury-stats'],
+  });
+
+  if (isLoading) return <div className="text-lime-500 animate-pulse">LOADING TREASURY DATA...</div>;
+
+  return (
+    <div className="bg-black border border-zinc-800 p-6 font-mono">
+      <div className="flex justify-between items-center mb-8 border-b border-zinc-800 pb-4">
+        <h2 className="text-xl text-lime-400 font-bold tracking-tighter uppercase underline">
+          Sovereign House Treasury
+        </h2>
+        <div className="text-[10px] text-zinc-500 text-right">
+          STATUS: SYSTEM ACTIVE<br />
+          PORTALS: 700 / 1K / 2K / 3K / 5K
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Total House Revenue */}
+        <div className="bg-zinc-950 p-4 border-l-2 border-lime-500">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Total House Take</p>
+          <p className="text-3xl text-white font-bold">${stats?.totalRevenue?.toLocaleString() || '0.00'}</p>
+          <p className="text-[10px] text-lime-600 mt-2">↑ 150% Spread Retention Active</p>
+        </div>
+
+        {/* Active Pool Volume */}
+        <div className="bg-zinc-950 p-4 border-l-2 border-zinc-700">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Active Floor Volume</p>
+          <p className="text-3xl text-zinc-300 font-bold">${stats?.activeVolume?.toLocaleString() || '0.00'}</p>
+          <p className="text-[10px] text-zinc-600 mt-2">Sum of all open TBIs</p>
+        </div>
+
+        {/* Early Exit Volume */}
+        <div className="bg-zinc-950 p-4 border-l-2 border-yellow-600">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Early Payouts Issued</p>
+          <p className="text-3xl text-yellow-500 font-bold">${stats?.earlyPayouts?.toLocaleString() || '0.00'}</p>
+          <p className="text-[10px] text-zinc-600 mt-2">Users paid first at lower offers</p>
+        </div>
+      </div>
+      
+      <div className="mt-8 text-[10px] text-zinc-700 italic">
+        *No-loss architecture enabled. All settlements are final and calculated across the trading floor.
+      </div>
+    </div>
+  );
+};

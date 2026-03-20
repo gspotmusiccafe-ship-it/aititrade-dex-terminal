@@ -14,7 +14,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing } from "./market-governor";
+import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, PORTALS } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -329,6 +329,7 @@ export async function registerRoutes(
       const poolSummary = state.pools.map((p) => ({
         trackId: p.trackId,
         poolSize: p.poolSize,
+        portalName: p.portalName,
         dynamicPrice: p.dynamicPrice,
         buyBackRate: p.buyBackRate,
         paperTradeCap: p.paperTradeCap,
@@ -337,6 +338,9 @@ export async function registerRoutes(
         rushMultiplier: p.rushMultiplier,
         isFlashScheduled: p.flashTriggerMinute !== null,
         liquiditySplit: p.liquiditySplit,
+        earlyOffer: p.earlyOffer,
+        maxPayout: p.maxPayout,
+        houseTake: p.houseTake,
       }));
       res.json({
         ...session,
@@ -363,12 +367,15 @@ export async function registerRoutes(
 
       const price = parseFloat(track.unitPrice || "3.50");
       const bbRate = parseFloat(track.buyBackRate || "0.18");
+      const portal = getPortalForPrice(price);
+      const portalCeiling = portal.pool;
       const grossSales = (track.salesCount || 0) * price;
       const split = computeLiquiditySplit(grossSales);
-      const poolPct = Math.min(100, (grossSales / POOL_CEILING) * 100);
-      const paperTradeCap = POOL_CEILING * 0.50;
+      const poolPct = Math.min(100, (grossSales / portalCeiling) * 100);
+      const paperTradeCap = portalCeiling * 0.50;
       const paperTradeUsed = Math.min(100, (grossSales / paperTradeCap) * 100);
-      const unitsRemaining = Math.max(0, Math.ceil((POOL_CEILING - grossSales) / price));
+      const unitsRemaining = Math.max(0, Math.ceil((portalCeiling - grossSales) / price));
+      const tradeStatus = calculateTradeStatus(price, grossSales);
 
       res.json({
         ...pool,
@@ -383,6 +390,12 @@ export async function registerRoutes(
         ceo46: split.ceo46,
         trustTithe: split.trustTithe,
         blessing: split.blessing,
+        portalName: portal.name,
+        portalCeiling,
+        earlyOffer: tradeStatus.earlyOffer,
+        maxPayout: tradeStatus.maxPayout,
+        houseTake: tradeStatus.houseTake,
+        tradeStatus: tradeStatus.status,
         session: state.session,
       });
     } catch (error) {
@@ -480,6 +493,7 @@ export async function registerRoutes(
 
         const price = parseFloat(track.unitPrice || "3.50");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
+        if (price < 2.00 && !isGlobal) throw new Error("MIN_TRADE");
 
         const minterFeeAmt = parseFloat((price * FLOOR_SPLIT).toFixed(4));
         const positionValue = parseFloat((price - minterFeeAmt).toFixed(4));
@@ -524,14 +538,17 @@ export async function registerRoutes(
 
         const buyBackRate = parseFloat(track.buyBackRate || "0.18");
         const currentGross = parseFloat((currentSales * price).toFixed(2));
-        const paperTradeCap = POOL_CEILING * 0.50;
+        const tradePortal = getPortalForPrice(price);
+        const portalCeiling = tradePortal.pool;
+        const paperTradeCap = portalCeiling * 0.50;
 
-        if (currentGross >= POOL_CEILING) {
+        if (currentGross >= portalCeiling) {
           throw new Error("CEILING_REACHED");
         }
 
         const newGrossAfter = parseFloat(((currentSales + 1) * price).toFixed(2));
         const split = computeLiquiditySplit(newGrossAfter);
+        const tradeStatus = calculateTradeStatus(price, newGrossAfter);
 
         const seq = String(currentSales + 1).padStart(3, "0");
         const mintId = `MNT-977-${ticker}-${seq}`;
@@ -543,6 +560,8 @@ export async function registerRoutes(
           creatorCredit: "0.16",
           creatorCreditAmount: minterFeeAmt.toString(),
           positionHolderAmount: positionValue.toString(),
+          poolCeiling: portalCeiling,
+          portalName: tradePortal.name,
           status: "confirmed",
         }).returning();
 
@@ -555,11 +574,11 @@ export async function registerRoutes(
 
         const newSales = updated.salesCount || currentSales + 1;
         const newGross = parseFloat((newSales * price).toFixed(2));
-        const capacityPct = Math.min(100, parseFloat(((newGross / POOL_CEILING) * 100).toFixed(1)));
+        const capacityPct = Math.min(100, parseFloat(((newGross / portalCeiling) * 100).toFixed(1)));
 
         let poolRecycled = false;
         let recycledData: { newPrice: number; newBuyBackRate: number } | null = null;
-        if (newGross >= POOL_CEILING) {
+        if (newGross >= portalCeiling) {
           const marketState = await getMarketState();
           recycledData = generateRecycleValues(marketState.session.volatility);
           poolRecycled = true;
@@ -589,12 +608,17 @@ export async function registerRoutes(
             aiModel: track.aiModel || "AITIFY-GEN-1",
             grossSales: newGross,
             totalMints: newSales,
-            poolCeiling: POOL_CEILING,
+            poolCeiling: portalCeiling,
             paperTradeCap,
             capacityPct,
             releaseType: "native",
             status: poolRecycled ? "SETTLED_REOPENED" : "MINTED",
-            poolSize: POOL_CEILING,
+            poolSize: portalCeiling,
+            portalName: tradePortal.name,
+            earlyOffer: tradeStatus.earlyOffer,
+            maxPayout: tradeStatus.maxPayout,
+            houseTake: tradeStatus.houseTake,
+            tradeSettlement: tradeStatus.status,
             floor54: split.floor54,
             ceo46: split.ceo46,
             trustTithe: split.trustTithe,
@@ -650,10 +674,100 @@ export async function registerRoutes(
       res.json(result);
     } catch (error: any) {
       if (error.message === "NOT_FOUND") return res.status(404).json({ message: "Asset not found" });
-      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "POOL SETTLED — $1K FILL-TO-CLOSE CEILING REACHED. Awaiting re-roll." });
+      if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "POOL SETTLED — FILL-TO-CLOSE CEILING REACHED. Awaiting re-roll." });
       if (error.message === "INVALID_PRICE") return res.status(400).json({ message: "Invalid asset price" });
+      if (error.message === "MIN_TRADE") return res.status(400).json({ message: "No 99 cent trades. Minimum $2.00." });
       console.error("Order placement error:", error);
       res.status(500).json({ message: "Order failed" });
+    }
+  });
+
+  app.post("/api/exchange/early-exit", isAuthenticated, async (req: any, res) => {
+    try {
+      const { orderId } = req.body;
+      if (!orderId) return res.status(400).json({ message: "orderId required" });
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) return res.status(404).json({ message: "Trade not found" });
+
+      if (order.status === "settled_early" || order.status === "settled") {
+        return res.status(409).json({ message: "Trade already settled" });
+      }
+
+      const amount = parseFloat(order.unitPrice || "2.00");
+      const { earlyPayout, houseProfit, portal } = calculateEarlyExit(amount);
+
+      await db.update(orders)
+        .set({
+          status: "settled_early",
+          finalPayout: earlyPayout.toString(),
+          houseTake: houseProfit.toString(),
+          houseTakeAccumulated: houseProfit.toString(),
+        })
+        .where(eq(orders.id, orderId));
+
+      logMarketEvent({
+        timestamp: new Date().toISOString(),
+        userId: req.user?.claims?.sub || "anonymous",
+        eventType: "EARLY_EXIT",
+        trackName: order.trackingNumber || "UNKNOWN",
+        ticker: order.trackingNumber?.split("-").slice(2, 3).join("") || "N/A",
+        unitPrice: amount,
+        grossSales: earlyPayout,
+        poolSize: portal.pool,
+        capacityPct: 0,
+        mintId: order.trackingNumber || "",
+        houseCut: houseProfit,
+        payoutPot: earlyPayout,
+      }).catch(() => {});
+
+      res.json({
+        message: "Early exit successful. Paid first.",
+        payout: earlyPayout,
+        houseTake: houseProfit,
+        portal: portal.name,
+        status: "SETTLED_EARLY",
+      });
+    } catch (error) {
+      console.error("Early exit error:", error);
+      res.status(500).json({ message: "Early exit failed" });
+    }
+  });
+
+  app.get("/api/exchange/portals", async (_req: any, res) => {
+    res.json(PORTALS);
+  });
+
+  app.get("/api/exchange/treasury", async (_req: any, res) => {
+    try {
+      const [treasuryResult] = await db.select({
+        totalRevenue: sql<string>`COALESCE(SUM(CAST(house_take AS DECIMAL)), 0)`,
+        settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
+      }).from(orders);
+
+      const allNative = await db.select({
+        salesCount: tracks.salesCount,
+        unitPrice: tracks.unitPrice,
+      }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
+
+      const activeFloorVolume = allNative.reduce((sum, t) => {
+        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "2.00"));
+      }, 0);
+
+      const totalRevenue = parseFloat(treasuryResult?.totalRevenue || "0");
+      const totalVolume = activeFloorVolume + totalRevenue;
+      const efficiency = totalVolume > 0 ? parseFloat(((activeFloorVolume / totalVolume) * 100).toFixed(1)) : 0;
+
+      res.json({
+        balance: totalRevenue,
+        formattedBalance: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(totalRevenue),
+        activeFloorVolume: new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(activeFloorVolume),
+        efficiency: `${efficiency}%`,
+        settledCount: treasuryResult?.settledCount || 0,
+      });
+    } catch (error) {
+      console.error("Treasury stats error:", error);
+      res.status(500).json({ message: "Failed to fetch treasury stats" });
     }
   });
 

@@ -10,6 +10,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
+import { getPortal, PortalBadge, LivingTicker } from "@/components/TradePortal";
 
 const CEILING = 1000.00;
 const FLASH_THRESHOLD = 900.00;
@@ -410,11 +411,14 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
   const releaseType = ((track as any).releaseType || "native").toLowerCase();
   const isGlobal = releaseType === "global";
   const isInspirational = assetClass === "inspirational";
-  const poolCeiling = CEILING;
+  const portal = getPortal(price);
+  const poolCeiling = isGlobal ? CEILING : portal.pool;
   const ptCap = poolCeiling * 0.50;
-  const bbPrice = parseFloat((track as any).buyBackRate || (price * 1.80).toFixed(2));
-  const roi = price > 0 ? parseFloat((((bbPrice - price) / price) * 100).toFixed(0)) : 0;
-  const bbLabel = `$${bbPrice.toFixed(2)} (${roi}% ROI)`;
+  const bbPrice = parseFloat((track as any).buyBackRate || (price * portal.mbb).toFixed(2));
+  const maxPayout = parseFloat((price * portal.mbb).toFixed(2));
+  const earlyExit = parseFloat((price * portal.early).toFixed(2));
+  const roi = price > 0 ? parseFloat((((maxPayout - price) / price) * 100).toFixed(0)) : 0;
+  const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
   const minterFeeLabel = "54/46";
   const grossSales = parseFloat((sales * price).toFixed(2));
   const capacityPct = Math.min(100, parseFloat(((grossSales / poolCeiling) * 100).toFixed(1)));
@@ -477,6 +481,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
           {!isGlobal && !isInspirational && (
             <span className="text-[8px] px-1 py-0.5 bg-emerald-500/10 text-emerald-500/60 border border-emerald-500/20 font-bold">NATIVE</span>
           )}
+          {!isGlobal && <PortalBadge unitPrice={price} />}
         </div>
         <div className="flex items-center gap-1.5">
           <span className={`text-[11px] font-extrabold ${priceClass}`}>{priceLabel}</span>
@@ -1044,7 +1049,7 @@ export default function HomePage() {
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
           <span>AITITRADE DIGITAL ASSET EXCHANGE | 97.7 THE FLAME | AityPay ENGINE</span>
-          <span>CEILING: $1K FILL-TO-CLOSE | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 70/30</span>
+          <span>PORTAL FILL-TO-CLOSE | $700-$5K CEILINGS | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 54/46</span>
         </div>
       </div>
     </div>
