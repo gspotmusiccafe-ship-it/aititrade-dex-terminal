@@ -499,6 +499,32 @@ export function getPoolForTrack(state: MarketState, trackId: string): PoolConfig
   return state.pools.find((p) => p.trackId === trackId);
 }
 
+export function applyMarketBreathing(pool: PoolConfig): PoolConfig {
+  const now = Date.now();
+  const minuteOfDay = new Date().getHours() * 60 + new Date().getMinutes();
+  const wave1 = Math.sin((minuteOfDay / 1440) * Math.PI * 2) * 0.03;
+  const wave2 = Math.sin((minuteOfDay / 360) * Math.PI * 2) * 0.02;
+  const wave3 = Math.sin((now / 30000) * Math.PI * 2) * 0.015;
+  const fillPressure = pool.fillPct > 75 ? 0.04 : pool.fillPct > 50 ? 0.02 : pool.fillPct > 25 ? 0.01 : 0;
+  const rushBoost = pool.status === "RUSH" ? 0.05 : 0;
+  const totalSwing = wave1 + wave2 + wave3 + fillPressure + rushBoost;
+  const breathingPrice = parseFloat((pool.dynamicPrice * (1 + totalSwing)).toFixed(2));
+  const breathingBuyBack = parseFloat((breathingPrice * pool.buyBackRate).toFixed(2));
+
+  return {
+    ...pool,
+    dynamicPrice: Math.max(0.50, breathingPrice),
+    buyBackPrice: breathingBuyBack,
+  };
+}
+
+export function getBreathingState(state: MarketState): MarketState {
+  return {
+    ...state,
+    pools: state.pools.map(p => p.status === "CLOSED" ? p : applyMarketBreathing(p)),
+  };
+}
+
 export function computeLiquiditySplit(grossSales: number): {
   floor54: number;
   ceo46: number;
