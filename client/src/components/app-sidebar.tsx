@@ -239,7 +239,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 pb-28 md:pb-28 space-y-2">
+      <SidebarFooter className="p-4 pb-4 space-y-2 flex-shrink-0">
         {isAuthenticated && user && !user.hasPassword && (
           <>
             {!showSetPassword ? (
