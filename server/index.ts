@@ -64,6 +64,20 @@ app.use((req, res, next) => {
   // Seed database with demo data
   await seedDatabase();
   
+  try {
+    const { db } = await import("./db");
+    const { sql } = await import("drizzle-orm");
+    const bcrypt = await import("bcryptjs");
+    const [adminRow] = (await db.execute(sql`SELECT id, password FROM users WHERE id = '31bohcbsxlhgbxwskjpbai674pta'`)).rows as any[];
+    if (adminRow && !adminRow.password) {
+      const hashed = await bcrypt.hash("Pookie@-1970", 10);
+      await db.execute(sql`UPDATE users SET password = ${hashed} WHERE id = '31bohcbsxlhgbxwskjpbai674pta'`);
+      console.log("[startup] Admin password set");
+    }
+  } catch (e) {
+    console.error("[startup] Password setup error:", e);
+  }
+
   // One-time migration: reassign gspotmusiccafe data to Spotify account
   try {
     const { db } = await import("./db");
