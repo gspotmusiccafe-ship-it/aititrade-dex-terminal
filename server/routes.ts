@@ -1653,13 +1653,13 @@ export async function registerRoutes(
       const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
       const isPriority = parsedAmount < 21.00;
 
-      const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
-
       console.log(`[CASH APP TRADE] Asset: ${ticker} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
       const seq = String(currentSales + 1).padStart(3, "0");
       const prefix = isGlobal ? "TRST" : "MNT";
       const trackingNum = `${prefix}-977-${ticker}-${seq}`;
+
+      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}?note=AITITRADE%20${encodeURIComponent(trackingNum)}`;
 
       const [order] = await db.insert(orders).values({
         trackId,
@@ -1679,7 +1679,7 @@ export async function registerRoutes(
       const capacityPct = Math.min(100, parseFloat(((newGross / GLOBAL_CEILING) * 100).toFixed(1)));
 
       res.json({
-        instruction: `SEND $${parsedAmount.toFixed(2)} TO CASH APP`,
+        instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
         url: cashAppUrl,
         cashtag: "$AITITRADEBROKERAGE",
         note: `AITITRADE ${trackingNum}`,
@@ -1727,12 +1727,12 @@ export async function registerRoutes(
       const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
       const isPriority = parsedAmount < 21.00;
 
-      const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
-
       console.log(`[SPOTIFY TRADE] Track: ${spotifyTrackId} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
+      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}`;
+
       res.json({
-        instruction: `SEND $${parsedAmount.toFixed(2)} TO CASH APP`,
+        instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
         paymentLink: cashAppUrl,
         cashtag: "$AITITRADEBROKERAGE",
         assetClass: "SPOTIFY_GLOBAL",
@@ -3138,6 +3138,12 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.post("/api/production/push", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+
+      const adminUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!adminUser.length || !adminUser[0].isAdmin) {
+        return res.status(403).json({ message: "MINT FACTORY — ADMIN ACCESS ONLY" });
+      }
+
       const { title, audioPrompt, visualPrompt, style, unitPrice, makeInstrumental } = req.body;
 
       if (!title) {

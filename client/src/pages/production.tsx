@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle2, AlertTriangle, Music, Image, Rocket, DollarSign, FileText, Zap, Radio } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle, Music, Image, Rocket, DollarSign, FileText, Zap, Radio, ShieldAlert } from "lucide-react";
 
 interface TrustStatus {
   isMember: boolean;
@@ -34,9 +34,33 @@ export default function ProductionPage() {
   const [audioResult, setAudioResult] = useState<GenerationResult | null>(null);
   const [visualResult, setVisualResult] = useState<GenerationResult | null>(null);
 
+  const { data: adminCheck, isLoading: adminLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/check"],
+  });
+
   const { data: trustStatus } = useQuery<TrustStatus>({
     queryKey: ["/api/trust/status"],
   });
+
+  if (adminLoading) {
+    return (
+      <div className="min-h-full bg-black flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-green-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!adminCheck?.isAdmin) {
+    return (
+      <div className="min-h-full bg-black flex items-center justify-center">
+        <div className="text-center border border-red-500/30 bg-red-500/5 p-10 max-w-md">
+          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-red-400 font-mono font-black text-xl mb-2">ACCESS DENIED</h2>
+          <p className="text-red-500/60 font-mono text-xs">THIS TERMINAL IS RESTRICTED TO AUTHORIZED ADMINISTRATORS ONLY.</p>
+        </div>
+      </div>
+    );
+  }
 
   const noteAmount = trustStatus?.member?.promissoryNoteAmount || 500;
   const outstanding = parseFloat(trustStatus?.member?.outstandingBalance || "475.00");
@@ -83,9 +107,9 @@ export default function ProductionPage() {
           <div className="border-b border-green-600/50 bg-green-900/10 px-6 py-4 flex items-center justify-between">
             <div>
               <h2 className="text-white font-black text-2xl italic uppercase underline font-mono tracking-tight" data-testid="text-production-title">
-                Asset Production & Distribution
+                MINT FACTORY
               </h2>
-              <p className="text-green-500/60 text-[10px] font-mono mt-1">SOVEREIGN EXCHANGE PRODUCTION TERMINAL</p>
+              <p className="text-green-500/60 text-[10px] font-mono mt-1">ADMIN-ONLY ASSET PRODUCTION & DISTRIBUTION TERMINAL</p>
             </div>
             <div className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-green-500 animate-pulse" />

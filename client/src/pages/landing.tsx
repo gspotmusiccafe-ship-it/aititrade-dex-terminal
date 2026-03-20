@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
-const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
+const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE/25.00";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
 import GlobalRadio from "@/components/GlobalRadio";
@@ -462,55 +462,24 @@ const features = [
 
 const membershipTiers = [
   {
-    name: "Front Page Investor",
-    price: "FREE",
-    period: "",
-    stream: "free",
-    features: [
-      "Paper trading on 97.7 THE FLAME",
-      "Stream AI-generated assets",
-      "Free Spotify account required",
-      "Landing page access only",
-      "No inside exchange access",
-    ],
-    highlight: false,
-  },
-  {
-    name: "Mint Factory CEO",
-    price: "$99.99",
-    period: " setup",
-    stream: "mintor",
-    features: [
-      "$99.99 SET-UP FEE + $9.99/MO RECURRING",
-      "Full Sovereign Exchange access",
-      "Mint & trade all asset classes",
-      "2-Week Early Pre-release trading",
-      "54/46 G. Smooth Trade Split",
-      "AI Lyrics Generator & Audio Mastering",
-      "Distribution to Spotify, Amazon, YouTube",
-      "Marketing & promotions",
-      "Aitify Music Store — 25% retention",
-      "Leaderboard, analytics & tier badges",
-      "Lossless audio quality",
-    ],
-    highlight: true,
-  },
-  {
-    name: "Asset Trustee",
-    price: "$500",
-    period: " total",
+    name: "Sovereign Trust Member",
+    price: "$25",
+    period: " down",
     stream: "trust",
     features: [
-      "$25 DOWN / 0% INTEREST / $19.79 MO FOR 24 MONTHS",
+      "$25 DOWN / 0% INTEREST / $19.79 MO × 24 MONTHS",
+      "$500 PROMISSORY NOTE — FULL SOVEREIGN ACCESS",
       "Full Sovereign Exchange access",
       "All assets + pre-release papers",
+      "54/46 G. Smooth Trade Split",
       "Priority settlement queue",
       "High-Volatility asset trading",
-      "Dual-status — hold with MINTOR tier",
       "Trust certificate on all positions",
-      "High quality audio",
+      "AI Lyrics Generator & Audio Mastering",
+      "Distribution to Spotify, Amazon, YouTube",
+      "Leaderboard, analytics & tier badges",
     ],
-    highlight: false,
+    highlight: true,
   },
 ];
 
@@ -783,10 +752,9 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
-              <span className="bg-lime-500/10 border border-lime-500/20 text-lime-400 px-2 py-1 font-bold">MINTOR: $99.99 SETUP + $9.99/MO</span>
-              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-1 font-bold">TRUST: $25 DOWN / $19.79 MO</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">CLASS: AI-GENERATED EQUITY</span>
-              <span className="bg-zinc-800 border border-zinc-700 text-zinc-400 px-2 py-1">FREE: FRONT PAGE ONLY</span>
+              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-1 font-bold">SOVEREIGN TRUST: $25 DOWN / $19.79 MO</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">54/46 G. SMOOTH TRADE SPLIT</span>
+              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">$500 PROMISSORY NOTE — 0% INTEREST</span>
             </div>
           </div>
 
@@ -852,105 +820,57 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Pricing Section — Financing Gate */}
+      {/* Pricing Section — Sovereign Trust */}
       <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto font-mono">
           <div className="text-center mb-16">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
-              POSITION TIERS & FINANCING TERMS
+              SOVEREIGN TRUST MEMBERSHIP
             </h2>
             <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
-              &gt; DUAL-STREAM REVENUE MODEL | <span className="text-lime-400 font-bold">MINTOR $99.99 + $9.99/MO</span> | <span className="text-amber-400 font-bold">TRUST $25 DOWN</span>
+              &gt; <span className="text-amber-400 font-bold">$25 DOWN</span> | 0% INTEREST | $19.79/MO × 24 MONTHS | $500 PROMISSORY NOTE
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
-            {membershipTiers.map((tier, index) => {
-              const isMintor = tier.stream === "mintor";
-              const isTrust = tier.stream === "trust";
-              const isFree = tier.stream === "free";
-              const borderCls = isTrust
-                ? "border-amber-500/60 bg-black hover:border-amber-500/80"
-                : isMintor
-                ? "border-lime-500/60 bg-black"
-                : "border-zinc-700/40 bg-black hover:border-zinc-700/60";
-              const titleCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-zinc-400";
-              const priceCls = isTrust ? "text-amber-300" : isMintor ? "text-lime-300" : "text-white";
-              const bulletCls = isTrust ? "text-amber-400" : isMintor ? "text-lime-400" : "text-zinc-500";
-              const featureCls = isTrust ? "text-amber-500/70" : isMintor ? "text-lime-500/70" : "text-zinc-500";
-
-              return (
-                <div
-                  key={index}
-                  className={`relative overflow-hidden transition-all border ${borderCls}`}
-                  data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  {isMintor && (
-                    <div className="bg-lime-500/20 text-lime-400 text-center py-1.5 text-[10px] font-extrabold uppercase tracking-wider border-b border-lime-500/30">
-                      ◆ MINTOR — MINT & TRADE
+          <div className="max-w-lg mx-auto">
+            {membershipTiers.map((tier, index) => (
+              <div
+                key={index}
+                className="relative overflow-hidden transition-all border-2 border-amber-500/60 bg-black hover:border-amber-500/80"
+                data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
+              >
+                <div className="bg-amber-500/20 text-amber-400 text-center py-1.5 text-[10px] font-extrabold uppercase tracking-wider border-b border-amber-500/30">
+                  ◆ SOVEREIGN TRUST — $25 DOWN / $19.79 MO
+                </div>
+                <div className="p-5">
+                  <div className="mb-4">
+                    <h3 className="font-extrabold text-sm mb-1 tracking-tight text-amber-400">{tier.name.toUpperCase()}</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-amber-300">{tier.price}</span>
+                      <span className="text-[10px] text-amber-500/70">{tier.period}</span>
                     </div>
-                  )}
-                  {isTrust && (
-                    <div className="bg-amber-500/20 text-amber-400 text-center py-1.5 text-[10px] font-extrabold uppercase tracking-wider border-b border-amber-500/30">
-                      ◆ TRUST INVESTOR — $25 DOWN
-                    </div>
-                  )}
-                  <div className="p-5">
-                    <div className="mb-4">
-                      <h3 className={`font-extrabold text-sm mb-1 tracking-tight ${titleCls}`}>{tier.name.toUpperCase()}</h3>
-                      <div className="flex items-baseline gap-1">
-                        <span className={`text-2xl font-black ${priceCls}`}>{tier.price}</span>
-                        <span className={`text-[10px] ${featureCls}`}>{tier.period}</span>
-                      </div>
-                      {isFree && (
-                        <p className="text-[9px] text-zinc-500 mt-1">PAPER TRADING ONLY — SPOTIFY ACCOUNT REQUIRED</p>
-                      )}
-                      {isMintor && (
-                        <p className="text-[10px] text-lime-400/60 mt-1 font-bold">BLUEVINE RECURRING — CANCEL ANYTIME</p>
-                      )}
-                      {isTrust && (
-                        <p className="text-[10px] text-amber-400/60 mt-1 font-bold">$25 DOWN / 0% INTEREST / $19.79 MO × 24</p>
-                      )}
-                    </div>
-
-                    <ul className="space-y-2 mb-5">
-                      {tier.features.map((feature, i) => (
-                        <li key={i} className={`flex items-start gap-2 text-[11px] ${featureCls}`}>
-                          <span className={`mt-0.5 ${isFree && feature.includes("No ") ? "text-red-400" : bulletCls}`}>▸</span>
-                          <span className={`${isFree && feature.includes("No ") ? "text-red-400/60" : ""} ${feature.includes("$25 DOWN") || feature.includes("$19.79") ? "font-extrabold text-amber-400" : ""}`}>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    {isTrust ? (
-                      <a
-                        href={CASH_APP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
-                        data-testid="button-activate-cashapp"
-                      >
-                        ACTIVATE — $25 DOWN VIA CASH APP
-                      </a>
-                    ) : isMintor ? (
-                      <a
-                        href={CASH_APP_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full py-2.5 text-[11px] font-extrabold text-center bg-lime-600 text-white hover:bg-lime-700 transition-colors"
-                        data-testid="button-activate-cashapp"
-                      >
-                        ACTIVATE — $25 DOWN VIA CASH APP
-                      </a>
-                    ) : (
-                      <button
-                        className="w-full py-2 text-[10px] font-bold border border-zinc-700 text-zinc-400 hover:bg-zinc-800 transition-colors"
-                        onClick={() => openAuth("signup")}
-                      >
-                        CREATE FREE ACCOUNT
-                      </button>
-                    )}
+                    <p className="text-[10px] text-amber-400/60 mt-1 font-bold">$25 DOWN / 0% INTEREST / $19.79 MO × 24 MONTHS</p>
                   </div>
+
+                  <ul className="space-y-2 mb-5">
+                    {tier.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[11px] text-amber-500/70">
+                        <span className="mt-0.5 text-amber-400">▸</span>
+                        <span className={feature.includes("$25 DOWN") || feature.includes("$19.79") || feature.includes("$500") ? "font-extrabold text-amber-400" : ""}>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <a
+                    href={CASH_APP_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full py-3 text-sm font-extrabold text-center bg-green-600 text-white hover:bg-green-500 transition-colors"
+                    data-testid="button-activate-cashapp"
+                  >
+                    ACTIVATE — $25 DOWN VIA CASH APP ($AITITRADEBROKERAGE)
+                  </a>
+                </div>
                 </div>
               );
             })}

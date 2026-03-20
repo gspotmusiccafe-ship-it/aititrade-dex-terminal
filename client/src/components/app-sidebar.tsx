@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, Rocket, BarChart3 } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3 } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -76,22 +76,8 @@ export function AppSidebar() {
     enabled: isAuthenticated,
   });
 
-  const TIER_LABELS: Record<string, string> = {
-    entry_trader: "Entry Trader",
-    exchange_trader: "Exchange Trader",
-    mint_factory_ceo: "Mint Factory CEO",
-    mintor: "Mint Factory CEO",
-    asset_trustee: "Asset Trustee",
-  };
-  const isMintor = membership?.tier === "mintor" || membership?.tier === "mint_factory_ceo";
   const isTrustee = !!membership?.trustInvestor;
-  const planLabel = isMintor && isTrustee
-    ? "MINTOR + TRUSTEE"
-    : membership?.tier && TIER_LABELS[membership.tier]
-    ? TIER_LABELS[membership.tier]
-    : isTrustee
-    ? "Asset Trustee"
-    : "Free";
+  const planLabel = isTrustee ? "Sovereign Trust" : "Inactive";
 
   const roleLabel = adminCheck?.isAdmin
     ? "Admin"
@@ -188,7 +174,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={location === "/artist-portal"}>
                   <Link href="/artist-portal" data-testid="nav-artist-portal">
                     <Upload className="h-5 w-5" />
-                    <span>Mint Factory</span>
+                    <span>Artist Portal</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -205,14 +191,6 @@ export function AppSidebar() {
                   <Link href="/trust-vault" data-testid="nav-trust-vault">
                     <Globe className="h-5 w-5 text-amber-400" />
                     <span className="text-amber-400 font-extrabold">Trust Vault</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/production"}>
-                  <Link href="/production" data-testid="nav-production">
-                    <Rocket className="h-5 w-5 text-green-500" />
-                    <span className="text-green-400 font-extrabold">Production Terminal</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
