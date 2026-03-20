@@ -2767,9 +2767,13 @@ export async function registerRoutes(
   app.post("/api/generate-lyrics", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const artist = await storage.getArtistByUserId(userId);
-      if (!artist) {
-        return res.status(403).json({ message: "Artist profile required" });
+      const adminUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const isAdmin = adminUser.length > 0 && adminUser[0].isAdmin;
+      if (!isAdmin) {
+        const artist = await storage.getArtistByUserId(userId);
+        if (!artist) {
+          return res.status(403).json({ message: "Artist profile required" });
+        }
       }
       const { prompt, genre, mood, style } = req.body;
       if (!prompt) {
