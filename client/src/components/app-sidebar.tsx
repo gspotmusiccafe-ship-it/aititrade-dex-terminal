@@ -298,11 +298,7 @@ export function AppSidebar() {
               </p>
               <p className="text-xs truncate">
                 <span className="text-muted-foreground">{roleLabel} · </span>
-                {isMintor && isTrustee ? (
-                  <><span className="text-lime-400 font-bold">MINTOR</span><span className="text-muted-foreground"> + </span><span className="text-amber-400 font-bold">TRUSTEE</span></>
-                ) : isMintor ? (
-                  <span className="text-lime-400 font-bold">{planLabel}</span>
-                ) : isTrustee ? (
+                {isTrustee ? (
                   <span className="text-amber-400 font-bold">{planLabel}</span>
                 ) : (
                   <span className="text-muted-foreground">{planLabel}</span>
