@@ -871,9 +871,8 @@ export default function LandingPage() {
                     ACTIVATE — $25 DOWN VIA CASH APP ($AITITRADEBROKERAGE)
                   </a>
                 </div>
-                </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       </section>
