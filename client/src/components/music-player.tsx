@@ -104,7 +104,7 @@ export function MusicPlayer() {
 
   if (!currentTrack) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t-4 border-green-600 flex items-center justify-center gap-4 py-3 font-mono z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-4 py-3 font-mono z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
         <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover opacity-80" />
         <div className="text-center">
           <p className="text-xs font-black text-green-400 tracking-wider" data-testid="text-radio-station-name">97.7 THE FLAME | AITITRADE EXCHANGE</p>
@@ -116,7 +116,7 @@ export function MusicPlayer() {
 
   if (autoplayBlocked) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t-4 border-green-600 z-50 flex items-center justify-center gap-4 px-4 py-3 font-mono shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 z-50 flex items-center justify-center gap-4 px-4 py-3 font-mono shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
         <div className="text-center">
           <p className="text-xs font-black text-green-400 tracking-wider" data-testid="text-radio-blocked-name">97.7 THE FLAME</p>
           <p className="text-[10px] text-zinc-500 font-bold">{currentTrack.title.toUpperCase()} — {currentTrack.artist?.name}</p>
@@ -290,7 +290,7 @@ export function MusicPlayer() {
         </div>
       )}
       <div className="fixed bottom-0 left-0 right-0 z-50 font-mono" data-testid="music-player">
-        <div className="w-full bg-black border-y-2 border-green-600 py-1 overflow-hidden whitespace-nowrap select-none" data-testid="singing-ticker">
+        <div className="w-full bg-black border-y border-zinc-800 py-1 overflow-hidden whitespace-nowrap select-none" data-testid="singing-ticker">
           <div className="animate-marquee inline-flex items-center text-xs md:text-sm">
             <span className="text-green-500 font-black px-4 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
             <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: 54% [STABLE]</span>
@@ -308,7 +308,7 @@ export function MusicPlayer() {
             <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
           </div>
         </div>
-      <div className="bg-zinc-950 border-t-4 border-green-600 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
+      <div className="bg-zinc-950 border-t border-zinc-800 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
         <div className="px-4 py-3 flex items-center gap-4 max-w-screen-2xl mx-auto">
 
           <div className="relative group w-20 h-20 md:w-24 md:h-24 border-2 border-zinc-800 rounded-sm overflow-hidden flex-shrink-0" data-testid="deck-a-art">

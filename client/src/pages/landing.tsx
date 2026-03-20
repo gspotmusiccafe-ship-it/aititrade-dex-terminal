@@ -444,8 +444,8 @@ function MiniRadio() {
 const features = [
   {
     icon: Clock,
-    title: "2-Week Early Trading Edge",
-    description: "Discover and trade new AI assets 2 weeks before they hit the retail stream (Spotify, Amazon, YouTube)",
+    title: "Pre-Market Trading Edge",
+    description: "Discover and trade new AI-generated music before it hits the global markets — Spotify, Deezer, Amazon, Apple, Pandora",
   },
   {
     icon: Headphones,
@@ -620,13 +620,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
           </button>
         </form>
 
-        <div className="mt-4 pt-3 border-t border-emerald-500/10">
-          <p className="text-[9px] text-emerald-500/30 text-center mb-2">EXTERNAL AUTHENTICATION</p>
-          <a href="/api/login/spotify" className="w-full flex items-center justify-center gap-2 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold py-2 hover:bg-emerald-500/10 transition-colors" data-testid="button-spotify-login">
-            <SiSpotify className="h-3.5 w-3.5" />
-            AUTHENTICATE VIA SPOTIFY
-          </a>
-        </div>
+        
       </div>
     </div>
   );
@@ -737,8 +731,8 @@ export default function LandingPage() {
               <div className="bg-red-600 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full animate-pulse font-bold self-start mt-2">LIVE FLOOR</div>
             </div>
             <p className="text-sm sm:text-base text-emerald-500/70 max-w-2xl font-mono">
-              &gt; DISCOVER AND TRADE NEW AI ASSETS 2 WEEKS BEFORE THEY HIT THE RETAIL STREAM (SPOTIFY, AMAZON, YOUTUBE) |
-              SETTLEMENT RATE: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME
+              &gt; DISCOVER AND TRADE NEW AI-GENERATED MUSIC BEFORE IT HITS THE GLOBAL MARKETS — SPOTIFY, DEEZER, AMAZON, APPLE, PANDORA |
+              OWN A PIECE OF THE MUSIC — LIKE, SHARE, PLAYLIST, STREAM, BUY, SELL, TRADE
             </p>
 
             <div className="mt-4 border border-amber-500/30 bg-amber-500/5 p-3 max-w-xl">
@@ -881,7 +875,7 @@ export default function LandingPage() {
             BECOME AN ASSET ARCHITECT
           </h2>
           <p className="text-emerald-500/50 mb-8 max-w-2xl mx-auto text-sm">
-            &gt; Mint high-velocity assets | Set 2-week pre-market dates | Earn settlement at $0.00025/stream | Autopilot priority rotation
+            &gt; Mint high-velocity assets | List on the sovereign exchange | Earn settlement from every trade | Autopilot priority rotation
           </p>
           <button onClick={() => openAuth("signup")} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 text-xs font-bold transition-colors">
             APPLY FOR ASSET ARCHITECT LISTING
