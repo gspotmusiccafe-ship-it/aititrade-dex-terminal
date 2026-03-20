@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Trophy, Flame, Medal, Crown, Star, Share2, Mail, MessageSquare } from "lucide-react";
+import { Trophy, Flame, Medal, Crown, Star, Share2, Mail, MessageSquare, TrendingUp, BarChart3, DollarSign, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 
 interface LeaderboardTrack {
@@ -176,13 +177,179 @@ function TopTrackShowcase({ track }: { track: LeaderboardTrack }) {
   );
 }
 
+interface TraderLeaderboardEntry {
+  rank: number;
+  traderId: string;
+  name: string;
+  totalInvested: number;
+  tradeCount: number;
+  earlyExits: number;
+  totalPayout: number;
+  roi: number;
+  avgPrice: number;
+  tier: string;
+}
+
+interface TraderLeaderboardStats {
+  totalVolume: number;
+  totalTraders: number;
+  totalTrades: number;
+  topTrader: TraderLeaderboardEntry | null;
+}
+
+const TRADER_TIER_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  PLATINUM: { label: "PLATINUM", color: "text-cyan-300", bgColor: "bg-cyan-500/10 border-cyan-500/30" },
+  GOLD: { label: "GOLD", color: "text-yellow-400", bgColor: "bg-yellow-500/10 border-yellow-500/30" },
+  SILVER: { label: "SILVER", color: "text-gray-300", bgColor: "bg-gray-400/10 border-gray-400/30" },
+  BRONZE: { label: "BRONZE", color: "text-orange-400", bgColor: "bg-orange-500/10 border-orange-500/30" },
+};
+
+function TradersLeaderboard() {
+  const { data, isLoading } = useQuery<{ traders: TraderLeaderboardEntry[]; stats: TraderLeaderboardStats }>({
+    queryKey: ["/api/leaderboard/traders"],
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const traders = data?.traders || [];
+  const stats = data?.stats;
+
+  return (
+    <div>
+      {stats && (
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <Card className="border-border/30 bg-card/60">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-black text-lime-400" data-testid="stat-total-volume">${formatNumber(stats.totalVolume)}</p>
+              <p className="text-xs text-muted-foreground">Total Volume</p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/30 bg-card/60">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-black text-emerald-400" data-testid="stat-total-traders">{stats.totalTraders}</p>
+              <p className="text-xs text-muted-foreground">Active Traders</p>
+            </CardContent>
+          </Card>
+          <Card className="border-border/30 bg-card/60">
+            <CardContent className="p-4 text-center">
+              <p className="text-2xl font-black text-yellow-400" data-testid="stat-total-trades">{stats.totalTrades}</p>
+              <p className="text-xs text-muted-foreground">Total Trades</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {traders[0] && (
+        <div className="relative overflow-hidden rounded-2xl border-2 border-lime-500/30 bg-gradient-to-br from-lime-500/10 via-background to-emerald-500/5 p-6 sm:p-8 mb-8" data-testid="section-top-trader">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="relative flex items-center gap-6">
+            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-lime-500/30 to-emerald-500/20 flex items-center justify-center ring-2 ring-lime-500/50">
+              <Crown className="h-10 w-10 text-lime-400" />
+            </div>
+            <div>
+              <p className="text-xs text-lime-400 font-bold uppercase tracking-wider mb-1">#1 TOP TRADER</p>
+              <p className="text-2xl font-black text-white">{traders[0].name}</p>
+              <div className="flex gap-6 mt-2">
+                <div><p className="text-xl font-black text-lime-400">${formatNumber(traders[0].totalInvested)}</p><p className="text-[10px] text-muted-foreground">invested</p></div>
+                <div><p className="text-xl font-black text-yellow-400">{traders[0].tradeCount}</p><p className="text-[10px] text-muted-foreground">trades</p></div>
+                <div><p className="text-xl font-black text-emerald-400">{traders[0].roi}%</p><p className="text-[10px] text-muted-foreground">ROI</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="h-5 w-5 text-lime-400" />
+          <h2 className="text-xl font-black">Trader Rankings</h2>
+        </div>
+
+        {traders.map((trader, index) => {
+          const tierConfig = TRADER_TIER_CONFIG[trader.tier] || TRADER_TIER_CONFIG.BRONZE;
+          return (
+            <Link key={trader.traderId} href={`/trader/${encodeURIComponent(trader.traderId)}`}>
+              <div
+                className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-colors hover:border-lime-500/30 cursor-pointer ${
+                  index === 0
+                    ? "bg-gradient-to-r from-lime-500/10 to-emerald-500/5 border-lime-500/30"
+                    : "bg-card/60 border-border/30"
+                }`}
+                data-testid={`leaderboard-trader-${trader.traderId}`}
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
+                  index === 0 ? "bg-lime-500 text-black" :
+                  index === 1 ? "bg-yellow-500/20 text-yellow-500" :
+                  index === 2 ? "bg-orange-500/20 text-orange-500" :
+                  "bg-muted text-muted-foreground"
+                }`}>
+                  {index + 1}
+                </div>
+
+                <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-5 w-5 text-lime-400/60" />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold truncate text-sm sm:text-base" data-testid={`text-trader-name-${trader.traderId}`}>
+                    {trader.name}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {trader.tradeCount} trades · {trader.earlyExits} early exits
+                  </p>
+                </div>
+
+                <Badge className={`${tierConfig.bgColor} ${tierConfig.color} border text-[10px] gap-0.5 hidden sm:flex`}>
+                  {tierConfig.label}
+                </Badge>
+
+                <div className="text-right flex-shrink-0">
+                  <p className="font-bold text-sm text-lime-400" data-testid={`text-trader-invested-${trader.traderId}`}>
+                    ${formatNumber(trader.totalInvested)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">invested</p>
+                </div>
+
+                <div className="text-right flex-shrink-0 hidden sm:block">
+                  <p className={`font-bold text-sm ${trader.roi > 0 ? "text-emerald-400" : "text-zinc-500"}`}>
+                    {trader.roi}%
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">ROI</p>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
+
+        {traders.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p>No trades yet — acquire positions on the trading floor to climb the ranks!</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LeaderboardPage() {
+  const [tab, setTab] = useState("songs");
+
   const { data, isLoading } = useQuery<{ tracks: LeaderboardTrack[]; stats: LeaderboardStats }>({
     queryKey: ["/api/leaderboard"],
     refetchInterval: 30000,
   });
 
-  if (isLoading) {
+  if (isLoading && tab === "songs") {
     return (
       <div className="min-h-full pb-28 px-6 py-8">
         <div className="max-w-4xl mx-auto">
@@ -214,108 +381,127 @@ export default function LeaderboardPage() {
             </h1>
           </div>
           <p className="text-muted-foreground text-sm">
-            Ranked by engagement — streams, likes, saves, and shares
+            Top performers on the exchange
           </p>
         </div>
 
-        {stats && (
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <Card className="border-border/30 bg-card/60">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-black text-primary" data-testid="stat-total-streams">{formatNumber(stats.totalStreams)}</p>
-                <p className="text-xs text-muted-foreground">Total Streams</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border/30 bg-card/60">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-black text-emerald-400" data-testid="stat-total-artists">{stats.totalArtists}</p>
-                <p className="text-xs text-muted-foreground">Artists</p>
-              </CardContent>
-            </Card>
-            <Card className="border-border/30 bg-card/60">
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-black text-yellow-400" data-testid="stat-total-tracks">{stats.totalTracks}</p>
-                <p className="text-xs text-muted-foreground">Tracks</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
+        <Tabs value={tab} onValueChange={setTab} className="mb-8">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="songs" data-testid="tab-songs-leaderboard">
+              <Flame className="h-4 w-4 mr-1.5" />
+              Songs
+            </TabsTrigger>
+            <TabsTrigger value="traders" data-testid="tab-traders-leaderboard">
+              <TrendingUp className="h-4 w-4 mr-1.5" />
+              Traders
+            </TabsTrigger>
+          </TabsList>
 
-        {topTrack && <TopTrackShowcase track={topTrack} />}
-
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-4">
-            <Flame className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-black">Rankings</h2>
-          </div>
-
-          {tracks.map((track, index) => {
-            const rankConfig = RANK_CONFIG[track.rank] || RANK_CONFIG.bronze;
-            const RankIcon = rankConfig.icon;
-            return (
-              <div
-                key={track.id}
-                className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-colors hover:border-primary/20 ${
-                  index === 0
-                    ? "bg-gradient-to-r from-primary/10 to-emerald-500/5 border-primary/30"
-                    : "bg-card/60 border-border/30"
-                }`}
-                data-testid={`leaderboard-track-${track.id}`}
-              >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
-                  index === 0 ? "bg-primary text-primary-foreground" :
-                  index === 1 ? "bg-yellow-500/20 text-yellow-500" :
-                  index === 2 ? "bg-orange-500/20 text-orange-500" :
-                  "bg-muted text-muted-foreground"
-                }`}>
-                  {index + 1}
-                </div>
-
-                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
-                  {track.coverImage ? (
-                    <img src={track.coverImage} alt={track.title} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
-                      <Flame className="h-5 w-5 text-primary/40" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold truncate text-sm sm:text-base" data-testid={`text-track-title-${track.id}`}>
-                    {track.title}
-                  </p>
-                  <Link href={`/artist/${track.artistId}`}>
-                    <p className="text-xs sm:text-sm text-muted-foreground truncate hover:text-primary transition-colors cursor-pointer">
-                      {track.artistName}
-                    </p>
-                  </Link>
-                </div>
-
-                <Badge className={`${rankConfig.bgColor} ${rankConfig.color} border text-[10px] gap-0.5 hidden sm:flex`}>
-                  <RankIcon className="h-2.5 w-2.5" />
-                  {rankConfig.label}
-                </Badge>
-
-                <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-sm" data-testid={`text-track-streams-${track.id}`}>
-                    {formatNumber(track.playCount)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">streams</p>
-                </div>
-
-                <ShareButtons track={track} />
+          <TabsContent value="songs" className="mt-6">
+            {stats && (
+              <div className="grid grid-cols-3 gap-4 mb-8">
+                <Card className="border-border/30 bg-card/60">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-black text-primary" data-testid="stat-total-streams">{formatNumber(stats.totalStreams)}</p>
+                    <p className="text-xs text-muted-foreground">Total Streams</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-border/30 bg-card/60">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-black text-emerald-400" data-testid="stat-total-artists">{stats.totalArtists}</p>
+                    <p className="text-xs text-muted-foreground">Artists</p>
+                  </CardContent>
+                </Card>
+                <Card className="border-border/30 bg-card/60">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-black text-yellow-400" data-testid="stat-total-tracks">{stats.totalTracks}</p>
+                    <p className="text-xs text-muted-foreground">Tracks</p>
+                  </CardContent>
+                </Card>
               </div>
-            );
-          })}
+            )}
 
-          {tracks.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
-              <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
-              <p>No tracks yet — upload music to start climbing the charts!</p>
+            {topTrack && <TopTrackShowcase track={topTrack} />}
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 mb-4">
+                <Flame className="h-5 w-5 text-primary" />
+                <h2 className="text-xl font-black">Rankings</h2>
+              </div>
+
+              {tracks.map((track, index) => {
+                const rankConfig = RANK_CONFIG[track.rank] || RANK_CONFIG.bronze;
+                const RankIcon = rankConfig.icon;
+                return (
+                  <div
+                    key={track.id}
+                    className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border transition-colors hover:border-primary/20 ${
+                      index === 0
+                        ? "bg-gradient-to-r from-primary/10 to-emerald-500/5 border-primary/30"
+                        : "bg-card/60 border-border/30"
+                    }`}
+                    data-testid={`leaderboard-track-${track.id}`}
+                  >
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
+                      index === 0 ? "bg-primary text-primary-foreground" :
+                      index === 1 ? "bg-yellow-500/20 text-yellow-500" :
+                      index === 2 ? "bg-orange-500/20 text-orange-500" :
+                      "bg-muted text-muted-foreground"
+                    }`}>
+                      {index + 1}
+                    </div>
+
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg overflow-hidden flex-shrink-0 bg-muted">
+                      {track.coverImage ? (
+                        <img src={track.coverImage} alt={track.title} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-primary/20 to-emerald-500/10 flex items-center justify-center">
+                          <Flame className="h-5 w-5 text-primary/40" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold truncate text-sm sm:text-base" data-testid={`text-track-title-${track.id}`}>
+                        {track.title}
+                      </p>
+                      <Link href={`/artist/${track.artistId}`}>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate hover:text-primary transition-colors cursor-pointer">
+                          {track.artistName}
+                        </p>
+                      </Link>
+                    </div>
+
+                    <Badge className={`${rankConfig.bgColor} ${rankConfig.color} border text-[10px] gap-0.5 hidden sm:flex`}>
+                      <RankIcon className="h-2.5 w-2.5" />
+                      {rankConfig.label}
+                    </Badge>
+
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-sm" data-testid={`text-track-streams-${track.id}`}>
+                        {formatNumber(track.playCount)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">streams</p>
+                    </div>
+
+                    <ShareButtons track={track} />
+                  </div>
+                );
+              })}
+
+              {tracks.length === 0 && (
+                <div className="text-center py-16 text-muted-foreground">
+                  <Trophy className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                  <p>No tracks yet — upload music to start climbing the charts!</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="traders" className="mt-6">
+            <TradersLeaderboard />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

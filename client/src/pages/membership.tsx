@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Crown, Check, Zap, Shield, DollarSign, LogOut, ExternalLink } from "lucide-react";
+import { Crown, Check, Zap, Shield, DollarSign, LogOut, ExternalLink, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 
 const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
 
@@ -171,6 +172,35 @@ export default function MembershipPage() {
             </div>
           </div>
         </div>
+
+        {isAuthenticated && !isMember && (
+          <div className="text-center mt-6 p-6 border border-emerald-800/50 bg-emerald-900/10">
+            <UserPlus className="h-6 w-6 text-emerald-400/60 mx-auto mb-3" />
+            <p className="text-emerald-400 text-xs font-mono font-bold mb-3 uppercase">
+              Want to explore first?
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/create-trader", { method: "POST" });
+                  if (res.ok) {
+                    queryClient.invalidateQueries({ queryKey: ["/api/trust/status"] });
+                    queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+                    window.location.href = "/";
+                  }
+                } catch {}
+              }}
+              className="bg-emerald-700 hover:bg-emerald-600 text-white font-mono font-extrabold py-3 px-8 text-sm transition-colors"
+              data-testid="button-create-trader"
+            >
+              <UserPlus className="h-4 w-4 inline mr-2" />
+              CREATE TRADER — FREE TRIAL
+            </button>
+            <p className="text-zinc-600 text-[9px] font-mono mt-2">
+              Trial access to the trading floor. Upgrade anytime via Cash App.
+            </p>
+          </div>
+        )}
 
         <div className="text-center mt-8 p-6 border border-zinc-800 bg-zinc-900/30">
           <Zap className="h-6 w-6 text-lime-400/40 mx-auto mb-3" />

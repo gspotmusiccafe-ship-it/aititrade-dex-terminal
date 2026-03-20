@@ -1124,6 +1124,88 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/leaderboard/traders", async (_req, res) => {
+    try {
+      const traderRows = await db.select({
+        usrId: orders.buyerEmail,
+        buyerName: orders.buyerName,
+        totalInvested: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
+        tradeCount: sql<number>`COUNT(*)`,
+        earlyExits: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
+        totalPayout: sql<string>`COALESCE(SUM(CAST(final_payout AS DECIMAL)), 0)`,
+        avgPrice: sql<string>`ROUND(AVG(CAST(unit_price AS DECIMAL)), 2)`,
+      })
+      .from(orders)
+      .groupBy(orders.buyerEmail, orders.buyerName)
+      .orderBy(sql`SUM(CAST(unit_price AS DECIMAL)) DESC`)
+      .limit(50);
+
+      const traders = traderRows.map((t, i) => {
+        const invested = parseFloat(t.totalInvested || "0");
+        const payout = parseFloat(t.totalPayout || "0");
+        const roi = invested > 0 ? parseFloat(((payout / invested) * 100).toFixed(1)) : 0;
+        let tier = "BRONZE";
+        if (invested >= 500) tier = "PLATINUM";
+        else if (invested >= 200) tier = "GOLD";
+        else if (invested >= 50) tier = "SILVER";
+
+        return {
+          rank: i + 1,
+          traderId: t.usrId || `trader-${i}`,
+          name: t.buyerName || t.usrId || "Anonymous Trader",
+          totalInvested: invested,
+          tradeCount: t.tradeCount || 0,
+          earlyExits: t.earlyExits || 0,
+          totalPayout: payout,
+          roi,
+          avgPrice: parseFloat(t.avgPrice || "0"),
+          tier,
+        };
+      });
+
+      const totalVolume = traders.reduce((s, t) => s + t.totalInvested, 0);
+      const totalTrades = traders.reduce((s, t) => s + t.tradeCount, 0);
+
+      res.json({
+        traders,
+        stats: {
+          totalVolume: parseFloat(totalVolume.toFixed(2)),
+          totalTraders: traders.length,
+          totalTrades,
+          topTrader: traders[0] || null,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching traders leaderboard:", error);
+      res.status(500).json({ message: "Failed to fetch traders leaderboard" });
+    }
+  });
+
+  app.post("/api/create-trader", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+
+      const existing = await db.select().from(memberships).where(eq(memberships.userId, userId)).limit(1);
+      if (existing.length > 0) {
+        return res.json({ message: "Trader account already exists", status: "active" });
+      }
+
+      await db.insert(memberships).values({
+        userId,
+        tier: "trial",
+        status: "active",
+        paymentMethod: "trial",
+      });
+
+      console.log(`[TRADER] Trial account created for ${userId}`);
+      res.json({ message: "Trial trader account activated", status: "active" });
+    } catch (error) {
+      console.error("Create trader error:", error);
+      res.status(500).json({ message: "Failed to create trader account" });
+    }
+  });
+
   // Get single artist
   app.get("/api/artists/:id", async (req, res) => {
     try {
