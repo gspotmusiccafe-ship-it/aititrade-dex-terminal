@@ -64,7 +64,7 @@ export function MarketTicker() {
   if (assets.length === 0) {
     return (
       <div
-        className="w-full bg-black border-b border-lime-500/40 overflow-hidden sticky top-0 z-50 flex items-center justify-center"
+        className="w-full bg-black border-b border-lime-500/40 overflow-hidden flex items-center justify-center"
         style={{ height: "32px" }}
         data-testid="market-ticker-global"
       >
@@ -77,7 +77,7 @@ export function MarketTicker() {
 
   return (
     <div
-      className="w-full bg-black border-b border-lime-500/40 overflow-hidden sticky top-0 z-50"
+      className="w-full bg-black border-b border-lime-500/40 overflow-hidden"
       style={{ height: "32px" }}
       data-testid="market-ticker-global"
     >
