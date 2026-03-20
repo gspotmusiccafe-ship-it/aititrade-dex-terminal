@@ -3663,10 +3663,21 @@ function PortalControlPanel() {
                         </button>
                       </td>
                       <td className="p-2 text-center space-x-1">
-                        <button onClick={savePortal} disabled={saving} className="text-[10px] px-2 py-0.5 bg-lime-700 text-black font-bold hover:bg-lime-500 disabled:opacity-50" data-testid="button-save-portal">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); savePortal(); }}
+                          disabled={saving}
+                          className="relative z-10 cursor-pointer text-[10px] px-3 py-1 bg-lime-600 text-black font-bold hover:bg-lime-400 disabled:opacity-50 active:scale-95 transition-all"
+                          data-testid="button-save-portal"
+                        >
                           {saving ? "..." : "SAVE"}
                         </button>
-                        <button onClick={() => setEditing(null)} className="text-[10px] px-2 py-0.5 border border-zinc-700 text-zinc-400 hover:text-white" data-testid="button-cancel-edit">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setEditing(null); }}
+                          className="relative z-10 cursor-pointer text-[10px] px-3 py-1 border border-red-700 text-red-400 hover:bg-red-700 hover:text-white active:scale-95 transition-all"
+                          data-testid="button-cancel-edit"
+                        >
                           X
                         </button>
                       </td>
@@ -3684,7 +3695,12 @@ function PortalControlPanel() {
                         <span className={`text-[10px] ${p.isActive ? "text-lime-400" : "text-red-400"}`}>{p.isActive ? "ON" : "OFF"}</span>
                       </td>
                       <td className="p-2 text-center">
-                        <button onClick={() => startEdit(p)} className="text-[10px] px-2 py-0.5 border border-zinc-700 text-zinc-400 hover:text-lime-400 hover:border-lime-700" data-testid={`button-edit-${p.name}`}>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); startEdit(p); }}
+                          className="relative z-10 cursor-pointer text-[10px] px-3 py-1 border border-lime-700 text-lime-400 bg-lime-900/30 hover:bg-lime-700 hover:text-black font-bold active:scale-95 transition-all"
+                          data-testid={`button-edit-${p.name}`}
+                        >
                           EDIT
                         </button>
                       </td>
