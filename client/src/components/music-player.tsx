@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock, Video, VideoOff, Zap } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock, Video, VideoOff, Zap, ChevronUp, ChevronDown } from "lucide-react";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -86,6 +86,7 @@ export function MusicPlayer() {
     toggleShuffle,
     toggleRepeat,
     removeFromQueue,
+    moveInQueue,
     clearQueue,
     playFromQueue,
     resumeAutoplay,
@@ -171,7 +172,7 @@ export function MusicPlayer() {
         <YouTubeVideoPanel videoUrl={currentTrack.audioUrl} onClose={() => setVideoOpen(false)} />
       )}
       {queueOpen && (
-        <div className="fixed right-0 bottom-36 w-72 max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
+        <div className="fixed right-0 bottom-36 w-[85vw] sm:w-72 max-h-[55vh] sm:max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
           <div className="flex items-center justify-between px-3 py-2 border-b border-emerald-500/10 bg-emerald-500/5">
             <span className="text-[10px] text-emerald-400 font-bold">QUEUE</span>
             <div className="flex items-center gap-1">
@@ -224,14 +225,34 @@ export function MusicPlayer() {
                 <div className="space-y-0.5">
                   {upcomingTracks.map((track, i) => {
                     const actualIndex = queueIndex + 1 + i;
+                    const isFirst = i === 0;
+                    const isLast = i === upcomingTracks.length - 1;
                     return (
                       <div
                         key={`${track.id}-${actualIndex}`}
-                        className="flex items-center gap-2 p-1.5 hover:bg-emerald-500/5 group/item cursor-pointer transition-colors"
+                        className="flex items-center gap-1 p-1 sm:p-1.5 hover:bg-emerald-500/5 group/item cursor-pointer transition-colors"
                         onClick={() => playFromQueue(actualIndex)}
                         data-testid={`queue-track-${actualIndex}`}
                       >
-                        <span className="text-[9px] text-zinc-600 w-3 text-center">{i + 1}</span>
+                        <div className="flex flex-col items-center flex-shrink-0 w-4">
+                          <button
+                            className={`h-3 w-3 flex items-center justify-center transition-colors ${isFirst ? "text-zinc-800 cursor-default" : "text-zinc-600 hover:text-emerald-400"}`}
+                            onClick={(e) => { e.stopPropagation(); if (!isFirst) moveInQueue(actualIndex, actualIndex - 1); }}
+                            disabled={isFirst}
+                            data-testid={`button-queue-up-${actualIndex}`}
+                          >
+                            <ChevronUp className="h-2.5 w-2.5" />
+                          </button>
+                          <span className="text-[8px] text-zinc-600 leading-none">{i + 1}</span>
+                          <button
+                            className={`h-3 w-3 flex items-center justify-center transition-colors ${isLast ? "text-zinc-800 cursor-default" : "text-zinc-600 hover:text-emerald-400"}`}
+                            onClick={(e) => { e.stopPropagation(); if (!isLast) moveInQueue(actualIndex, actualIndex + 1); }}
+                            disabled={isLast}
+                            data-testid={`button-queue-down-${actualIndex}`}
+                          >
+                            <ChevronDown className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-white truncate">{track.title}</p>
                           <p className="text-[9px] text-zinc-600 truncate">{track.artist?.name}</p>
@@ -239,7 +260,7 @@ export function MusicPlayer() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5 opacity-0 group-hover/item:opacity-100 text-zinc-600"
+                          className="h-5 w-5 opacity-0 group-hover/item:opacity-100 text-zinc-600 flex-shrink-0"
                           onClick={(e) => { e.stopPropagation(); removeFromQueue(actualIndex); }}
                           data-testid={`button-remove-queue-${actualIndex}`}
                         >

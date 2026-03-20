@@ -66,6 +66,7 @@ interface PlayerContextType extends PlayerState {
   seekTo: (time: number) => void;
   addToQueue: (track: TrackWithArtist) => void;
   removeFromQueue: (index: number) => void;
+  moveInQueue: (fromIndex: number, toIndex: number) => void;
   clearQueue: () => void;
   playFromQueue: (index: number) => void;
   toggleShuffle: () => void;
@@ -642,6 +643,26 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const moveInQueue = useCallback((fromIndex: number, toIndex: number) => {
+    setState(prev => {
+      if (fromIndex === toIndex) return prev;
+      if (fromIndex < 0 || fromIndex >= prev.queue.length) return prev;
+      if (toIndex < 0 || toIndex >= prev.queue.length) return prev;
+      const newQueue = [...prev.queue];
+      const [moved] = newQueue.splice(fromIndex, 1);
+      newQueue.splice(toIndex, 0, moved);
+      let newIndex = prev.queueIndex;
+      if (prev.queueIndex === fromIndex) {
+        newIndex = toIndex;
+      } else if (fromIndex < prev.queueIndex && toIndex >= prev.queueIndex) {
+        newIndex = prev.queueIndex - 1;
+      } else if (fromIndex > prev.queueIndex && toIndex <= prev.queueIndex) {
+        newIndex = prev.queueIndex + 1;
+      }
+      return { ...prev, queue: newQueue, queueIndex: newIndex };
+    });
+  }, []);
+
   const clearQueue = useCallback(() => {
     setState(prev => {
       const currentTrack = prev.currentTrack;
@@ -851,6 +872,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         seekTo,
         addToQueue,
         removeFromQueue,
+        moveInQueue,
         clearQueue,
         playFromQueue,
         toggleShuffle,

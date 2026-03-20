@@ -90,23 +90,23 @@ function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed }: { base
   const signalColor = signal === "BUY" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : signal === "SELL" ? "text-red-400 bg-red-500/10 border-red-500/30" : "text-amber-400 bg-amber-500/10 border-amber-500/30";
 
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800 p-2 mb-2" data-testid="mbbp-indicator">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[8px] text-zinc-500 font-bold tracking-wider">MBBP MOMENTUM</span>
-          <span className={`text-[8px] px-1 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
-        </div>
+    <div className="bg-zinc-900/80 border border-zinc-800 p-1.5 sm:p-2 mb-1.5 sm:mb-2" data-testid="mbbp-indicator">
+      <div className="flex items-center justify-between mb-0.5 sm:mb-1">
         <div className="flex items-center gap-1">
-          {isUp ? <TrendingUp className="h-3 w-3 text-emerald-400" /> : <TrendingDown className="h-3 w-3 text-red-400" />}
-          <span className={`text-[10px] font-extrabold ${pctColor}`}>
+          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">MBBP</span>
+          <span className={`text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
+        </div>
+        <div className="flex items-center gap-0.5">
+          {isUp ? <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-400" /> : <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-400" />}
+          <span className={`text-[9px] sm:text-[10px] font-extrabold ${pctColor}`}>
             {isUp ? "+" : ""}{pctChange}%
           </span>
         </div>
       </div>
-      <div className="flex items-end justify-between gap-2">
+      <div className="flex items-end justify-between gap-1.5 sm:gap-2">
         <div>
-          <p className={`text-sm font-black ${isUp ? "text-emerald-400" : "text-red-400"}`}>${liveMbbp.toFixed(2)}</p>
-          <p className="text-[8px] text-zinc-600">BASE: ${mbbPrice.toFixed(2)}</p>
+          <p className={`text-xs sm:text-sm font-black ${isUp ? "text-emerald-400" : "text-red-400"}`}>${liveMbbp.toFixed(2)}</p>
+          <p className="text-[7px] sm:text-[8px] text-zinc-600">BASE: ${mbbPrice.toFixed(2)}</p>
         </div>
         <MomentumSparkline data={sparkData} color={chartColor} />
       </div>
@@ -600,39 +600,41 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
 
   return (
     <div className={`bg-black border font-mono group transition-all ${borderColor}`} data-testid={`asset-card-${track.id}`}>
-      <div className={`border-b px-3 py-1.5 flex items-center justify-between ${headerBg}`}>
-        <div className="flex items-center gap-2">
-          <span className={`font-bold text-sm ${isClosed ? "text-red-400" : isGlobal ? "text-amber-400" : isInspirational ? "text-violet-400" : "text-lime-400"}`}>{ticker}</span>
-          <span className="text-zinc-400 text-[10px] font-semibold">{assetId}</span>
-          {isGlobal && (
-            <span className="text-[8px] px-1 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold flex items-center gap-0.5"><Globe className="h-2.5 w-2.5" /> TRUST VAULT</span>
-          )}
-          {isInspirational && !isGlobal && (
-            <span className="text-[8px] px-1 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold">INSPIRATIONAL</span>
-          )}
-          {!isGlobal && !isInspirational && (
-            <span className="text-[8px] px-1 py-0.5 bg-emerald-500/10 text-emerald-500/60 border border-emerald-500/20 font-bold">NATIVE</span>
-          )}
-          {!isGlobal && <PortalBadge unitPrice={price} />}
+      <div className={`border-b px-2 sm:px-3 py-1 sm:py-1.5 ${headerBg}`}>
+        <div className="flex items-center justify-between gap-1">
+          <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 overflow-hidden">
+            <span className={`font-bold text-xs sm:text-sm flex-shrink-0 ${isClosed ? "text-red-400" : isGlobal ? "text-amber-400" : isInspirational ? "text-violet-400" : "text-lime-400"}`}>{ticker}</span>
+            <span className="text-zinc-400 text-[8px] sm:text-[10px] font-semibold truncate">{assetId}</span>
+            {isGlobal && (
+              <span className="text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold flex items-center gap-0.5 flex-shrink-0"><Globe className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> VAULT</span>
+            )}
+            {isInspirational && !isGlobal && (
+              <span className="text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 font-bold flex-shrink-0">INSP</span>
+            )}
+            {!isGlobal && !isInspirational && (
+              <span className="text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 bg-emerald-500/10 text-emerald-500/60 border border-emerald-500/20 font-bold flex-shrink-0 hidden sm:inline">NATIVE</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className={`text-[10px] sm:text-[11px] font-extrabold ${priceClass}`}>{priceLabel}</span>
+            {isGlobal ? (
+              <span className="text-[7px] sm:text-[9px] px-1 py-0.5 bg-amber-500/10 text-amber-400 font-extrabold flex items-center gap-0.5">
+                <Shield className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> VAULT
+              </span>
+            ) : isClosed ? (
+              <span className="text-[7px] sm:text-[9px] px-1 py-0.5 bg-red-500/20 text-red-400 font-bold flex items-center gap-0.5">
+                <Lock className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> CLOSED
+              </span>
+            ) : isHighCapacity ? (
+              <span className="text-[7px] sm:text-[9px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 font-bold animate-pulse">
+                {capacityPct.toFixed(0)}%
+              </span>
+            ) : (
+              <span className={`text-[7px] sm:text-[9px] px-1 py-0.5 ${isInspirational ? "bg-violet-500/10 text-violet-400" : "bg-emerald-500/10 text-emerald-500"}`}>OPEN</span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className={`text-[11px] font-extrabold ${priceClass}`}>{priceLabel}</span>
-          {isGlobal ? (
-            <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 font-extrabold flex items-center gap-1">
-              <Shield className="h-2.5 w-2.5" /> TRUST VAULT
-            </span>
-          ) : isClosed ? (
-            <span className="text-[9px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-bold flex items-center gap-1">
-              <Lock className="h-2.5 w-2.5" /> CLOSED
-            </span>
-          ) : isHighCapacity ? (
-            <span className="text-[9px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 font-bold animate-pulse">
-              {capacityPct.toFixed(0)}% CAP
-            </span>
-          ) : (
-            <span className={`text-[9px] px-1.5 py-0.5 ${isInspirational ? "bg-violet-500/10 text-violet-400" : "bg-emerald-500/10 text-emerald-500"}`}>OPEN</span>
-          )}
-        </div>
+        {!isGlobal && <div className="mt-0.5"><PortalBadge unitPrice={price} /></div>}
       </div>
 
       {isFlashZone && flashTimer !== null && flashTimer > 0 && (
@@ -673,14 +675,14 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
         </div>
       )}
 
-      <div className="p-3">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="relative w-10 h-10 bg-zinc-900 overflow-hidden flex-shrink-0 border border-emerald-500/10">
+      <div className="p-2 sm:p-3">
+        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+          <div className="relative w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 overflow-hidden flex-shrink-0 border border-emerald-500/10">
             {track.coverImage ? (
               <img src={track.coverImage} alt={track.title} className="w-full h-full object-cover opacity-80" />
             ) : (
               <div className="w-full h-full flex items-center justify-center">
-                <Music className="h-4 w-4 text-emerald-500/30" />
+                <Music className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500/30" />
               </div>
             )}
             <button
@@ -689,44 +691,44 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
               data-testid={`button-play-${track.id}`}
             >
               {isCurrentTrack && isPlaying ? (
-                <Pause className="h-4 w-4 text-emerald-400" />
+                <Pause className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
               ) : (
-                <Play className="h-4 w-4 text-emerald-400" />
+                <Play className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
               )}
             </button>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-extrabold text-lime-400 truncate">{track.title.toUpperCase()}</h3>
-            <p className="text-[11px] text-zinc-400 font-semibold truncate">{track.artist?.name || "UNKNOWN"}</p>
+            <h3 className="text-xs sm:text-sm font-extrabold text-lime-400 truncate">{track.title.toUpperCase()}</h3>
+            <p className="text-[10px] sm:text-[11px] text-zinc-400 font-semibold truncate">{track.artist?.name || "UNKNOWN"}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-1 mb-1 text-center">
-          <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[10px] text-zinc-400 font-bold">GROSS</p>
-            <p className={`text-xs font-extrabold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-lime-400" : "text-zinc-500"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+        <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-0.5 sm:mb-1 text-center">
+          <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+            <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">GROSS</p>
+            <p className={`text-[10px] sm:text-xs font-extrabold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-lime-400" : "text-zinc-500"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
           </div>
-          <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[10px] text-zinc-400 font-bold">UNITS</p>
-            <p className="text-xs text-white font-extrabold">{sales.toLocaleString()}</p>
+          <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+            <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">UNITS</p>
+            <p className="text-[10px] sm:text-xs text-white font-extrabold">{sales.toLocaleString()}</p>
           </div>
-          <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-            <p className="text-[10px] text-zinc-400 font-bold">BUY-IN</p>
-            <p className={`text-xs font-extrabold ${priceClass}`}>{priceLabel}</p>
+          <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+            <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">BUY-IN</p>
+            <p className={`text-[10px] sm:text-xs font-extrabold ${priceClass}`}>{priceLabel}</p>
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-1 mb-2 text-center">
-          <div className="bg-zinc-900/80 p-1 border border-zinc-800">
-            <p className="text-[9px] text-zinc-500 font-bold">BUY-BACK</p>
-            <p className={`text-[11px] font-extrabold ${bbPrice >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
+        <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
+          <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">BUY-BACK</p>
+            <p className={`text-[9px] sm:text-[11px] font-extrabold ${bbPrice >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
           </div>
-          <div className="bg-zinc-900/80 p-1 border border-zinc-800">
-            <p className="text-[9px] text-zinc-500 font-bold">SPLIT</p>
-            <p className="text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
+          <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">SPLIT</p>
+            <p className="text-[9px] sm:text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
           </div>
-          <div className={`bg-zinc-900/80 p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
-            <p className="text-[9px] text-zinc-500 font-bold">YIELD</p>
-            <p className={`text-[11px] font-extrabold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-amber-400" : capacityPct >= 30 ? "text-lime-400" : "text-zinc-300"}`}>▲ {yieldPct}</p>
+          <div className={`bg-zinc-900/80 p-0.5 sm:p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">YIELD</p>
+            <p className={`text-[9px] sm:text-[11px] font-extrabold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-amber-400" : capacityPct >= 30 ? "text-lime-400" : "text-zinc-300"}`}>▲ {yieldPct}</p>
           </div>
         </div>
 
@@ -738,24 +740,24 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
         />
 
         {isGlobal ? (
-          <div className="mb-2 px-2 py-2 border border-amber-500/20 bg-amber-500/5">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[9px] text-amber-400 font-extrabold flex items-center gap-1"><Globe className="h-3 w-3" /> GLOBAL YIELD ASSET</span>
-              <span className="text-[9px] text-amber-300 font-extrabold flex items-center gap-1"><Shield className="h-3 w-3" /> TRUST CERTIFIED</span>
+          <div className="mb-1.5 sm:mb-2 px-1.5 sm:px-2 py-1.5 sm:py-2 border border-amber-500/20 bg-amber-500/5">
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[8px] sm:text-[9px] text-amber-400 font-extrabold flex items-center gap-0.5"><Globe className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> GLOBAL YIELD</span>
+              <span className="text-[8px] sm:text-[9px] text-amber-300 font-extrabold flex items-center gap-0.5"><Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> TRUST</span>
             </div>
-            <p className="text-[8px] text-amber-500/40 text-center">ROYALTY-BEARING — GLOBAL DISTRIBUTION — TRUST VAULT EXCLUSIVE</p>
+            <p className="text-[7px] sm:text-[8px] text-amber-500/40 text-center">ROYALTY-BEARING — TRUST VAULT EXCLUSIVE</p>
           </div>
         ) : (
-          <div className="mb-2">
+          <div className="mb-1.5 sm:mb-2">
             <div className="flex items-center justify-between mb-0.5">
-              <span className={`text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-zinc-400"}`}>
-                MARKET PROGRESS
+              <span className={`text-[8px] sm:text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-zinc-400"}`}>
+                PROGRESS
               </span>
-              <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>
-                ${globalGross.toLocaleString('en-US', { minimumFractionDigits: 2 })} / ${nextKAt.toLocaleString('en-US')} — NEXT $540 PAYOUT
+              <span className={`text-[8px] sm:text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>
+                ${globalGross.toLocaleString('en-US', { minimumFractionDigits: 0 })} / ${nextKAt.toLocaleString('en-US')}
               </span>
             </div>
-            <div className="w-full bg-zinc-900 h-3 relative overflow-hidden border border-zinc-700/50">
+            <div className="w-full bg-zinc-900 h-2.5 sm:h-3 relative overflow-hidden border border-zinc-700/50">
               <div
                 className={`h-full transition-all duration-500 ${urgencyBg} ${urgencyPulse}`}
                 style={{ width: `${capacityPct}%` }}
@@ -767,21 +769,21 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
                 <div className="absolute right-0 top-0 h-full w-[10%] bg-red-500/30 animate-pulse" />
               )}
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-[8px] font-black ${capacityPct > 50 ? "text-black" : "text-zinc-400"}`}>
+                <span className={`text-[7px] sm:text-[8px] font-black ${capacityPct > 50 ? "text-black" : "text-zinc-400"}`}>
                   {capacityPct.toFixed(1)}%
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT | {portal.name}</span>
+            <div className="flex items-center justify-between mt-0.5 flex-wrap gap-x-2">
+              <span className="text-zinc-400 text-[8px] sm:text-[10px] font-bold">{priceLabel}/U | {portal.name}</span>
               {!isFlashZone && (
-                <span className="text-lime-400/70 text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO NEXT $540</span>
+                <span className="text-lime-400/70 text-[8px] sm:text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO $540</span>
               )}
               {isFlashZone && (
-                <span className="text-red-400 text-[10px] font-extrabold animate-pulse">⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} — SETTLEMENT IMMINENT</span>
+                <span className="text-red-400 text-[8px] sm:text-[10px] font-extrabold animate-pulse">⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })}</span>
               )}
               {fundAvailable > 0 && (
-                <span className="text-emerald-400 text-[10px] font-extrabold">${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })} PAYABLE</span>
+                <span className="text-emerald-400 text-[8px] sm:text-[10px] font-extrabold">${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 0 })} PAY</span>
               )}
             </div>
           </div>
@@ -794,56 +796,56 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
           </div>
         )}
 
-        <div className="flex gap-1 mb-1">
+        <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
           <Link
             href="/trust-vault"
-            className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-amber-600/20 transition-colors flex items-center justify-center gap-1"
+            className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center hover:bg-amber-600/20 transition-colors flex items-center justify-center gap-0.5"
             data-testid={`button-trust-link-${track.id}`}
           >
-            <Shield className="h-3 w-3" /> TRUST VAULT
+            <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> VAULT
           </Link>
           <Link
             href="/artist-portal"
-            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[10px] font-extrabold py-1.5 text-center hover:bg-violet-500/20 transition-colors flex items-center justify-center gap-1"
+            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center hover:bg-violet-500/20 transition-colors flex items-center justify-center gap-0.5"
             data-testid={`button-mentor-link-${track.id}`}
           >
-            <Users className="h-3 w-3" /> MENTOR
+            <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> MENTOR
           </Link>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-0.5 sm:gap-1">
           {isClosed || isReconciling ? (
-            <div className={`flex-1 ${isReconciling ? "bg-amber-500/10 border border-amber-500/30 text-amber-400" : "bg-red-500/10 border border-red-500/30 text-red-400"} text-[10px] font-extrabold py-2 text-center flex items-center justify-center gap-1 cursor-not-allowed`} data-testid={`button-closed-${track.id}`}>
-              <Lock className="h-3 w-3" /> {isReconciling ? "POOL CLOSED — RECONCILING" : "POOL CLOSED — SETTLED"}
+            <div className={`flex-1 ${isReconciling ? "bg-amber-500/10 border border-amber-500/30 text-amber-400" : "bg-red-500/10 border border-red-500/30 text-red-400"} text-[8px] sm:text-[10px] font-extrabold py-1.5 sm:py-2 text-center flex items-center justify-center gap-0.5 cursor-not-allowed`} data-testid={`button-closed-${track.id}`}>
+              <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> {isReconciling ? "RECONCILING" : "CLOSED"}
             </div>
           ) : isPaperCapHit ? (
             <div
-              className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[10px] font-extrabold py-2 text-center flex items-center justify-center gap-1"
+              className="flex-1 bg-amber-600/10 border border-amber-500/30 text-amber-400 text-[8px] sm:text-[10px] font-extrabold py-1.5 sm:py-2 text-center flex items-center justify-center gap-0.5"
               data-testid={`button-paper-cap-${track.id}`}
             >
-              <AlertTriangle className="h-3 w-3" /> PAPER TRADE CAP — 50% POOL LIMIT HIT
+              <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> CAP HIT
             </div>
           ) : (
             <button
               onClick={() => setShowPayPal(true)}
-              className="flex-1 bg-lime-600 text-white text-[11px] font-extrabold py-2 text-center hover:bg-lime-700 transition-colors flex items-center justify-center gap-1"
+              className="flex-1 bg-lime-600 text-white text-[8px] sm:text-[11px] font-extrabold py-1.5 sm:py-2 text-center hover:bg-lime-700 transition-colors flex items-center justify-center gap-0.5"
               data-testid={`button-acquire-${track.id}`}
             >
-              <DollarSign className="h-3 w-3" /> ACQUIRE POSITION — CASH APP
+              <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> ACQUIRE
             </button>
           )}
           <button
-            className={`flex-1 border ${isGlobal ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"} text-[10px] font-bold py-1.5 text-center transition-colors`}
+            className={`border ${isGlobal ? "border-amber-500/30 text-amber-400 hover:bg-amber-500/10" : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"} text-[8px] sm:text-[10px] font-bold py-1 sm:py-1.5 px-2 sm:px-3 text-center transition-colors flex-shrink-0`}
             onClick={() => onPlay(track)}
             data-testid={`button-stream-${track.id}`}
           >
-            <Play className="h-3 w-3 inline mr-1" />STREAM
+            <Play className="h-2.5 w-2.5 sm:h-3 sm:w-3 inline mr-0.5" />PLAY
           </button>
           <button
             onClick={() => setShowP2P(!showP2P)}
-            className={`border text-[10px] font-bold py-1.5 px-2 text-center transition-colors ${showP2P ? "border-green-500/50 text-green-400 bg-green-500/10" : "border-zinc-700 text-zinc-500 hover:border-green-500/30 hover:text-green-400"}`}
+            className={`border text-[8px] sm:text-[10px] font-bold py-1 sm:py-1.5 px-1.5 sm:px-2 text-center transition-colors flex-shrink-0 ${showP2P ? "border-green-500/50 text-green-400 bg-green-500/10" : "border-zinc-700 text-zinc-500 hover:border-green-500/30 hover:text-green-400"}`}
             data-testid={`button-p2p-toggle-${track.id}`}
           >
-            <Users className="h-3 w-3 inline mr-0.5" />P2P
+            <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 inline" />
           </button>
         </div>
       </div>
@@ -989,64 +991,64 @@ export default function HomePage() {
       <TrustTutorial />
       <div className="border-b border-emerald-500/20 bg-black">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <Activity className="h-5 w-5 text-white" />
-              <h1 className="text-lg font-black tracking-tighter text-white" data-testid="text-terminal-title">
-                AITITRADE <span className="text-green-500">DIGITAL ASSET EXCHANGE</span>
+          <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
+            <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-white flex-shrink-0" />
+              <h1 className="text-sm sm:text-lg font-black tracking-tighter text-white truncate" data-testid="text-terminal-title">
+                AITITRADE <span className="text-green-500">DEX</span>
               </h1>
-              <div className="bg-red-600 text-white text-[10px] px-2 py-0.5 rounded-full animate-pulse font-bold">LIVE FLOOR</div>
+              <div className="bg-red-600 text-white text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full animate-pulse font-bold flex-shrink-0">LIVE</div>
             </div>
-            <div className="flex items-center gap-3 text-[10px]">
-              <span className="text-zinc-600">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[9px]">97.7 THE FLAME</Badge>
+            <div className="flex items-center gap-2 text-[9px] sm:text-[10px]">
+              <span className="text-zinc-600 hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[8px] sm:text-[9px]">97.7 THE FLAME</Badge>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <div className="bg-zinc-900 border border-zinc-800 p-2">
-              <p className="text-[9px] text-zinc-600">TOTAL GROSS SALES</p>
-              <p className="text-sm text-emerald-400 font-bold">${totalGrossSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <div className="grid grid-cols-4 gap-1 sm:gap-2">
+            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-zinc-600">GROSS</p>
+              <p className="text-[10px] sm:text-sm text-emerald-400 font-bold">${totalGrossSales.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-2">
-              <p className="text-[9px] text-zinc-600">TOTAL UNITS</p>
-              <p className="text-sm text-white font-bold">{totalUnits.toLocaleString()}</p>
+            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-zinc-600">UNITS</p>
+              <p className="text-[10px] sm:text-sm text-white font-bold">{totalUnits.toLocaleString()}</p>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-2">
-              <p className="text-[9px] text-zinc-600">OPEN TRADES</p>
-              <p className="text-sm text-emerald-400 font-bold">{openCount}</p>
+            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-zinc-600">OPEN</p>
+              <p className="text-[10px] sm:text-sm text-emerald-400 font-bold">{openCount}</p>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-2">
-              <p className="text-[9px] text-zinc-600">CLOSED / TOTAL</p>
-              <p className="text-sm font-bold"><span className="text-red-400">{closedCount}</span><span className="text-zinc-600"> / {displayTracks.length}</span></p>
+            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-zinc-600">CLOSED</p>
+              <p className="text-[10px] sm:text-sm font-bold"><span className="text-red-400">{closedCount}</span><span className="text-zinc-600">/{displayTracks.length}</span></p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-2 px-4 bg-black border-b border-zinc-800" data-testid="trade-indicators-bar">
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider">TRADE SECTORS</span>
-          <span className="text-zinc-700">|</span>
-          <span className="text-[9px] text-zinc-600">81 PORTALS — 9 TIERS × 9 RISK PROFILES</span>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-            <span className="text-[10px] text-white font-black italic" data-testid="text-live-signal">LIVE SIGNAL: 97.7 THE FLAME</span>
+      <div className="p-1.5 sm:p-2 px-3 sm:px-4 bg-black border-b border-zinc-800" data-testid="trade-indicators-bar">
+        <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
+          <span className="text-[8px] sm:text-[9px] text-zinc-500 font-bold uppercase tracking-wider">SECTORS</span>
+          <span className="text-zinc-700 hidden sm:inline">|</span>
+          <span className="text-[8px] sm:text-[9px] text-zinc-600 hidden sm:inline">81 PORTALS — 9×9</span>
+          <div className="ml-auto flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-600 animate-ping" />
+            <span className="text-[8px] sm:text-[10px] text-white font-black italic" data-testid="text-live-signal">97.7 THE FLAME</span>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
           {[
             { name: "NANO", tbi: "$1", color: "text-zinc-400 border-zinc-700" },
             { name: "MICRO", tbi: "$2", color: "text-emerald-400 border-emerald-500/30" },
             { name: "PENNY", tbi: "$3.50", color: "text-emerald-400 border-emerald-500/30" },
             { name: "MINI", tbi: "$5", color: "text-lime-400 border-lime-500/30" },
             { name: "ENTRY", tbi: "$7.50", color: "text-lime-400 border-lime-500/30" },
-            { name: "STANDARD", tbi: "$10", color: "text-green-400 border-green-500/30" },
+            { name: "STD", tbi: "$10", color: "text-green-400 border-green-500/30" },
             { name: "MID", tbi: "$15", color: "text-amber-400 border-amber-500/30" },
             { name: "PRO", tbi: "$25", color: "text-orange-400 border-orange-500/30" },
-            { name: "SOVEREIGN", tbi: "$50", color: "text-red-400 border-red-500/30" },
+            { name: "SOV", tbi: "$50", color: "text-red-400 border-red-500/30" },
           ].map(s => (
-            <span key={s.name} className={`text-[9px] font-bold border px-1.5 py-0.5 bg-zinc-900/80 ${s.color}`}>
+            <span key={s.name} className={`text-[7px] sm:text-[9px] font-bold border px-1 sm:px-1.5 py-0.5 bg-zinc-900/80 whitespace-nowrap flex-shrink-0 ${s.color}`}>
               {s.name} {s.tbi}
             </span>
           ))}
@@ -1060,9 +1062,9 @@ export default function HomePage() {
             className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] hover:bg-zinc-900/50 transition-colors"
             data-testid="button-toggle-intel"
           >
-            <div className="flex items-center gap-2">
-              <Zap className="h-3 w-3 text-lime-400" />
-              <span className="text-lime-400 font-extrabold tracking-widest">MARKET INTELLIGENCE — CEO HANDS-OFF MODE</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-lime-400 flex-shrink-0" />
+              <span className="text-lime-400 font-extrabold tracking-wider sm:tracking-widest text-[8px] sm:text-[10px]">MARKET INTEL — CEO MODE</span>
               <span className={`px-1.5 py-0.5 font-extrabold text-[8px] border ${
                 marketSession.marketSentiment === "BULL"
                   ? "text-lime-400 border-lime-500/40 bg-lime-500/10"
