@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { tracks } from "@shared/schema";
+import { tracks, orders } from "@shared/schema";
 import { desc, sql, eq } from "drizzle-orm";
 
 const FLOOR_SPLIT = 0.54;
@@ -392,6 +392,28 @@ export function calculateEarlyExit(buyIn: number) {
   const earlyPayout = parseFloat((buyIn * portal.early).toFixed(2));
   const houseProfit = parseFloat(((buyIn * portal.mbb) - earlyPayout).toFixed(2));
   return { earlyPayout, houseProfit, portal };
+}
+
+const TREASURY_MILESTONES = [100, 500, 1000, 5000, 10000, 25000, 50000, 100000];
+const reachedMilestones = new Set<number>();
+
+export async function checkTreasuryMilestones(): Promise<{ reached: number[]; total: number }> {
+  const [{ total }] = await db.select({
+    total: sql<string>`COALESCE(SUM(CAST(house_take AS DECIMAL)), 0)`,
+  }).from(orders);
+
+  const totalNum = parseFloat(total || "0");
+  const newlyReached: number[] = [];
+
+  for (const target of TREASURY_MILESTONES) {
+    if (totalNum >= target && !reachedMilestones.has(target)) {
+      reachedMilestones.add(target);
+      newlyReached.push(target);
+      console.log(`[TREASURY] MILESTONE REACHED: House Treasury has cleared $${target.toLocaleString()}!`);
+    }
+  }
+
+  return { reached: newlyReached, total: totalNum };
 }
 
 export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS };
