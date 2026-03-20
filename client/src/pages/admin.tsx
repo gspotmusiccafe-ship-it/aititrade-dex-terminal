@@ -4053,7 +4053,7 @@ export default function AdminPage() {
               </TabsTrigger>
               <TabsTrigger value="jam-control" data-testid="tab-jam-control" className="whitespace-nowrap data-[state=active]:bg-[#1DB954]/10 data-[state=active]:text-[#1DB954]">
                 <Wifi className="h-4 w-4 mr-1.5" />
-                Jam Control
+                Global Trades
               </TabsTrigger>
               <TabsTrigger value="portals" data-testid="tab-portals" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
                 <Target className="h-4 w-4 mr-1.5 text-lime-400" />
