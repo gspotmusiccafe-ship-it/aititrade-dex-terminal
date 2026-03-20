@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock, ChevronUp, ChevronDown } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1786,6 +1786,24 @@ function GlobalRotationTab() {
     onError: () => toast({ title: "Failed to remove", variant: "destructive" }),
   });
 
+  const reorderMutation = useMutation({
+    mutationFn: async (orderedIds: string[]) => apiRequest("POST", "/api/admin/global-rotation/reorder", { orderedIds }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/global-rotation"] });
+    },
+    onError: () => toast({ title: "Failed to reorder", variant: "destructive" }),
+  });
+
+  const moveItem = (index: number, direction: "up" | "down") => {
+    if (!items) return;
+    const newItems = [...items];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newItems.length) return;
+    [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
+    const orderedIds = newItems.map((item: any) => item.id);
+    reorderMutation.mutate(orderedIds);
+  };
+
   const resetForm = () => {
     setForm({ ticker: "", title: "", type: "playlist", spotifyUri: "", spotifyUrl: "", audioUrl: "", coverImage: "", artistName: "", assetClass: "global" });
     setShowAdd(false);
@@ -1961,62 +1979,84 @@ function GlobalRotationTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            {items?.map((item: any, index: number) => (
-              <div
-                key={item.id}
-                className="flex items-center gap-3 p-3 rounded-md bg-lime-500/5 hover:bg-lime-500/10 border border-lime-500/10"
-                data-testid={`rotation-item-${item.id}`}
-              >
-                <span className="text-sm text-lime-400/60 w-6 text-center font-mono font-bold">{index + 1}</span>
-                <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-black border border-lime-500/20">
-                  {item.coverImage ? (
-                    <img src={item.coverImage} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Disc3 className="h-4 w-4 text-lime-400/40" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate">{item.title}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-lime-400 font-mono font-bold">{item.ticker}</span>
-                    {item.artistName && <span className="text-[10px] text-muted-foreground">— {item.artistName}</span>}
+            {items?.map((item: any, index: number) => {
+              const isFirst = index === 0;
+              const isLast = index === (items?.length || 0) - 1;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-md bg-lime-500/5 hover:bg-lime-500/10 border border-lime-500/10 transition-colors"
+                  data-testid={`rotation-item-${item.id}`}
+                >
+                  <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                    <button
+                      className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isFirst ? "text-zinc-700 cursor-default" : "text-lime-400/60 hover:text-lime-400 hover:bg-lime-500/20"}`}
+                      onClick={() => !isFirst && moveItem(index, "up")}
+                      disabled={isFirst || reorderMutation.isPending}
+                      data-testid={`button-rotation-up-${item.id}`}
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="text-xs text-lime-400/60 font-mono font-bold leading-none w-5 text-center">{index + 1}</span>
+                    <button
+                      className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isLast ? "text-zinc-700 cursor-default" : "text-lime-400/60 hover:text-lime-400 hover:bg-lime-500/20"}`}
+                      onClick={() => !isLast && moveItem(index, "down")}
+                      disabled={isLast || reorderMutation.isPending}
+                      data-testid={`button-rotation-down-${item.id}`}
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
                   </div>
+                  <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-black border border-lime-500/20">
+                    {item.coverImage ? (
+                      <img src={item.coverImage} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Disc3 className="h-4 w-4 text-lime-400/40" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold truncate">{item.title}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-lime-400 font-mono font-bold">{item.ticker}</span>
+                      {item.artistName && <span className="text-[10px] text-muted-foreground">— {item.artistName}</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {item.spotifyUri && (
+                      <Badge variant="secondary" className="text-[9px] bg-green-500/10 text-green-400">
+                        <SiSpotify className="h-2.5 w-2.5 mr-0.5" /> SPOTIFY
+                      </Badge>
+                    )}
+                    {item.audioUrl && (
+                      <Badge variant="secondary" className="text-[9px] bg-blue-500/10 text-blue-400">
+                        AUDIO
+                      </Badge>
+                    )}
+                    <Badge variant="secondary" className="text-[9px]">{item.assetClass?.toUpperCase()}</Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => startEdit(item)}
+                    data-testid={`button-edit-rotation-${item.id}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(item.id)}
+                    disabled={deleteMutation.isPending}
+                    data-testid={`button-delete-rotation-${item.id}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-                <div className="flex items-center gap-1">
-                  {item.spotifyUri && (
-                    <Badge variant="secondary" className="text-[9px] bg-green-500/10 text-green-400">
-                      <SiSpotify className="h-2.5 w-2.5 mr-0.5" /> SPOTIFY
-                    </Badge>
-                  )}
-                  {item.audioUrl && (
-                    <Badge variant="secondary" className="text-[9px] bg-blue-500/10 text-blue-400">
-                      AUDIO
-                    </Badge>
-                  )}
-                  <Badge variant="secondary" className="text-[9px]">{item.assetClass?.toUpperCase()}</Badge>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => startEdit(item)}
-                  data-testid={`button-edit-rotation-${item.id}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => deleteMutation.mutate(item.id)}
-                  disabled={deleteMutation.isPending}
-                  data-testid={`button-delete-rotation-${item.id}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       ) : (

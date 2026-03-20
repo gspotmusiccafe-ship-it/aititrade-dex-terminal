@@ -234,23 +234,23 @@ export function MusicPlayer() {
                         onClick={() => playFromQueue(actualIndex)}
                         data-testid={`queue-track-${actualIndex}`}
                       >
-                        <div className="flex flex-col items-center flex-shrink-0 w-4">
+                        <div className="flex flex-col items-center flex-shrink-0 w-6">
                           <button
-                            className={`h-3 w-3 flex items-center justify-center transition-colors ${isFirst ? "text-zinc-800 cursor-default" : "text-zinc-600 hover:text-emerald-400"}`}
+                            className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isFirst ? "text-zinc-800 cursor-default" : "text-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20"}`}
                             onClick={(e) => { e.stopPropagation(); if (!isFirst) moveInQueue(actualIndex, actualIndex - 1); }}
                             disabled={isFirst}
                             data-testid={`button-queue-up-${actualIndex}`}
                           >
-                            <ChevronUp className="h-2.5 w-2.5" />
+                            <ChevronUp className="h-3.5 w-3.5" />
                           </button>
-                          <span className="text-[8px] text-zinc-600 leading-none">{i + 1}</span>
+                          <span className="text-[9px] text-emerald-500/40 font-mono font-bold leading-none">{i + 1}</span>
                           <button
-                            className={`h-3 w-3 flex items-center justify-center transition-colors ${isLast ? "text-zinc-800 cursor-default" : "text-zinc-600 hover:text-emerald-400"}`}
+                            className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isLast ? "text-zinc-800 cursor-default" : "text-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20"}`}
                             onClick={(e) => { e.stopPropagation(); if (!isLast) moveInQueue(actualIndex, actualIndex + 1); }}
                             disabled={isLast}
                             data-testid={`button-queue-down-${actualIndex}`}
                           >
-                            <ChevronDown className="h-2.5 w-2.5" />
+                            <ChevronDown className="h-3.5 w-3.5" />
                           </button>
                         </div>
                         <div className="min-w-0 flex-1">

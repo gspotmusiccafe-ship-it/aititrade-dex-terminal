@@ -4264,6 +4264,20 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/global-rotation/reorder", isAdmin, async (req: any, res) => {
+    try {
+      const { orderedIds } = req.body;
+      if (!Array.isArray(orderedIds)) return res.status(400).json({ message: "orderedIds required" });
+      for (let i = 0; i < orderedIds.length; i++) {
+        await db.update(globalRotation).set({ position: i }).where(eq(globalRotation.id, orderedIds[i]));
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reordering global rotation:", error);
+      res.status(500).json({ message: "Failed to reorder rotation" });
+    }
+  });
+
   // === Spotify Playback (Spotify is now the primary auth — tokens stored at login) ===
 
   app.get("/api/spotify/token", isAuthenticated, async (req: any, res) => {
