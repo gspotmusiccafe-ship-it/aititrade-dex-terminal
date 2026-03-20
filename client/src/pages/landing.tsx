@@ -769,17 +769,57 @@ export default function LandingPage() {
             </Button>
           </div>
 
-          <div className="flex flex-col gap-4 mt-8 max-w-xl mx-auto">
-            <button
-              onClick={() => openAuth("signup")}
-              className="w-full py-6 bg-green-600 hover:bg-green-500 text-white text-xl font-black border-b-4 border-green-800 transition-all transform active:scale-95"
-              data-testid="button-24hr-trader"
-            >
-              CREATE 24HR TRADER (STIMULATION)
-            </button>
-            <p className="text-center text-gray-400 text-sm font-bold uppercase tracking-widest">
-              No Simulation • 24HR Live Market Access • Feel The Heat
-            </p>
+          <div className="mt-10 max-w-xl mx-auto">
+            <div className="border border-emerald-500/30 bg-black relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-lime-500/5 to-emerald-500/5 animate-pulse" />
+              <div className="relative">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-emerald-500/20 bg-emerald-500/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse" />
+                    <span className="text-[9px] text-emerald-400 font-bold tracking-widest font-mono">24HR LIVE MARKET ACCESS</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[8px] text-red-400 font-bold animate-pulse">🔥</span>
+                    <span className="text-[9px] text-amber-400 font-extrabold font-mono">STIMULATION ACTIVE</span>
+                  </div>
+                </div>
+                <div className="px-4 py-5 sm:py-6 text-center">
+                  <div className="flex items-center justify-center gap-3 mb-3">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+                    <span className="text-[10px] text-emerald-500/60 font-mono font-bold tracking-wider">SOVEREIGN EXCHANGE TERMINAL</span>
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
+                  </div>
+                  <button
+                    onClick={() => openAuth("signup")}
+                    className="w-full py-4 sm:py-5 bg-gradient-to-r from-emerald-600 via-lime-600 to-emerald-600 hover:from-emerald-500 hover:via-lime-500 hover:to-emerald-500 text-white font-mono font-black text-lg sm:text-xl tracking-wider transition-all transform active:scale-[0.98] shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.35)] border border-emerald-400/30"
+                    data-testid="button-24hr-trader"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="text-lg">⚡</span>
+                      CREATE 24HR TRADER
+                      <span className="text-lg">⚡</span>
+                    </span>
+                  </button>
+                  <div className="mt-3 flex items-center justify-center gap-4 text-[9px] font-mono">
+                    <span className="text-lime-400/80 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> NO SIMULATION
+                    </span>
+                    <span className="text-zinc-600">|</span>
+                    <span className="text-emerald-400/80 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> LIVE FLOOR
+                    </span>
+                    <span className="text-zinc-600">|</span>
+                    <span className="text-amber-400/80 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> FEEL THE HEAT
+                    </span>
+                  </div>
+                </div>
+                <div className="px-4 py-2 border-t border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
+                  <span className="text-[8px] text-zinc-600 font-mono">AITIFY EXCHANGE v2.0</span>
+                  <span className="text-[8px] text-emerald-500/50 font-mono font-bold">81 PORTALS • 9 TIERS • 9 RISK PROFILES</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
