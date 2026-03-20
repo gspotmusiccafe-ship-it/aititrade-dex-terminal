@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -773,6 +773,97 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Treasury stats error:", error);
       res.status(500).json({ message: "Failed to fetch treasury stats" });
+    }
+  });
+
+  app.post("/api/admin/treasury-withdraw", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { amount, destination, note } = req.body;
+      if (!amount || amount <= 0) return res.status(400).json({ message: "Invalid amount" });
+      if (!destination) return res.status(400).json({ message: "Destination required" });
+
+      const [{ totalHouse }] = await db.select({
+        totalHouse: sql<string>`COALESCE(SUM(CAST(house_take AS DECIMAL)), 0)`,
+      }).from(orders);
+
+      const [{ totalWithdrawn }] = await db.select({
+        totalWithdrawn: sql<string>`COALESCE(SUM(CAST(amount AS DECIMAL)), 0)`,
+      }).from(treasuryLogs).where(eq(treasuryLogs.type, "WITHDRAWAL"));
+
+      const available = parseFloat(totalHouse || "0") - parseFloat(totalWithdrawn || "0");
+      if (amount > available) {
+        return res.status(400).json({ message: "Insufficient treasury funds", available });
+      }
+
+      const [log] = await db.insert(treasuryLogs).values({
+        amount: amount.toString(),
+        destination,
+        type: "WITHDRAWAL",
+        note: note || null,
+        executedBy: userId,
+      }).returning();
+
+      console.log(`[TREASURY] WITHDRAWAL: $${amount} to ${destination} by ${userId}`);
+
+      res.json({
+        success: true,
+        withdrawal: log,
+        remaining: parseFloat((available - amount).toFixed(2)),
+      });
+    } catch (error) {
+      console.error("Treasury withdrawal error:", error);
+      res.status(500).json({ message: "Withdrawal failed" });
+    }
+  });
+
+  app.get("/api/admin/treasury-withdrawals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const withdrawals = await db.select().from(treasuryLogs)
+        .orderBy(desc(treasuryLogs.createdAt))
+        .limit(50);
+
+      res.json(withdrawals);
+    } catch (error) {
+      console.error("Treasury withdrawals error:", error);
+      res.status(500).json({ message: "Failed to fetch withdrawals" });
+    }
+  });
+
+  app.get("/api/admin/early-exit-ledger", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const exits = await db.select({
+        id: orders.id,
+        trackingNumber: orders.trackingNumber,
+        unitPrice: orders.unitPrice,
+        finalPayout: orders.finalPayout,
+        houseTake: orders.houseTake,
+        portalName: orders.portalName,
+        createdAt: orders.createdAt,
+      })
+      .from(orders)
+      .where(eq(orders.status, "settled_early"))
+      .orderBy(desc(orders.createdAt))
+      .limit(100);
+
+      res.json(exits);
+    } catch (error) {
+      console.error("Early exit ledger error:", error);
+      res.status(500).json({ message: "Failed to fetch ledger" });
     }
   });
 

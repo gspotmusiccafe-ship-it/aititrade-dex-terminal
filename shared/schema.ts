@@ -76,6 +76,20 @@ export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, tra
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 export type Order = typeof orders.$inferSelect;
 
+export const treasuryLogs = pgTable("treasury_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  destination: varchar("destination").notNull(),
+  type: varchar("type").notNull().default("WITHDRAWAL"),
+  note: text("note"),
+  executedBy: varchar("executed_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertTreasuryLogSchema = createInsertSchema(treasuryLogs).omit({ id: true, createdAt: true });
+export type InsertTreasuryLog = z.infer<typeof insertTreasuryLogSchema>;
+export type TreasuryLog = typeof treasuryLogs.$inferSelect;
+
 export const videos = pgTable("videos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   artistId: varchar("artist_id").notNull().references(() => artists.id),

@@ -3545,6 +3545,136 @@ function CreateArtistHeaderButton() {
   );
 }
 
+function GlobalLedger() {
+  const { data: exits, isLoading } = useQuery<{
+    id: string;
+    trackingNumber: string;
+    unitPrice: string;
+    finalPayout: string;
+    houseTake: string;
+    portalName: string;
+    createdAt: string;
+  }[]>({
+    queryKey: ["/api/admin/early-exit-ledger"],
+    refetchInterval: 30000,
+  });
+
+  return (
+    <div className="mt-6 border border-zinc-800 bg-black p-4 font-mono text-[11px]" data-testid="global-ledger">
+      <h3 className="text-zinc-400 text-xs font-bold uppercase mb-3 tracking-wider">Early Exit Ledger</h3>
+      <div className="grid grid-cols-5 text-zinc-500 uppercase border-b border-zinc-800 pb-2 mb-2">
+        <span>Asset ID</span>
+        <span>Buy-In (TBI)</span>
+        <span>User Payout</span>
+        <span className="text-lime-500">House Take</span>
+        <span>Portal</span>
+      </div>
+      <div className="space-y-1 max-h-64 overflow-y-auto">
+        {isLoading ? (
+          <div className="text-zinc-600 py-4 text-center">Loading ledger...</div>
+        ) : !exits?.length ? (
+          <div className="text-zinc-600 py-4 text-center">No early exits recorded</div>
+        ) : (
+          exits.map((log) => (
+            <div key={log.id} className="grid grid-cols-5 border-b border-zinc-900 py-1 hover:bg-zinc-950" data-testid={`ledger-row-${log.id}`}>
+              <span className="text-zinc-400 truncate">{log.trackingNumber}</span>
+              <span className="text-white">${log.unitPrice}</span>
+              <span className="text-yellow-600">${log.finalPayout || "—"}</span>
+              <span className="text-lime-400 font-bold">${log.houseTake || "—"}</span>
+              <span className="text-zinc-500">{log.portalName || "—"}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WithdrawalTool() {
+  const [amt, setAmt] = useState("");
+  const [destination, setDestination] = useState("$AITITRADEBROKERAGE");
+  const [note, setNote] = useState("");
+  const [pending, setPending] = useState(false);
+  const [result, setResult] = useState<{ success?: boolean; remaining?: number; error?: string } | null>(null);
+
+  const executeWithdraw = async () => {
+    const amount = parseFloat(amt);
+    if (!amount || amount <= 0) return;
+    setPending(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/treasury-withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, destination, note: note || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResult({ error: data.message || "Withdrawal failed" });
+      } else {
+        setResult({ success: true, remaining: data.remaining });
+        setAmt("");
+        setNote("");
+      }
+    } catch {
+      setResult({ error: "Network error" });
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="mt-6 p-4 border border-red-900/50 bg-zinc-950 font-mono" data-testid="withdrawal-tool">
+      <h3 className="text-red-500 text-xs font-bold uppercase mb-4 tracking-wider">Treasury Sweep Tool</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        <input
+          type="number"
+          placeholder="Amount"
+          className="bg-black border border-zinc-800 text-white p-2 text-sm"
+          value={amt}
+          onChange={(e) => setAmt(e.target.value)}
+          data-testid="input-withdraw-amount"
+          min="0.01"
+          step="0.01"
+        />
+        <input
+          type="text"
+          placeholder="Destination"
+          className="bg-black border border-zinc-800 text-white p-2 text-sm"
+          value={destination}
+          onChange={(e) => setDestination(e.target.value)}
+          data-testid="input-withdraw-destination"
+        />
+        <input
+          type="text"
+          placeholder="Note (optional)"
+          className="bg-black border border-zinc-800 text-zinc-400 p-2 text-sm"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          data-testid="input-withdraw-note"
+        />
+      </div>
+      <button
+        className="w-full bg-red-700 text-white py-2 font-bold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+        onClick={executeWithdraw}
+        disabled={pending || !amt || parseFloat(amt) <= 0}
+        data-testid="button-execute-withdrawal"
+      >
+        {pending ? "PROCESSING..." : "EXECUTE TRANSFER"}
+      </button>
+      {result?.success && (
+        <p className="text-lime-500 text-[10px] mt-2">Transfer complete. Remaining: ${result.remaining?.toFixed(2)}</p>
+      )}
+      {result?.error && (
+        <p className="text-red-500 text-[10px] mt-2">{result.error}</p>
+      )}
+      <p className="text-[9px] text-zinc-600 mt-2 italic">
+        *This action will be logged in the Global Ledger for audit purposes.
+      </p>
+    </div>
+  );
+}
+
 function TreasuryDashboard() {
   const { data: stats, isLoading } = useQuery<{
     totalRevenue: number;
@@ -3609,6 +3739,9 @@ function TreasuryDashboard() {
           <p className="text-[10px] text-zinc-600 mt-1">Holding for MBB settlement</p>
         </div>
       </div>
+
+      <GlobalLedger />
+      <WithdrawalTool />
 
       <div className="mt-8 text-[10px] text-zinc-700 italic">
         *No-loss architecture enabled. All settlements are final and calculated across the trading floor.
