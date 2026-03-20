@@ -620,7 +620,19 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
           </button>
         </form>
 
-        
+        {mode === "login" && (
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("aitifymusic26@gmail.com");
+              setPassword("Pookie@-1970");
+            }}
+            className="w-full mt-2 border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400/70 hover:text-amber-400 text-[9px] font-bold py-1.5 transition-colors font-mono"
+            data-testid="button-admin-autofill"
+          >
+            ◆ ADMIN LOGIN
+          </button>
+        )}
       </div>
     </div>
   );
