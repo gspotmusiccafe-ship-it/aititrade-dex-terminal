@@ -6,9 +6,9 @@ import { MarketTicker } from "@/components/market-ticker";
 import GlobalRadio from "@/components/GlobalRadio";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -310,6 +310,132 @@ function HeroPlayer() {
               {playlist.length > 0 && `${currentIndex + 1} / ${playlist.length}`}
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniRadio() {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+
+  const { data: tracks } = useQuery<TrackData[]>({
+    queryKey: ["/api/tracks/featured"],
+  });
+
+  const playlist = tracks?.filter((t) => t.audioUrl) || [];
+  const current = playlist[currentIndex];
+
+  const play = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !current) return;
+    if (!audio.src || audio.src === window.location.href) {
+      audio.src = current.audioUrl;
+      audio.load();
+    }
+    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+  }, [current]);
+
+  const pause = useCallback(() => { audioRef.current?.pause(); setIsPlaying(false); }, []);
+  const togglePlay = useCallback(() => { isPlaying ? pause() : play(); }, [isPlaying, play, pause]);
+
+  const skipTo = useCallback((i: number) => {
+    if (!playlist.length) return;
+    const next = ((i % playlist.length) + playlist.length) % playlist.length;
+    setCurrentIndex(next);
+    setCurrentTime(0);
+    setDuration(0);
+    const audio = audioRef.current;
+    if (audio && playlist[next]) {
+      audio.src = playlist[next].audioUrl;
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    }
+  }, [playlist]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = isMuted ? 0 : 0.7;
+  }, [isMuted]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const onTime = () => setCurrentTime(audio.currentTime);
+    const onMeta = () => setDuration(audio.duration);
+    const onEnded = () => {
+      const next = (currentIndex + 1) % (playlist.length || 1);
+      setCurrentIndex(next);
+      if (playlist[next]) {
+        audio.src = playlist[next].audioUrl;
+        audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+      }
+    };
+    const onError = () => {
+      if (playlist.length > 1) {
+        const next = (currentIndex + 1) % playlist.length;
+        setCurrentIndex(next);
+        if (playlist[next]) {
+          audio.src = playlist[next].audioUrl;
+          audio.play().catch(() => {});
+        }
+      }
+    };
+    audio.addEventListener("timeupdate", onTime);
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
+    return () => {
+      audio.removeEventListener("timeupdate", onTime);
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
+    };
+  }, [currentIndex, playlist]);
+
+  const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const coverSrc = current?.coverImage || current?.artist?.profileImage || null;
+
+  return (
+    <div className="fixed top-[74px] left-0 right-0 z-40 font-mono" data-testid="mini-radio">
+      <audio ref={audioRef} preload="metadata" />
+      <div className="bg-black/95 backdrop-blur-sm border-b border-emerald-500/20">
+        <div className="h-[2px] bg-zinc-900"><div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${pct}%` }} /></div>
+        <div className="max-w-7xl mx-auto px-4 flex items-center gap-2.5 h-10">
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Disc3 className={`h-3 w-3 text-lime-400 ${isPlaying ? "animate-spin" : ""}`} style={{ animationDuration: "2s" }} />
+            <span className="text-[8px] text-lime-400 font-extrabold tracking-widest hidden sm:inline">97.7 THE FLAME</span>
+          </div>
+          <div className="w-7 h-7 flex-shrink-0 bg-zinc-900 border border-emerald-500/20 overflow-hidden">
+            {coverSrc ? (
+              <img src={coverSrc} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center"><Music2 className="h-3 w-3 text-emerald-500/30" /></div>
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] text-lime-400 font-extrabold truncate">{current?.title?.toUpperCase() || "ASSET RADIO"}</p>
+            <p className="text-[8px] text-zinc-500 truncate">{current?.artist?.name || "AITIFY"}</p>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button onClick={() => skipTo(currentIndex - 1)} disabled={!playlist.length} className="p-0.5 text-zinc-500 hover:text-lime-400 disabled:opacity-20" data-testid="mini-radio-prev"><SkipBack className="h-3 w-3" /></button>
+            <button onClick={togglePlay} disabled={!playlist.length} className="w-7 h-7 bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center disabled:opacity-30" data-testid="mini-radio-play">
+              {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
+            </button>
+            <button onClick={() => skipTo(currentIndex + 1)} disabled={!playlist.length} className="p-0.5 text-zinc-500 hover:text-lime-400 disabled:opacity-20" data-testid="mini-radio-next"><SkipForward className="h-3 w-3" /></button>
+            <button onClick={() => setIsMuted(!isMuted)} className="p-0.5 text-zinc-600 hover:text-zinc-400 ml-1" data-testid="mini-radio-mute">
+              {isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
+            </button>
+          </div>
+          <div className="hidden sm:flex items-center gap-0.5 text-[7px] text-zinc-600 flex-shrink-0">
+            <span>{formatTime(currentTime)}</span><span>/</span><span>{formatTime(duration)}</span>
+          </div>
+          {isPlaying && <span className="text-[7px] text-red-400 font-bold animate-pulse flex-shrink-0">LIVE</span>}
         </div>
       </div>
     </div>
@@ -626,8 +752,10 @@ export default function LandingPage() {
         </div>
       </header>
 
+      <MiniRadio />
+
       {/* Hero Section — Bloomberg Terminal */}
-      <section className="pt-32 pb-12 px-4 sm:px-6 lg:px-8 bg-black">
+      <section className="pt-[120px] pb-12 px-4 sm:px-6 lg:px-8 bg-black">
         <div className="max-w-7xl mx-auto font-mono">
           <div className="border border-emerald-500/30 bg-black p-6 sm:p-10 mb-6">
             <div className="flex items-center gap-2 mb-4">
