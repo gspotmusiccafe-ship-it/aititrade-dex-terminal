@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, Rocket } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -205,6 +205,14 @@ export function AppSidebar() {
                   <Link href="/trust-vault" data-testid="nav-trust-vault">
                     <Globe className="h-5 w-5 text-amber-400" />
                     <span className="text-amber-400 font-extrabold">Trust Vault</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/production"}>
+                  <Link href="/production" data-testid="nav-production">
+                    <Rocket className="h-5 w-5 text-green-500" />
+                    <span className="text-green-400 font-extrabold">Production Terminal</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

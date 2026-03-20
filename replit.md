@@ -37,8 +37,7 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Asset Classes**: Tracks can be `standard` (emerald styling) or `inspirational` (violet styling with higher yield bands).
 -   **Autopilot Radio**: A DJ console feature that automatically queues high-velocity assets from the pool, prioritizing 2-week pre-release tracks. CEOs can save priority rotations.
 -   **2-Week Early Trading Edge**: Pre-release assets are tradeable two weeks before general retail distribution, incentivizing early adoption.
--   **Free Tier Gating**: Free-tier users can view market data but require a premium membership to "Acquire Position" (trade assets).
--   **Dual-Stream Revenue Model**: Offers two paid tiers: MINTOR ($9.99/mo, for minting and trading) and TRUST INVESTOR ($500 total, for trust certificates). Users can hold both statuses.
+-   **Production Terminal**: Full asset production & distribution console at `/production`. Integrates Suno v3.5 ($0.35/track) for audio generation, Ideogram v2 ($0.03/image) for artwork, and direct-push pipeline ($0.38 total wholesale) to list assets on the trading floor. Shows ledger status, 54/46 split breakdown, and pipeline status tracking.
 -   **CEO CLASS — 12-Step Business Credit Program**: An interactive checklist on the dashboard guiding users through business credit development steps, with progress tracking.
 -   **PremiumGate Access Control**: A core component (`PremiumGate`) restricts access to most in-app routes to premium users only, ensuring paid content exclusivity.
 -   **Artist Portal**: Provides artists with tools for profile management, track uploads, pre-release scheduling, AI Lyrics Generation (using OpenAI), and Audio Mastering (using ffmpeg).
