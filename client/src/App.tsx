@@ -59,25 +59,14 @@ function ActivationRedirect() {
 
 function PremiumGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user } = useAuth();
-  const { data: trustStatus, isLoading: trustLoading } = useQuery<TrustStatus>({
+  const { data: trustStatus } = useQuery<TrustStatus>({
     queryKey: ["/api/trust/status"],
     enabled: isAuthenticated,
   });
 
   if (!isAuthenticated) return <LandingPage />;
-
-  if (trustLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-lime-500/20 animate-pulse" />
-          <p className="text-lime-400 font-mono text-xs font-extrabold">VERIFYING TRADING ACCESS...</p>
-        </div>
-      </div>
-    );
-  }
-
   if ((user as any)?.isAdmin) return <>{children}</>;
+  if (trustStatus === undefined) return <>{children}</>;
   if (!checkIsTrader(trustStatus)) return <ActivationRedirect />;
 
   return <>{children}</>;
@@ -93,19 +82,8 @@ function useIsPremiumUser() {
 }
 
 function AuthenticatedLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated } = useAuth();
   const isPremium = useIsPremiumUser();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 bg-emerald-500/20 animate-pulse" />
-          <p className="text-emerald-500/50 font-mono text-xs">LOADING EXCHANGE...</p>
-        </div>
-      </div>
-    );
-  }
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
