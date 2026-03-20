@@ -658,6 +658,186 @@ function AuthErrorBanner() {
   );
 }
 
+function OscillatorWave({ color, speed, amplitude, phase }: { color: string; speed: number; amplitude: number; phase: number }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 120);
+    return () => clearInterval(iv);
+  }, []);
+
+  const points: string[] = [];
+  for (let x = 0; x <= 200; x += 2) {
+    const t = (tick * speed * 0.05) + phase;
+    const y = 25 + Math.sin((x / 200) * Math.PI * 4 + t) * amplitude
+              + Math.sin((x / 200) * Math.PI * 7 + t * 1.3) * (amplitude * 0.4)
+              + Math.sin((x / 200) * Math.PI * 2 + t * 0.7) * (amplitude * 0.6);
+    points.push(`${x},${Math.max(2, Math.min(48, y)).toFixed(1)}`);
+  }
+  const polyline = points.join(" ");
+  const fillPoints = `0,50 ${polyline} 200,50`;
+
+  return (
+    <svg viewBox="0 0 200 50" className="w-full h-full" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={`osc-fill-${color}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polygon points={fillPoints} fill={`url(#osc-fill-${color})`} />
+      <polyline points={polyline} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx={points[points.length - 1].split(",")[0]} cy={points[points.length - 1].split(",")[1]} r="2.5" fill={color}>
+        <animate attributeName="opacity" values="1;0.4;1" dur="1s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
+
+function StimulationBoard({ onSignup }: { onSignup: () => void }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 2000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const now = Date.now();
+  const minuteOfDay = new Date().getHours() * 60 + new Date().getMinutes();
+  const w1 = Math.sin((minuteOfDay / 1440) * Math.PI * 2) * 0.04;
+  const w2 = Math.sin((now / 30000) * Math.PI * 2) * 0.02;
+  const swing = w1 + w2 + Math.sin(tick * 0.3) * 0.01;
+
+  const tbiBase = 7.00;
+  const mbbBase = 21.00;
+  const tbiLive = parseFloat((tbiBase * (1 + swing)).toFixed(2));
+  const mbbLive = parseFloat((mbbBase * (1 + swing * 1.4)).toFixed(2));
+  const mbbpRatio = parseFloat(((mbbLive / tbiLive) * 100).toFixed(1));
+  const tbiPct = parseFloat(((swing) * 100).toFixed(1));
+  const mbbPct = parseFloat(((swing * 1.4) * 100).toFixed(1));
+  const signal = mbbPct >= 3 ? "BUY" : mbbPct <= -2 ? "SELL" : "HOLD";
+  const signalColor = signal === "BUY" ? "text-lime-400 border-lime-500/40 bg-lime-500/10" : signal === "SELL" ? "text-red-400 border-red-500/40 bg-red-500/10" : "text-amber-400 border-amber-500/40 bg-amber-500/10";
+
+  const tiers = [
+    { name: "NANO", tbi: 1, color: "text-zinc-400" },
+    { name: "MICRO", tbi: 2, color: "text-emerald-400" },
+    { name: "PENNY", tbi: 3.5, color: "text-emerald-400" },
+    { name: "MINI", tbi: 5, color: "text-lime-400" },
+    { name: "ENTRY", tbi: 7.5, color: "text-lime-400" },
+    { name: "STD", tbi: 10, color: "text-green-400" },
+    { name: "MID", tbi: 15, color: "text-amber-400" },
+    { name: "PRO", tbi: 25, color: "text-orange-400" },
+    { name: "SOV", tbi: 50, color: "text-red-400" },
+  ];
+
+  return (
+    <div className="mt-10 max-w-3xl mx-auto font-mono">
+      <div className="border border-emerald-500/30 bg-black">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 border-b border-emerald-500/20 bg-emerald-500/5">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse" />
+            <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest">24HR STIMULATION BOARD</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] text-red-400 animate-pulse">🔥</span>
+            <span className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
+            <span className="text-[8px] text-zinc-600">{new Date().toLocaleTimeString('en-US', { hour12: false })}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-px bg-zinc-800">
+          <div className="bg-black p-2 sm:p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[8px] text-zinc-500 font-bold tracking-wider">TBI OSCILLATOR</span>
+              <span className={`text-[9px] sm:text-[10px] font-black ${tbiPct >= 0 ? "text-lime-400" : "text-red-400"}`}>
+                {tbiPct >= 0 ? "+" : ""}{tbiPct}%
+              </span>
+            </div>
+            <div className="h-12 sm:h-14 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
+              <OscillatorWave color="#4ade80" speed={1.2} amplitude={12} phase={0} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] text-zinc-600">BASE: $7.00</span>
+              <span className="text-xs sm:text-sm text-lime-400 font-black">${tbiLive.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="bg-black p-2 sm:p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[8px] text-zinc-500 font-bold tracking-wider">MBBP MOMENTUM</span>
+              <span className={`text-[9px] sm:text-[10px] font-black ${mbbPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                {mbbPct >= 0 ? "+" : ""}{mbbPct}%
+              </span>
+            </div>
+            <div className="h-12 sm:h-14 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
+              <OscillatorWave color="#34d399" speed={0.8} amplitude={10} phase={2} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] text-zinc-600">BASE: $21.00</span>
+              <span className="text-xs sm:text-sm text-emerald-400 font-black">${mbbLive.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-px bg-zinc-800 border-t border-zinc-800">
+          <div className="bg-black p-1.5 sm:p-2 text-center">
+            <p className="text-[7px] text-zinc-600 font-bold">MBBP RATIO</p>
+            <p className="text-[10px] sm:text-xs text-amber-400 font-black">{mbbpRatio}%</p>
+          </div>
+          <div className="bg-black p-1.5 sm:p-2 text-center">
+            <p className="text-[7px] text-zinc-600 font-bold">SPLIT</p>
+            <p className="text-[10px] sm:text-xs text-emerald-400 font-black">54 / 46</p>
+          </div>
+          <div className="bg-black p-1.5 sm:p-2 text-center">
+            <p className="text-[7px] text-zinc-600 font-bold">SETTLEMENT</p>
+            <p className="text-[10px] sm:text-xs text-lime-400 font-black">$540/K</p>
+          </div>
+          <div className="bg-black p-1.5 sm:p-2 text-center">
+            <p className="text-[7px] text-zinc-600 font-bold">PORTALS</p>
+            <p className="text-[10px] sm:text-xs text-white font-black">81</p>
+          </div>
+        </div>
+
+        <div className="border-t border-zinc-800 px-3 py-1.5 flex gap-1 overflow-x-auto scrollbar-hide">
+          {tiers.map(t => (
+            <span key={t.name} className={`text-[7px] sm:text-[8px] font-bold border border-zinc-800 px-1 sm:px-1.5 py-0.5 bg-zinc-950 whitespace-nowrap flex-shrink-0 ${t.color}`}>
+              {t.name} ${t.tbi}
+            </span>
+          ))}
+        </div>
+
+        <div className="border-t border-emerald-500/20 p-3 sm:p-4">
+          <button
+            onClick={onSignup}
+            className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-emerald-600 via-lime-600 to-emerald-600 hover:from-emerald-500 hover:via-lime-500 hover:to-emerald-500 text-white font-black text-base sm:text-lg tracking-wider transition-all transform active:scale-[0.98] shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.4)] border border-emerald-400/30"
+            data-testid="button-24hr-trader"
+          >
+            <span className="flex items-center justify-center gap-2">
+              ⚡ CREATE 24HR TRADER ⚡
+            </span>
+          </button>
+          <div className="mt-2 flex items-center justify-center gap-3 sm:gap-4 text-[8px] sm:text-[9px]">
+            <span className="text-lime-400/80 font-bold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> NO SIMULATION
+            </span>
+            <span className="text-zinc-700">|</span>
+            <span className="text-emerald-400/80 font-bold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> LIVE FLOOR
+            </span>
+            <span className="text-zinc-700">|</span>
+            <span className="text-amber-400/80 font-bold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> FEEL THE HEAT
+            </span>
+          </div>
+        </div>
+
+        <div className="px-3 py-1.5 border-t border-emerald-500/10 bg-emerald-500/5 flex items-center justify-between">
+          <span className="text-[7px] sm:text-[8px] text-zinc-600">AITIFY EXCHANGE v2.0</span>
+          <span className="text-[7px] sm:text-[8px] text-emerald-500/50 font-bold">9 TIERS × 9 RISK PROFILES</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
@@ -751,12 +931,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="max-w-lg mx-auto mb-8">
-            <HeroPlayer />
-          </div>
+          <StimulationBoard onSignup={() => openAuth("signup")} />
 
-
-          <div className="flex flex-wrap gap-3 justify-center">
+          <div className="flex flex-wrap gap-3 justify-center mt-6">
             <Button size="lg" variant="outline" asChild className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono">
               <a href="#pricing">
                 VIEW FINANCING TERMS
@@ -767,59 +944,6 @@ export default function LandingPage() {
               OPEN TRADING ACCOUNT
               <ArrowRight className="h-4 w-4" />
             </Button>
-          </div>
-
-          <div className="mt-10 max-w-xl mx-auto">
-            <div className="border border-emerald-500/30 bg-black relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-lime-500/5 to-emerald-500/5 animate-pulse" />
-              <div className="relative">
-                <div className="flex items-center justify-between px-4 py-2 border-b border-emerald-500/20 bg-emerald-500/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse" />
-                    <span className="text-[9px] text-emerald-400 font-bold tracking-widest font-mono">24HR LIVE MARKET ACCESS</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-red-400 font-bold animate-pulse">🔥</span>
-                    <span className="text-[9px] text-amber-400 font-extrabold font-mono">STIMULATION ACTIVE</span>
-                  </div>
-                </div>
-                <div className="px-4 py-5 sm:py-6 text-center">
-                  <div className="flex items-center justify-center gap-3 mb-3">
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
-                    <span className="text-[10px] text-emerald-500/60 font-mono font-bold tracking-wider">SOVEREIGN EXCHANGE TERMINAL</span>
-                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-emerald-500/40 to-transparent" />
-                  </div>
-                  <button
-                    onClick={() => openAuth("signup")}
-                    className="w-full py-4 sm:py-5 bg-gradient-to-r from-emerald-600 via-lime-600 to-emerald-600 hover:from-emerald-500 hover:via-lime-500 hover:to-emerald-500 text-white font-mono font-black text-lg sm:text-xl tracking-wider transition-all transform active:scale-[0.98] shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.35)] border border-emerald-400/30"
-                    data-testid="button-24hr-trader"
-                  >
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="text-lg">⚡</span>
-                      CREATE 24HR TRADER
-                      <span className="text-lg">⚡</span>
-                    </span>
-                  </button>
-                  <div className="mt-3 flex items-center justify-center gap-4 text-[9px] font-mono">
-                    <span className="text-lime-400/80 font-bold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> NO SIMULATION
-                    </span>
-                    <span className="text-zinc-600">|</span>
-                    <span className="text-emerald-400/80 font-bold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> LIVE FLOOR
-                    </span>
-                    <span className="text-zinc-600">|</span>
-                    <span className="text-amber-400/80 font-bold flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> FEEL THE HEAT
-                    </span>
-                  </div>
-                </div>
-                <div className="px-4 py-2 border-t border-emerald-500/20 bg-emerald-500/5 flex items-center justify-between">
-                  <span className="text-[8px] text-zinc-600 font-mono">AITIFY EXCHANGE v2.0</span>
-                  <span className="text-[8px] text-emerald-500/50 font-mono font-bold">81 PORTALS • 9 TIERS • 9 RISK PROFILES</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
