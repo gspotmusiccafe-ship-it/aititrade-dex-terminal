@@ -3,7 +3,6 @@ import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star,
 const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE/25.00";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
-import GlobalRadio from "@/components/GlobalRadio";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -762,9 +761,6 @@ export default function LandingPage() {
             <HeroPlayer />
           </div>
 
-          <div className="max-w-3xl mx-auto mb-10">
-            <GlobalRadio />
-          </div>
 
           <div className="flex flex-wrap gap-3 justify-center">
             <Button size="lg" variant="outline" asChild className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono">

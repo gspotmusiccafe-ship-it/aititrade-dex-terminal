@@ -10,6 +10,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { MusicPlayer } from "@/components/music-player";
 import { useAuth } from "@/hooks/use-auth";
 import { MarketTicker } from "@/components/market-ticker";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import NotFound from "@/pages/not-found";
 import LandingPage from "@/pages/landing";
 import HomePage from "@/pages/home";

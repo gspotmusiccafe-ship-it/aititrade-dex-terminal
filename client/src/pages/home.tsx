@@ -10,6 +10,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 import GlobalRadio from "@/components/GlobalRadio";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Link } from "wouter";
 
 const CEILING = 1000.00;
@@ -1042,7 +1043,9 @@ export default function HomePage() {
       </div>
 
       <div className="p-4">
-        <GlobalRadio />
+        <ErrorBoundary>
+          <GlobalRadio />
+        </ErrorBoundary>
       </div>
 
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
