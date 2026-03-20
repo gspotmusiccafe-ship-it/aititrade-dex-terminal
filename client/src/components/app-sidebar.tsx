@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3, Rocket } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3, Rocket, Upload } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -200,6 +200,16 @@ export function AppSidebar() {
                     <Link href="/dashboard?cert=1" data-testid="nav-trust-certificate">
                       <ScrollText className="h-5 w-5 text-amber-400" />
                       <span className="text-amber-400 font-bold">Trust Certificate</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+              {adminCheck?.isAdmin && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/artist-portal"}>
+                    <Link href="/artist-portal" data-testid="nav-mint-factory">
+                      <Upload className="h-5 w-5 text-lime-400" />
+                      <span className="text-lime-400 font-extrabold">Mint Factory</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
