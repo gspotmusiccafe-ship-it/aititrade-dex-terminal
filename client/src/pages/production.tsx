@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle2, AlertTriangle, Music, Image, Rocket, DollarSign, FileText, Zap, Radio } from "lucide-react";
 
@@ -31,8 +31,6 @@ export default function ProductionPage() {
   const [visualPrompt, setVisualPrompt] = useState("");
   const [assetTitle, setAssetTitle] = useState("");
   const [unitPrice, setUnitPrice] = useState("25.00");
-  const [step, setStep] = useState<"compose" | "review" | "pushing">("compose");
-
   const [audioResult, setAudioResult] = useState<GenerationResult | null>(null);
   const [visualResult, setVisualResult] = useState<GenerationResult | null>(null);
 
@@ -45,70 +43,37 @@ export default function ProductionPage() {
   const monthly = trustStatus?.member?.monthlyCommitment || "19.79";
   const monthsLeft = trustStatus?.member?.monthsRemaining || 24;
 
-  const sunoMutation = useMutation({
+  const pushMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/admin/suno-generate", {
-        prompt: audioPrompt || assetTitle,
-        style: audioStyle,
-        makeInstrumental,
-      });
-    },
-    onSuccess: (data: any) => {
-      setAudioResult(data);
-      toast({ title: "AUDIO GENERATED", description: `Suno asset created — $0.35 lent to trust` });
-    },
-    onError: (err: any) => {
-      toast({ title: "AUDIO GENERATION FAILED", description: err.message || "Check SUNO_API_KEY", variant: "destructive" });
-    },
-  });
-
-  const ideogramMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/admin/ideogram-generate", {
-        trackTitle: assetTitle,
-        customPrompt: visualPrompt || undefined,
-        aspectRatio: "1:1",
-      });
-    },
-    onSuccess: (data: any) => {
-      setVisualResult(data);
-      toast({ title: "ARTWORK GENERATED", description: `Ideogram visual created — $0.03 lent to trust` });
-    },
-    onError: (err: any) => {
-      toast({ title: "ART GENERATION FAILED", description: err.message || "Check IDEOGRAM_API_KEY", variant: "destructive" });
-    },
-  });
-
-  const directPushMutation = useMutation({
-    mutationFn: async () => {
-      return apiRequest("POST", "/api/distribute/direct-push", {
+      const res = await apiRequest("POST", "/api/production/push", {
         title: assetTitle,
-        prompt: audioPrompt || assetTitle,
+        audioPrompt: audioPrompt || assetTitle,
+        visualPrompt: visualPrompt || undefined,
         style: audioStyle,
-        price: parseFloat(unitPrice),
+        unitPrice: parseFloat(unitPrice),
         makeInstrumental,
-        aspectRatio: "1:1",
       });
+      return res.json();
     },
     onSuccess: (data: any) => {
-      setStep("compose");
+      setAudioResult(data.audio ? { status: data.audio.status, suno_id: data.audio.suno_id } : null);
+      setVisualResult(data.artwork ? { status: data.artwork.status, imageUrl: data.artwork.imageUrl } : null);
+      setAssetTitle("");
       setAudioPrompt("");
       setVisualPrompt("");
-      setAssetTitle("");
-      setAudioResult(null);
-      setVisualResult(null);
       toast({
         title: "ASSET PUSHED TO GLOBAL FLOOR",
-        description: `${data.ticker || assetTitle} is now LIVE on 97.7 THE FLAME — $0.38 wholesale`,
+        description: `${data.assetTicker} LIVE — $${data.pricing?.wholesaleCost || 0.38} debited from trust note. Balance: $${data.ledger?.newBalance}`,
       });
+      queryClient.invalidateQueries({ queryKey: ["/api/trust/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
     },
     onError: (err: any) => {
       toast({ title: "PUSH FAILED", description: err.message || "Pipeline error", variant: "destructive" });
     },
   });
 
-  const isGenerating = sunoMutation.isPending || ideogramMutation.isPending;
-  const isPushing = directPushMutation.isPending;
+  const isPushing = pushMutation.isPending;
   const canPush = assetTitle.trim().length > 0;
 
   return (
@@ -227,20 +192,9 @@ export default function ProductionPage() {
                     <span className="text-zinc-400 text-[9px] font-mono">INSTRUMENTAL</span>
                   </label>
                 </div>
-                <button
-                  onClick={() => sunoMutation.mutate()}
-                  disabled={sunoMutation.isPending || !canPush}
-                  className="w-full mt-3 bg-zinc-800 border border-green-600/30 text-green-400 text-[10px] font-mono font-extrabold py-2 hover:bg-green-900/20 hover:border-green-500/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  data-testid="button-generate-audio"
-                >
-                  {sunoMutation.isPending ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> GENERATING AUDIO...</>
-                  ) : audioResult ? (
-                    <><CheckCircle2 className="h-3 w-3" /> AUDIO READY — REGENERATE</>
-                  ) : (
-                    <><Music className="h-3 w-3" /> GENERATE AUDIO — $0.35</>
-                  )}
-                </button>
+                <div className="w-full mt-3 bg-zinc-800/50 border border-zinc-700 text-zinc-500 text-[10px] font-mono font-extrabold py-2 text-center flex items-center justify-center gap-2">
+                  <Music className="h-3 w-3" /> INCLUDED IN FULL PUSH — $0.35
+                </div>
               </div>
 
               <div className="p-4 bg-black border border-zinc-800">
@@ -259,20 +213,9 @@ export default function ProductionPage() {
                   data-testid="textarea-visual-prompt"
                 />
                 <span className="text-zinc-500 text-[9px] font-mono font-bold">COST: $0.03 LENT TO TRUST</span>
-                <button
-                  onClick={() => ideogramMutation.mutate()}
-                  disabled={ideogramMutation.isPending || !canPush}
-                  className="w-full mt-3 bg-zinc-800 border border-green-600/30 text-green-400 text-[10px] font-mono font-extrabold py-2 hover:bg-green-900/20 hover:border-green-500/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  data-testid="button-generate-visual"
-                >
-                  {ideogramMutation.isPending ? (
-                    <><Loader2 className="h-3 w-3 animate-spin" /> GENERATING ARTWORK...</>
-                  ) : visualResult ? (
-                    <><CheckCircle2 className="h-3 w-3" /> ARTWORK READY — REGENERATE</>
-                  ) : (
-                    <><Image className="h-3 w-3" /> GENERATE ARTWORK — $0.03</>
-                  )}
-                </button>
+                <div className="w-full mt-3 bg-zinc-800/50 border border-zinc-700 text-zinc-500 text-[10px] font-mono font-extrabold py-2 text-center flex items-center justify-center gap-2">
+                  <Image className="h-3 w-3" /> INCLUDED IN FULL PUSH — $0.03
+                </div>
 
                 {visualResult?.imageUrl && (
                   <div className="mt-3 border border-zinc-700 overflow-hidden">
@@ -323,7 +266,7 @@ export default function ProductionPage() {
               </div>
 
               <button
-                onClick={() => directPushMutation.mutate()}
+                onClick={() => pushMutation.mutate()}
                 disabled={isPushing || !canPush}
                 className="w-full bg-green-600 py-4 text-white font-black text-xl hover:bg-green-400 transition-all font-mono disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                 data-testid="button-push-to-floor"

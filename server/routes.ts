@@ -3131,6 +3131,304 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  // ═══════════════════════════════════════════════════════════════
+  // THE PUSHER ENGINE — Trust Member Production Pipeline
+  // Suno/Ideogram → DB Track → Ledger Debit → Floor Listing
+  // ═══════════════════════════════════════════════════════════════
+  app.post("/api/production/push", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { title, audioPrompt, visualPrompt, style, unitPrice, makeInstrumental } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ message: "Asset title required" });
+      }
+
+      const member = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
+      if (member.length === 0) {
+        return res.status(403).json({
+          error: "PROMISSORY NOTE ACTIVATION REQUIRED",
+          message: "You must be a trust member to push assets. Activate your $25 down payment.",
+          redirect: "/membership",
+        });
+      }
+
+      const tm = member[0];
+      const outstanding = parseFloat(tm.outstandingBalance || "475.00");
+
+      if (outstanding <= 0) {
+        return res.status(403).json({
+          error: "NOTE FULLY AMORTIZED",
+          message: "Your promissory note is fully paid. Contact admin to renew.",
+        });
+      }
+
+      console.log(`[PUSHER] ${userId} pushing asset: "${title}" | Trust: ${tm.trustId} | Balance: $${outstanding}`);
+
+      const sunoKey = process.env.SUNO_API_KEY;
+      const ideogramKey = process.env.IDEOGRAM_API_KEY;
+
+      let audioAsset = { suno_id: null as string | null, audioUrl: null as string | null, status: "SKIPPED" };
+      let visualAsset = { imageUrl: null as string | null, status: "SKIPPED" };
+
+      const wholesaleAudio = 0.35;
+      const wholesaleArt = 0.03;
+      const totalWholesale = wholesaleAudio + wholesaleArt;
+
+      if (sunoKey) {
+        try {
+          const sunoRes = await fetch("https://api.suno.ai/v1/generate", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${sunoKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prompt: audioPrompt || title,
+              tags: style || "Global Trade Beat",
+              mv: "chirp-v3.5",
+              make_instrumental: !!makeInstrumental,
+            }),
+          });
+          if (sunoRes.ok) {
+            const sunoData = await sunoRes.json();
+            audioAsset = { suno_id: sunoData.id || null, audioUrl: sunoData.audio_url || null, status: "MINTING_PENDING" };
+            console.log(`[PUSHER] Suno generated: ${audioAsset.suno_id || "pending"}`);
+          } else {
+            console.error(`[PUSHER] Suno API error: ${sunoRes.status}`);
+            audioAsset.status = "API_ERROR";
+          }
+        } catch (e: any) {
+          console.error(`[PUSHER] Suno fetch error:`, e.message);
+          audioAsset.status = "FETCH_ERROR";
+        }
+      } else {
+        audioAsset.status = "NO_KEY";
+      }
+
+      if (ideogramKey) {
+        try {
+          const artPrompt = visualPrompt || `Cinematic trading floor style album art for "${title}", neon green and obsidian, high-tech digital asset style`;
+          const ideogramRes = await fetch("https://api.ideogram.ai/generate", {
+            method: "POST",
+            headers: { "Api-Key": ideogramKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: artPrompt, aspect_ratio: "1:1", model: "v-2" }),
+          });
+          if (ideogramRes.ok) {
+            const artData = await ideogramRes.json();
+            visualAsset = { imageUrl: artData.data?.[0]?.url || artData.url || null, status: "ART_READY" };
+            console.log(`[PUSHER] Ideogram generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
+          } else {
+            console.error(`[PUSHER] Ideogram API error: ${ideogramRes.status}`);
+            visualAsset.status = "API_ERROR";
+          }
+        } catch (e: any) {
+          console.error(`[PUSHER] Ideogram fetch error:`, e.message);
+          visualAsset.status = "FETCH_ERROR";
+        }
+      } else {
+        visualAsset.status = "NO_KEY";
+      }
+
+      const ticker = title.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+      const price = parseFloat(String(unitPrice || 5.00));
+      const buyBack = parseFloat((price * 1.80).toFixed(2));
+
+      const defaultArtistId = "ac86c1b3-363b-4567-be22-2691d3adcb6e";
+
+      const [newTrack] = await db.insert(tracks).values({
+        artistId: defaultArtistId,
+        title,
+        duration: 180,
+        audioUrl: audioAsset.audioUrl || `suno-pending://${audioAsset.suno_id || "queue"}`,
+        coverImage: visualAsset.imageUrl || null,
+        unitPrice: price.toString(),
+        buyBackRate: buyBack.toString(),
+        salesCount: 0,
+        assetClass: "standard",
+        releaseType: "native",
+        aiModel: "AITIFY-GEN-1",
+        isFeatured: true,
+        isPrerelease: false,
+        genre: style || "Global Trade Beat",
+      }).returning();
+
+      const newBalance = parseFloat((outstanding - totalWholesale).toFixed(2));
+      await db.update(trustMembers)
+        .set({ outstandingBalance: newBalance.toString() })
+        .where(eq(trustMembers.id, tm.id));
+
+      console.log(`[PUSHER] Asset ${ticker} LIVE | Track ID: ${newTrack.id} | Wholesale: $${totalWholesale} | New Balance: $${newBalance}`);
+
+      const floor54 = parseFloat((price * FLOOR_SPLIT).toFixed(4));
+      const ceo46 = parseFloat((price * CEO_SPLIT).toFixed(4));
+      const trustTithe = parseFloat((ceo46 * 0.10).toFixed(4));
+      const blessing = parseFloat((ceo46 - trustTithe).toFixed(4));
+
+      res.json({
+        status: "PUSHED",
+        assetTicker: `$${ticker}`,
+        trackId: newTrack.id,
+        title,
+        audio: { suno_id: audioAsset.suno_id, status: audioAsset.status, engine: "chirp-v3.5" },
+        artwork: { imageUrl: visualAsset.imageUrl, status: visualAsset.status, engine: "ideogram-v2" },
+        pricing: { unitPrice: price, buyBack, roi: parseFloat((((buyBack - price) / price) * 100).toFixed(1)), wholesaleCost: totalWholesale },
+        split: { floor: floor54, ceoGross: ceo46, trustTithe, blessing, mandate: "54/46" },
+        ledger: {
+          previousBalance: outstanding,
+          debit: totalWholesale,
+          newBalance,
+          monthlyCommitment: tm.monthlyCommitment,
+          monthsRemaining: tm.monthsRemaining,
+          trustId: tm.trustId,
+        },
+        amortization: `$${tm.monthlyCommitment}/MO × ${tm.monthsRemaining} MONTHS REMAINING`,
+        settlement: "https://cash.app/$AITITRADEBROKERAGE",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("[PUSHER] Pipeline error:", error);
+      res.status(500).json({ message: "Production push failed" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // SETTLEMENT ENGINE — $1K Accumulated Intake FIFO Cycle
+  // ═══════════════════════════════════════════════════════════════
+  app.get("/api/settlement/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const allNativeTracks = await db.select({
+        id: tracks.id,
+        title: tracks.title,
+        unitPrice: tracks.unitPrice,
+        salesCount: tracks.salesCount,
+      }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
+
+      const systemIntake = allNativeTracks.reduce((sum, t) => {
+        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "5.00"));
+      }, 0);
+
+      const settlementThreshold = POOL_CEILING;
+      const currentCycle = Math.floor(systemIntake / settlementThreshold) + 1;
+      const cycleProgress = systemIntake % settlementThreshold;
+      const cyclePct = parseFloat(((cycleProgress / settlementThreshold) * 100).toFixed(1));
+
+      const pendingOrders = await db.select({
+        id: orders.id,
+        trackId: orders.trackId,
+        unitPrice: orders.unitPrice,
+        createdAt: orders.createdAt,
+        status: orders.status,
+      }).from(orders)
+        .where(eq(orders.status, "confirmed"))
+        .orderBy(orders.createdAt);
+
+      const fifoQueue = pendingOrders.map((o, i) => ({
+        position: i + 1,
+        orderId: o.id,
+        trackId: o.trackId,
+        buyIn: parseFloat(o.unitPrice || "5.00"),
+        buyBack: parseFloat((parseFloat(o.unitPrice || "5.00") * 1.80).toFixed(2)),
+        status: cycleProgress >= settlementThreshold ? "SETTLING" : "QUEUED",
+      }));
+
+      res.json({
+        systemIntake: parseFloat(systemIntake.toFixed(2)),
+        settlementThreshold,
+        currentCycle,
+        cycleProgress: parseFloat(cycleProgress.toFixed(2)),
+        cyclePct,
+        fifoQueueLength: fifoQueue.length,
+        fifoQueue: fifoQueue.slice(0, 25),
+        splitMandate: "54/46",
+        buyBackMultiplier: 1.80,
+        floor54: parseFloat((systemIntake * FLOOR_SPLIT).toFixed(2)),
+        ceo46: parseFloat((systemIntake * CEO_SPLIT).toFixed(2)),
+      });
+    } catch (error: any) {
+      console.error("[SETTLEMENT] Status error:", error);
+      res.status(500).json({ message: "Failed to fetch settlement status" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // TRADER PORTAL — Individual trader profile + positions
+  // ═══════════════════════════════════════════════════════════════
+  app.get("/api/trader/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const targetUserId = req.params.userId;
+      const requestingUserId = req.user?.claims?.sub;
+
+      const requestingUser = await storage.getUser(requestingUserId);
+      if (targetUserId !== requestingUserId && !requestingUser?.isAdmin) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const user = await storage.getUser(targetUserId);
+      if (!user) {
+        return res.status(404).json({ message: "Trader not found" });
+      }
+
+      const trustMember = await db.select().from(trustMembers).where(eq(trustMembers.userId, targetUserId)).limit(1);
+      const isTrustMember = trustMember.length > 0;
+      const tm = trustMember[0] || null;
+
+      const traderOrders = await db.select({
+        id: orders.id,
+        trackId: orders.trackId,
+        trackingNumber: orders.trackingNumber,
+        unitPrice: orders.unitPrice,
+        status: orders.status,
+        createdAt: orders.createdAt,
+      }).from(orders)
+        .where(sql`${orders.buyerEmail} = ${user.email} OR ${orders.buyerName} = ${user.username}`)
+        .orderBy(desc(orders.createdAt))
+        .limit(50);
+
+      const positions = await Promise.all(traderOrders.map(async (o) => {
+        const [track] = await db.select({ title: tracks.title, coverImage: tracks.coverImage, buyBackRate: tracks.buyBackRate }).from(tracks).where(eq(tracks.id, o.trackId)).limit(1);
+        const buyIn = parseFloat(o.unitPrice || "5.00");
+        const buyBack = parseFloat(track?.buyBackRate || (buyIn * 1.80).toFixed(2));
+        return {
+          ...o,
+          trackTitle: track?.title || "UNKNOWN",
+          coverImage: track?.coverImage || null,
+          buyIn,
+          buyBack,
+          roi: parseFloat((((buyBack - buyIn) / buyIn) * 100).toFixed(1)),
+        };
+      }));
+
+      const totalInvested = positions.reduce((sum, p) => sum + p.buyIn, 0);
+      const totalBuyBack = positions.reduce((sum, p) => sum + p.buyBack, 0);
+
+      res.json({
+        trader: {
+          id: targetUserId,
+          username: user.username || "ANON",
+          profileImage: user.profileImageUrl || null,
+          isAdmin: user.isAdmin || false,
+        },
+        trust: isTrustMember ? {
+          trustId: tm!.trustId,
+          noteAmount: tm!.promissoryNoteAmount || 500,
+          outstandingBalance: parseFloat(tm!.outstandingBalance || "475.00"),
+          monthlyCommitment: tm!.monthlyCommitment || "19.79",
+          monthsRemaining: tm!.monthsRemaining || 24,
+          isBeneficiary: tm!.isBeneficiary,
+          giftedYield: parseFloat(tm!.giftedYield || "0.00"),
+        } : null,
+        positions,
+        summary: {
+          totalPositions: positions.length,
+          totalInvested: parseFloat(totalInvested.toFixed(2)),
+          totalBuyBack: parseFloat(totalBuyBack.toFixed(2)),
+          projectedROI: totalInvested > 0 ? parseFloat((((totalBuyBack - totalInvested) / totalInvested) * 100).toFixed(1)) : 0,
+        },
+      });
+    } catch (error: any) {
+      console.error("[TRADER_PORTAL] Error:", error);
+      res.status(500).json({ message: "Failed to load trader portal" });
+    }
+  });
+
   app.post("/api/trust/join", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

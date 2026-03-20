@@ -27,6 +27,7 @@ import LeaderboardPage from "@/pages/leaderboard";
 import DashboardPage from "@/pages/dashboard";
 import TrustVaultPage from "@/pages/trust-vault";
 import ProductionPage from "@/pages/production";
+import TraderPage from "@/pages/trader";
 import { useEffect } from "react";
 
 interface TrustStatus {
@@ -141,6 +142,8 @@ function AuthenticatedLayout() {
               <Route path="/dashboard">{() => <PremiumGate><DashboardPage /></PremiumGate>}</Route>
               <Route path="/trust-vault">{() => <PremiumGate><TrustVaultPage /></PremiumGate>}</Route>
               <Route path="/production">{() => <PremiumGate><ProductionPage /></PremiumGate>}</Route>
+              <Route path="/trader/:userId">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
+              <Route path="/trader">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
               <Route path="/login" component={LandingPage} />
               <Route component={NotFound} />
             </Switch>

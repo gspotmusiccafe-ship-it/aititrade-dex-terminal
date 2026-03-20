@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, Rocket } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Upload, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, Rocket, BarChart3 } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -213,6 +213,14 @@ export function AppSidebar() {
                   <Link href="/production" data-testid="nav-production">
                     <Rocket className="h-5 w-5 text-green-500" />
                     <span className="text-green-400 font-extrabold">Production Terminal</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/trader" || location.startsWith("/trader/")}>
+                  <Link href="/trader" data-testid="nav-trader-portal">
+                    <BarChart3 className="h-5 w-5 text-green-500" />
+                    <span className="text-green-400 font-extrabold">Trader Portal</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
