@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback } from "react";
 import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
@@ -3914,6 +3914,223 @@ function WithdrawalTool() {
   );
 }
 
+function SettlementGovernorTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: dashboard, isLoading } = useQuery<{
+    grossIntake: number;
+    ksReached: number;
+    totalOwed54: number;
+    totalPaidOut: number;
+    fundAvailable: number;
+    payoutPerK: number;
+    totalTraders: number;
+    queuedCount: number;
+    holdingCount: number;
+    settledCount: number;
+    currentCycle: number;
+    cycleThreshold: number;
+    nextKAt: number;
+    ceo46Total: number;
+    recentSettlements: any[];
+    topQueue: any[];
+  }>({
+    queryKey: ["/api/settlement/status"],
+    refetchInterval: 10000,
+  });
+
+  const runCycleMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/settlement/run-cycle");
+      if (!res.ok) throw new Error("Failed to run cycle");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Settlement Cycle Complete", description: `Cycle #${data.cycleNumber} — ${data.settled?.length || 0} settled, ${data.holding?.length || 0} holding` });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+    },
+    onError: () => toast({ title: "Cycle Failed", variant: "destructive" }),
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: async (queueId: string) => {
+      const res = await apiRequest("POST", "/api/settlement/accept", { queueId });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "Settlement Accepted", description: `$${data.payout?.toFixed(2)} paid at ${data.multiplier?.toFixed(2)}x` });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+    },
+    onError: (err: any) => toast({ title: "Accept Failed", description: err.message, variant: "destructive" }),
+  });
+
+  if (isLoading) return <div className="p-8 text-center text-zinc-500 font-mono">Loading Settlement Governor...</div>;
+  if (!dashboard) return <div className="p-8 text-center text-zinc-500 font-mono">No settlement data</div>;
+
+  const distToClose = Math.max(0, dashboard.nextKAt - dashboard.grossIntake);
+  const cyclePct = Math.min(100, ((dashboard.grossIntake % 1000) / 1000) * 100);
+
+  return (
+    <div className="space-y-4 font-mono">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-black text-emerald-400">SETTLEMENT GOVERNOR</h2>
+          <p className="text-[10px] text-zinc-500">54/46 G. SMOOTH GLOBAL MANDATE — EVERY $1K = $540 PAYOUT</p>
+        </div>
+        <Button
+          onClick={() => runCycleMutation.mutate()}
+          disabled={runCycleMutation.isPending || dashboard.fundAvailable <= 0}
+          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+          data-testid="button-run-settlement-cycle"
+        >
+          {runCycleMutation.isPending ? "RUNNING..." : "RUN SETTLEMENT CYCLE"}
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="bg-zinc-900 border border-emerald-500/20 p-3">
+          <p className="text-[9px] text-zinc-500 tracking-wider">GROSS INTAKE</p>
+          <p className="text-lg text-emerald-400 font-black">${dashboard.grossIntake.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-zinc-900 border border-emerald-500/20 p-3">
+          <p className="text-[9px] text-zinc-500 tracking-wider">54% TRADER POOL</p>
+          <p className="text-lg text-lime-400 font-black">${dashboard.totalOwed54.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-zinc-900 border border-emerald-500/20 p-3">
+          <p className="text-[9px] text-zinc-500 tracking-wider">46% CEO TAKE</p>
+          <p className="text-lg text-amber-400 font-black">${dashboard.ceo46Total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+        </div>
+        <div className="bg-zinc-900 border border-emerald-500/20 p-3">
+          <p className="text-[9px] text-zinc-500 tracking-wider">FUND AVAILABLE</p>
+          <p className={`text-lg font-black ${dashboard.fundAvailable > 0 ? "text-emerald-400" : "text-zinc-500"}`}>${dashboard.fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+        </div>
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-800 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] text-zinc-400 font-bold">DISTANCE TO NEXT $540 PAYOUT</span>
+          <span className={`text-sm font-black ${distToClose <= 100 ? "text-red-400 animate-pulse" : distToClose <= 200 ? "text-amber-400" : "text-lime-400"}`}>
+            ${distToClose.toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY
+          </span>
+        </div>
+        <div className="w-full bg-zinc-800 h-4 overflow-hidden border border-zinc-700">
+          <div
+            className={`h-full transition-all duration-500 ${distToClose <= 100 ? "bg-red-500 animate-pulse" : distToClose <= 200 ? "bg-amber-500" : "bg-emerald-500"}`}
+            style={{ width: `${cyclePct}%` }}
+          />
+        </div>
+        <div className="flex justify-between mt-1 text-[9px] text-zinc-500">
+          <span>{dashboard.ksReached}K CYCLES COMPLETED</span>
+          <span>NEXT K @ ${dashboard.nextKAt.toLocaleString()}</span>
+          <span>PAID OUT: ${dashboard.totalPaidOut.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2">
+        <div className="bg-zinc-900 border border-zinc-800 p-2 text-center">
+          <p className="text-[9px] text-zinc-500">TOTAL TRADERS</p>
+          <p className="text-lg text-white font-black">{dashboard.totalTraders}</p>
+        </div>
+        <div className="bg-zinc-900 border border-emerald-500/20 p-2 text-center">
+          <p className="text-[9px] text-zinc-500">QUEUED</p>
+          <p className="text-lg text-emerald-400 font-black">{dashboard.queuedCount}</p>
+        </div>
+        <div className="bg-zinc-900 border border-amber-500/20 p-2 text-center">
+          <p className="text-[9px] text-zinc-500">HOLDING</p>
+          <p className="text-lg text-amber-400 font-black">{dashboard.holdingCount}</p>
+        </div>
+        <div className="bg-zinc-900 border border-lime-500/20 p-2 text-center">
+          <p className="text-[9px] text-zinc-500">SETTLED</p>
+          <p className="text-lg text-lime-400 font-black">{dashboard.settledCount}</p>
+        </div>
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-800">
+        <div className="px-3 py-2 border-b border-zinc-800 flex items-center justify-between">
+          <span className="text-[10px] text-emerald-400 font-extrabold tracking-wider">FIFO SETTLEMENT QUEUE</span>
+          <span className="text-[9px] text-zinc-500">{dashboard.topQueue?.length || 0} IN LINE</span>
+        </div>
+        {dashboard.topQueue && dashboard.topQueue.length > 0 ? (
+          <div className="divide-y divide-zinc-800">
+            {dashboard.topQueue.map((entry: any, idx: number) => {
+              const pctGain = entry.buyIn > 0 ? (((entry.currentOffer - entry.buyIn) / entry.buyIn) * 100).toFixed(0) : "0";
+              const maxPctGain = entry.buyIn > 0 ? (((entry.maxPayout - entry.buyIn) / entry.buyIn) * 100).toFixed(0) : "0";
+              return (
+                <div key={entry.queueId} className="px-3 py-2 flex items-center gap-3 hover:bg-zinc-800/50 transition-colors" data-testid={`settlement-row-${entry.queueId}`}>
+                  <div className="w-8 text-center">
+                    <span className={`text-sm font-black ${idx === 0 ? "text-emerald-400" : idx < 3 ? "text-lime-400" : "text-zinc-400"}`}>#{entry.queuePosition}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-white font-bold truncate">{entry.userId.slice(0, 12)}...</span>
+                      <span className={`text-[8px] px-1 py-0.5 border font-bold ${
+                        entry.status === "OFFERED" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" :
+                        entry.status === "HOLDING" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                        entry.status === "SETTLED" ? "text-lime-400 border-lime-500/30 bg-lime-500/10" :
+                        "text-zinc-400 border-zinc-600 bg-zinc-800"
+                      }`}>{entry.status}</span>
+                      <span className="text-[8px] text-zinc-600">{entry.portalName}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-[9px] text-zinc-500">BUY-IN: <span className="text-white font-bold">${entry.buyIn.toFixed(2)}</span></span>
+                      <span className="text-[9px] text-zinc-500">OFFER: <span className="text-emerald-400 font-bold">${entry.currentOffer.toFixed(2)} ({pctGain}%)</span></span>
+                      <span className="text-[9px] text-zinc-500">MAX: <span className="text-amber-400 font-bold">${entry.maxPayout.toFixed(2)} ({maxPctGain}%)</span></span>
+                      <span className="text-[9px] text-zinc-500">HELD: <span className="text-white">{entry.cyclesHeld}x</span></span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {entry.status !== "SETTLED" && (
+                      <Button
+                        size="sm"
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-bold h-7 px-2"
+                        onClick={() => acceptMutation.mutate(entry.queueId)}
+                        disabled={acceptMutation.isPending}
+                        data-testid={`button-settle-${entry.queueId}`}
+                      >
+                        SETTLE ${entry.currentOffer.toFixed(2)}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-8 text-center text-zinc-500 text-sm">
+            <p>No traders in settlement queue</p>
+            <p className="text-[10px] text-zinc-600 mt-1">Traders are enqueued automatically when they acquire positions</p>
+          </div>
+        )}
+      </div>
+
+      {dashboard.recentSettlements && dashboard.recentSettlements.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800">
+          <div className="px-3 py-2 border-b border-zinc-800">
+            <span className="text-[10px] text-lime-400 font-extrabold tracking-wider">RECENT SETTLEMENTS</span>
+          </div>
+          <div className="divide-y divide-zinc-800">
+            {dashboard.recentSettlements.map((s: any) => (
+              <div key={s.queueId} className="px-3 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] text-zinc-400">{s.userId.slice(0, 12)}...</span>
+                  <span className="text-[9px] text-zinc-600">{s.portalName}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[9px] text-zinc-500">IN: ${s.buyIn.toFixed(2)}</span>
+                  <span className="text-[9px] text-lime-400 font-bold">OUT: ${s.currentOffer.toFixed(2)}</span>
+                  <span className="text-[9px] text-emerald-400 font-bold">{s.currentMultiplier.toFixed(2)}x</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TreasuryDashboard() {
   const { data: stats, isLoading } = useQuery<{
     totalRevenue: number;
@@ -4121,6 +4338,9 @@ export default function AdminPage() {
                 <Target className="h-4 w-4 mr-1.5 text-lime-400" />
                 Portals
               </TabsTrigger>
+              <TabsTrigger value="settlement" data-testid="tab-settlement" className="whitespace-nowrap data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400">
+                Settlement Governor
+              </TabsTrigger>
               <TabsTrigger value="treasury" data-testid="tab-treasury" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
                 <DollarSign className="h-4 w-4 mr-1.5 text-lime-400" />
                 Treasury
@@ -4194,6 +4414,10 @@ export default function AdminPage() {
 
           <TabsContent value="portals">
             <PortalControlPanel />
+          </TabsContent>
+
+          <TabsContent value="settlement">
+            <SettlementGovernorTab />
           </TabsContent>
 
           <TabsContent value="treasury">
