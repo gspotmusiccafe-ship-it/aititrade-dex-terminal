@@ -3545,6 +3545,167 @@ function CreateArtistHeaderButton() {
   );
 }
 
+function PortalControlPanel() {
+  const { data: portals, isLoading, refetch } = useQuery<{
+    id: string;
+    name: string;
+    tbi: string;
+    mbb: string;
+    early: string;
+    pool: number;
+    sortOrder: number;
+    isActive: boolean;
+  }[]>({
+    queryKey: ["/api/admin/portals"],
+  });
+
+  const [editing, setEditing] = useState<string | null>(null);
+  const [form, setForm] = useState({ tbi: "", mbb: "", early: "", pool: "", isActive: true });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const startEdit = (p: NonNullable<typeof portals>[0]) => {
+    setEditing(p.id);
+    setForm({
+      tbi: p.tbi,
+      mbb: p.mbb,
+      early: p.early,
+      pool: p.pool.toString(),
+      isActive: p.isActive,
+    });
+    setMsg(null);
+  };
+
+  const savePortal = async () => {
+    if (!editing) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/admin/portals/${editing}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tbi: parseFloat(form.tbi),
+          mbb: parseFloat(form.mbb),
+          early: parseFloat(form.early),
+          pool: parseInt(form.pool),
+          isActive: form.isActive,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setMsg(err.message || "Save failed");
+      } else {
+        setMsg("Saved. Market updated.");
+        setEditing(null);
+        refetch();
+      }
+    } catch {
+      setMsg("Network error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isLoading) return <div className="text-lime-500 animate-pulse font-mono p-6">LOADING PORTAL CONFIG...</div>;
+
+  return (
+    <div className="bg-black border border-zinc-800 p-6 font-mono" data-testid="portal-control-panel">
+      <div className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+        <h2 className="text-xl text-lime-400 font-bold tracking-tighter uppercase underline">
+          Trade Portal Control
+        </h2>
+        <div className="text-[10px] text-zinc-500">ADMIN ONLY — CHANGES APPLY IMMEDIATELY</div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="text-zinc-500 uppercase border-b border-zinc-800">
+              <th className="text-left p-2">Portal</th>
+              <th className="text-right p-2">TBI ($)</th>
+              <th className="text-right p-2">MBB (x)</th>
+              <th className="text-right p-2">BB Price ($)</th>
+              <th className="text-right p-2">Early (x)</th>
+              <th className="text-right p-2">Early Price ($)</th>
+              <th className="text-right p-2">House Spread ($)</th>
+              <th className="text-right p-2">Pool ($)</th>
+              <th className="text-center p-2">Active</th>
+              <th className="text-center p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {portals?.map((p) => {
+              const tbi = parseFloat(p.tbi);
+              const mbb = parseFloat(p.mbb);
+              const early = parseFloat(p.early);
+              const bbPrice = (tbi * mbb).toFixed(2);
+              const earlyPrice = (tbi * early).toFixed(2);
+              const houseSpread = ((tbi * mbb) - (tbi * early)).toFixed(2);
+              const isEditing = editing === p.id;
+
+              return (
+                <tr key={p.id} className={`border-b border-zinc-900 ${isEditing ? "bg-zinc-950" : "hover:bg-zinc-950/50"}`} data-testid={`portal-row-${p.name}`}>
+                  <td className="p-2 text-white font-bold">{p.name.replace(/_/g, " ")}</td>
+
+                  {isEditing ? (
+                    <>
+                      <td className="p-2"><input type="number" step="0.01" className="bg-black border border-lime-700 text-lime-400 p-1 w-20 text-right" value={form.tbi} onChange={e => setForm({...form, tbi: e.target.value})} data-testid="input-edit-tbi" /></td>
+                      <td className="p-2"><input type="number" step="0.01" className="bg-black border border-lime-700 text-lime-400 p-1 w-16 text-right" value={form.mbb} onChange={e => setForm({...form, mbb: e.target.value})} data-testid="input-edit-mbb" /></td>
+                      <td className="p-2 text-zinc-400 text-right">${(parseFloat(form.tbi || "0") * parseFloat(form.mbb || "0")).toFixed(2)}</td>
+                      <td className="p-2"><input type="number" step="0.01" className="bg-black border border-yellow-700 text-yellow-400 p-1 w-16 text-right" value={form.early} onChange={e => setForm({...form, early: e.target.value})} data-testid="input-edit-early" /></td>
+                      <td className="p-2 text-yellow-500 text-right">${(parseFloat(form.tbi || "0") * parseFloat(form.early || "0")).toFixed(2)}</td>
+                      <td className="p-2 text-lime-400 text-right font-bold">${((parseFloat(form.tbi || "0") * parseFloat(form.mbb || "0")) - (parseFloat(form.tbi || "0") * parseFloat(form.early || "0"))).toFixed(2)}</td>
+                      <td className="p-2"><input type="number" step="100" className="bg-black border border-zinc-700 text-white p-1 w-20 text-right" value={form.pool} onChange={e => setForm({...form, pool: e.target.value})} data-testid="input-edit-pool" /></td>
+                      <td className="p-2 text-center">
+                        <button onClick={() => setForm({...form, isActive: !form.isActive})} className={`text-[10px] px-2 py-0.5 border ${form.isActive ? "border-lime-500 text-lime-400" : "border-red-500 text-red-400"}`} data-testid="button-toggle-active">
+                          {form.isActive ? "ON" : "OFF"}
+                        </button>
+                      </td>
+                      <td className="p-2 text-center space-x-1">
+                        <button onClick={savePortal} disabled={saving} className="text-[10px] px-2 py-0.5 bg-lime-700 text-black font-bold hover:bg-lime-500 disabled:opacity-50" data-testid="button-save-portal">
+                          {saving ? "..." : "SAVE"}
+                        </button>
+                        <button onClick={() => setEditing(null)} className="text-[10px] px-2 py-0.5 border border-zinc-700 text-zinc-400 hover:text-white" data-testid="button-cancel-edit">
+                          X
+                        </button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="p-2 text-white text-right">${tbi.toFixed(2)}</td>
+                      <td className="p-2 text-zinc-300 text-right">{mbb.toFixed(2)}x</td>
+                      <td className="p-2 text-zinc-400 text-right">${bbPrice}</td>
+                      <td className="p-2 text-yellow-500 text-right">{early.toFixed(2)}x</td>
+                      <td className="p-2 text-yellow-500 text-right">${earlyPrice}</td>
+                      <td className="p-2 text-lime-400 text-right font-bold">${houseSpread}</td>
+                      <td className="p-2 text-white text-right">${p.pool.toLocaleString()}</td>
+                      <td className="p-2 text-center">
+                        <span className={`text-[10px] ${p.isActive ? "text-lime-400" : "text-red-400"}`}>{p.isActive ? "ON" : "OFF"}</span>
+                      </td>
+                      <td className="p-2 text-center">
+                        <button onClick={() => startEdit(p)} className="text-[10px] px-2 py-0.5 border border-zinc-700 text-zinc-400 hover:text-lime-400 hover:border-lime-700" data-testid={`button-edit-${p.name}`}>
+                          EDIT
+                        </button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {msg && <p className={`mt-3 text-[10px] ${msg.includes("Saved") ? "text-lime-500" : "text-red-500"}`}>{msg}</p>}
+
+      <div className="mt-4 text-[10px] text-zinc-600 italic">
+        *TBI = Trade Buy-In threshold. MBB = Max Buy-Back multiplier. Early = Early Exit multiplier. Pool = Pool ceiling in USD.
+      </div>
+    </div>
+  );
+}
+
 function GlobalLedger() {
   const { data: exits, isLoading } = useQuery<{
     id: string;
@@ -3878,6 +4039,10 @@ export default function AdminPage() {
                 <Wifi className="h-4 w-4 mr-1.5" />
                 Jam Control
               </TabsTrigger>
+              <TabsTrigger value="portals" data-testid="tab-portals" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
+                <Target className="h-4 w-4 mr-1.5 text-lime-400" />
+                Portals
+              </TabsTrigger>
               <TabsTrigger value="treasury" data-testid="tab-treasury" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
                 <DollarSign className="h-4 w-4 mr-1.5 text-lime-400" />
                 Treasury
@@ -3947,6 +4112,10 @@ export default function AdminPage() {
 
           <TabsContent value="jam-control">
             <JamControlTab />
+          </TabsContent>
+
+          <TabsContent value="portals">
+            <PortalControlPanel />
           </TabsContent>
 
           <TabsContent value="treasury">

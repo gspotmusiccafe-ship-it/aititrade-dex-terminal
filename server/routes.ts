@@ -9,12 +9,12 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs, portalSettings } from "@shared/schema";
 import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, PORTALS } from "./market-governor";
+import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -107,6 +107,7 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   initSheetsFromEnv();
+  loadPortalsFromDb().catch(err => console.error("[PORTALS] Init load failed:", err));
   initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
 
   app.get("/uploads/:filename", async (req: any, res) => {
@@ -737,7 +738,61 @@ export async function registerRoutes(
   });
 
   app.get("/api/exchange/portals", async (_req: any, res) => {
-    res.json(PORTALS);
+    try {
+      const configs = await getPortalConfigs();
+      res.json(configs);
+    } catch {
+      res.json(PORTALS);
+    }
+  });
+
+  app.get("/api/admin/portals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const all = await db.select().from(portalSettings).orderBy(portalSettings.sortOrder);
+      res.json(all);
+    } catch (error) {
+      console.error("Admin portals error:", error);
+      res.status(500).json({ message: "Failed to fetch portals" });
+    }
+  });
+
+  app.put("/api/admin/portals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { tbi, mbb, early, pool, isActive, sortOrder } = req.body;
+      const updates: any = { updatedAt: new Date() };
+      if (tbi !== undefined) updates.tbi = tbi.toString();
+      if (mbb !== undefined) updates.mbb = mbb.toString();
+      if (early !== undefined) updates.early = early.toString();
+      if (pool !== undefined) updates.pool = parseInt(pool);
+      if (isActive !== undefined) updates.isActive = isActive;
+      if (sortOrder !== undefined) updates.sortOrder = parseInt(sortOrder);
+
+      const [updated] = await db.update(portalSettings)
+        .set(updates)
+        .where(eq(portalSettings.id, req.params.id))
+        .returning();
+
+      if (!updated) return res.status(404).json({ message: "Portal not found" });
+
+      invalidatePortalCache();
+      await loadPortalsFromDb();
+      console.log(`[PORTALS] Admin updated portal ${updated.name}: TBI=$${tbi}, MBB=${mbb}x, Early=${early}x, Pool=$${pool}`);
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Portal update error:", error);
+      res.status(500).json({ message: "Failed to update portal" });
+    }
   });
 
   app.get("/api/admin/treasury-stats", isAuthenticated, async (req: any, res) => {

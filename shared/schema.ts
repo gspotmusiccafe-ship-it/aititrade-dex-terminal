@@ -90,6 +90,22 @@ export const insertTreasuryLogSchema = createInsertSchema(treasuryLogs).omit({ i
 export type InsertTreasuryLog = z.infer<typeof insertTreasuryLogSchema>;
 export type TreasuryLog = typeof treasuryLogs.$inferSelect;
 
+export const portalSettings = pgTable("portal_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  tbi: decimal("tbi", { precision: 10, scale: 2 }).notNull(),
+  mbb: decimal("mbb", { precision: 5, scale: 2 }).notNull(),
+  early: decimal("early", { precision: 5, scale: 2 }).notNull(),
+  pool: integer("pool").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPortalSettingSchema = createInsertSchema(portalSettings).omit({ id: true, updatedAt: true });
+export type InsertPortalSetting = z.infer<typeof insertPortalSettingSchema>;
+export type PortalSetting = typeof portalSettings.$inferSelect;
+
 export const videos = pgTable("videos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   artistId: varchar("artist_id").notNull().references(() => artists.id),

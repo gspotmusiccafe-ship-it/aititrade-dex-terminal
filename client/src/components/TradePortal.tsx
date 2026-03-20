@@ -1,28 +1,56 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle, TrendingUp, DollarSign, Clock, Shield } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 
-export const TRADE_PORTALS = {
-  STANDARD:    { tbi: 2.00,  mbb: 3.00, early: 1.50, pool: 1000 },
-  MICRO_700:   { tbi: 5.00,  mbb: 3.35, early: 2.00, pool: 700 },
-  MID_2K:      { tbi: 10.00, mbb: 3.75, early: 2.85, pool: 2000 },
-  PRO_20:      { tbi: 20.00, mbb: 3.75, early: 2.85, pool: 2000 },
-  PRO_30:      { tbi: 30.00, mbb: 3.75, early: 2.85, pool: 3000 },
-  HIGH_50:     { tbi: 50.00, mbb: 3.75, early: 2.85, pool: 5000 },
-};
-
-type PortalName = keyof typeof TRADE_PORTALS;
-
-export function getPortal(amount: number) {
-  if (amount >= 50) return { name: "HIGH_50" as PortalName, ...TRADE_PORTALS.HIGH_50 };
-  if (amount >= 30) return { name: "PRO_30" as PortalName, ...TRADE_PORTALS.PRO_30 };
-  if (amount >= 20) return { name: "PRO_20" as PortalName, ...TRADE_PORTALS.PRO_20 };
-  if (amount >= 10) return { name: "MID_2K" as PortalName, ...TRADE_PORTALS.MID_2K };
-  if (amount >= 5) return { name: "MICRO_700" as PortalName, ...TRADE_PORTALS.MICRO_700 };
-  return { name: "STANDARD" as PortalName, ...TRADE_PORTALS.STANDARD };
+export interface PortalConfig {
+  name: string;
+  tbi: number;
+  mbb: number;
+  early: number;
+  pool: number;
 }
 
-function calculateEarlyExit(buyIn: number, portal: typeof TRADE_PORTALS[PortalName]) {
+const FALLBACK_PORTALS: PortalConfig[] = [
+  { name: "STANDARD",  tbi: 2.00,  mbb: 3.00, early: 1.50, pool: 1000 },
+  { name: "MICRO_700", tbi: 5.00,  mbb: 3.35, early: 2.00, pool: 700 },
+  { name: "MID_2K",    tbi: 10.00, mbb: 3.75, early: 2.85, pool: 2000 },
+  { name: "PRO_20",    tbi: 20.00, mbb: 3.75, early: 2.85, pool: 2000 },
+  { name: "PRO_30",    tbi: 30.00, mbb: 3.75, early: 2.85, pool: 3000 },
+  { name: "HIGH_50",   tbi: 50.00, mbb: 3.75, early: 2.85, pool: 5000 },
+];
+
+let cachedPortals: PortalConfig[] = FALLBACK_PORTALS;
+
+export function setPortalCache(portals: PortalConfig[]) {
+  if (portals.length > 0) cachedPortals = portals;
+}
+
+export function getPortal(amount: number): PortalConfig {
+  const sorted = [...cachedPortals].sort((a, b) => b.tbi - a.tbi);
+  for (const portal of sorted) {
+    if (amount >= portal.tbi) return portal;
+  }
+  return sorted[sorted.length - 1] || FALLBACK_PORTALS[0];
+}
+
+export function usePortalConfigs() {
+  const query = useQuery<PortalConfig[]>({
+    queryKey: ["/api/exchange/portals"],
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+
+  useEffect(() => {
+    if (query.data && query.data.length > 0) {
+      setPortalCache(query.data);
+    }
+  }, [query.data]);
+
+  return query;
+}
+
+function calculateEarlyExit(buyIn: number, portal: PortalConfig) {
   const earlyPayout = parseFloat((buyIn * portal.early).toFixed(2));
   const houseProfit = parseFloat(((buyIn * portal.mbb) - earlyPayout).toFixed(2));
   return { earlyPayout, houseProfit };

@@ -10,7 +10,7 @@ import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
-import { getPortal, PortalBadge, LivingTicker } from "@/components/TradePortal";
+import { getPortal, PortalBadge, LivingTicker, usePortalConfigs } from "@/components/TradePortal";
 import { TrustTutorial } from "@/components/TrustTutorial";
 
 const CEILING = 1000.00;
@@ -776,6 +776,7 @@ export default function HomePage() {
   const { playTrack, currentTrack, setAutopilotPool } = usePlayer();
   const autoPlayedRef = useRef(false);
   const [showIntel, setShowIntel] = useState(false);
+  usePortalConfigs();
 
   const { data: trustStatus } = useQuery<{ isMember: boolean }>({
     queryKey: ["/api/trust/status"],

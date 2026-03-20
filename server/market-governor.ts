@@ -1,11 +1,11 @@
 import { db } from "./db";
-import { tracks, orders } from "@shared/schema";
-import { desc, sql, eq } from "drizzle-orm";
+import { tracks, orders, portalSettings } from "@shared/schema";
+import { desc, sql, eq, asc } from "drizzle-orm";
 
 const FLOOR_SPLIT = 0.54;
 const CEO_SPLIT = 0.46;
 
-const PORTALS = {
+const DEFAULT_PORTALS: Record<string, { tbi: number; mbb: number; early: number; pool: number }> = {
   STANDARD:    { tbi: 2.00,  mbb: 3.00, early: 1.50, pool: 1000 },
   MICRO_700:   { tbi: 5.00,  mbb: 3.35, early: 2.00, pool: 700 },
   MID_2K:      { tbi: 10.00, mbb: 3.75, early: 2.85, pool: 2000 },
@@ -14,23 +14,74 @@ const PORTALS = {
   HIGH_50:     { tbi: 50.00, mbb: 3.75, early: 2.85, pool: 5000 },
 };
 
-type PortalName = keyof typeof PORTALS;
+const PORTALS = { ...DEFAULT_PORTALS };
 
 export interface PortalConfig {
-  name: PortalName;
+  name: string;
   tbi: number;
   mbb: number;
   early: number;
   pool: number;
 }
 
+let portalCache: PortalConfig[] | null = null;
+let portalCacheTime = 0;
+const PORTAL_CACHE_TTL = 30000;
+
+export async function loadPortalsFromDb(): Promise<PortalConfig[]> {
+  try {
+    const rows = await db.select().from(portalSettings)
+      .where(eq(portalSettings.isActive, true))
+      .orderBy(asc(portalSettings.sortOrder));
+
+    if (rows.length === 0) {
+      return Object.entries(DEFAULT_PORTALS).map(([name, cfg]) => ({ name, ...cfg }));
+    }
+
+    const configs = rows.map(r => ({
+      name: r.name,
+      tbi: parseFloat(r.tbi),
+      mbb: parseFloat(r.mbb),
+      early: parseFloat(r.early),
+      pool: r.pool,
+    }));
+
+    for (const cfg of configs) {
+      (PORTALS as any)[cfg.name] = { tbi: cfg.tbi, mbb: cfg.mbb, early: cfg.early, pool: cfg.pool };
+    }
+
+    portalCache = configs;
+    portalCacheTime = Date.now();
+    console.log(`[PORTALS] Loaded ${configs.length} portal configs from DB`);
+    return configs;
+  } catch (e) {
+    console.error("[PORTALS] Failed to load from DB, using defaults:", e);
+    return Object.entries(DEFAULT_PORTALS).map(([name, cfg]) => ({ name, ...cfg }));
+  }
+}
+
+export async function getPortalConfigs(): Promise<PortalConfig[]> {
+  if (portalCache && (Date.now() - portalCacheTime) < PORTAL_CACHE_TTL) {
+    return portalCache;
+  }
+  return loadPortalsFromDb();
+}
+
+export function invalidatePortalCache() {
+  portalCache = null;
+  portalCacheTime = 0;
+}
+
 export function getPortalForPrice(amount: number): PortalConfig {
-  if (amount >= 50) return { name: "HIGH_50", ...PORTALS.HIGH_50 };
-  if (amount >= 30) return { name: "PRO_30", ...PORTALS.PRO_30 };
-  if (amount >= 20) return { name: "PRO_20", ...PORTALS.PRO_20 };
-  if (amount >= 10) return { name: "MID_2K", ...PORTALS.MID_2K };
-  if (amount >= 5) return { name: "MICRO_700", ...PORTALS.MICRO_700 };
-  return { name: "STANDARD", ...PORTALS.STANDARD };
+  const entries = Object.entries(PORTALS)
+    .map(([name, cfg]) => ({ name, ...cfg }))
+    .sort((a, b) => b.tbi - a.tbi);
+
+  for (const portal of entries) {
+    if (amount >= portal.tbi) return portal;
+  }
+  const fallback = entries[entries.length - 1];
+  return fallback || { name: "STANDARD", ...DEFAULT_PORTALS.STANDARD };
 }
 
 export function calculateTradeStatus(buyIn: number, currentFloorTotal: number) {
@@ -416,4 +467,4 @@ export async function checkTreasuryMilestones(): Promise<{ reached: number[]; to
   return { reached: newlyReached, total: totalNum };
 }
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS };
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS };
