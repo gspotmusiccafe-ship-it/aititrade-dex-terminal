@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users } from "lucide-react";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,6 +12,107 @@ import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
 import { getPortal, PortalBadge, LivingTicker, usePortalConfigs } from "@/components/TradePortal";
 import { TrustTutorial } from "@/components/TrustTutorial";
+
+function generateSparklineData(seed: number, basePrice: number, points: number = 24): number[] {
+  let s = seed;
+  const rng = () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+  const now = Date.now();
+  const minuteOfDay = new Date().getHours() * 60 + new Date().getMinutes();
+  const data: number[] = [];
+  for (let i = 0; i < points; i++) {
+    const t = minuteOfDay - (points - i) * 30;
+    const wave1 = Math.sin((t / 1440) * Math.PI * 2) * 0.03;
+    const wave2 = Math.sin((t / 360) * Math.PI * 2) * 0.02;
+    const wave3 = Math.sin(((now / 30000) + i * 0.4) * Math.PI * 2) * 0.015;
+    const noise = (rng() - 0.5) * 0.02;
+    data.push(basePrice * (1 + wave1 + wave2 + wave3 + noise));
+  }
+  return data;
+}
+
+let sparklineIdCounter = 0;
+function MomentumSparkline({ data, width = 120, height = 36, color }: { data: number[]; width?: number; height?: number; color: string }) {
+  const gradId = useMemo(() => `spark-grad-${++sparklineIdCounter}`, []);
+  if (data.length < 2) return null;
+  const min = Math.min(...data) * 0.998;
+  const max = Math.max(...data) * 1.002;
+  const range = max - min || 1;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - ((v - min) / range) * height;
+    return `${x},${y}`;
+  }).join(' ');
+  const fillPoints = `0,${height} ${points} ${width},${height}`;
+  const lastY = height - ((data[data.length - 1] - min) / range) * height;
+  return (
+    <svg width={width} height={height} className="overflow-visible">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      <polygon points={fillPoints} fill={`url(#${gradId})`} />
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
+      <circle cx={width} cy={lastY} r="2.5" fill={color}>
+        <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
+
+function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed }: { basePrice: number; mbbPrice: number; mbbMultiplier: number; trackSeed: number }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const iv = setInterval(() => setTick(t => t + 1), 8000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const { liveMbbp, pctChange, sparkData, signal } = useMemo(() => {
+    const now = Date.now();
+    const minuteOfDay = new Date().getHours() * 60 + new Date().getMinutes();
+    const w1 = Math.sin((minuteOfDay / 1440) * Math.PI * 2) * 0.03;
+    const w2 = Math.sin((minuteOfDay / 360) * Math.PI * 2) * 0.02;
+    const w3 = Math.sin((now / 30000) * Math.PI * 2) * 0.015;
+    const swing = w1 + w2 + w3;
+    const livePrice = basePrice * (1 + swing);
+    const liveMbbp = parseFloat((livePrice * mbbMultiplier).toFixed(2));
+    const pctChange = parseFloat((((liveMbbp - mbbPrice) / mbbPrice) * 100).toFixed(1));
+    const sparkData = generateSparklineData(trackSeed, mbbPrice, 24);
+    sparkData[sparkData.length - 1] = liveMbbp;
+    const signal = pctChange >= 15 ? "BUY" : pctChange >= 5 ? "BUY" : pctChange <= -5 ? "SELL" : "HOLD";
+    return { liveMbbp, pctChange, sparkData, signal };
+  }, [basePrice, mbbPrice, mbbMultiplier, trackSeed, tick]);
+
+  const isUp = pctChange >= 0;
+  const pctColor = pctChange >= 15 ? "text-emerald-400" : pctChange >= 5 ? "text-lime-400" : pctChange <= -5 ? "text-red-400" : "text-amber-400";
+  const chartColor = isUp ? "#4ade80" : "#f87171";
+  const signalColor = signal === "BUY" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : signal === "SELL" ? "text-red-400 bg-red-500/10 border-red-500/30" : "text-amber-400 bg-amber-500/10 border-amber-500/30";
+
+  return (
+    <div className="bg-zinc-900/80 border border-zinc-800 p-2 mb-2" data-testid="mbbp-indicator">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[8px] text-zinc-500 font-bold tracking-wider">MBBP MOMENTUM</span>
+          <span className={`text-[8px] px-1 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {isUp ? <TrendingUp className="h-3 w-3 text-emerald-400" /> : <TrendingDown className="h-3 w-3 text-red-400" />}
+          <span className={`text-[10px] font-extrabold ${pctColor}`}>
+            {isUp ? "+" : ""}{pctChange}%
+          </span>
+        </div>
+      </div>
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <p className={`text-sm font-black ${isUp ? "text-emerald-400" : "text-red-400"}`}>${liveMbbp.toFixed(2)}</p>
+          <p className="text-[8px] text-zinc-600">BASE: ${mbbPrice.toFixed(2)}</p>
+        </div>
+        <MomentumSparkline data={sparkData} color={chartColor} />
+      </div>
+    </div>
+  );
+}
 
 const CEILING = 1000.00;
 const FLASH_THRESHOLD = 900.00;
@@ -628,6 +729,13 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
             <p className={`text-[11px] font-extrabold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-amber-400" : capacityPct >= 30 ? "text-lime-400" : "text-zinc-300"}`}>▲ {yieldPct}</p>
           </div>
         </div>
+
+        <MBBPIndicator
+          basePrice={price}
+          mbbPrice={maxPayout}
+          mbbMultiplier={portal.mbb}
+          trackSeed={parseInt(String(track.id).replace(/\D/g, '').slice(0, 8) || '12345')}
+        />
 
         {isGlobal ? (
           <div className="mb-2 px-2 py-2 border border-amber-500/20 bg-amber-500/5">
