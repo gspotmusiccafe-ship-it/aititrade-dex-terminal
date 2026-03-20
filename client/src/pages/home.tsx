@@ -998,10 +998,8 @@ export default function HomePage() {
 
       <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-4 text-[10px]">
-          <span className="text-zinc-600">VARIANTS:</span>
-          <span className="text-emerald-400">$0.99</span>
-          <span className="text-amber-400">$2.50</span>
-          <span className="text-yellow-400">$5.00</span>
+          <span className="text-zinc-600">POWERED BY:</span>
+          <span className="text-emerald-400">97.7 THE FLAME</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">CLASS:</span>
           <span className="text-emerald-400">STD</span>

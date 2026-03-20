@@ -26,7 +26,7 @@ export function TrustTutorial() {
         <div className="space-y-4 text-xs">
           <section>
             <h4 className="text-white font-bold underline">1. MINIMUM ENTRY</h4>
-            <p className="text-zinc-400">All legacy $0.99 trades are retired. Minimum Buy-In (TBI) is now $2.00.</p>
+            <p className="text-zinc-400">Minimum Trade Buy-In (TBI) starts at $2.00. Powered by 97.7 THE FLAME.</p>
           </section>
 
           <section>
