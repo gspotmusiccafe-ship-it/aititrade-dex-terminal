@@ -839,32 +839,46 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
 
-      const [result] = await db.select({
-        totalRevenue: sql<string>`COALESCE(SUM(CAST(house_take AS DECIMAL)), 0)`,
-        earlyPayouts: sql<string>`COALESCE(SUM(CAST(final_payout AS DECIMAL)), 0)`,
-        settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
-        holdingCount: sql<number>`COUNT(CASE WHEN status = 'confirmed' THEN 1 END)`,
-      }).from(orders);
-
       const allNative = await db.select({
         salesCount: tracks.salesCount,
         unitPrice: tracks.unitPrice,
       }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
 
-      const activeVolume = allNative.reduce((sum, t) => {
+      const totalVolume = allNative.reduce((sum, t) => {
         return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "2.00"));
       }, 0);
 
+      const traderSettlementPool = totalVolume * 0.54;
+      const houseRetention = totalVolume * 0.46;
+
+      const distanceToClose = 1000 - (totalVolume % 1000);
+      const cyclesCompleted = Math.floor(totalVolume / 1000);
+      const totalPaidOut = cyclesCompleted * 540;
+
+      const [orderStats] = await db.select({
+        settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
+        holdingCount: sql<number>`COUNT(CASE WHEN status = 'confirmed' THEN 1 END)`,
+        totalOrders: sql<number>`COUNT(*)`,
+      }).from(orders);
+
       res.json({
-        totalRevenue: parseFloat(result?.totalRevenue || "0"),
-        activeVolume: parseFloat(activeVolume.toFixed(2)),
-        earlyPayouts: parseFloat(result?.earlyPayouts || "0"),
-        settledCount: result?.settledCount || 0,
-        holdingCount: result?.holdingCount || 0,
+        status: "SYSTEM ACTIVE",
+        signal: "100%",
+        totalVolume: parseFloat(totalVolume.toFixed(2)),
+        totalRevenue: parseFloat(houseRetention.toFixed(2)),
+        payoutPool: parseFloat(traderSettlementPool.toFixed(2)),
+        activeVolume: parseFloat(totalVolume.toFixed(2)),
+        distanceToClose: parseFloat(distanceToClose.toFixed(2)),
+        cyclesCompleted,
+        totalPaidOut: parseFloat(totalPaidOut.toFixed(2)),
+        settledCount: orderStats?.settledCount || 0,
+        holdingCount: orderStats?.holdingCount || 0,
+        totalOrders: orderStats?.totalOrders || 0,
+        complianceStatus: "ADHERED TO MINT FACTORY",
       });
     } catch (error) {
       console.error("Treasury stats error:", error);
-      res.status(500).json({ message: "Failed to fetch treasury stats" });
+      res.status(500).json({ error: "Signal Interrupted" });
     }
   });
 
