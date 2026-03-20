@@ -268,7 +268,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white font-mono p-4 sm:p-6">
+    <div className="min-h-screen bg-black text-white font-mono p-4 sm:p-6 pb-40">
       <div className="max-w-4xl mx-auto">
         <div className="border border-lime-500/30 bg-black mb-6">
           <div className="bg-lime-500/10 border-b border-lime-500/30 px-4 py-3 flex items-center justify-between">

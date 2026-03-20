@@ -105,7 +105,7 @@ function AuthenticatedLayout() {
               </header>
             )}
           </div>
-          <main className="flex-1 overflow-auto bg-black">
+          <main className="flex-1 overflow-auto bg-black pb-40">
             <ErrorBoundary fallback={<CrashFallback />}>
               <Switch>
                 <Route path="/">{() => <PremiumGate><HomePage /></PremiumGate>}</Route>
