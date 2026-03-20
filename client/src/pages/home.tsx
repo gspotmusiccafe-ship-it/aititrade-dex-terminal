@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
 import { getPortal, PortalBadge, LivingTicker } from "@/components/TradePortal";
+import { TrustTutorial } from "@/components/TrustTutorial";
 
 const CEILING = 1000.00;
 const FLASH_THRESHOLD = 900.00;
@@ -831,6 +832,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-full pb-28 bg-black font-mono">
+      <TrustTutorial />
       <div className="border-b border-emerald-500/20 bg-black">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-2">
