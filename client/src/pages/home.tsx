@@ -396,8 +396,6 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
       setTradeData(data);
       queryClient.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
 
-      window.open(data.url, "_blank");
-
       toast({ title: "POSITION LOCKED", description: `${data.trackingNumber} — Send to ${data.cashtag}` });
 
       const isGlobal = track.releaseType === "global";
@@ -474,18 +472,36 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
               data-testid={`button-cashapp-trade-${track.id}`}
             >
               <DollarSign className="h-4 w-4 inline mr-1" />
-              ACQUIRE POSITION — OPEN CASH APP
+              ACQUIRE POSITION
             </button>
           ) : (
-            <a
-              href={tradeData.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 text-sm tracking-wider transition-colors text-center"
-              data-testid="link-cashapp-pay"
-            >
-              OPEN CASH APP — $AITITRADEBROKERAGE
-            </a>
+            <div className="space-y-3">
+              <div className="border-2 border-green-500/50 bg-green-950/30 p-4 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-wider mb-2">SCAN TO PAY VIA CASH APP</p>
+                <div className="bg-white p-3 inline-block mx-auto">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(tradeData.url || "https://cash.app/$AITITRADEBROKERAGE/" + price.toFixed(2))}`}
+                    alt="Cash App QR Code"
+                    className="w-[180px] h-[180px]"
+                    data-testid="img-cashapp-qr"
+                  />
+                </div>
+                <p className="text-lg text-green-400 font-black mt-2">$AITITRADEBROKERAGE</p>
+                <p className="text-[10px] text-green-400/60 mt-1">AMOUNT: ${price.toFixed(2)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[8px] text-zinc-500">Or tap below to open Cash App directly</p>
+                <a
+                  href={tradeData.url || "https://cash.app/$AITITRADEBROKERAGE/" + price.toFixed(2)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-1 text-[10px] text-green-400 underline hover:text-green-300"
+                  data-testid="link-cashapp-pay"
+                >
+                  Open Cash App
+                </a>
+              </div>
+            </div>
           )}
         </div>
       </div>

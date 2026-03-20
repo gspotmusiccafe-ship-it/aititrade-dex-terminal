@@ -10,7 +10,7 @@ import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs, portalSettings } from "@shared/schema";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, or, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
@@ -3930,7 +3930,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         status: orders.status,
         createdAt: orders.createdAt,
       }).from(orders)
-        .where(sql`${orders.buyerEmail} = ${user.email} OR ${orders.buyerName} = ${user.username}`)
+        .where((() => {
+          const conditions = [];
+          if (user.email) conditions.push(eq(orders.buyerEmail, user.email));
+          if (user.username) conditions.push(eq(orders.buyerName, user.username));
+          if (conditions.length === 0) return sql`false`;
+          return conditions.length === 1 ? conditions[0] : or(...conditions);
+        })())
         .orderBy(desc(orders.createdAt))
         .limit(50);
 

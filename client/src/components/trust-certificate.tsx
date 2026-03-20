@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toPng } from "html-to-image";
-import { X, Download, Shield, Cpu, Globe } from "lucide-react";
+import { X, Download, Shield, Cpu, Globe, TrendingUp, Activity } from "lucide-react";
 
 interface TrustCertificateProps {
   userId: string;
@@ -11,6 +12,17 @@ interface TrustCertificateProps {
   trustVaultRate?: string;
   userShare?: number;
   onClose: () => void;
+}
+
+interface SettlementStatus {
+  grossIntake: number;
+  ksReached: number;
+  totalOwed54: number;
+  totalPaidOut: number;
+  fundAvailable: number;
+  payoutPerK: number;
+  nextKAt: number;
+  ceo46Total: number;
 }
 
 function generateTrustId(userId: string): string {
@@ -33,6 +45,25 @@ export function TrustCertificate({ userId, userName, userEmail, membershipDate, 
     day: "numeric",
   });
   const displayName = userName || userEmail || "SOVEREIGN HOLDER";
+
+  const { data: settlementData } = useQuery<SettlementStatus>({
+    queryKey: ["/api/settlement/status"],
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+
+  const grossIntake = settlementData?.grossIntake || 0;
+  const ksReached = settlementData?.ksReached || 0;
+  const totalPaidOut = settlementData?.totalPaidOut || 0;
+  const fundAvailable = settlementData?.fundAvailable || 0;
+  const nextKAt = settlementData?.nextKAt || 1000;
+  const ceo46Total = settlementData?.ceo46Total || 0;
+  const cyclePct = Math.min(100, ((grossIntake % 1000) / 1000) * 100);
+  const totalSettled = ksReached * 540;
+  const trustPoolValue = trustValuation || (grossIntake * 0.16);
+  const liveUserShare = userShare || (trustPoolValue * 0.18);
+  const floorRetained = grossIntake * 0.54;
+  const roiPct = grossIntake > 0 ? ((totalSettled / grossIntake) * 100).toFixed(1) : "0.0";
 
   const handleDownload = async () => {
     if (!certRef.current) return;
@@ -263,6 +294,84 @@ export function TrustCertificate({ userId, userName, userEmail, membershipDate, 
               </div>
 
               <div style={{
+                border: "1px solid rgba(34,197,94,0.3)",
+                marginBottom: "24px",
+                background: "rgba(34,197,94,0.05)",
+              }}>
+                <div style={{
+                  padding: "8px 12px",
+                  borderBottom: "1px solid rgba(34,197,94,0.2)",
+                  fontSize: "9px",
+                  color: "#22c55e",
+                  fontWeight: 700,
+                  letterSpacing: "2px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}>
+                  <TrendingUp style={{ width: "12px", height: "12px" }} />
+                  LIVE TRUST PERFORMANCE — REAL-TIME CALCULATIONS
+                </div>
+                <div style={{ padding: "12px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>GROSS INTAKE</div>
+                    <div style={{ fontSize: "18px", color: "#22c55e", fontWeight: 900 }}>${grossIntake.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>FLOOR RETAINED (54%)</div>
+                    <div style={{ fontSize: "18px", color: "#10b981", fontWeight: 900 }}>${floorRetained.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>CEO GROSS (46%)</div>
+                    <div style={{ fontSize: "18px", color: "#fbbf24", fontWeight: 900 }}>${ceo46Total.toFixed(2)}</div>
+                  </div>
+                </div>
+                <div style={{ padding: "0 12px 12px", display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "12px" }}>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>$1K CYCLES</div>
+                    <div style={{ fontSize: "14px", color: "#84cc16", fontWeight: 900 }}>{ksReached}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>TOTAL SETTLED</div>
+                    <div style={{ fontSize: "14px", color: "#22c55e", fontWeight: 900 }}>${totalSettled.toLocaleString('en-US')}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>TOTAL PAID OUT</div>
+                    <div style={{ fontSize: "14px", color: "#10b981", fontWeight: 900 }}>${totalPaidOut.toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700, marginBottom: "2px" }}>SETTLEMENT ROI</div>
+                    <div style={{ fontSize: "14px", color: "#84cc16", fontWeight: 900 }}>{roiPct}%</div>
+                  </div>
+                </div>
+                <div style={{
+                  padding: "8px 12px",
+                  borderTop: "1px solid rgba(34,197,94,0.2)",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>CYCLE PROGRESS</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div style={{ width: "120px", height: "6px", background: "#1a1a1a", borderRadius: "3px", overflow: "hidden" }}>
+                        <div style={{ width: `${cyclePct}%`, height: "100%", background: cyclePct > 80 ? "#ef4444" : "#22c55e", borderRadius: "3px" }} />
+                      </div>
+                      <span style={{ fontSize: "10px", color: cyclePct > 80 ? "#ef4444" : "#22c55e", fontWeight: 900 }}>{cyclePct.toFixed(1)}%</span>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>FUND AVAILABLE</div>
+                    <div style={{
+                      fontSize: "14px",
+                      color: fundAvailable > 0 ? "#22c55e" : "#71717a",
+                      fontWeight: 900,
+                    }}>${fundAvailable.toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{
                 border: "1px solid rgba(217,119,6,0.2)",
                 padding: "12px",
                 marginBottom: "24px",
@@ -270,34 +379,13 @@ export function TrustCertificate({ userId, userName, userEmail, membershipDate, 
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
                   <Shield style={{ width: "14px", height: "14px", color: "#fbbf24" }} />
-                  <span style={{ fontSize: "9px", color: "#d97706", fontWeight: 700, letterSpacing: "2px" }}>MINTER CREDIT SCHEDULE</span>
-                </div>
-                <div style={{ display: "flex", gap: "16px" }}>
-                  <div>
-                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>ORIGINATOR CREDIT</div>
-                    <div style={{ fontSize: "18px", color: "#fbbf24", fontWeight: 900 }}>16%</div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>DISBURSEMENT</div>
-                    <div style={{ fontSize: "12px", color: "#fbbf24", fontWeight: 900 }}>PER GLOBAL ASSET SALE</div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{
-                border: "1px solid rgba(34,197,94,0.3)",
-                padding: "12px",
-                marginBottom: "24px",
-                background: "rgba(34,197,94,0.05)",
-              }}>
-                <div style={{ fontSize: "9px", color: "#22c55e", fontWeight: 700, letterSpacing: "2px", marginBottom: "10px" }}>
-                  CURRENT TRUST VALUATION
+                  <span style={{ fontSize: "9px", color: "#d97706", fontWeight: 700, letterSpacing: "2px" }}>TRUST VAULT VALUATION</span>
                 </div>
                 <div style={{ display: "flex", gap: "16px", alignItems: "flex-end" }}>
                   <div>
-                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>TRUST VAULT POOL</div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>TRUST POOL VALUE</div>
                     <div style={{ fontSize: "22px", color: "#22c55e", fontWeight: 900 }}>
-                      ${(trustValuation ?? 0).toFixed(2)}
+                      ${trustPoolValue.toFixed(2)}
                     </div>
                   </div>
                   <div>
@@ -307,12 +395,16 @@ export function TrustCertificate({ userId, userName, userEmail, membershipDate, 
                   <div>
                     <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>YOUR SHARE</div>
                     <div style={{ fontSize: "14px", color: "#22c55e", fontWeight: 900 }}>
-                      ${(userShare ?? 0).toFixed(4)}
+                      ${liveUserShare.toFixed(4)}
                     </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "8px", color: "#71717a", fontWeight: 700 }}>ORIGINATOR CREDIT</div>
+                    <div style={{ fontSize: "14px", color: "#fbbf24", fontWeight: 900 }}>16%</div>
                   </div>
                 </div>
                 <div style={{ fontSize: "8px", color: "rgba(34,197,94,0.5)", marginTop: "6px", fontWeight: 700 }}>
-                  ACCUMULATED FROM GLOBAL ASSET ROYALTIES — LIVE VALUATION
+                  ACCUMULATED FROM GLOBAL ASSET ROYALTIES — LIVE VALUATION — AUTO-REFRESHING
                 </div>
               </div>
 

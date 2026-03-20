@@ -497,7 +497,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      toast({ title: "✦ ACCOUNT CREATED", description: "Welcome to the Sovereign Exchange — upgrade to start trading" });
+      toast({ title: "✦ ACCOUNT CREATED", description: "Welcome to AITITRADE — your trader portal is ready" });
       onSuccess?.();
     },
     onError: (err: Error) => setError(err.message),
@@ -857,7 +857,7 @@ export default function LandingPage() {
       {showAuthModal && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowAuthModal(false)}>
           <div onClick={(e) => e.stopPropagation()}>
-            <AuthForm mode={authMode} onSuccess={() => setShowAuthModal(false)} />
+            <AuthForm mode={authMode} onSuccess={() => { setShowAuthModal(false); window.location.href = "/trader"; }} />
           </div>
         </div>
       )}

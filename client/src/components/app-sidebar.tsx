@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3, Rocket, Upload } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3, Rocket, Upload, Lock } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,17 +23,6 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-
-const mainNavItems = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Search", url: "/search", icon: Search },
-  { title: "Library", url: "/library", icon: Library },
-];
-
-const yourMusicItems = [
-  { title: "Liked Songs", url: "/liked", icon: Heart },
-  { title: "Create Playlist", url: "/library", icon: Plus },
-];
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -77,7 +66,7 @@ export function AppSidebar() {
   });
 
   const isTrustee = !!membership?.trustInvestor;
-  const planLabel = isTrustee ? "Sovereign Trust" : "Inactive";
+  const planLabel = isTrustee ? "Sovereign Trust" : "Trader";
 
   const roleLabel = adminCheck?.isAdmin
     ? "Admin"
@@ -104,61 +93,46 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`nav-${item.title.toLowerCase()}`}>
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="opacity-30" />
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Your Music</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {yourMusicItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
-                      <item.icon className="h-5 w-5" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="opacity-30" />
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground/60">Explore</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-emerald-400/60">Trading Floor</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/membership"}>
-                  <Link href="/membership" data-testid="nav-membership">
-                    <Crown className="h-5 w-5 text-yellow-500" />
-                    <span>Get Premium</span>
+                <SidebarMenuButton asChild isActive={location === "/"}>
+                  <Link href="/" data-testid="nav-home">
+                    <Home className="h-5 w-5" />
+                    <span>Home</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/radio"}>
-                  <Link href="/radio" data-testid="nav-radio">
-                    <Radio className="h-5 w-5 text-[#1DB954]" />
-                    <span>Global Trades</span>
+                <SidebarMenuButton asChild isActive={location === "/search"}>
+                  <Link href="/search" data-testid="nav-search">
+                    <Search className="h-5 w-5" />
+                    <span>Search</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/library"}>
+                  <Link href="/library" data-testid="nav-library">
+                    <Library className="h-5 w-5" />
+                    <span>Library</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/liked"}>
+                  <Link href="/liked" data-testid="nav-liked-songs">
+                    <Heart className="h-5 w-5" />
+                    <span>Liked Songs</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/trader" || location.startsWith("/trader/")}>
+                  <Link href="/trader" data-testid="nav-trader-portal">
+                    <BarChart3 className="h-5 w-5 text-green-500" />
+                    <span className="text-green-400 font-extrabold">Trader Portal</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -170,11 +144,24 @@ export function AppSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="opacity-30" />
+
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-amber-400/60 flex items-center gap-1">
+            <Crown className="h-3 w-3" /> Premium / Spotify
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/dashboard"}>
-                  <Link href="/dashboard" data-testid="nav-dashboard">
-                    <GraduationCap className="h-5 w-5 text-lime-400" />
-                    <span className="text-lime-400 font-bold">CEO Class</span>
+                <SidebarMenuButton asChild isActive={location === "/radio"}>
+                  <Link href="/radio" data-testid="nav-radio">
+                    <Radio className="h-5 w-5 text-[#1DB954]" />
+                    <span>Global Trades</span>
+                    {!isTrustee && !adminCheck?.isAdmin && <Lock className="h-3 w-3 text-amber-500/50 ml-auto" />}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -183,14 +170,16 @@ export function AppSidebar() {
                   <Link href="/trust-vault" data-testid="nav-trust-vault">
                     <Globe className="h-5 w-5 text-amber-400" />
                     <span className="text-amber-400 font-extrabold">Trust Vault</span>
+                    {!isTrustee && !adminCheck?.isAdmin && <Lock className="h-3 w-3 text-amber-500/50 ml-auto" />}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/trader" || location.startsWith("/trader/")}>
-                  <Link href="/trader" data-testid="nav-trader-portal">
-                    <BarChart3 className="h-5 w-5 text-green-500" />
-                    <span className="text-green-400 font-extrabold">Trader Portal</span>
+                <SidebarMenuButton asChild isActive={location === "/dashboard"}>
+                  <Link href="/dashboard" data-testid="nav-dashboard">
+                    <GraduationCap className="h-5 w-5 text-lime-400" />
+                    <span className="text-lime-400 font-bold">CEO Class</span>
+                    {!isTrustee && !adminCheck?.isAdmin && <Lock className="h-3 w-3 text-amber-500/50 ml-auto" />}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -204,27 +193,25 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
-              {adminCheck?.isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === "/artist-portal"}>
-                    <Link href="/artist-portal" data-testid="nav-mint-factory">
-                      <Upload className="h-5 w-5 text-lime-400" />
-                      <span className="text-lime-400 font-extrabold">Mint Factory</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {adminCheck?.isAdmin && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === "/production"}>
-                    <Link href="/production" data-testid="nav-production">
-                      <Rocket className="h-5 w-5 text-orange-500" />
-                      <span className="text-orange-400 font-bold">Production Center</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {adminCheck?.isAdmin && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/membership"}>
+                  <Link href="/membership" data-testid="nav-membership">
+                    <Crown className="h-5 w-5 text-yellow-500" />
+                    <span>Get Premium</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator className="opacity-30" />
+
+        {adminCheck?.isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-red-400/60">Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/admin"}>
                     <Link href="/admin" data-testid="nav-admin">
@@ -233,10 +220,26 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/artist-portal"}>
+                    <Link href="/artist-portal" data-testid="nav-mint-factory">
+                      <Upload className="h-5 w-5 text-lime-400" />
+                      <span className="text-lime-400 font-extrabold">Mint Factory</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/production"}>
+                    <Link href="/production" data-testid="nav-production">
+                      <Rocket className="h-5 w-5 text-orange-500" />
+                      <span className="text-orange-400 font-bold">Production Center</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 pb-4 space-y-2 flex-shrink-0">
@@ -321,7 +324,7 @@ export function AppSidebar() {
                 {isTrustee ? (
                   <span className="text-amber-400 font-bold">{planLabel}</span>
                 ) : (
-                  <span className="text-muted-foreground">{planLabel}</span>
+                  <span className="text-emerald-400 font-bold">{planLabel}</span>
                 )}
               </p>
             </div>

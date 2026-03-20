@@ -35,58 +35,38 @@ interface TrustStatus {
   isMember: boolean;
 }
 
-function checkIsTrader(trustStatus: TrustStatus | null | undefined): boolean {
-  return !!trustStatus?.isMember;
+function AuthGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <>{children}</>;
+  if (!isAuthenticated) return <LandingPage />;
+  return <>{children}</>;
 }
 
-function ActivationRedirect() {
-  const [, setLocation] = useLocation();
-  useEffect(() => {
-    setLocation("/membership");
-  }, [setLocation]);
+function PremiumGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const { data: trustStatus, isLoading: trustLoading } = useQuery<TrustStatus>({
+    queryKey: ["/api/trust/status"],
+    enabled: isAuthenticated,
+  });
+
+  if (isLoading || trustLoading) return <>{children}</>;
+  if (!isAuthenticated) return <LandingPage />;
+  if ((user as any)?.isAdmin) return <>{children}</>;
+  if (trustStatus?.isMember) return <>{children}</>;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-black">
-      <div className="flex flex-col items-center gap-4 text-center font-mono">
-        <div className="w-16 h-16 bg-lime-500/20 flex items-center justify-center">
-          <span className="text-lime-400 text-2xl font-extrabold">$</span>
-        </div>
-        <p className="text-lime-400 text-sm font-extrabold" data-testid="text-upgrade-redirect">TRADING ACCOUNT ACTIVATION REQUIRED</p>
-        <p className="text-zinc-400 text-xs">$25 DOWN + $19.79/MO VIA CASH APP</p>
-        <p className="text-zinc-500 text-[10px]">REDIRECTING...</p>
+    <div className="min-h-screen flex items-center justify-center bg-black font-mono">
+      <div className="text-center border border-amber-500/30 p-10 max-w-md">
+        <h1 className="text-amber-400 font-black text-xl mb-4">PREMIUM ACCESS REQUIRED</h1>
+        <p className="text-zinc-400 text-sm mb-2">This room requires a Sovereign Trust membership with Spotify Premium.</p>
+        <p className="text-zinc-600 text-xs">$25 DOWN + $19.79/MO VIA CASH APP</p>
       </div>
     </div>
   );
 }
 
-function PremiumGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, user } = useAuth();
-  const { data: trustStatus } = useQuery<TrustStatus>({
-    queryKey: ["/api/trust/status"],
-    enabled: isAuthenticated,
-  });
-
-  if (isLoading) return <>{children}</>;
-  if (!isAuthenticated) return <LandingPage />;
-  if ((user as any)?.isAdmin) return <>{children}</>;
-  if (trustStatus === undefined) return <>{children}</>;
-  if (!checkIsTrader(trustStatus)) return <ActivationRedirect />;
-
-  return <>{children}</>;
-}
-
-function useIsPremiumUser() {
-  const { isAuthenticated, user } = useAuth();
-  const { data: trustStatus } = useQuery<TrustStatus>({
-    queryKey: ["/api/trust/status"],
-    enabled: isAuthenticated,
-  });
-  return isAuthenticated && ((user as any)?.isAdmin || checkIsTrader(trustStatus));
-}
-
 function AuthenticatedLayout() {
   const { isAuthenticated } = useAuth();
-  const isPremium = useIsPremiumUser();
-
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "4rem",
@@ -95,11 +75,11 @@ function AuthenticatedLayout() {
   return (
     <SidebarProvider style={sidebarStyle as React.CSSProperties}>
       <div className="flex h-screen w-full">
-        {isPremium && <AppSidebar />}
+        {isAuthenticated && <AppSidebar />}
         <SidebarInset className="flex flex-col flex-1 bg-black">
           <div className="sticky top-0 z-40">
             <MarketTicker />
-            {isPremium && (
+            {isAuthenticated && (
               <header className="flex items-center p-2 border-b border-emerald-500/10 bg-black">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
               </header>
@@ -108,23 +88,23 @@ function AuthenticatedLayout() {
           <main className="flex-1 overflow-auto bg-black pb-40">
             <ErrorBoundary fallback={<CrashFallback />}>
               <Switch>
-                <Route path="/">{() => <PremiumGate><HomePage /></PremiumGate>}</Route>
-                <Route path="/search">{() => <PremiumGate><SearchPage /></PremiumGate>}</Route>
-                <Route path="/library">{() => <PremiumGate><LibraryPage /></PremiumGate>}</Route>
+                <Route path="/">{() => <AuthGate><HomePage /></AuthGate>}</Route>
+                <Route path="/search">{() => <AuthGate><SearchPage /></AuthGate>}</Route>
+                <Route path="/library">{() => <AuthGate><LibraryPage /></AuthGate>}</Route>
                 <Route path="/membership" component={MembershipPage} />
-                <Route path="/artist-portal">{() => <PremiumGate><ArtistPortalPage /></PremiumGate>}</Route>
-                <Route path="/liked">{() => <PremiumGate><LikedSongsPage /></PremiumGate>}</Route>
-                <Route path="/artist/:id">{() => <PremiumGate><ArtistPage /></PremiumGate>}</Route>
-                <Route path="/admin">{() => <PremiumGate><AdminPage /></PremiumGate>}</Route>
+                <Route path="/artist-portal">{() => <AuthGate><ArtistPortalPage /></AuthGate>}</Route>
+                <Route path="/liked">{() => <AuthGate><LikedSongsPage /></AuthGate>}</Route>
+                <Route path="/artist/:id">{() => <AuthGate><ArtistPage /></AuthGate>}</Route>
+                <Route path="/admin">{() => <AuthGate><AdminPage /></AuthGate>}</Route>
                 <Route path="/radio">{() => <PremiumGate><RadioPage /></PremiumGate>}</Route>
-                <Route path="/leaderboard">{() => <PremiumGate><LeaderboardPage /></PremiumGate>}</Route>
-                <Route path="/playlist/:id">{() => <PremiumGate><PlaylistPage /></PremiumGate>}</Route>
-                <Route path="/browse/:section">{() => <PremiumGate><BrowsePage /></PremiumGate>}</Route>
+                <Route path="/leaderboard">{() => <AuthGate><LeaderboardPage /></AuthGate>}</Route>
+                <Route path="/playlist/:id">{() => <AuthGate><PlaylistPage /></AuthGate>}</Route>
+                <Route path="/browse/:section">{() => <AuthGate><BrowsePage /></AuthGate>}</Route>
                 <Route path="/dashboard">{() => <PremiumGate><DashboardPage /></PremiumGate>}</Route>
                 <Route path="/trust-vault">{() => <PremiumGate><TrustVaultPage /></PremiumGate>}</Route>
-                <Route path="/production">{() => <PremiumGate><ProductionPage /></PremiumGate>}</Route>
-                <Route path="/trader/:userId">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
-                <Route path="/trader">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
+                <Route path="/production">{() => <AuthGate><ProductionPage /></AuthGate>}</Route>
+                <Route path="/trader/:userId">{() => <AuthGate><TraderPage /></AuthGate>}</Route>
+                <Route path="/trader">{() => <AuthGate><TraderPage /></AuthGate>}</Route>
                 <Route path="/login" component={LandingPage} />
                 <Route component={NotFound} />
               </Switch>

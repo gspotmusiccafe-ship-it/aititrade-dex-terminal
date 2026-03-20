@@ -117,19 +117,17 @@ export function MusicPlayer() {
 
   if (autoplayBlocked) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 z-50 flex items-center justify-center gap-4 px-4 py-3 font-mono shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
+      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 z-50 flex items-center justify-center gap-4 px-4 py-3 font-mono shadow-[0_-10px_40px_rgba(0,0,0,0.9)]"
+        onClick={resumeAutoplay}
+        role="button"
+        data-testid="button-tune-in"
+      >
+        <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover opacity-80" />
         <div className="text-center">
           <p className="text-xs font-black text-green-400 tracking-wider" data-testid="text-radio-blocked-name">97.7 THE FLAME</p>
           <p className="text-[10px] text-zinc-500 font-bold">{currentTrack.title.toUpperCase()} — {currentTrack.artist?.name}</p>
         </div>
-        <button
-          className="bg-green-600 hover:bg-green-500 text-white px-5 py-2 text-[10px] font-black flex items-center gap-1.5 transition-colors tracking-wider border border-green-500"
-          onClick={resumeAutoplay}
-          data-testid="button-tune-in"
-        >
-          <Play className="h-3 w-3" />
-          TUNE IN
-        </button>
+        <Play className="h-4 w-4 text-green-400 animate-pulse" />
       </div>
     );
   }
