@@ -761,6 +761,43 @@ export async function registerRoutes(
     }
   });
 
+  app.put("/api/admin/portals/bulk-update", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { portals } = req.body;
+      if (!Array.isArray(portals)) return res.status(400).json({ message: "portals array required" });
+
+      const results = [];
+      for (const p of portals) {
+        const updates: any = { updatedAt: new Date() };
+        if (p.tbi !== undefined) updates.tbi = p.tbi.toString();
+        if (p.mbb !== undefined) updates.mbb = p.mbb.toString();
+        if (p.early !== undefined) updates.early = p.early.toString();
+        if (p.pool !== undefined) updates.pool = parseInt(p.pool);
+        if (p.isActive !== undefined) updates.isActive = p.isActive;
+
+        const [updated] = await db.update(portalSettings)
+          .set(updates)
+          .where(eq(portalSettings.id, p.id))
+          .returning();
+        if (updated) results.push(updated);
+      }
+
+      invalidatePortalCache();
+      await loadPortalsFromDb();
+      console.log(`[PORTALS] Admin bulk-updated ${results.length} portals`);
+
+      res.json({ updated: results.length, portals: results });
+    } catch (error) {
+      console.error("Bulk portal update error:", error);
+      res.status(500).json({ message: "Failed to bulk update portals" });
+    }
+  });
+
   app.put("/api/admin/portals/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -2792,7 +2829,7 @@ Format the output as a structured song with clearly labeled sections:
 Make the lyrics emotionally engaging, with strong hooks and memorable phrases. Use rhyme schemes and rhythm that fit the genre.${genre ? `\nGenre: ${genre}` : ""}${mood ? `\nMood: ${mood}` : ""}${style ? `\nStyle reference: ${style}` : ""}`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5.2",
+        model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
@@ -3512,6 +3549,98 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error: any) {
       console.error("[DIRECT_PUSH] Pipeline error:", error);
       res.status(500).json({ message: "Failed to execute direct push distribution" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // INDIVIDUAL GENERATORS — Preview before Push
+  // ═══════════════════════════════════════════════════════════════
+
+  app.post("/api/production/generate-beat", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!adminUser.length || !adminUser[0].isAdmin) {
+        return res.status(403).json({ message: "ADMIN ACCESS ONLY" });
+      }
+
+      const { prompt, style, voiceType, makeInstrumental } = req.body;
+      if (!prompt) return res.status(400).json({ message: "Prompt required" });
+
+      const sunoKey = process.env.SUNO_API_KEY;
+      if (!sunoKey) {
+        return res.status(400).json({ message: "Suno API key not configured. Add SUNO_API_KEY to secrets." });
+      }
+
+      console.log(`[BEAT-GEN] Generating beat: style=${style}, voice=${voiceType}, instrumental=${makeInstrumental}`);
+
+      const sunoRes = await fetch("https://api.suno.ai/v1/generate", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${sunoKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          tags: style || "Global Trade Beat",
+          mv: "chirp-v3.5",
+          make_instrumental: !!makeInstrumental,
+        }),
+      });
+
+      if (!sunoRes.ok) {
+        const errText = await sunoRes.text();
+        console.error(`[BEAT-GEN] Suno error ${sunoRes.status}: ${errText}`);
+        return res.status(500).json({ message: `Suno API error: ${sunoRes.status}` });
+      }
+
+      const sunoData = await sunoRes.json();
+      console.log(`[BEAT-GEN] Suno response:`, JSON.stringify(sunoData).slice(0, 200));
+
+      res.json({
+        audioUrl: sunoData.audio_url || null,
+        sunoId: sunoData.id || null,
+        status: sunoData.audio_url ? "READY" : "PENDING",
+      });
+    } catch (error: any) {
+      console.error("[BEAT-GEN] Error:", error.message);
+      res.status(500).json({ message: error.message || "Beat generation failed" });
+    }
+  });
+
+  app.post("/api/production/generate-art", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const adminUser = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (!adminUser.length || !adminUser[0].isAdmin) {
+        return res.status(403).json({ message: "ADMIN ACCESS ONLY" });
+      }
+
+      const { prompt } = req.body;
+      const ideogramKey = process.env.IDEOGRAM_API_KEY;
+      if (!ideogramKey) {
+        return res.status(400).json({ message: "Ideogram API key not configured. Add IDEOGRAM_API_KEY to secrets." });
+      }
+
+      console.log(`[ART-GEN] Generating artwork`);
+
+      const ideogramRes = await fetch("https://api.ideogram.ai/generate", {
+        method: "POST",
+        headers: { "Api-Key": ideogramKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, aspect_ratio: "1:1", model: "v-2" }),
+      });
+
+      if (!ideogramRes.ok) {
+        const errText = await ideogramRes.text();
+        console.error(`[ART-GEN] Ideogram error ${ideogramRes.status}: ${errText}`);
+        return res.status(500).json({ message: `Ideogram API error: ${ideogramRes.status}` });
+      }
+
+      const artData = await ideogramRes.json();
+      const imageUrl = artData.data?.[0]?.url || artData.url || null;
+      console.log(`[ART-GEN] Ideogram result: ${imageUrl ? "OK" : "NO_URL"}`);
+
+      res.json({ imageUrl, status: imageUrl ? "READY" : "NO_URL" });
+    } catch (error: any) {
+      console.error("[ART-GEN] Error:", error.message);
+      res.status(500).json({ message: error.message || "Art generation failed" });
     }
   });
 

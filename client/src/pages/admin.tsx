@@ -3562,7 +3562,10 @@ function PortalControlPanel() {
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState({ tbi: "", mbb: "", early: "", pool: "", isActive: true });
   const [saving, setSaving] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [bulkMbb, setBulkMbb] = useState("");
+  const [bulkEarly, setBulkEarly] = useState("");
 
   const startEdit = (p: NonNullable<typeof portals>[0]) => {
     setEditing(p.id);
@@ -3604,6 +3607,38 @@ function PortalControlPanel() {
       setMsg("Network error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updateAllPortals = async () => {
+    if (!portals?.length) return;
+    setBulkSaving(true);
+    setMsg(null);
+    try {
+      const updates = portals.map((p) => ({
+        id: p.id,
+        ...(bulkMbb ? { mbb: parseFloat(bulkMbb) } : {}),
+        ...(bulkEarly ? { early: parseFloat(bulkEarly) } : {}),
+      }));
+      const res = await fetch("/api/admin/portals/bulk-update", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ portals: updates }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setMsg(err.message || "Bulk update failed");
+      } else {
+        const data = await res.json();
+        setMsg(`ALL ${data.updated} TERMINALS UPDATED. Market live.`);
+        setBulkMbb("");
+        setBulkEarly("");
+        refetch();
+      }
+    } catch {
+      setMsg("Network error");
+    } finally {
+      setBulkSaving(false);
     }
   };
 
@@ -3713,7 +3748,34 @@ function PortalControlPanel() {
         </table>
       </div>
 
-      {msg && <p className={`mt-3 text-[10px] ${msg.includes("Saved") ? "text-lime-500" : "text-red-500"}`}>{msg}</p>}
+      {msg && <p className={`mt-3 text-[10px] ${msg.includes("UPDATED") || msg.includes("Saved") ? "text-lime-500" : "text-red-500"}`}>{msg}</p>}
+
+      <div className="mt-6 p-4 border border-lime-700/30 bg-lime-950/10">
+        <p className="text-lime-400 text-xs font-mono font-bold mb-3 uppercase">UPDATE ALL TERMINALS AT ONCE</p>
+        <div className="flex gap-3 items-end flex-wrap">
+          <div>
+            <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">NEW MBB (x) FOR ALL</label>
+            <input type="number" step="0.01" value={bulkMbb} onChange={e => setBulkMbb(e.target.value)}
+              placeholder="e.g. 3.50"
+              className="bg-black border border-lime-700 text-lime-400 p-2 w-24 text-right text-xs font-mono"
+              data-testid="input-bulk-mbb" />
+          </div>
+          <div>
+            <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">NEW EARLY (x) FOR ALL</label>
+            <input type="number" step="0.01" value={bulkEarly} onChange={e => setBulkEarly(e.target.value)}
+              placeholder="e.g. 2.00"
+              className="bg-black border border-yellow-700 text-yellow-400 p-2 w-24 text-right text-xs font-mono"
+              data-testid="input-bulk-early" />
+          </div>
+          <button type="button" onClick={updateAllPortals}
+            disabled={bulkSaving || (!bulkMbb && !bulkEarly)}
+            className="relative z-10 cursor-pointer bg-lime-600 hover:bg-lime-500 text-black font-mono font-black py-2 px-6 text-xs disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
+            data-testid="button-update-all-terminals">
+            {bulkSaving ? "UPDATING..." : "UPDATE ALL TERMINALS"}
+          </button>
+        </div>
+        <p className="text-zinc-600 text-[9px] font-mono mt-2">Set a value in either field and hit UPDATE — applies to all 6 portals instantly.</p>
+      </div>
 
       <div className="mt-4 text-[10px] text-zinc-600 italic">
         *TBI = Trade Buy-In threshold. MBB = Max Buy-Back multiplier. Early = Early Exit multiplier. Pool = Pool ceiling in USD.
