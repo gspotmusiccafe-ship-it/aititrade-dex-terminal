@@ -576,7 +576,7 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
         <div className="grid grid-cols-3 gap-1 mb-2 text-center">
           <div className="bg-zinc-900/80 p-1 border border-zinc-800">
             <p className="text-[9px] text-zinc-500 font-bold">BUY-BACK</p>
-            <p className={`text-[11px] font-extrabold ${bbRate >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
+            <p className={`text-[11px] font-extrabold ${bbPrice >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
           </div>
           <div className="bg-zinc-900/80 p-1 border border-zinc-800">
             <p className="text-[9px] text-zinc-500 font-bold">SPLIT</p>
