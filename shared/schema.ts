@@ -90,6 +90,45 @@ export const insertTreasuryLogSchema = createInsertSchema(treasuryLogs).omit({ i
 export type InsertTreasuryLog = z.infer<typeof insertTreasuryLogSchema>;
 export type TreasuryLog = typeof treasuryLogs.$inferSelect;
 
+export const settlementQueue = pgTable("settlement_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderId: varchar("order_id").notNull().references(() => orders.id),
+  userId: varchar("user_id").notNull(),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  buyIn: decimal("buy_in", { precision: 10, scale: 2 }).notNull(),
+  portalName: varchar("portal_name").notNull().default("STANDARD"),
+  baseMbb: decimal("base_mbb", { precision: 5, scale: 2 }).notNull().default("3.00"),
+  currentOffer: decimal("current_offer", { precision: 10, scale: 2 }),
+  currentMultiplier: decimal("current_multiplier", { precision: 5, scale: 2 }),
+  acceptedMultiplier: decimal("accepted_multiplier", { precision: 5, scale: 2 }),
+  payoutAmount: decimal("payout_amount", { precision: 10, scale: 2 }),
+  cyclesHeld: integer("cycles_held").notNull().default(0),
+  status: varchar("status").notNull().default("QUEUED"),
+  queuePosition: integer("queue_position").notNull().default(0),
+  settledAt: timestamp("settled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertSettlementQueueSchema = createInsertSchema(settlementQueue).omit({ id: true, createdAt: true });
+export type InsertSettlementQueue = z.infer<typeof insertSettlementQueueSchema>;
+export type SettlementQueueEntry = typeof settlementQueue.$inferSelect;
+
+export const settlementCycles = pgTable("settlement_cycles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cycleNumber: integer("cycle_number").notNull(),
+  poolIntake: decimal("pool_intake", { precision: 10, scale: 2 }).notNull(),
+  totalSettled: decimal("total_settled", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  tradersSettled: integer("traders_settled").notNull().default(0),
+  tradersHolding: integer("traders_holding").notNull().default(0),
+  status: varchar("status").notNull().default("ACTIVE"),
+  openedAt: timestamp("opened_at").defaultNow(),
+  closedAt: timestamp("closed_at"),
+});
+
+export const insertSettlementCycleSchema = createInsertSchema(settlementCycles).omit({ id: true, openedAt: true });
+export type InsertSettlementCycle = z.infer<typeof insertSettlementCycleSchema>;
+export type SettlementCycle = typeof settlementCycles.$inferSelect;
+
 export const portalSettings = pgTable("portal_settings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: varchar("name").notNull().unique(),

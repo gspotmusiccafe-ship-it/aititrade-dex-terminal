@@ -392,7 +392,26 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
   );
 }
 
-function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void }) {
+interface SettlementStatus {
+  grossIntake: number;
+  ksReached: number;
+  totalOwed54: number;
+  totalPaidOut: number;
+  fundAvailable: number;
+  payoutPerK: number;
+  nextKAt: number;
+  ceo46Total: number;
+}
+
+function useSettlementStatus() {
+  return useQuery<SettlementStatus>({
+    queryKey: ["/api/settlement/status"],
+    refetchInterval: 15000,
+    staleTime: 10000,
+  });
+}
+
+function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; settlement?: SettlementStatus }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -422,18 +441,29 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
   const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
   const minterFeeLabel = "54/46";
   const grossSales = parseFloat((sales * price).toFixed(2));
-  const capacityPct = Math.min(100, parseFloat(((grossSales / poolCeiling) * 100).toFixed(1)));
-  const paperTradePct = Math.min(100, parseFloat(((grossSales / ptCap) * 100).toFixed(1)));
-  const flashThreshold = poolCeiling * 0.9;
-  const isFlashZone = !isGlobal && grossSales >= flashThreshold && grossSales < poolCeiling;
-  const isClosed = !isGlobal && grossSales >= poolCeiling;
+
+  const globalGross = settlement?.grossIntake || 0;
+  const nextKAt = settlement?.nextKAt || 1000;
+  const globalRemaining = Math.max(0, parseFloat((nextKAt - globalGross).toFixed(2)));
+  const globalPct = Math.min(100, parseFloat(((globalGross % 1000) / 1000 * 100).toFixed(1)));
+  const ksReached = settlement?.ksReached || 0;
+  const fundAvailable = settlement?.fundAvailable || 0;
+
+  const capacityPct = globalPct;
+  const isSettlementClose = globalRemaining <= 200 && globalRemaining > 50;
+  const isSettlementImminent = globalRemaining <= 50 && globalRemaining > 0;
+  const isFlashZone = isSettlementImminent;
+  const isClosed = false;
   const isPaperCapHit = false;
-  const isHighCapacity = !isGlobal && capacityPct >= 60 && !isClosed && !isFlashZone;
-  const remaining = Math.max(0, parseFloat((poolCeiling - grossSales).toFixed(2)));
+  const isHighCapacity = isSettlementClose;
+  const remaining = globalRemaining;
   const unitsRemaining = price > 0 ? Math.ceil(remaining / price) : 0;
-  const reconciliationPct = price > 0 ? parseFloat(((price / poolCeiling) * 100).toFixed(1)) : 0;
-  const poolLabel = poolCeiling >= 1000 ? `$${(poolCeiling / 1000).toFixed(0)}K` : `$${poolCeiling}`;
+  const poolLabel = `$1K CYCLE #${ksReached + 1}`;
   const yieldPct = capacityPct >= 45 ? "45%" : capacityPct >= 30 ? "30%" : "16%";
+
+  const urgencyColor = isSettlementImminent ? "text-red-400" : isSettlementClose ? "text-amber-400" : "text-lime-400";
+  const urgencyBg = isSettlementImminent ? "bg-red-500" : isSettlementClose ? "bg-amber-500" : "bg-emerald-500";
+  const urgencyPulse = isSettlementImminent ? "animate-pulse" : isSettlementClose ? "animate-pulse" : "";
 
   useEffect(() => {
     if (isFlashZone && !flashTriggeredRef.current && !isClosed) {
@@ -515,23 +545,30 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
         </div>
       )}
 
-      {isHighCapacity && !isFlashZone && (
-        <div className="px-3 py-1.5 bg-yellow-500/10 border-b border-yellow-500/20 flex items-center gap-2 animate-pulse">
-          <AlertTriangle className="h-3 w-3 text-yellow-400 flex-shrink-0" />
-          <span className="text-[9px] text-yellow-400 font-bold">{capacityPct.toFixed(0)}% CAPACITY — {unitsRemaining} UNITS TO {poolLabel} CEILING</span>
+      {isSettlementClose && !isSettlementImminent && (
+        <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 animate-pulse">
+          <AlertTriangle className="h-3 w-3 text-amber-400 flex-shrink-0" />
+          <span className="text-[9px] text-amber-400 font-bold">
+            ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY — SETTLEMENT CLOSING — {unitsRemaining} TRADES TO $540 PAYOUT
+          </span>
         </div>
       )}
 
-      {isClosed && !isReconciling && (
-        <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 text-center">
-          <p className="text-[10px] text-red-400 font-bold">POOL CLOSED — ${SETTLEMENT_PAYOUT} SETTLEMENT PENDING TO {HOLDER_COUNT} HOLDERS</p>
+      {isSettlementImminent && (
+        <div className="px-3 py-2 bg-red-500/10 border-b border-red-500/20 text-center animate-pulse">
+          <p className="text-[10px] text-red-400 font-extrabold">
+            ⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY — SETTLEMENT IMMINENT — NEXT TRADE COULD CLOSE IT ⚡
+          </p>
+          <p className="text-[8px] text-red-400/70 mt-0.5">$540 PAYOUT DROPS WHEN GROSS HITS ${nextKAt.toLocaleString('en-US')} — TRADE NOW TO LOCK POSITION</p>
         </div>
       )}
 
-      {isReconciling && (
-        <div className="px-3 py-2 bg-amber-500/10 border-b border-amber-500/20 text-center animate-pulse" data-testid={`reconciling-${track.id}`}>
-          <p className="text-[10px] text-amber-400 font-extrabold">POOL CLOSED — RECONCILING...</p>
-          <p className="text-[8px] text-amber-400/50 mt-0.5">SETTLEMENT IN PROGRESS — TRADING WILL REOPEN AFTER RECONCILIATION</p>
+      {fundAvailable > 0 && (
+        <div className="px-3 py-1.5 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center gap-2">
+          <DollarSign className="h-3 w-3 text-emerald-400 flex-shrink-0" />
+          <span className="text-[9px] text-emerald-400 font-bold">
+            ${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })} SETTLEMENT FUND AVAILABLE — ACCEPT OR HOLD
+          </span>
         </div>
       )}
 
@@ -607,16 +644,16 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
                 MARKET PROGRESS
               </span>
               <span className={`text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>
-                ${grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })} / $1,000
+                ${globalGross.toLocaleString('en-US', { minimumFractionDigits: 2 })} / ${nextKAt.toLocaleString('en-US')} — NEXT $540 PAYOUT
               </span>
             </div>
             <div className="w-full bg-zinc-900 h-3 relative overflow-hidden border border-zinc-700/50">
               <div
-                className={`h-full transition-all duration-500 ${isClosed ? "bg-red-500" : isFlashZone ? "bg-red-500 animate-pulse" : isHighCapacity ? "bg-yellow-500 animate-pulse" : isInspirational ? "bg-violet-500" : "bg-emerald-500"}`}
+                className={`h-full transition-all duration-500 ${urgencyBg} ${urgencyPulse}`}
                 style={{ width: `${capacityPct}%` }}
               />
               {capacityPct >= 50 && capacityPct < 90 && (
-                <div className="absolute left-1/2 top-0 h-full w-px bg-amber-500/40" title="50% Paper Trade Cap" />
+                <div className="absolute left-1/2 top-0 h-full w-px bg-amber-500/40" title="54% Settlement Line" />
               )}
               {isFlashZone && (
                 <div className="absolute right-0 top-0 h-full w-[10%] bg-red-500/30 animate-pulse" />
@@ -628,15 +665,16 @@ function AssetCard({ track, onPlay }: { track: TrackWithArtist; onPlay: (t: Trac
               </div>
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT</span>
-              {!isClosed && !isFlashZone && (
-                <span className="text-lime-400/70 text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO SETTLE</span>
+              <span className="text-zinc-400 text-[10px] font-bold">@ {priceLabel}/UNIT | {portal.name}</span>
+              {!isFlashZone && (
+                <span className="text-lime-400/70 text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO NEXT $540</span>
               )}
-              {isFlashZone && !isClosed && (
-                <span className="text-red-400 text-[10px] font-extrabold animate-pulse">⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} TO RUSH</span>
+              {isFlashZone && (
+                <span className="text-red-400 text-[10px] font-extrabold animate-pulse">⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} — SETTLEMENT IMMINENT</span>
               )}
-              {isClosed && !isReconciling && <span className="text-red-400 text-[10px] font-bold">SETTLED — REOPENING</span>}
-              {isReconciling && <span className="text-amber-400 text-[10px] font-extrabold">SETTLE & RE-ROLL</span>}
+              {fundAvailable > 0 && (
+                <span className="text-emerald-400 text-[10px] font-extrabold">${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })} PAYABLE</span>
+              )}
             </div>
           </div>
         )}
@@ -798,6 +836,13 @@ export default function HomePage() {
   const { data: autopilotPoolData } = useQuery<TrackWithArtist[]>({
     queryKey: ["/api/autopilot/pool"],
     staleTime: 60000,
+  });
+
+  const { data: settlementData } = useQuery<SettlementStatus>({
+    queryKey: ["/api/settlement/status"],
+    refetchInterval: 15000,
+    staleTime: 10000,
+    enabled: !!user,
   });
 
   useEffect(() => {
@@ -1001,15 +1046,22 @@ export default function HomePage() {
           <span className="text-zinc-600">POWERED BY:</span>
           <span className="text-emerald-400">97.7 THE FLAME</span>
           <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">CLASS:</span>
-          <span className="text-emerald-400">STD</span>
-          <span className="text-violet-400">INSP</span>
+          <span className="text-zinc-600">EVERY $1K =</span>
+          <span className="text-emerald-400">$540 PAYOUT</span>
           <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">CEILING:</span>
-          <span className="text-emerald-400">DYNAMIC</span>
+          <span className="text-zinc-600">SPLIT:</span>
+          <span className="text-emerald-400">54/46</span>
           <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">SETTLEMENT:</span>
-          <span className="text-emerald-400">${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS</span>
+          <span className="text-zinc-600">PORTALS:</span>
+          <span className="text-emerald-400">81 TERMINALS</span>
+          <span className="text-zinc-800">|</span>
+          {settlementData && (
+            <>
+              <span className={`font-bold ${(settlementData.nextKAt - settlementData.grossIntake) <= 100 ? "text-red-400 animate-pulse" : "text-lime-400"}`}>
+                ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY
+              </span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2 text-[10px]">
           <span className="text-zinc-600">{user?.firstName || user?.email || "PUBLIC"}</span>
@@ -1034,6 +1086,7 @@ export default function HomePage() {
                 key={track.id}
                 track={track}
                 onPlay={(t) => playTrack(t, displayTracks)}
+                settlement={settlementData}
               />
             ))}
           </div>
@@ -1050,7 +1103,7 @@ export default function HomePage() {
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
           <span>AITITRADE DIGITAL ASSET EXCHANGE | 97.7 THE FLAME | AityPay ENGINE</span>
-          <span>PORTAL FILL-TO-CLOSE | $700-$5K CEILINGS | PAYOUT: ${SETTLEMENT_PAYOUT} → {HOLDER_COUNT} HOLDERS | SPLIT: 54/46</span>
+          <span>81 TRADE PORTALS | $1-$50 ENTRY | EVERY $1K TRADED = $540 SETTLEMENT | 54% DEX / 46% CEO | ACCEPT OR HOLD — NO LOSING | POWERED BY 97.7 THE FLAME</span>
         </div>
       </div>
     </div>

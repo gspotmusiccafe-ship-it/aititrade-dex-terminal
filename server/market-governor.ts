@@ -1,20 +1,54 @@
 import { db } from "./db";
-import { tracks, orders, portalSettings } from "@shared/schema";
-import { desc, sql, eq, asc } from "drizzle-orm";
+import { tracks, orders, portalSettings, settlementQueue, settlementCycles } from "@shared/schema";
+import { desc, sql, eq, asc, and, inArray } from "drizzle-orm";
 
 const FLOOR_SPLIT = 0.54;
 const CEO_SPLIT = 0.46;
 
-const DEFAULT_PORTALS: Record<string, { tbi: number; mbb: number; early: number; pool: number }> = {
-  STANDARD:    { tbi: 2.00,  mbb: 3.00, early: 1.50, pool: 1000 },
-  MICRO_700:   { tbi: 5.00,  mbb: 3.35, early: 2.00, pool: 700 },
-  MID_2K:      { tbi: 10.00, mbb: 3.75, early: 2.85, pool: 2000 },
-  PRO_20:      { tbi: 20.00, mbb: 3.75, early: 2.85, pool: 2000 },
-  PRO_30:      { tbi: 30.00, mbb: 3.75, early: 2.85, pool: 3000 },
-  HIGH_50:     { tbi: 50.00, mbb: 3.75, early: 2.85, pool: 5000 },
-};
+type PortalName = string;
 
-const PORTALS = { ...DEFAULT_PORTALS };
+const PRICE_TIERS = [
+  { prefix: "NANO",      tbi: 1.00,  basePool: 300 },
+  { prefix: "MICRO",     tbi: 2.00,  basePool: 400 },
+  { prefix: "PENNY",     tbi: 3.50,  basePool: 500 },
+  { prefix: "MINI",      tbi: 5.00,  basePool: 600 },
+  { prefix: "ENTRY",     tbi: 7.50,  basePool: 700 },
+  { prefix: "STANDARD",  tbi: 10.00, basePool: 1000 },
+  { prefix: "MID",       tbi: 15.00, basePool: 1500 },
+  { prefix: "PRO",       tbi: 25.00, basePool: 2500 },
+  { prefix: "SOVEREIGN", tbi: 50.00, basePool: 5000 },
+];
+
+const RISK_PROFILES = [
+  { suffix: "SAFE",      mbb: 1.50, early: 1.25, poolMult: 1.0 },
+  { suffix: "STEADY",    mbb: 1.75, early: 1.35, poolMult: 1.2 },
+  { suffix: "MODERATE",  mbb: 2.00, early: 1.50, poolMult: 1.4 },
+  { suffix: "GROWTH",    mbb: 2.25, early: 1.65, poolMult: 1.6 },
+  { suffix: "BALANCED",  mbb: 2.50, early: 1.80, poolMult: 2.0 },
+  { suffix: "DYNAMIC",   mbb: 2.75, early: 1.95, poolMult: 2.5 },
+  { suffix: "MOMENTUM",  mbb: 3.00, early: 2.15, poolMult: 3.0 },
+  { suffix: "VELOCITY",  mbb: 3.35, early: 2.50, poolMult: 4.0 },
+  { suffix: "APEX",      mbb: 3.75, early: 2.85, poolMult: 5.0 },
+];
+
+function generateAll81Portals(): Record<string, { tbi: number; mbb: number; early: number; pool: number }> {
+  const portals: Record<string, { tbi: number; mbb: number; early: number; pool: number }> = {};
+  for (const tier of PRICE_TIERS) {
+    for (const risk of RISK_PROFILES) {
+      const name = `${tier.prefix}_${risk.suffix}`;
+      portals[name] = {
+        tbi: tier.tbi,
+        mbb: risk.mbb,
+        early: risk.early,
+        pool: Math.round(tier.basePool * risk.poolMult),
+      };
+    }
+  }
+  return portals;
+}
+
+const DEFAULT_PORTALS = generateAll81Portals();
+const PORTALS: Record<string, { tbi: number; mbb: number; early: number; pool: number }> = { ...DEFAULT_PORTALS };
 
 export interface PortalConfig {
   name: string;
@@ -73,15 +107,31 @@ export function invalidatePortalCache() {
 }
 
 export function getPortalForPrice(amount: number): PortalConfig {
-  const entries = Object.entries(PORTALS)
-    .map(([name, cfg]) => ({ name, ...cfg }))
-    .sort((a, b) => b.tbi - a.tbi);
-
-  for (const portal of entries) {
-    if (amount >= portal.tbi) return portal;
+  let bestTier = PRICE_TIERS[0];
+  for (const tier of PRICE_TIERS) {
+    if (amount >= tier.tbi) bestTier = tier;
   }
-  const fallback = entries[entries.length - 1];
-  return fallback || { name: "STANDARD", ...DEFAULT_PORTALS.STANDARD };
+
+  const riskIndex = Math.min(
+    Math.floor((amount - bestTier.tbi) / (bestTier.tbi * 0.5)),
+    RISK_PROFILES.length - 1
+  );
+  const risk = RISK_PROFILES[Math.max(0, riskIndex)];
+  const name = `${bestTier.prefix}_${risk.suffix}`;
+  const cfg = PORTALS[name];
+  if (cfg) return { name, ...cfg };
+
+  const balancedName = `${bestTier.prefix}_BALANCED`;
+  const balancedCfg = PORTALS[balancedName];
+  if (balancedCfg) return { name: balancedName, ...balancedCfg };
+
+  return { name: "NANO_SAFE", tbi: 1.00, mbb: 1.50, early: 1.25, pool: 300 };
+}
+
+export function getPortalByName(portalName: string): PortalConfig {
+  const cfg = PORTALS[portalName];
+  if (cfg) return { name: portalName, ...cfg };
+  return { name: "NANO_SAFE", tbi: 1.00, mbb: 1.50, early: 1.25, pool: 300 };
 }
 
 export function calculateTradeStatus(buyIn: number, currentFloorTotal: number) {
@@ -166,20 +216,19 @@ function getDaySeed(): number {
 function getBuyInForRank(rank: number, totalTracks: number, rng: () => number): { buyIn: number; buyBack: number; roi: number; portal: PortalConfig } {
   const topPct = totalTracks > 0 ? rank / totalTracks : 1;
 
-  let buyIn: number;
-  if (topPct <= 0.05) {
-    buyIn = PORTALS.HIGH_50.tbi;
-  } else if (topPct <= 0.10) {
-    buyIn = PORTALS.PRO_30.tbi;
-  } else if (topPct <= 0.20) {
-    buyIn = PORTALS.PRO_20.tbi;
-  } else if (topPct <= 0.40) {
-    buyIn = PORTALS.MID_2K.tbi;
-  } else if (topPct <= 0.70) {
-    buyIn = PORTALS.MICRO_700.tbi;
-  } else {
-    buyIn = PORTALS.STANDARD.tbi;
-  }
+  let tierIndex: number;
+  if (topPct <= 0.02)      tierIndex = 8;
+  else if (topPct <= 0.05) tierIndex = 7;
+  else if (topPct <= 0.10) tierIndex = 6;
+  else if (topPct <= 0.18) tierIndex = 5;
+  else if (topPct <= 0.28) tierIndex = 4;
+  else if (topPct <= 0.40) tierIndex = 3;
+  else if (topPct <= 0.55) tierIndex = 2;
+  else if (topPct <= 0.75) tierIndex = 1;
+  else                     tierIndex = 0;
+
+  const tier = PRICE_TIERS[tierIndex];
+  let buyIn = tier.tbi;
 
   const portal = getPortalForPrice(buyIn);
   const jitter = 0.95 + rng() * 0.10;
@@ -388,6 +437,64 @@ export async function initTrackPricing(): Promise<void> {
   console.log(`[MARKET] Initialized pricing for ${allTracks.length} native assets (${seeded} updated)`);
 }
 
+export async function seed81Portals(): Promise<number> {
+  const existing = await db.select({ cnt: sql<string>`COUNT(*)` }).from(portalSettings);
+  const currentCount = parseInt(existing[0]?.cnt || "0");
+
+  if (currentCount >= 81) {
+    console.log(`[PORTALS] Already have ${currentCount} portals — skipping seed`);
+    return currentCount;
+  }
+
+  await db.delete(portalSettings).where(sql`1=1`);
+
+  let sortOrder = 0;
+  for (const tier of PRICE_TIERS) {
+    for (const risk of RISK_PROFILES) {
+      const name = `${tier.prefix}_${risk.suffix}`;
+      const poolSize = Math.round(tier.basePool * risk.poolMult);
+      await db.insert(portalSettings).values({
+        name,
+        tbi: tier.tbi.toFixed(2),
+        mbb: risk.mbb.toFixed(2),
+        early: risk.early.toFixed(2),
+        pool: poolSize,
+        sortOrder: sortOrder++,
+        isActive: true,
+      }).onConflictDoUpdate({
+        target: portalSettings.name,
+        set: {
+          tbi: tier.tbi.toFixed(2),
+          mbb: risk.mbb.toFixed(2),
+          early: risk.early.toFixed(2),
+          pool: poolSize,
+          sortOrder: sortOrder - 1,
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+    }
+  }
+
+  console.log(`[PORTALS] Seeded 81 portals (9 tiers × 9 risk profiles) into DB`);
+  invalidatePortalCache();
+  return 81;
+}
+
+export function getPortalTiers() {
+  return PRICE_TIERS.map(tier => ({
+    prefix: tier.prefix,
+    tbi: tier.tbi,
+    variants: RISK_PROFILES.map(risk => ({
+      name: `${tier.prefix}_${risk.suffix}`,
+      suffix: risk.suffix,
+      mbb: risk.mbb,
+      early: risk.early,
+      pool: Math.round(tier.basePool * risk.poolMult),
+    })),
+  }));
+}
+
 export function getPoolForTrack(state: MarketState, trackId: string): PoolConfig | undefined {
   return state.pools.find((p) => p.trackId === trackId);
 }
@@ -467,4 +574,393 @@ export async function checkTreasuryMilestones(): Promise<{ reached: number[]; to
   return { reached: newlyReached, total: totalNum };
 }
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS };
+const SETTLEMENT_CYCLE_THRESHOLD = 1000;
+const PAYOUT_PER_CYCLE = 540;
+const EARLY_ACCEPT_MULTIPLIER = 1.25;
+const HOLD_BONUS_PER_CYCLE = 0.15;
+
+export interface SettlementOffer {
+  queueId: string;
+  orderId: string;
+  userId: string;
+  trackId: string;
+  buyIn: number;
+  portalName: string;
+  baseMbb: number;
+  currentMultiplier: number;
+  currentOffer: number;
+  maxPayout: number;
+  cyclesHeld: number;
+  queuePosition: number;
+  status: string;
+  createdAt: Date | null;
+}
+
+export async function enqueueTrader(
+  orderId: string,
+  userId: string,
+  trackId: string,
+  buyIn: number,
+): Promise<void> {
+  const portal = getPortalForPrice(buyIn);
+
+  const [maxPos] = await db.select({
+    maxPos: sql<string>`COALESCE(MAX(queue_position), 0)`,
+  }).from(settlementQueue).where(
+    inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+  );
+  const nextPos = parseInt(maxPos?.maxPos || "0") + 1;
+
+  const earlyOffer = parseFloat((buyIn * EARLY_ACCEPT_MULTIPLIER).toFixed(2));
+
+  await db.insert(settlementQueue).values({
+    orderId,
+    userId,
+    trackId,
+    buyIn: buyIn.toString(),
+    portalName: portal.name,
+    baseMbb: portal.mbb.toString(),
+    currentOffer: earlyOffer.toString(),
+    currentMultiplier: EARLY_ACCEPT_MULTIPLIER.toString(),
+    cyclesHeld: 0,
+    status: "QUEUED",
+    queuePosition: nextPos,
+  });
+
+  console.log(`[GOVERNOR] Trader enqueued: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | Early Offer: $${earlyOffer}`);
+}
+
+export async function getGrossIntake(): Promise<number> {
+  const [result] = await db.select({
+    total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
+  }).from(orders);
+  return parseFloat(result?.total || "0");
+}
+
+export async function getTotalPaidOut(): Promise<number> {
+  const [result] = await db.select({
+    paid: sql<string>`COALESCE(SUM(CAST(payout_amount AS DECIMAL)), 0)`,
+  }).from(settlementQueue).where(eq(settlementQueue.status, "SETTLED"));
+  return parseFloat(result?.paid || "0");
+}
+
+export async function getSettlementFundBalance(): Promise<number> {
+  const grossIntake = await getGrossIntake();
+  const totalPaid = await getTotalPaidOut();
+  const totalOwed = parseFloat((grossIntake * FLOOR_SPLIT).toFixed(2));
+  return parseFloat((totalOwed - totalPaid).toFixed(2));
+}
+
+export async function getCompletedCycleCount(): Promise<number> {
+  const [result] = await db.select({
+    cnt: sql<string>`COALESCE(MAX(cycle_number), 0)`,
+  }).from(settlementCycles);
+  return parseInt(result?.cnt || "0");
+}
+
+export async function runSettlementCycle(): Promise<{
+  cycleNumber: number;
+  settled: { userId: string; payout: number; multiplier: number }[];
+  holding: string[];
+  payoutBudget: number;
+  totalPaidOut: number;
+}> {
+  const grossIntake = await getGrossIntake();
+  const completedCycles = await getCompletedCycleCount();
+  const cycleNumber = completedCycles + 1;
+
+  const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
+  const totalPayoutBudget = totalKsReached * PAYOUT_PER_CYCLE;
+
+  const alreadyPaid = await getTotalPaidOut();
+  const payoutBudget = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
+
+  if (payoutBudget <= 0) {
+    console.log(`[GOVERNOR] Cycle #${cycleNumber} — No payout budget. Gross: $${grossIntake.toFixed(2)} | ${totalKsReached} K's reached | Already paid: $${alreadyPaid.toFixed(2)}`);
+    return { cycleNumber, settled: [], holding: [], payoutBudget: 0, totalPaidOut: 0 };
+  }
+
+  console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K = $${totalPayoutBudget} total owed | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
+
+  const queued = await db.select().from(settlementQueue)
+    .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"]))
+    .orderBy(asc(settlementQueue.queuePosition));
+
+  let remaining = payoutBudget;
+  const settled: { userId: string; payout: number; multiplier: number }[] = [];
+  const holding: string[] = [];
+  let totalPaidOut = 0;
+
+  for (const entry of queued) {
+    if (remaining <= 0) {
+      holding.push(entry.userId);
+      continue;
+    }
+
+    const buyIn = parseFloat(entry.buyIn || "0");
+    const baseMbb = parseFloat(entry.baseMbb || "3.00");
+    const cyclesHeld = entry.cyclesHeld || 0;
+
+    const holdBonus = cyclesHeld * HOLD_BONUS_PER_CYCLE;
+    const currentMult = parseFloat(Math.min(
+      EARLY_ACCEPT_MULTIPLIER + holdBonus,
+      baseMbb
+    ).toFixed(2));
+    const offerAmount = parseFloat((buyIn * currentMult).toFixed(2));
+
+    await db.update(settlementQueue).set({
+      currentMultiplier: currentMult.toFixed(2),
+      currentOffer: offerAmount.toFixed(2),
+      cyclesHeld: cyclesHeld + 1,
+    }).where(eq(settlementQueue.id, entry.id));
+
+    if (offerAmount <= remaining) {
+      await db.update(settlementQueue).set({
+        status: "OFFERED",
+        currentMultiplier: currentMult.toFixed(2),
+        currentOffer: offerAmount.toFixed(2),
+        cyclesHeld: cyclesHeld + 1,
+      }).where(eq(settlementQueue.id, entry.id));
+
+      holding.push(entry.userId);
+    } else {
+      holding.push(entry.userId);
+    }
+  }
+
+  await db.insert(settlementCycles).values({
+    cycleNumber,
+    poolIntake: grossIntake.toFixed(2),
+    totalSettled: totalPaidOut.toFixed(2),
+    tradersSettled: settled.length,
+    tradersHolding: holding.length,
+    status: "COMPLETED",
+    closedAt: new Date(),
+  });
+
+  console.log(`[GOVERNOR] Cycle #${cycleNumber} COMPLETE | Budget: $${payoutBudget.toFixed(2)} | Settled: ${settled.length} | Holding: ${holding.length} | Paid: $${totalPaidOut.toFixed(2)}`);
+
+  return { cycleNumber, settled, holding, payoutBudget, totalPaidOut };
+}
+
+export async function traderAcceptOffer(queueId: string, userId: string): Promise<{
+  success: boolean;
+  payout?: number;
+  multiplier?: number;
+  message: string;
+}> {
+  const [entry] = await db.select().from(settlementQueue)
+    .where(and(eq(settlementQueue.id, queueId), eq(settlementQueue.userId, userId)));
+
+  if (!entry) return { success: false, message: "Position not found" };
+  if (entry.status === "SETTLED") return { success: false, message: "Already settled" };
+
+  const buyIn = parseFloat(entry.buyIn || "0");
+  const baseMbb = parseFloat(entry.baseMbb || "3.00");
+  const cyclesHeld = entry.cyclesHeld || 0;
+
+  const holdBonus = cyclesHeld * HOLD_BONUS_PER_CYCLE;
+  const currentMult = parseFloat(Math.min(
+    EARLY_ACCEPT_MULTIPLIER + holdBonus,
+    baseMbb
+  ).toFixed(2));
+  const offerAmount = parseFloat((buyIn * currentMult).toFixed(2));
+
+  const grossIntake = await getGrossIntake();
+  const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
+  const totalPayoutBudget = totalKsReached * PAYOUT_PER_CYCLE;
+  const alreadyPaid = await getTotalPaidOut();
+  const available = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
+
+  if (offerAmount > available) {
+    return {
+      success: false,
+      message: `Fund has $${available.toFixed(2)} available. Your offer is $${offerAmount.toFixed(2)}. Hold for next $1K cycle — next $540 drops when gross hits $${((totalKsReached + 1) * SETTLEMENT_CYCLE_THRESHOLD).toLocaleString()}.`,
+    };
+  }
+
+  await db.update(settlementQueue).set({
+    status: "SETTLED",
+    acceptedMultiplier: currentMult.toFixed(2),
+    payoutAmount: offerAmount.toFixed(2),
+    currentOffer: offerAmount.toFixed(2),
+    currentMultiplier: currentMult.toFixed(2),
+    settledAt: new Date(),
+  }).where(eq(settlementQueue.id, queueId));
+
+  console.log(`[GOVERNOR] TRADER ACCEPTED: ${userId} | $${buyIn} → $${offerAmount} (${currentMult}x) | Fund remaining: $${(available - offerAmount).toFixed(2)}`);
+
+  return {
+    success: true,
+    payout: offerAmount,
+    multiplier: currentMult,
+    message: `SETTLED — $${offerAmount.toFixed(2)} at ${currentMult}x. Payout via $AITITRADEBROKERAGE.`,
+  };
+}
+
+export async function traderHoldPosition(queueId: string, userId: string): Promise<{
+  success: boolean;
+  nextMultiplier?: number;
+  nextOffer?: number;
+  message: string;
+}> {
+  const [entry] = await db.select().from(settlementQueue)
+    .where(and(eq(settlementQueue.id, queueId), eq(settlementQueue.userId, userId)));
+
+  if (!entry) return { success: false, message: "Position not found" };
+  if (entry.status === "SETTLED") return { success: false, message: "Already settled" };
+
+  const buyIn = parseFloat(entry.buyIn || "0");
+  const baseMbb = parseFloat(entry.baseMbb || "3.00");
+  const cyclesHeld = (entry.cyclesHeld || 0);
+
+  const nextMult = parseFloat(Math.min(
+    EARLY_ACCEPT_MULTIPLIER + (cyclesHeld + 1) * HOLD_BONUS_PER_CYCLE,
+    baseMbb
+  ).toFixed(2));
+  const nextOffer = parseFloat((buyIn * nextMult).toFixed(2));
+  const maxPayout = parseFloat((buyIn * baseMbb).toFixed(2));
+
+  await db.update(settlementQueue).set({
+    status: "HOLDING",
+  }).where(eq(settlementQueue.id, queueId));
+
+  console.log(`[GOVERNOR] TRADER HOLDING: ${userId} | Current: ${parseFloat(entry.currentMultiplier || "1.25").toFixed(2)}x → Next: ${nextMult}x ($${nextOffer}) | Max: $${maxPayout}`);
+
+  return {
+    success: true,
+    nextMultiplier: nextMult,
+    nextOffer,
+    message: `HOLDING — Next cycle offer: $${nextOffer.toFixed(2)} (${nextMult}x). Max payout: $${maxPayout.toFixed(2)} (${baseMbb}x).`,
+  };
+}
+
+export async function getTraderPositions(userId: string): Promise<SettlementOffer[]> {
+  const positions = await db.select().from(settlementQueue)
+    .where(eq(settlementQueue.userId, userId))
+    .orderBy(asc(settlementQueue.queuePosition));
+
+  return positions.map(p => {
+    const buyIn = parseFloat(p.buyIn || "0");
+    const baseMbb = parseFloat(p.baseMbb || "3.00");
+    const currentMult = parseFloat(p.currentMultiplier || EARLY_ACCEPT_MULTIPLIER.toString());
+    return {
+      queueId: p.id,
+      orderId: p.orderId,
+      userId: p.userId,
+      trackId: p.trackId,
+      buyIn,
+      portalName: p.portalName || "NANO_SAFE",
+      baseMbb,
+      currentMultiplier: currentMult,
+      currentOffer: parseFloat(p.currentOffer || (buyIn * currentMult).toFixed(2)),
+      maxPayout: parseFloat((buyIn * baseMbb).toFixed(2)),
+      cyclesHeld: p.cyclesHeld || 0,
+      queuePosition: p.queuePosition || 0,
+      status: p.status || "QUEUED",
+      createdAt: p.createdAt,
+    };
+  });
+}
+
+export async function getSettlementDashboard(): Promise<{
+  grossIntake: number;
+  ksReached: number;
+  totalOwed54: number;
+  totalPaidOut: number;
+  fundAvailable: number;
+  payoutPerK: number;
+  totalTraders: number;
+  queuedCount: number;
+  holdingCount: number;
+  settledCount: number;
+  currentCycle: number;
+  cycleThreshold: number;
+  nextKAt: number;
+  ceo46Total: number;
+  recentSettlements: SettlementOffer[];
+  topQueue: SettlementOffer[];
+}> {
+  const grossIntake = await getGrossIntake();
+  const totalPaid = await getTotalPaidOut();
+  const ksReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
+  const totalOwed54 = parseFloat((ksReached * PAYOUT_PER_CYCLE).toFixed(2));
+  const fundAvailable = parseFloat((totalOwed54 - totalPaid).toFixed(2));
+  const ceo46Total = parseFloat((grossIntake * CEO_SPLIT).toFixed(2));
+  const nextKAt = (ksReached + 1) * SETTLEMENT_CYCLE_THRESHOLD;
+
+  const [counts] = await db.select({
+    total: sql<string>`COUNT(*)`,
+    queued: sql<string>`SUM(CASE WHEN status IN ('QUEUED','OFFERED') THEN 1 ELSE 0 END)`,
+    holding: sql<string>`SUM(CASE WHEN status = 'HOLDING' THEN 1 ELSE 0 END)`,
+    settled: sql<string>`SUM(CASE WHEN status = 'SETTLED' THEN 1 ELSE 0 END)`,
+  }).from(settlementQueue);
+
+  const completedCycles = await getCompletedCycleCount();
+
+  const recentSettled = await db.select().from(settlementQueue)
+    .where(eq(settlementQueue.status, "SETTLED"))
+    .orderBy(desc(settlementQueue.settledAt))
+    .limit(10);
+
+  const topQueued = await db.select().from(settlementQueue)
+    .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"]))
+    .orderBy(asc(settlementQueue.queuePosition))
+    .limit(20);
+
+  const mapEntry = (p: any): SettlementOffer => {
+    const buyIn = parseFloat(p.buyIn || "0");
+    const baseMbb = parseFloat(p.baseMbb || "3.00");
+    const currentMult = parseFloat(p.currentMultiplier || EARLY_ACCEPT_MULTIPLIER.toString());
+    return {
+      queueId: p.id,
+      orderId: p.orderId,
+      userId: p.userId,
+      trackId: p.trackId,
+      buyIn,
+      portalName: p.portalName || "NANO_SAFE",
+      baseMbb,
+      currentMultiplier: currentMult,
+      currentOffer: parseFloat(p.currentOffer || (buyIn * currentMult).toFixed(2)),
+      maxPayout: parseFloat((buyIn * baseMbb).toFixed(2)),
+      cyclesHeld: p.cyclesHeld || 0,
+      queuePosition: p.queuePosition || 0,
+      status: p.status || "QUEUED",
+      createdAt: p.createdAt,
+    };
+  };
+
+  return {
+    grossIntake,
+    ksReached,
+    totalOwed54: totalOwed54,
+    totalPaidOut: totalPaid,
+    fundAvailable: Math.max(0, fundAvailable),
+    payoutPerK: PAYOUT_PER_CYCLE,
+    totalTraders: parseInt(counts?.total || "0"),
+    queuedCount: parseInt(counts?.queued || "0"),
+    holdingCount: parseInt(counts?.holding || "0"),
+    settledCount: parseInt(counts?.settled || "0"),
+    currentCycle: completedCycles,
+    cycleThreshold: SETTLEMENT_CYCLE_THRESHOLD,
+    nextKAt,
+    ceo46Total,
+    recentSettlements: recentSettled.map(mapEntry),
+    topQueue: topQueued.map(mapEntry),
+  };
+}
+
+export async function checkAndTriggerSettlement(): Promise<boolean> {
+  const grossIntake = await getGrossIntake();
+  const completedCycles = await getCompletedCycleCount();
+  const ksReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
+
+  if (ksReached > completedCycles) {
+    console.log(`[GOVERNOR] New $1K milestone! Gross: $${grossIntake.toFixed(2)} | ${ksReached}K reached | ${completedCycles} cycles done | Triggering settlement...`);
+    await runSettlementCycle();
+    return true;
+  }
+  return false;
+}
+
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES };

@@ -14,7 +14,7 @@ import { eq, and, desc, sql, count } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS } from "./market-governor";
+import { getMarketState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -107,7 +107,7 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   initSheetsFromEnv();
-  loadPortalsFromDb().catch(err => console.error("[PORTALS] Init load failed:", err));
+  seed81Portals().then(() => loadPortalsFromDb()).catch(err => console.error("[PORTALS] Init load failed:", err));
   initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
 
   app.get("/uploads/:filename", async (req: any, res) => {
@@ -2092,8 +2092,13 @@ export async function registerRoutes(
         .set({ salesCount: sql`${tracks.salesCount} + 1` })
         .where(eq(tracks.id, trackId));
 
+      await enqueueTrader(order.id, userId, trackId, parsedAmount);
+
+      const settlementTriggered = await checkAndTriggerSettlement();
+
       const newGross = parseFloat(((currentSales + 1) * price).toFixed(2));
       const capacityPct = Math.min(100, parseFloat(((newGross / GLOBAL_CEILING) * 100).toFixed(1)));
+      const fundBalance = await getSettlementFundBalance();
 
       res.json({
         instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
@@ -2118,6 +2123,8 @@ export async function registerRoutes(
         capacityPct,
         aiModel: track.aiModel || "AITIFY-GEN-1",
         releaseType: isGlobal ? "global" : "native",
+        settlementFund: fundBalance,
+        settlementTriggered,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
@@ -3813,57 +3820,67 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   // ═══════════════════════════════════════════════════════════════
   app.get("/api/settlement/status", isAuthenticated, async (req: any, res) => {
     try {
-      const allNativeTracks = await db.select({
-        id: tracks.id,
-        title: tracks.title,
-        unitPrice: tracks.unitPrice,
-        salesCount: tracks.salesCount,
-      }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
-
-      const systemIntake = allNativeTracks.reduce((sum, t) => {
-        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "5.00"));
-      }, 0);
-
-      const settlementThreshold = POOL_CEILING;
-      const currentCycle = Math.floor(systemIntake / settlementThreshold) + 1;
-      const cycleProgress = systemIntake % settlementThreshold;
-      const cyclePct = parseFloat(((cycleProgress / settlementThreshold) * 100).toFixed(1));
-
-      const pendingOrders = await db.select({
-        id: orders.id,
-        trackId: orders.trackId,
-        unitPrice: orders.unitPrice,
-        createdAt: orders.createdAt,
-        status: orders.status,
-      }).from(orders)
-        .where(eq(orders.status, "confirmed"))
-        .orderBy(orders.createdAt);
-
-      const fifoQueue = pendingOrders.map((o, i) => ({
-        position: i + 1,
-        orderId: o.id,
-        trackId: o.trackId,
-        buyIn: parseFloat(o.unitPrice || "5.00"),
-        buyBack: parseFloat((parseFloat(o.unitPrice || "5.00") * 1.80).toFixed(2)),
-        status: cycleProgress >= settlementThreshold ? "SETTLING" : "QUEUED",
-      }));
-
+      const dashboard = await getSettlementDashboard();
       res.json({
-        systemIntake: parseFloat(systemIntake.toFixed(2)),
-        settlementThreshold,
-        currentCycle,
-        cycleProgress: parseFloat(cycleProgress.toFixed(2)),
-        cyclePct,
-        fifoQueueLength: fifoQueue.length,
-        fifoQueue: fifoQueue.slice(0, 25),
+        ...dashboard,
         splitMandate: "54/46",
-        buyBackMultiplier: 1.80,
-        floor54: parseFloat((systemIntake * FLOOR_SPLIT).toFixed(2)),
-        ceo46: parseFloat((systemIntake * CEO_SPLIT).toFixed(2)),
+        earlyAcceptMultiplier: 1.25,
+        holdBonusPerCycle: 0.15,
       });
     } catch (error: any) {
       console.error("[SETTLEMENT] Status error:", error);
       res.status(500).json({ message: "Failed to fetch settlement status" });
+    }
+  });
+
+  app.get("/api/settlement/my-positions", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const positions = await getTraderPositions(userId);
+      const fundBalance = await getSettlementFundBalance();
+      res.json({ positions, fundBalance, cycleThreshold: SETTLEMENT_CYCLE_THRESHOLD });
+    } catch (error: any) {
+      console.error("[SETTLEMENT] Positions error:", error);
+      res.status(500).json({ message: "Failed to fetch positions" });
+    }
+  });
+
+  app.post("/api/settlement/accept", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { queueId } = req.body;
+      if (!queueId) return res.status(400).json({ message: "queueId required" });
+      const result = await traderAcceptOffer(queueId, userId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[SETTLEMENT] Accept error:", error);
+      res.status(500).json({ message: "Failed to accept settlement" });
+    }
+  });
+
+  app.post("/api/settlement/hold", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { queueId } = req.body;
+      if (!queueId) return res.status(400).json({ message: "queueId required" });
+      const result = await traderHoldPosition(queueId, userId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[SETTLEMENT] Hold error:", error);
+      res.status(500).json({ message: "Failed to hold position" });
+    }
+  });
+
+  app.post("/api/admin/settlement/run-cycle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const result = await runSettlementCycle();
+      res.json(result);
+    } catch (error: any) {
+      console.error("[SETTLEMENT] Admin cycle error:", error);
+      res.status(500).json({ message: "Failed to run settlement cycle" });
     }
   });
 
