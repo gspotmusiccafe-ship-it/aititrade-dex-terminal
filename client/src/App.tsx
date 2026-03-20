@@ -59,12 +59,13 @@ function ActivationRedirect() {
 }
 
 function PremiumGate({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const { data: trustStatus } = useQuery<TrustStatus>({
     queryKey: ["/api/trust/status"],
     enabled: isAuthenticated,
   });
 
+  if (isLoading) return <>{children}</>;
   if (!isAuthenticated) return <LandingPage />;
   if ((user as any)?.isAdmin) return <>{children}</>;
   if (trustStatus === undefined) return <>{children}</>;
@@ -105,27 +106,29 @@ function AuthenticatedLayout() {
             )}
           </div>
           <main className="flex-1 overflow-auto bg-black">
-            <Switch>
-              <Route path="/">{() => <PremiumGate><HomePage /></PremiumGate>}</Route>
-              <Route path="/search">{() => <PremiumGate><SearchPage /></PremiumGate>}</Route>
-              <Route path="/library">{() => <PremiumGate><LibraryPage /></PremiumGate>}</Route>
-              <Route path="/membership" component={MembershipPage} />
-              <Route path="/artist-portal">{() => <PremiumGate><ArtistPortalPage /></PremiumGate>}</Route>
-              <Route path="/liked">{() => <PremiumGate><LikedSongsPage /></PremiumGate>}</Route>
-              <Route path="/artist/:id">{() => <PremiumGate><ArtistPage /></PremiumGate>}</Route>
-              <Route path="/admin">{() => <PremiumGate><AdminPage /></PremiumGate>}</Route>
-              <Route path="/radio">{() => <PremiumGate><RadioPage /></PremiumGate>}</Route>
-              <Route path="/leaderboard">{() => <PremiumGate><LeaderboardPage /></PremiumGate>}</Route>
-              <Route path="/playlist/:id">{() => <PremiumGate><PlaylistPage /></PremiumGate>}</Route>
-              <Route path="/browse/:section">{() => <PremiumGate><BrowsePage /></PremiumGate>}</Route>
-              <Route path="/dashboard">{() => <PremiumGate><DashboardPage /></PremiumGate>}</Route>
-              <Route path="/trust-vault">{() => <PremiumGate><TrustVaultPage /></PremiumGate>}</Route>
-              <Route path="/production">{() => <PremiumGate><ProductionPage /></PremiumGate>}</Route>
-              <Route path="/trader/:userId">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
-              <Route path="/trader">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
-              <Route path="/login" component={LandingPage} />
-              <Route component={NotFound} />
-            </Switch>
+            <ErrorBoundary fallback={<CrashFallback />}>
+              <Switch>
+                <Route path="/">{() => <PremiumGate><HomePage /></PremiumGate>}</Route>
+                <Route path="/search">{() => <PremiumGate><SearchPage /></PremiumGate>}</Route>
+                <Route path="/library">{() => <PremiumGate><LibraryPage /></PremiumGate>}</Route>
+                <Route path="/membership" component={MembershipPage} />
+                <Route path="/artist-portal">{() => <PremiumGate><ArtistPortalPage /></PremiumGate>}</Route>
+                <Route path="/liked">{() => <PremiumGate><LikedSongsPage /></PremiumGate>}</Route>
+                <Route path="/artist/:id">{() => <PremiumGate><ArtistPage /></PremiumGate>}</Route>
+                <Route path="/admin">{() => <PremiumGate><AdminPage /></PremiumGate>}</Route>
+                <Route path="/radio">{() => <PremiumGate><RadioPage /></PremiumGate>}</Route>
+                <Route path="/leaderboard">{() => <PremiumGate><LeaderboardPage /></PremiumGate>}</Route>
+                <Route path="/playlist/:id">{() => <PremiumGate><PlaylistPage /></PremiumGate>}</Route>
+                <Route path="/browse/:section">{() => <PremiumGate><BrowsePage /></PremiumGate>}</Route>
+                <Route path="/dashboard">{() => <PremiumGate><DashboardPage /></PremiumGate>}</Route>
+                <Route path="/trust-vault">{() => <PremiumGate><TrustVaultPage /></PremiumGate>}</Route>
+                <Route path="/production">{() => <PremiumGate><ProductionPage /></PremiumGate>}</Route>
+                <Route path="/trader/:userId">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
+                <Route path="/trader">{() => <PremiumGate><TraderPage /></PremiumGate>}</Route>
+                <Route path="/login" component={LandingPage} />
+                <Route component={NotFound} />
+              </Switch>
+            </ErrorBoundary>
           </main>
         </SidebarInset>
       </div>
@@ -134,18 +137,34 @@ function AuthenticatedLayout() {
   );
 }
 
+function CrashFallback() {
+  return (
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center font-mono">
+      <div className="text-center border border-emerald-500/30 p-10 max-w-md">
+        <h1 className="text-emerald-400 font-black text-2xl mb-4">AITITRADE EXCHANGE</h1>
+        <p className="text-white mb-2">System is reloading...</p>
+        <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-emerald-600 text-white font-bold hover:bg-emerald-500">
+          RELOAD EXCHANGE
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <PlayerProvider>
-            <AuthenticatedLayout />
-            <Toaster />
-          </PlayerProvider>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary fallback={<CrashFallback />}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider defaultTheme="dark">
+          <TooltipProvider>
+            <PlayerProvider>
+              <AuthenticatedLayout />
+              <Toaster />
+            </PlayerProvider>
+          </TooltipProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
