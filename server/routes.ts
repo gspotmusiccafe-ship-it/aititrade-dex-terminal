@@ -738,6 +738,42 @@ export async function registerRoutes(
     res.json(PORTALS);
   });
 
+  app.get("/api/admin/treasury-stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const [result] = await db.select({
+        totalRevenue: sql<string>`COALESCE(SUM(CAST(house_take AS DECIMAL)), 0)`,
+        earlyPayouts: sql<string>`COALESCE(SUM(CAST(final_payout AS DECIMAL)), 0)`,
+        settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
+        holdingCount: sql<number>`COUNT(CASE WHEN status = 'confirmed' THEN 1 END)`,
+      }).from(orders);
+
+      const allNative = await db.select({
+        salesCount: tracks.salesCount,
+        unitPrice: tracks.unitPrice,
+      }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
+
+      const activeVolume = allNative.reduce((sum, t) => {
+        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "2.00"));
+      }, 0);
+
+      res.json({
+        totalRevenue: parseFloat(result?.totalRevenue || "0"),
+        activeVolume: parseFloat(activeVolume.toFixed(2)),
+        earlyPayouts: parseFloat(result?.earlyPayouts || "0"),
+        settledCount: result?.settledCount || 0,
+        holdingCount: result?.holdingCount || 0,
+      });
+    } catch (error) {
+      console.error("Treasury stats error:", error);
+      res.status(500).json({ message: "Failed to fetch treasury stats" });
+    }
+  });
+
   app.get("/api/exchange/treasury", async (_req: any, res) => {
     try {
       const [treasuryResult] = await db.select({

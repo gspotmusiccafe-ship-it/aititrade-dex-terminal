@@ -3545,6 +3545,78 @@ function CreateArtistHeaderButton() {
   );
 }
 
+function TreasuryDashboard() {
+  const { data: stats, isLoading } = useQuery<{
+    totalRevenue: number;
+    activeVolume: number;
+    earlyPayouts: number;
+    settledCount: number;
+    holdingCount: number;
+  }>({
+    queryKey: ["/api/admin/treasury-stats"],
+    refetchInterval: 30000,
+  });
+
+  if (isLoading) return <div className="text-lime-500 animate-pulse font-mono p-6">LOADING TREASURY DATA...</div>;
+
+  return (
+    <div className="bg-black border border-zinc-800 p-6 font-mono" data-testid="treasury-dashboard">
+      <div className="flex justify-between items-center mb-8 border-b border-zinc-800 pb-4">
+        <h2 className="text-xl text-lime-400 font-bold tracking-tighter uppercase underline">
+          Sovereign House Treasury
+        </h2>
+        <div className="text-[10px] text-zinc-500 text-right">
+          STATUS: SYSTEM ACTIVE<br />
+          PORTALS: 700 / 1K / 2K / 3K / 5K
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-zinc-950 p-4 border-l-2 border-lime-500">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Total House Take</p>
+          <p className="text-3xl text-white font-bold" data-testid="treasury-total-revenue">
+            ${stats?.totalRevenue?.toLocaleString() || "0.00"}
+          </p>
+          <p className="text-[10px] text-lime-600 mt-2">↑ 150% Spread Retention Active</p>
+        </div>
+
+        <div className="bg-zinc-950 p-4 border-l-2 border-zinc-700">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Active Floor Volume</p>
+          <p className="text-3xl text-zinc-300 font-bold" data-testid="treasury-active-volume">
+            ${stats?.activeVolume?.toLocaleString() || "0.00"}
+          </p>
+          <p className="text-[10px] text-zinc-600 mt-2">Sum of all open TBIs</p>
+        </div>
+
+        <div className="bg-zinc-950 p-4 border-l-2 border-yellow-600">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Early Payouts Issued</p>
+          <p className="text-3xl text-yellow-500 font-bold" data-testid="treasury-early-payouts">
+            ${stats?.earlyPayouts?.toLocaleString() || "0.00"}
+          </p>
+          <p className="text-[10px] text-zinc-600 mt-2">Users paid first at lower offers</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 mt-6">
+        <div className="bg-zinc-950 p-4 border border-zinc-800">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Early Exits</p>
+          <p className="text-2xl text-lime-400 font-bold" data-testid="treasury-settled-count">{stats?.settledCount || 0}</p>
+          <p className="text-[10px] text-zinc-600 mt-1">Positions closed at early rate</p>
+        </div>
+        <div className="bg-zinc-950 p-4 border border-zinc-800">
+          <p className="text-zinc-500 text-xs uppercase mb-1">Active Positions</p>
+          <p className="text-2xl text-white font-bold" data-testid="treasury-holding-count">{stats?.holdingCount || 0}</p>
+          <p className="text-[10px] text-zinc-600 mt-1">Holding for MBB settlement</p>
+        </div>
+      </div>
+
+      <div className="mt-8 text-[10px] text-zinc-700 italic">
+        *No-loss architecture enabled. All settlements are final and calculated across the trading floor.
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { data: adminCheck, isLoading: checkingAdmin } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -3673,6 +3745,10 @@ export default function AdminPage() {
                 <Wifi className="h-4 w-4 mr-1.5" />
                 Jam Control
               </TabsTrigger>
+              <TabsTrigger value="treasury" data-testid="tab-treasury" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
+                <DollarSign className="h-4 w-4 mr-1.5 text-lime-400" />
+                Treasury
+              </TabsTrigger>
               <TabsTrigger value="vault" data-testid="tab-vault" className="whitespace-nowrap data-[state=active]:bg-yellow-500/10 data-[state=active]:text-yellow-400">
                 <ShieldCheck className="h-4 w-4 mr-1.5" />
                 CEO Vault
@@ -3738,6 +3814,10 @@ export default function AdminPage() {
 
           <TabsContent value="jam-control">
             <JamControlTab />
+          </TabsContent>
+
+          <TabsContent value="treasury">
+            <TreasuryDashboard />
           </TabsContent>
 
           <TabsContent value="vault">
