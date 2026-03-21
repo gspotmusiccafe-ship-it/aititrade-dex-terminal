@@ -1,16 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Music2, Play, Pause, Crown, Clock, Headphones, Users, ArrowRight, Star, CheckCircle2, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
-const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE/25.00";
+import { Music2, Play, Pause, Clock, Headphones, Users, ArrowRight, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3 } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,290 +21,6 @@ function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function HeroPlayer() {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [playError, setPlayError] = useState<string | null>(null);
-
-  const { data: tracks } = useQuery<TrackData[]>({
-    queryKey: ["/api/tracks/featured"],
-  });
-
-  const playlist = tracks?.filter((t) => t.audioUrl) || [];
-  const current = playlist[currentIndex];
-
-  useEffect(() => {
-    if (tracks && currentIndex >= playlist.length && playlist.length > 0) {
-      setCurrentIndex(0);
-    }
-  }, [tracks, playlist.length, currentIndex]);
-
-  const play = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !current) return;
-    setPlayError(null);
-    if (!audio.src || audio.src === window.location.href) {
-      audio.src = current.audioUrl;
-      audio.load();
-    }
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => setIsPlaying(true))
-        .catch((err: Error) => {
-          console.error("Audio play failed:", err.message);
-          if (err.name === "NotAllowedError") {
-            setPlayError("Tap play again — your browser blocked autoplay");
-          } else {
-            setPlayError("Playback failed — try another track");
-          }
-          setIsPlaying(false);
-        });
-    }
-  }, [current]);
-
-  const pause = useCallback(() => {
-    audioRef.current?.pause();
-    setIsPlaying(false);
-  }, []);
-
-  const togglePlay = useCallback(() => {
-    if (isPlaying) pause();
-    else play();
-  }, [isPlaying, play, pause]);
-
-  const playlistRef = useRef(playlist);
-  playlistRef.current = playlist;
-  const currentIndexRef = useRef(currentIndex);
-  currentIndexRef.current = currentIndex;
-  const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
-
-  const playNextDirect = useCallback((audio: HTMLAudioElement, nextIndex: number) => {
-    const pl = playlistRef.current;
-    if (!pl.length) return;
-    const idx = ((nextIndex % pl.length) + pl.length) % pl.length;
-    const nextTrack = pl[idx];
-    if (!nextTrack) return;
-    currentIndexRef.current = idx;
-    setCurrentIndex(idx);
-    setCurrentTime(0);
-    setDuration(0);
-    setPlayError(null);
-    audio.src = nextTrack.audioUrl;
-    const p = audio.play();
-    if (p !== undefined) {
-      p.then(() => setIsPlaying(true))
-        .catch(() => {
-          setIsPlaying(false);
-          setPlayError("Tap play to continue listening");
-        });
-    }
-  }, []);
-
-  const skipTo = useCallback((index: number, autoPlay = false) => {
-    const pl = playlistRef.current;
-    if (!pl.length) return;
-    const next = ((index % pl.length) + pl.length) % pl.length;
-    const audio = audioRef.current;
-    if (!audio) return;
-    setPlayError(null);
-    setCurrentIndex(next);
-    currentIndexRef.current = next;
-    setIsLoaded(false);
-    setCurrentTime(0);
-    setDuration(0);
-    const nextTrack = pl[next];
-    if (nextTrack && (autoPlay || isPlayingRef.current)) {
-      audio.src = nextTrack.audioUrl;
-      const p = audio.play();
-      if (p !== undefined) {
-        p.then(() => setIsPlaying(true))
-          .catch(() => {
-            setIsPlaying(false);
-            setPlayError("Tap play to continue listening");
-          });
-      }
-    } else if (nextTrack) {
-      audio.src = nextTrack.audioUrl;
-      audio.load();
-    }
-  }, []);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.volume = isMuted ? 0 : volume;
-  }, [volume, isMuted]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const onTime = () => setCurrentTime(audio.currentTime);
-    const onMeta = () => { setDuration(audio.duration); setIsLoaded(true); };
-    const onEnded = () => {
-      playNextDirect(audio, currentIndexRef.current + 1);
-    };
-    const onError = () => {
-      setIsLoaded(false);
-      if (playlistRef.current.length > 1) {
-        setTimeout(() => playNextDirect(audio, currentIndexRef.current + 1), 300);
-      } else {
-        setIsPlaying(false);
-      }
-    };
-    audio.addEventListener("timeupdate", onTime);
-    audio.addEventListener("loadedmetadata", onMeta);
-    audio.addEventListener("ended", onEnded);
-    audio.addEventListener("error", onError);
-    return () => {
-      audio.removeEventListener("timeupdate", onTime);
-      audio.removeEventListener("loadedmetadata", onMeta);
-      audio.removeEventListener("ended", onEnded);
-      audio.removeEventListener("error", onError);
-    };
-  }, [playNextDirect]);
-
-  const seek = (val: number[]) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = val[0];
-    setCurrentTime(val[0]);
-  };
-
-  const coverSrc = current?.coverImage || current?.artist?.profileImage || null;
-
-  return (
-    <div className="relative aspect-square max-w-lg mx-auto">
-      <audio ref={audioRef} preload="metadata" />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent rounded-3xl blur-3xl" />
-
-      <div className="relative h-full rounded-3xl bg-gradient-to-br from-card to-card/50 border border-border/50 overflow-hidden flex flex-col">
-        <div className="flex-1 relative flex items-center justify-center overflow-hidden bg-black/20">
-          {coverSrc ? (
-            <img
-              src={coverSrc}
-              alt={current?.title || "Album cover"}
-              className={`w-full h-full object-cover transition-transform duration-700 ${isPlaying ? "scale-105" : "scale-100"}`}
-              data-testid="img-hero-cover"
-            />
-          ) : (
-            <div className="flex flex-col items-center gap-3">
-              <Disc3 className={`h-24 w-24 text-primary/40 ${isPlaying ? "animate-spin" : ""}`} style={{ animationDuration: "3s" }} />
-              <span className="text-xs text-muted-foreground">
-                {playlist.length ? "No artwork" : "Loading tracks..."}
-              </span>
-            </div>
-          )}
-          {coverSrc && isPlaying && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          )}
-
-          <div className="absolute top-3 right-3 bg-primary/90 text-primary-foreground px-3 py-1 rounded-full text-xs font-medium shadow-lg">
-            LIVE
-          </div>
-        </div>
-
-        <div className="p-4 bg-card/95 backdrop-blur-sm border-t border-border/30 space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-semibold text-primary/80 uppercase tracking-wider" data-testid="text-hero-radio-label">97.7 THE FLAME</p>
-              <p className="text-sm font-semibold truncate" data-testid="text-hero-track-title">
-                {current?.title || "Select a track"}
-              </p>
-              <p className="text-xs text-muted-foreground truncate" data-testid="text-hero-track-artist">
-                {current?.artist?.name || "AITIFY MUSIC RADIO"}
-              </p>
-              {playError && (
-                <p className="text-xs text-destructive mt-0.5" data-testid="text-play-error">{playError}</p>
-              )}
-            </div>
-            {current?.genre && (
-              <Badge variant="secondary" className="text-[10px] flex-shrink-0">
-                {current.genre}
-              </Badge>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <Slider
-              value={[currentTime]}
-              max={duration || 100}
-              step={0.5}
-              onValueChange={seek}
-              className="cursor-pointer"
-              data-testid="slider-hero-seek"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setIsMuted(!isMuted)}
-                className="p-1.5 rounded-full hover:bg-muted/50 transition-colors"
-                data-testid="button-hero-mute"
-              >
-                {isMuted ? <VolumeX className="h-3.5 w-3.5 text-muted-foreground" /> : <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />}
-              </button>
-              <Slider
-                value={[isMuted ? 0 : volume * 100]}
-                max={100}
-                step={1}
-                onValueChange={(v) => { setVolume(v[0] / 100); if (isMuted) setIsMuted(false); }}
-                className="w-16 cursor-pointer"
-                data-testid="slider-hero-volume"
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => skipTo(currentIndex - 1)}
-                disabled={!playlist.length}
-                className="p-2 rounded-full hover:bg-muted/50 transition-colors disabled:opacity-30"
-                data-testid="button-hero-prev"
-                aria-label="Previous track"
-              >
-                <SkipBack className="h-4 w-4" />
-              </button>
-              <button
-                onClick={togglePlay}
-                disabled={!playlist.length}
-                className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-30 shadow-lg"
-                data-testid="button-hero-play"
-                aria-label={isPlaying ? "Pause" : "Play"}
-              >
-                {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-              </button>
-              <button
-                onClick={() => skipTo(currentIndex + 1)}
-                disabled={!playlist.length}
-                className="p-2 rounded-full hover:bg-muted/50 transition-colors disabled:opacity-30"
-                data-testid="button-hero-next"
-                aria-label="Next track"
-              >
-                <SkipForward className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="text-[10px] text-muted-foreground w-16 text-right">
-              {playlist.length > 0 && `${currentIndex + 1} / ${playlist.length}`}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function MiniRadio() {
@@ -441,47 +149,6 @@ function MiniRadio() {
   );
 }
 
-const features = [
-  {
-    icon: Clock,
-    title: "Pre-Market Trading Edge",
-    description: "Discover and trade new AI-generated music before it hits the global markets — Spotify, Deezer, Amazon, Apple, Pandora",
-  },
-  {
-    icon: Headphones,
-    title: "All-AI Asset Catalog",
-    description: "A curated catalog of AI-generated high-velocity assets across every sector — the future of sovereign equity",
-  },
-  {
-    icon: Users,
-    title: "Support Asset Architects",
-    description: "Asset Architects mint high-velocity assets and earn more per stream while you build positions in exclusive pre-market equity",
-  },
-];
-
-const membershipTiers = [
-  {
-    name: "Sovereign Trust Member",
-    price: "$25",
-    period: " down",
-    stream: "trust",
-    features: [
-      "$25 DOWN / 0% INTEREST / $19.79 MO × 24 MONTHS",
-      "$500 PROMISSORY NOTE — FULL SOVEREIGN ACCESS",
-      "Full Sovereign Exchange access",
-      "All assets + pre-release papers",
-      "54/46 G. Smooth Trade Split",
-      "Priority settlement queue",
-      "High-Volatility asset trading",
-      "Trust certificate on all positions",
-      "AI Lyrics Generator & Audio Mastering",
-      "Distribution to Spotify, Amazon, YouTube",
-      "Leaderboard, analytics & tier badges",
-    ],
-    highlight: true,
-  },
-];
-
 function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" | "signup"; onSuccess?: () => void }) {
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
@@ -497,7 +164,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      toast({ title: "✦ ACCOUNT CREATED", description: "Welcome to AITITRADE — your trader portal is ready" });
+      toast({ title: "ACCOUNT CREATED", description: "Welcome to AITITRADE — your trader portal is ready" });
       onSuccess?.();
     },
     onError: (err: Error) => setError(err.message),
@@ -508,7 +175,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      toast({ title: "✦ LOGIN VERIFIED", description: "Access granted — loading exchange..." });
+      toast({ title: "LOGIN VERIFIED", description: "Access granted — loading exchange..." });
       onSuccess?.();
     },
     onError: (err: Error) => setError(err.message),
@@ -531,7 +198,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     <div className="bg-black border border-emerald-500/30 w-full max-w-sm font-mono shadow-2xl shadow-emerald-500/10">
       <div className="border-b border-emerald-500/20 px-4 py-2 flex items-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-        <span className="text-[10px] text-emerald-500 font-bold">AITIFY INSIDER ACCESS TERMINAL</span>
+        <span className="text-[10px] text-emerald-500 font-bold">AITITRADE ACCESS TERMINAL</span>
       </div>
       <div className="p-5">
         <div className="flex gap-1 mb-5">
@@ -630,7 +297,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
             className="w-full mt-2 border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-400/70 hover:text-amber-400 text-[9px] font-bold py-1.5 transition-colors font-mono"
             data-testid="button-admin-autofill"
           >
-            ◆ ADMIN LOGIN
+            ADMIN LOGIN
           </button>
         )}
       </div>
@@ -705,6 +372,87 @@ function OscillatorWave({ color, speed, amplitude, phase }: { color: string; spe
   );
 }
 
+const SIMULATED_TRADERS = ["K.MASON", "D.WRIGHT", "T.JONES", "M.CHEN", "A.PATEL", "R.DAVIS", "L.GARCIA", "S.BROWN", "J.SMITH", "B.WILLIAMS", "N.TAYLOR", "C.MOORE", "P.JACKSON", "E.HARRIS", "F.CLARK"];
+const SIMULATED_ASSETS = ["$THELOVE", "$CANDYMAN", "$DYNASTY", "$FLAMEHEAT", "$SOVRN", "$ASTRAL", "$VAULTX", "$HEATWAVE", "$DEEPSOUL", "$BLAZEUP"];
+const SIMULATED_PORTALS = ["NANO $1", "MICRO $2", "PENNY $3.50", "MINI $5", "ENTRY $7.50", "STD $10", "MID $15", "PRO $25", "SOV $50"];
+
+function LiveTradeFeed() {
+  const [trades, setTrades] = useState<Array<{ id: number; trader: string; asset: string; portal: string; amount: string; time: string; type: string }>>([]);
+
+  useEffect(() => {
+    const seed = () => {
+      const initial = [];
+      for (let i = 0; i < 6; i++) {
+        const ago = Math.floor(Math.random() * 300) + 10;
+        initial.push({
+          id: i,
+          trader: SIMULATED_TRADERS[Math.floor(Math.random() * SIMULATED_TRADERS.length)],
+          asset: SIMULATED_ASSETS[Math.floor(Math.random() * SIMULATED_ASSETS.length)],
+          portal: SIMULATED_PORTALS[Math.floor(Math.random() * SIMULATED_PORTALS.length)],
+          amount: (Math.random() * 48 + 2).toFixed(2),
+          time: `${Math.floor(ago / 60)}m ${ago % 60}s ago`,
+          type: Math.random() > 0.3 ? "BUY" : "SETTLE",
+        });
+      }
+      setTrades(initial);
+    };
+    seed();
+
+    const iv = setInterval(() => {
+      setTrades(prev => {
+        const newTrade = {
+          id: Date.now(),
+          trader: SIMULATED_TRADERS[Math.floor(Math.random() * SIMULATED_TRADERS.length)],
+          asset: SIMULATED_ASSETS[Math.floor(Math.random() * SIMULATED_ASSETS.length)],
+          portal: SIMULATED_PORTALS[Math.floor(Math.random() * SIMULATED_PORTALS.length)],
+          amount: (Math.random() * 48 + 2).toFixed(2),
+          time: "just now",
+          type: Math.random() > 0.25 ? "BUY" : "SETTLE",
+        };
+        return [newTrade, ...prev.slice(0, 7)];
+      });
+    }, 4000 + Math.random() * 3000);
+
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className="border border-emerald-500/20 bg-black font-mono">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-emerald-500/15 bg-emerald-500/5">
+        <div className="flex items-center gap-1.5">
+          <Activity className="h-3 w-3 text-emerald-400" />
+          <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest">LIVE TRADE FEED</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-[7px] text-red-400 font-bold">LIVE</span>
+        </div>
+      </div>
+      <div className="max-h-[220px] overflow-hidden">
+        {trades.map((trade, i) => (
+          <div
+            key={trade.id}
+            className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-900 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/5" : ""}`}
+          >
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <span className={`px-1 py-0.5 font-extrabold text-[7px] border ${
+                trade.type === "BUY" ? "text-lime-400 border-lime-500/30 bg-lime-500/10" : "text-amber-400 border-amber-500/30 bg-amber-500/10"
+              }`}>{trade.type}</span>
+              <span className="text-zinc-500 font-bold truncate">{trade.trader}</span>
+              <span className="text-emerald-400 font-extrabold">{trade.asset}</span>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-zinc-600 text-[8px]">{trade.portal}</span>
+              <span className="text-white font-bold">${trade.amount}</span>
+              <span className="text-zinc-700 text-[7px] w-16 text-right">{trade.time}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function StimulationBoard({ onSignup }: { onSignup: () => void }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -741,7 +489,7 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
   ];
 
   return (
-    <div className="mt-10 max-w-3xl mx-auto font-mono">
+    <div className="font-mono">
       <div className="border border-emerald-500/30 bg-black">
         <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 border-b border-emerald-500/20 bg-emerald-500/5">
           <div className="flex items-center gap-2">
@@ -749,7 +497,6 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
             <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest">24HR STIMULATION BOARD</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[8px] text-red-400 animate-pulse">🔥</span>
             <span className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
             <span className="text-[8px] text-zinc-600">{new Date().toLocaleTimeString('en-US', { hour12: false })}</span>
           </div>
@@ -763,7 +510,7 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
                 {tbiPct >= 0 ? "+" : ""}{tbiPct}%
               </span>
             </div>
-            <div className="h-12 sm:h-14 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
+            <div className="h-14 sm:h-16 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
               <OscillatorWave color="#4ade80" speed={1.2} amplitude={12} phase={0} />
             </div>
             <div className="flex items-center justify-between">
@@ -779,7 +526,7 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
                 {mbbPct >= 0 ? "+" : ""}{mbbPct}%
               </span>
             </div>
-            <div className="h-12 sm:h-14 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
+            <div className="h-14 sm:h-16 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
               <OscillatorWave color="#34d399" speed={0.8} amplitude={10} phase={2} />
             </div>
             <div className="flex items-center justify-between">
@@ -815,36 +562,6 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
             </span>
           ))}
         </div>
-
-        <div className="border-t border-emerald-500/20 p-3 sm:p-4">
-          <button
-            onClick={onSignup}
-            className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-emerald-600 via-lime-600 to-emerald-600 hover:from-emerald-500 hover:via-lime-500 hover:to-emerald-500 text-white font-black text-base sm:text-lg tracking-wider transition-all transform active:scale-[0.98] shadow-[0_0_30px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.4)] border border-emerald-400/30"
-            data-testid="button-24hr-trader"
-          >
-            <span className="flex items-center justify-center gap-2">
-              ⚡ CREATE 24HR TRADER ⚡
-            </span>
-          </button>
-          <div className="mt-2 flex items-center justify-center gap-3 sm:gap-4 text-[8px] sm:text-[9px]">
-            <span className="text-lime-400/80 font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> NO SIMULATION
-            </span>
-            <span className="text-zinc-700">|</span>
-            <span className="text-emerald-400/80 font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> LIVE FLOOR
-            </span>
-            <span className="text-zinc-700">|</span>
-            <span className="text-amber-400/80 font-bold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> FEEL THE HEAT
-            </span>
-          </div>
-        </div>
-
-        <div className="px-3 py-1.5 border-t border-emerald-500/10 bg-emerald-500/5 flex items-center justify-between">
-          <span className="text-[7px] sm:text-[8px] text-zinc-600">AITIFY EXCHANGE v2.0</span>
-          <span className="text-[7px] sm:text-[8px] text-emerald-500/50 font-bold">9 TIERS × 9 RISK PROFILES</span>
-        </div>
       </div>
     </div>
   );
@@ -879,20 +596,8 @@ export default function LandingPage() {
           <div className="flex items-center justify-between h-14 gap-4 font-mono">
             <div className="flex items-center gap-2">
               <img src={logoImage} alt="AITIFY" className="w-7 h-7 object-cover" />
-              <span className="text-emerald-400 text-xs font-bold hidden sm:inline">AITIFY EXCHANGE</span>
+              <span className="text-emerald-400 text-xs font-bold hidden sm:inline">AITITRADE DEX</span>
             </div>
-
-            <nav className="hidden md:flex items-center gap-4">
-              <a href="#features" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
-                Capabilities
-              </a>
-              <a href="#pricing" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
-                Positions
-              </a>
-              <a href="#artists" className="text-[10px] text-emerald-500/50 hover:text-emerald-400 transition-colors uppercase">
-                Asset Architects
-              </a>
-            </nav>
 
             <div className="flex items-center gap-2">
               <button onClick={() => openAuth("login")} data-testid="button-login" className="text-emerald-400 text-[10px] font-bold px-3 py-1.5 border border-emerald-500/30 hover:bg-emerald-500/10 transition-colors">
@@ -908,170 +613,61 @@ export default function LandingPage() {
 
       <MiniRadio />
 
-      {/* Hero Section — Bloomberg Terminal */}
-      <section className="pt-[120px] pb-12 px-4 sm:px-6 lg:px-8 bg-black">
-        <div className="max-w-7xl mx-auto font-mono">
-          <div className="border border-emerald-500/30 bg-black p-6 sm:p-10 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-emerald-500 text-xs">DIGITAL ASSET EXCHANGE TERMINAL</span>
+      <section className="pt-[120px] pb-8 px-4 sm:px-6 lg:px-8 bg-black">
+        <div className="max-w-5xl mx-auto font-mono">
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-[10px] text-red-400 font-bold tracking-widest">LIVE TRADING FLOOR</span>
             </div>
-            <div className="flex items-center gap-3 mb-4">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tighter text-white" data-testid="text-radio-hero-title">
-                AITITRADE <span className="text-green-500">DIGITAL ASSET EXCHANGE</span>
-              </h1>
-              <div className="bg-red-600 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full animate-pulse font-bold self-start mt-2">LIVE FLOOR</div>
-            </div>
-            <p className="text-sm sm:text-base text-emerald-500/70 max-w-2xl font-mono">
-              &gt; DISCOVER AND TRADE NEW AI-GENERATED MUSIC BEFORE IT HITS THE GLOBAL MARKETS — SPOTIFY, DEEZER, AMAZON, APPLE, PANDORA |
-              OWN A PIECE OF THE MUSIC — LIKE, SHARE, PLAYLIST, STREAM, BUY, SELL, TRADE
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-white mb-2" data-testid="text-radio-hero-title">
+              AITITRADE <span className="text-emerald-400">DEX</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-500 max-w-lg mx-auto">
+              DIGITAL ASSET EXCHANGE — AI-POWERED MUSIC ASSETS
             </p>
-
-            <div className="mt-4 border border-amber-500/30 bg-amber-500/5 p-3 max-w-xl">
-              <div className="flex items-center gap-2 mb-1">
-                <Crown className="h-4 w-4 text-amber-400" />
-                <span className="text-amber-400 text-xs font-black tracking-wider">SOVEREIGN TRUST TERMS</span>
-              </div>
-              <p className="text-amber-300 text-sm font-extrabold">$25 DOWN / 0% INTEREST / $19.79/MO × 24 MONTHS</p>
-              <p className="text-amber-500/60 text-[10px] mt-1">TOTAL: $500 — TRUST CERTIFICATE + ROYALTY-BEARING GLOBAL ASSETS + PRIORITY SETTLEMENT</p>
-            </div>
-
-            <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
-              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-1 font-bold">SOVEREIGN TRUST: $25 DOWN / $19.79 MO</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">54/46 G. SMOOTH TRADE SPLIT</span>
-              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-1">$500 PROMISSORY NOTE — 0% INTEREST</span>
-            </div>
           </div>
 
           <StimulationBoard onSignup={() => openAuth("signup")} />
 
-          <div className="flex flex-wrap gap-3 justify-center mt-6">
-            <Button size="lg" variant="outline" asChild className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 font-mono">
-              <a href="#pricing">
-                VIEW FINANCING TERMS
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </a>
-            </Button>
-            <Button size="lg" onClick={() => openAuth("signup")} data-testid="button-hero-cta" className="bg-emerald-600 hover:bg-emerald-700 font-mono gap-1.5 border-0">
+          <div className="mt-4">
+            <LiveTradeFeed />
+          </div>
+
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => openAuth("signup")}
+              className="px-8 sm:px-12 py-3.5 sm:py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base tracking-wider transition-all border border-emerald-400/30"
+              data-testid="button-hero-cta"
+            >
               OPEN TRADING ACCOUNT
-              <ArrowRight className="h-4 w-4" />
-            </Button>
+            </button>
+            <div className="mt-3 flex items-center justify-center gap-3 sm:gap-4 text-[8px] sm:text-[9px]">
+              <span className="text-lime-400/80 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> LIVE FLOOR
+              </span>
+              <span className="text-zinc-700">|</span>
+              <span className="text-emerald-400/80 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> 81 PORTALS
+              </span>
+              <span className="text-zinc-700">|</span>
+              <span className="text-amber-400/80 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> $1-$50 ENTRY
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
-        <div className="max-w-7xl mx-auto font-mono">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
-              AITITRADE EXCHANGE CAPABILITIES
-            </h2>
-            <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
-              &gt; TRADE SOVEREIGN ASSETS | EARN SETTLEMENT | BUILD POSITIONS
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-4">
-            {features.map((feature, index) => (
-              <div key={index} className="bg-black border border-emerald-500/20 hover:border-emerald-500/50 transition-all p-5">
-                <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mb-3">
-                  <feature.icon className="h-5 w-5 text-emerald-400" />
-                </div>
-                <h3 className="font-bold text-sm mb-2 text-emerald-400">{feature.title.toUpperCase()}</h3>
-                <p className="text-emerald-500/50 text-xs">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section — Sovereign Trust */}
-      <section id="pricing" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
-        <div className="max-w-7xl mx-auto font-mono">
-          <div className="text-center mb-16">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
-              SOVEREIGN TRUST MEMBERSHIP
-            </h2>
-            <p className="text-emerald-500/60 max-w-2xl mx-auto text-sm">
-              &gt; <span className="text-amber-400 font-bold">$25 DOWN</span> | 0% INTEREST | $19.79/MO × 24 MONTHS | $500 PROMISSORY NOTE
-            </p>
-          </div>
-
-          <div className="max-w-lg mx-auto">
-            {membershipTiers.map((tier, index) => (
-              <div
-                key={index}
-                className="relative overflow-hidden transition-all border-2 border-amber-500/60 bg-black hover:border-amber-500/80"
-                data-testid={`pricing-tier-${tier.name.toLowerCase().replace(/\s+/g, '-')}`}
-              >
-                <div className="bg-amber-500/20 text-amber-400 text-center py-1.5 text-[10px] font-extrabold uppercase tracking-wider border-b border-amber-500/30">
-                  ◆ SOVEREIGN TRUST — $25 DOWN / $19.79 MO
-                </div>
-                <div className="p-5">
-                  <div className="mb-4">
-                    <h3 className="font-extrabold text-sm mb-1 tracking-tight text-amber-400">{tier.name.toUpperCase()}</h3>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-amber-300">{tier.price}</span>
-                      <span className="text-[10px] text-amber-500/70">{tier.period}</span>
-                    </div>
-                    <p className="text-[10px] text-amber-400/60 mt-1 font-bold">$25 DOWN / 0% INTEREST / $19.79 MO × 24 MONTHS</p>
-                  </div>
-
-                  <ul className="space-y-2 mb-5">
-                    {tier.features.map((feature, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[11px] text-amber-500/70">
-                        <span className="mt-0.5 text-amber-400">▸</span>
-                        <span className={feature.includes("$25 DOWN") || feature.includes("$19.79") || feature.includes("$500") ? "font-extrabold text-amber-400" : ""}>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <a
-                    href={CASH_APP_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block w-full py-3 text-sm font-extrabold text-center bg-green-600 text-white hover:bg-green-500 transition-colors"
-                    data-testid="button-activate-cashapp"
-                  >
-                    ACTIVATE — $25 DOWN VIA CASH APP ($AITITRADEBROKERAGE)
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Asset Architects CTA Section */}
-      <section id="artists" className="py-20 px-4 sm:px-6 lg:px-8 bg-black border-t border-emerald-500/10">
-        <div className="max-w-4xl mx-auto text-center font-mono">
-          <Crown className="h-10 w-10 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight mb-4 text-emerald-400">
-            BECOME AN ASSET ARCHITECT
-          </h2>
-          <p className="text-emerald-500/50 mb-8 max-w-2xl mx-auto text-sm">
-            &gt; Mint high-velocity assets | List on the sovereign exchange | Earn settlement from every trade | Autopilot priority rotation
-          </p>
-          <button onClick={() => openAuth("signup")} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 text-xs font-bold transition-colors">
-            APPLY FOR ASSET ARCHITECT LISTING
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 sm:px-6 lg:px-8 border-t border-emerald-500/10 bg-black">
+      <footer className="py-6 px-4 sm:px-6 lg:px-8 border-t border-emerald-500/10 bg-black">
         <div className="max-w-7xl mx-auto font-mono">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src={logoImage} alt="AITIFY" className="w-6 h-6 object-cover" />
+              <img src={logoImage} alt="AITIFY" className="w-5 h-5 object-cover" />
               <span className="text-emerald-400 text-xs font-bold">AITITRADE DIGITAL ASSET EXCHANGE</span>
             </div>
-            <p className="text-[10px] text-emerald-500/40">
-              SETTLEMENT: $0.00025/STREAM | SECTORS: $MUSE $DYNM $FLAME | 97.7 THE FLAME
-            </p>
             <p className="text-[10px] text-emerald-500/30">
-              &copy; {new Date().getFullYear()} AITITRADE DIGITAL ASSET EXCHANGE. ALL RIGHTS RESERVED.
+              &copy; {new Date().getFullYear()} AITITRADE DIGITAL ASSET EXCHANGE
             </p>
           </div>
         </div>
