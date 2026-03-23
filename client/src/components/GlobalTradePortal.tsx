@@ -405,44 +405,50 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
   const progressPct = playerState?.durationMs ? (playerState.progressMs / playerState.durationMs) * 100 : 0;
 
   return (
-    <div className="bg-black border border-emerald-500/30 font-mono overflow-hidden" data-testid={`global-trade-portal-${portalIndex}`}>
-      <div className="bg-emerald-950/40 border-b border-emerald-500/20 px-3 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Globe className="h-3.5 w-3.5 text-emerald-400" />
-          <span className="text-emerald-400 text-[10px] font-extrabold tracking-widest">GLOBAL TRADING</span>
+    <div className="bg-black border border-emerald-500/20 hover:border-emerald-500/60 font-mono overflow-hidden transition-colors" data-testid={`global-trade-portal-${portalIndex}`}>
+      <div className="border-b border-emerald-500/10 bg-emerald-500/5 px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <SiSpotify className="h-3 w-3 text-green-400 flex-shrink-0" />
+          <span className="font-bold text-xs sm:text-sm text-emerald-400 flex-shrink-0">{currentAsset.ticker}</span>
+          <span className="text-[7px] sm:text-[9px] text-zinc-500 truncate">{currentAsset.title}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <SiSpotify className="h-3 w-3 text-green-400" />
-          {tunedIn && playerState?.isPlaying && (
-            <span className="text-[7px] text-red-400 font-extrabold animate-pulse flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />LIVE
-            </span>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {tunedIn && playerState?.isPlaying ? (
+            <span className="text-[7px] sm:text-[8px] px-1.5 py-0.5 bg-red-500/20 text-red-400 font-extrabold animate-pulse">LIVE</span>
+          ) : (
+            <span className="text-[7px] sm:text-[8px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400/60 font-bold">GLOBAL</span>
           )}
         </div>
       </div>
 
       {!tunedIn ? (
-        <div className="p-4 flex flex-col items-center gap-3">
-          <div className="w-20 h-20 rounded-full border-2 border-emerald-500/30 bg-zinc-950 flex items-center justify-center">
-            <Radio className="h-8 w-8 text-emerald-400/50" />
-          </div>
-          <div className="text-center">
-            <p className="text-emerald-400 text-xs font-extrabold">{currentAsset.title}</p>
-            <p className="text-zinc-600 text-[9px]">{currentAsset.ticker} • SPOTIFY PREMIUM</p>
+        <div className="p-3 sm:p-4">
+          <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-2 text-center">
+            <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+              <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">TYPE</p>
+              <p className="text-[10px] sm:text-xs text-amber-400 font-extrabold">GLOBAL</p>
+            </div>
+            <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+              <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">SOURCE</p>
+              <p className="text-[10px] sm:text-xs text-green-400 font-extrabold">SPOTIFY</p>
+            </div>
+            <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+              <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">ACCESS</p>
+              <p className="text-[10px] sm:text-xs text-zinc-300 font-extrabold">PREMIUM</p>
+            </div>
           </div>
           <Button
             onClick={handleStartTrading}
             disabled={connecting}
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] h-9"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[10px] h-8 sm:h-9"
             data-testid={`button-start-global-trading-${portalIndex}`}
           >
             {connecting ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> CONNECTING...</>
             ) : (
-              <><SiSpotify className="h-3.5 w-3.5 mr-1" /> LOGIN • START GLOBAL TRADING</>
+              <><SiSpotify className="h-3.5 w-3.5 mr-1" /> TUNE IN</>
             )}
           </Button>
-          <p className="text-[8px] text-zinc-600 text-center">REQUIRES SPOTIFY PREMIUM</p>
         </div>
       ) : (
         <div className="p-3 space-y-2">
@@ -542,9 +548,9 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
         </div>
       )}
 
-      <div className="border-t border-emerald-500/10 px-3 py-1.5 flex items-center justify-between">
-        <span className="text-[7px] text-zinc-600 font-bold">KINETIC SPLIT • GLOBAL</span>
-        <span className="text-[7px] text-emerald-400/60 font-bold">{currentAsset.ticker}</span>
+      <div className="border-t border-zinc-800 px-2 sm:px-3 py-1 flex items-center justify-between bg-zinc-900/30">
+        <span className="text-[7px] text-zinc-600 font-bold">{currentAsset.ticker} • GLOBAL RADIO</span>
+        <span className="text-[7px] text-emerald-400/40 font-bold">97.7 THE FLAME</span>
       </div>
     </div>
   );

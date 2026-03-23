@@ -619,7 +619,8 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const isSettlementClose = globalRemaining <= 200 && globalRemaining > 50;
   const isSettlementImminent = globalRemaining <= 50 && globalRemaining > 0;
   const isFlashZone = isSettlementImminent;
-  const isClosed = false;
+  const poolForTrack = settlement?.pools?.find((p: any) => p.trackId === track.id);
+  const isClosed = poolForTrack?.status === "CLOSED";
   const isPaperCapHit = false;
   const isHighCapacity = isSettlementClose;
   const remaining = globalRemaining;
@@ -1291,8 +1292,6 @@ export default function HomePage() {
           </div>
         ) : displayTracks.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-            <GlobalTradePortal portalIndex={0} />
-            <GlobalTradePortal portalIndex={1} />
             {displayTracks.map((track) => (
               <AssetCard
                 key={track.id}
@@ -1301,6 +1300,8 @@ export default function HomePage() {
                 settlement={settlementData}
               />
             ))}
+            <GlobalTradePortal portalIndex={0} />
+            <GlobalTradePortal portalIndex={1} />
           </div>
         ) : (
           <div className="text-center py-20 border border-zinc-800">
