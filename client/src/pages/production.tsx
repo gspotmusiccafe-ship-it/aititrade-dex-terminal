@@ -335,7 +335,7 @@ export default function ProductionPage() {
                     <button type="button" onClick={feedLyricsToBeatMachine}
                       className="w-full bg-green-700 hover:bg-green-600 text-white font-mono font-black py-3 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] border border-green-500/30"
                       data-testid="button-feed-to-beat">
-                      <ArrowDown className="h-4 w-4" /> FEED LYRICS INTO BEAT MACHINE
+                      <ArrowDown className="h-4 w-4" /> FEED LYRICS TO VOCAL PERFORMER
                     </button>
                   </div>
                 )}
@@ -345,7 +345,7 @@ export default function ProductionPage() {
             <div className="border-2 border-green-600/50 bg-green-950/10 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Music className="h-5 w-5 text-green-400" />
-                <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — BEAT MACHINE (SUNO v3.5)</h3>
+                <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — VOCAL PERFORMANCE (AI)</h3>
                 <span className="text-zinc-600 text-[9px] font-mono ml-auto">$0.35/TRACK</span>
               </div>
 
@@ -378,7 +378,7 @@ export default function ProductionPage() {
               </div>
 
               <textarea value={audioPrompt} onChange={(e) => { setAudioPrompt(e.target.value); setBeatApproved(false); setGeneratedAudioUrl(null); }}
-                placeholder="Paste lyrics here or describe the beat... Lyrics from Step 1 auto-fill when you click 'Feed to Beat Machine'"
+                placeholder="Paste lyrics here... Lyrics from Step 1 auto-fill when you click 'Feed'. AI will sing/perform these with your selected voice and style."
                 className="w-full bg-black border border-green-700/50 p-3 text-white text-sm font-mono h-32 resize-none focus:border-green-400 focus:outline-none"
                 data-testid="textarea-audio-prompt" />
 
@@ -394,12 +394,12 @@ export default function ProductionPage() {
               <button type="button" onClick={handleGenerateBeat} disabled={generatingBeat || (!audioPrompt.trim() && !assetTitle.trim())}
                 className="w-full mt-4 bg-green-700 hover:bg-green-600 text-white font-mono font-black py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-[0.98] border border-green-500/30"
                 data-testid="button-generate-beat">
-                {generatingBeat ? <><Loader2 className="h-4 w-4 animate-spin" /> GENERATING BEAT...</> : <><Music className="h-4 w-4" /> GENERATE BEAT</>}
+                {generatingBeat ? <><Loader2 className="h-4 w-4 animate-spin" /> GENERATING VOCAL...</> : <><Music className="h-4 w-4" /> GENERATE VOCAL PERFORMANCE</>}
               </button>
 
               {generatedAudioUrl && (
                 <div className="mt-4 p-4 border border-green-600/40 bg-green-950/30">
-                  <p className="text-green-400 text-[10px] font-mono font-bold mb-3">PREVIEW YOUR BEAT:</p>
+                  <p className="text-green-400 text-[10px] font-mono font-bold mb-3">PREVIEW YOUR VOCAL:</p>
                   <div className="flex items-center gap-3 mb-3">
                     <button type="button" onClick={togglePlayback}
                       className="bg-green-600 hover:bg-green-500 text-black p-3 transition-all active:scale-95"
@@ -525,7 +525,7 @@ export default function ProductionPage() {
                 {isPushing ? <><Loader2 className="h-5 w-5 animate-spin" /> PUSHING TO FLOOR...</> : <><Rocket className="h-5 w-5" /> PUSH TO GLOBAL FLOOR</>}
               </button>
               <p className="text-center text-zinc-600 text-[9px] font-mono mt-2">
-                SUNO AUDIO ($0.35) + IDEOGRAM ART ($0.03) + FLOOR LISTING — KINETIC SPLIT ACTIVE
+                AI VOCAL ($0.35) + DALL-E ART ($0.03) + FLOOR LISTING — KINETIC SPLIT ACTIVE
               </p>
             </div>
 

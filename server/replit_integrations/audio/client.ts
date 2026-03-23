@@ -203,6 +203,32 @@ export async function textToSpeech(
 }
 
 /**
+ * Vocal Performance: Sings/performs lyrics with musical expression and style.
+ * Uses gpt-audio model with singing-specific system prompt.
+ * NOT a flat reading — the model is instructed to sing with melody, rhythm, and emotion.
+ */
+export async function performVocal(
+  lyrics: string,
+  style: string,
+  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "nova",
+  format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "mp3"
+): Promise<Buffer> {
+  const systemPrompt = `You are a professional singer and vocal performer. You MUST SING the lyrics given to you — do NOT just read or speak them. Deliver a full vocal performance with melody, rhythm, emotion, and musical phrasing. Use the style direction provided. Add natural vocal runs, ad-libs, and breathing. Perform it like a real recording session — this is music, not narration. Style: ${style}`;
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-audio",
+    modalities: ["text", "audio"],
+    audio: { voice, format },
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Sing these lyrics with full musical expression:\n\n${lyrics}` },
+    ],
+  });
+  const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
+  return Buffer.from(audioData, "base64");
+}
+
+/**
  * Streaming Text-to-Speech: Converts text to speech with real-time streaming.
  * Uses gpt-audio model via Replit AI Integrations.
  * Note: Streaming only supports pcm16 output format.
