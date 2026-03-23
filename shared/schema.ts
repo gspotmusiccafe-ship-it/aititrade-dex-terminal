@@ -515,6 +515,42 @@ export const insertTrustMemberSchema = createInsertSchema(trustMembers).omit({ i
 export type InsertTrustMember = z.infer<typeof insertTrustMemberSchema>;
 export type TrustMember = typeof trustMembers.$inferSelect;
 
+export const playbackSchedules = pgTable("playback_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull(),
+  hour: integer("hour").notNull(),
+  minute: integer("minute").notNull(),
+  spotifyUri: text("spotify_uri").notNull(),
+  playlistTitle: varchar("playlist_title"),
+  isActive: boolean("is_active").default(true),
+  daysOfWeek: text("days_of_week").notNull().default("0,1,2,3,4,5,6"),
+  lastTriggered: timestamp("last_triggered"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPlaybackScheduleSchema = createInsertSchema(playbackSchedules).omit({ id: true, createdAt: true, lastTriggered: true });
+export type InsertPlaybackSchedule = z.infer<typeof insertPlaybackScheduleSchema>;
+export type PlaybackSchedule = typeof playbackSchedules.$inferSelect;
+
+export const globalStreamLogs = pgTable("global_stream_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userEmail: varchar("user_email"),
+  trackName: text("track_name").notNull(),
+  artistName: text("artist_name"),
+  ticker: varchar("ticker"),
+  spotifyUri: text("spotify_uri"),
+  portalIndex: integer("portal_index").default(0),
+  action: varchar("action").notNull(),
+  streamDurationMs: integer("stream_duration_ms").default(0),
+  sessionStartedAt: timestamp("session_started_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGlobalStreamLogSchema = createInsertSchema(globalStreamLogs).omit({ id: true, createdAt: true });
+export type InsertGlobalStreamLog = z.infer<typeof insertGlobalStreamLogSchema>;
+export type GlobalStreamLog = typeof globalStreamLogs.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

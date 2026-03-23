@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -450,6 +450,172 @@ export async function registerRoutes(
   app.get("/api/logs/signal", async (_req: any, res) => {
     const status = getSignalStatus();
     res.json(status);
+  });
+
+  app.post("/api/global-stream/log", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || "anonymous";
+      const userEmail = req.user?.claims?.email || null;
+      const { trackName, artistName, ticker, spotifyUri, portalIndex, action, streamDurationMs, sessionStartedAt } = req.body;
+      if (!trackName || !action) return res.status(400).json({ error: "trackName and action required" });
+      await db.insert(globalStreamLogs).values({
+        userId,
+        userEmail,
+        trackName,
+        artistName: artistName || null,
+        ticker: ticker || null,
+        spotifyUri: spotifyUri || null,
+        portalIndex: portalIndex || 0,
+        action,
+        streamDurationMs: streamDurationMs || 0,
+        sessionStartedAt: sessionStartedAt ? new Date(sessionStartedAt) : null,
+      });
+      res.json({ logged: true });
+    } catch (error) {
+      console.error("[GlobalStream] Log error:", error);
+      res.json({ logged: false });
+    }
+  });
+
+  app.get("/api/admin/global-stream/logs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const logs = await db.select().from(globalStreamLogs).orderBy(desc(globalStreamLogs.createdAt)).limit(200);
+      res.json(logs);
+    } catch (error) {
+      console.error("[GlobalStream] Fetch logs error:", error);
+      res.status(500).json({ error: "Failed to fetch stream logs" });
+    }
+  });
+
+  app.get("/api/admin/global-stream/stats", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const totalStreams = await db.select({ count: count() }).from(globalStreamLogs).where(eq(globalStreamLogs.action, "STREAM_HEARTBEAT"));
+      const totalPlays = await db.select({ count: count() }).from(globalStreamLogs).where(eq(globalStreamLogs.action, "PLAY_START"));
+      const totalSkips = await db.select({ count: count() }).from(globalStreamLogs).where(eq(globalStreamLogs.action, "SKIP"));
+      const totalDuration = await db.select({ total: sql<number>`COALESCE(SUM(stream_duration_ms), 0)` }).from(globalStreamLogs);
+      const uniqueListeners = await db.select({ count: sql<number>`COUNT(DISTINCT user_id)` }).from(globalStreamLogs);
+      res.json({
+        totalHeartbeats: totalStreams[0]?.count || 0,
+        totalPlays: totalPlays[0]?.count || 0,
+        totalSkips: totalSkips[0]?.count || 0,
+        totalStreamTimeMs: totalDuration[0]?.total || 0,
+        uniqueListeners: uniqueListeners[0]?.count || 0,
+      });
+    } catch (error) {
+      console.error("[GlobalStream] Stats error:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  app.get("/api/admin/playback-schedules", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const schedules = await db.select().from(playbackSchedules).orderBy(asc(playbackSchedules.hour), asc(playbackSchedules.minute));
+      res.json(schedules);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch schedules" });
+    }
+  });
+
+  app.post("/api/admin/playback-schedules", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { name, hour, minute, spotifyUri, playlistTitle, daysOfWeek } = req.body;
+      if (!name || hour === undefined || minute === undefined || !spotifyUri) {
+        return res.status(400).json({ error: "name, hour, minute, spotifyUri required" });
+      }
+      const [schedule] = await db.insert(playbackSchedules).values({
+        name,
+        hour: Number(hour),
+        minute: Number(minute),
+        spotifyUri,
+        playlistTitle: playlistTitle || name,
+        daysOfWeek: daysOfWeek || "0,1,2,3,4,5,6",
+        isActive: true,
+      }).returning();
+      res.json(schedule);
+    } catch (error) {
+      console.error("[Schedule] Create error:", error);
+      res.status(500).json({ error: "Failed to create schedule" });
+    }
+  });
+
+  app.patch("/api/admin/playback-schedules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { id } = req.params;
+      const { isActive, hour, minute, name, spotifyUri, playlistTitle, daysOfWeek } = req.body;
+      const updates: any = {};
+      if (isActive !== undefined) updates.isActive = isActive;
+      if (hour !== undefined) updates.hour = Number(hour);
+      if (minute !== undefined) updates.minute = Number(minute);
+      if (name) updates.name = name;
+      if (spotifyUri) updates.spotifyUri = spotifyUri;
+      if (playlistTitle) updates.playlistTitle = playlistTitle;
+      if (daysOfWeek) updates.daysOfWeek = daysOfWeek;
+      const [updated] = await db.update(playbackSchedules).set(updates).where(eq(playbackSchedules.id, id)).returning();
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update schedule" });
+    }
+  });
+
+  app.delete("/api/admin/playback-schedules/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      await db.delete(playbackSchedules).where(eq(playbackSchedules.id, req.params.id));
+      res.json({ deleted: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete schedule" });
+    }
+  });
+
+  app.get("/api/playback-schedules/active", async (_req: any, res) => {
+    try {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+      const currentDay = now.getDay();
+      const activeSchedules = await db.select().from(playbackSchedules).where(eq(playbackSchedules.isActive, true));
+      const dueSchedules = activeSchedules.filter(s => {
+        const days = s.daysOfWeek.split(",").map(Number);
+        if (!days.includes(currentDay)) return false;
+        if (s.hour === currentHour && s.minute === currentMinute) return true;
+        return false;
+      });
+      res.json(dueSchedules);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to check schedules" });
+    }
+  });
+
+  app.post("/api/playback-schedules/:id/triggered", isAuthenticated, async (req: any, res) => {
+    try {
+      await db.update(playbackSchedules).set({ lastTriggered: new Date() }).where(eq(playbackSchedules.id, req.params.id));
+      res.json({ ok: true });
+    } catch (error) {
+      res.json({ ok: false });
+    }
   });
 
   app.post("/api/logs/webhook-config", async (req: any, res) => {
@@ -2060,8 +2226,8 @@ export async function registerRoutes(
       }
 
       const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return res.status(400).json({ message: "Invalid amount" });
+      if (isNaN(parsedAmount) || parsedAmount < 1) {
+        return res.status(400).json({ message: "Minimum trade amount is $1.00" });
       }
 
       const [track] = await db.select().from(tracks).where(eq(tracks.id, trackId));
@@ -2069,7 +2235,7 @@ export async function registerRoutes(
 
       const isGlobal = track.releaseType === "global";
       const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
-      const price = parseFloat(track.unitPrice || "1");
+      const price = Math.max(1, parseFloat(track.unitPrice || "1"));
       const currentSales = track.salesCount || 0;
 
       const GLOBAL_CEILING = 1000.00;
@@ -2157,8 +2323,8 @@ export async function registerRoutes(
       }
 
       const parsedAmount = parseFloat(amount);
-      if (isNaN(parsedAmount) || parsedAmount <= 0) {
-        return res.status(400).json({ message: "Invalid amount" });
+      if (isNaN(parsedAmount) || parsedAmount < 1) {
+        return res.status(400).json({ message: "Minimum trade amount is $1.00" });
       }
 
       const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));

@@ -12,6 +12,7 @@ import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
 import { getPortal, PortalBadge, LivingTicker, usePortalConfigs } from "@/components/TradePortal";
 import { TrustTutorial } from "@/components/TrustTutorial";
+import GlobalTradePortal from "@/components/GlobalTradePortal";
 
 function generateSparklineData(seed: number, basePrice: number, points: number = 24): number[] {
   let s = seed;
@@ -372,7 +373,8 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const price = parseFloat(track.unitPrice || "1");
+  const rawPrice = parseFloat(track.unitPrice || "1");
+  const price = Math.max(1, rawPrice);
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
 
   const handleAcquire = async () => {
@@ -1284,6 +1286,8 @@ export default function HomePage() {
           </div>
         ) : displayTracks.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <GlobalTradePortal portalIndex={0} />
+            <GlobalTradePortal portalIndex={1} />
             {displayTracks.map((track) => (
               <AssetCard
                 key={track.id}

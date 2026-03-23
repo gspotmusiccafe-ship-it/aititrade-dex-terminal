@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
-import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock, ChevronUp, ChevronDown } from "lucide-react";
+import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock, ChevronUp, ChevronDown, Activity } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -4461,6 +4461,256 @@ export default function AdminPage() {
     );
   }
 
+  function StreamEngagementTab() {
+    const { data: stats } = useQuery<any>({ queryKey: ["/api/admin/global-stream/stats"] });
+    const { data: logs, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/global-stream/logs"] });
+
+    const formatMs = (ms: number) => {
+      const totalSec = Math.floor(ms / 1000);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) return `${h}h ${m}m ${s}s`;
+      if (m > 0) return `${m}m ${s}s`;
+      return `${s}s`;
+    };
+
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-bold">Global Stream Engagement</h3>
+        {stats && (
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <Card><CardContent className="pt-4 text-center">
+              <p className="text-2xl font-bold text-emerald-400">{stats.totalPlays}</p>
+              <p className="text-xs text-muted-foreground">PLAYS</p>
+            </CardContent></Card>
+            <Card><CardContent className="pt-4 text-center">
+              <p className="text-2xl font-bold text-emerald-400">{stats.totalHeartbeats}</p>
+              <p className="text-xs text-muted-foreground">HEARTBEATS</p>
+            </CardContent></Card>
+            <Card><CardContent className="pt-4 text-center">
+              <p className="text-2xl font-bold text-amber-400">{stats.totalSkips}</p>
+              <p className="text-xs text-muted-foreground">SKIPS</p>
+            </CardContent></Card>
+            <Card><CardContent className="pt-4 text-center">
+              <p className="text-2xl font-bold text-blue-400">{formatMs(Number(stats.totalStreamTimeMs))}</p>
+              <p className="text-xs text-muted-foreground">TOTAL STREAM TIME</p>
+            </CardContent></Card>
+            <Card><CardContent className="pt-4 text-center">
+              <p className="text-2xl font-bold text-lime-400">{stats.uniqueListeners}</p>
+              <p className="text-xs text-muted-foreground">UNIQUE LISTENERS</p>
+            </CardContent></Card>
+          </div>
+        )}
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-xs">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left p-2 font-bold">TIME</th>
+                <th className="text-left p-2 font-bold">ACTION</th>
+                <th className="text-left p-2 font-bold">TRACK</th>
+                <th className="text-left p-2 font-bold">ARTIST</th>
+                <th className="text-left p-2 font-bold">TICKER</th>
+                <th className="text-left p-2 font-bold">DURATION</th>
+                <th className="text-left p-2 font-bold">USER</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
+                <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">Loading...</td></tr>
+              ) : logs && logs.length > 0 ? logs.map((log: any, i: number) => (
+                <tr key={log.id || i} className="border-t border-muted/30 hover:bg-muted/20" data-testid={`stream-log-${i}`}>
+                  <td className="p-2 text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</td>
+                  <td className="p-2">
+                    <Badge variant={log.action === "PLAY_START" ? "default" : log.action === "SKIP" ? "destructive" : "secondary"} className="text-[9px]">
+                      {log.action}
+                    </Badge>
+                  </td>
+                  <td className="p-2 font-medium truncate max-w-[120px]">{log.trackName}</td>
+                  <td className="p-2 text-muted-foreground truncate max-w-[100px]">{log.artistName || "—"}</td>
+                  <td className="p-2 text-emerald-400 font-mono">{log.ticker || "—"}</td>
+                  <td className="p-2">{log.streamDurationMs ? formatMs(log.streamDurationMs) : "—"}</td>
+                  <td className="p-2 text-muted-foreground truncate max-w-[120px]">{log.userEmail || log.userId}</td>
+                </tr>
+              )) : (
+                <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">No stream logs yet</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  function PlaybackSchedulerTab() {
+    const queryClient = useQueryClient();
+    const { toast } = useToast();
+    const [showAdd, setShowAdd] = useState(false);
+    const [form, setForm] = useState({ name: "", hour: "8", minute: "0", spotifyUri: "", playlistTitle: "", daysOfWeek: "0,1,2,3,4,5,6" });
+
+    const { data: schedules, isLoading } = useQuery<any[]>({ queryKey: ["/api/admin/playback-schedules"] });
+    const { data: rotationItems } = useQuery<any[]>({ queryKey: ["/api/global-rotation"] });
+
+    const addMutation = useMutation({
+      mutationFn: async (data: any) => apiRequest("POST", "/api/admin/playback-schedules", data),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/playback-schedules"] });
+        toast({ title: "Schedule added" });
+        setShowAdd(false);
+        setForm({ name: "", hour: "8", minute: "0", spotifyUri: "", playlistTitle: "", daysOfWeek: "0,1,2,3,4,5,6" });
+      },
+    });
+
+    const toggleMutation = useMutation({
+      mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) =>
+        apiRequest("PATCH", `/api/admin/playback-schedules/${id}`, { isActive }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/admin/playback-schedules"] }),
+    });
+
+    const deleteMutation = useMutation({
+      mutationFn: async (id: string) => apiRequest("DELETE", `/api/admin/playback-schedules/${id}`),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/playback-schedules"] });
+        toast({ title: "Schedule removed" });
+      },
+    });
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const toggleDay = (day: number) => {
+      const current = form.daysOfWeek.split(",").map(Number);
+      const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day].sort();
+      setForm({ ...form, daysOfWeek: next.join(",") });
+    };
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Spotify Playback Timer</h3>
+          <Button onClick={() => setShowAdd(!showAdd)} size="sm" data-testid="button-add-schedule">
+            <Plus className="h-4 w-4 mr-1" /> Add Schedule
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">Set daily times to auto-start Spotify playback on the Global Trade Portal. Like IFTTT — every day at your set time, the portal fires up your playlist.</p>
+
+        {showAdd && (
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold mb-1 block">NAME</label>
+                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Morning Market Open" data-testid="input-schedule-name" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1 block">PLAYLIST TITLE</label>
+                  <Input value={form.playlistTitle} onChange={(e) => setForm({ ...form, playlistTitle: e.target.value })} placeholder="Optional display name" data-testid="input-schedule-title" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-bold mb-1 block">HOUR (0-23)</label>
+                  <Input type="number" min={0} max={23} value={form.hour} onChange={(e) => setForm({ ...form, hour: e.target.value })} data-testid="input-schedule-hour" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1 block">MINUTE (0-59)</label>
+                  <Input type="number" min={0} max={59} value={form.minute} onChange={(e) => setForm({ ...form, minute: e.target.value })} data-testid="input-schedule-minute" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold mb-1 block">SPOTIFY URI</label>
+                  <Input value={form.spotifyUri} onChange={(e) => setForm({ ...form, spotifyUri: e.target.value })} placeholder="spotify:playlist:..." data-testid="input-schedule-uri" />
+                </div>
+              </div>
+              {rotationItems && rotationItems.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold mb-1 block">OR SELECT FROM ROTATION</label>
+                  <div className="flex flex-wrap gap-1">
+                    {rotationItems.map((item: any) => (
+                      <Button
+                        key={item.id}
+                        variant={form.spotifyUri === item.spotifyUri ? "default" : "outline"}
+                        size="sm"
+                        className="text-[10px] h-7"
+                        onClick={() => setForm({ ...form, spotifyUri: item.spotifyUri || "", playlistTitle: item.title, name: form.name || item.title })}
+                        data-testid={`select-rotation-${item.id}`}
+                      >
+                        {item.ticker}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-bold mb-1 block">DAYS</label>
+                <div className="flex gap-1">
+                  {dayNames.map((d, i) => (
+                    <Button
+                      key={i}
+                      variant={form.daysOfWeek.split(",").map(Number).includes(i) ? "default" : "outline"}
+                      size="sm"
+                      className="text-[10px] h-7 px-2"
+                      onClick={() => toggleDay(i)}
+                      data-testid={`day-toggle-${i}`}
+                    >
+                      {d}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <Button
+                onClick={() => addMutation.mutate({ name: form.name, hour: Number(form.hour), minute: Number(form.minute), spotifyUri: form.spotifyUri, playlistTitle: form.playlistTitle, daysOfWeek: form.daysOfWeek })}
+                disabled={!form.name || !form.spotifyUri || addMutation.isPending}
+                className="w-full"
+                data-testid="button-save-schedule"
+              >
+                {addMutation.isPending ? "Saving..." : "SAVE SCHEDULE"}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="space-y-2">
+          {isLoading ? (
+            <p className="text-muted-foreground text-sm">Loading schedules...</p>
+          ) : schedules && schedules.length > 0 ? schedules.map((sched: any) => (
+            <Card key={sched.id} className={`${sched.isActive ? "border-emerald-500/30" : "border-muted opacity-60"}`} data-testid={`schedule-card-${sched.id}`}>
+              <CardContent className="pt-4 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-sm">{sched.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Every {sched.daysOfWeek.split(",").map((d: string) => dayNames[Number(d)]).join(", ")} at {String(sched.hour).padStart(2, "0")}:{String(sched.minute).padStart(2, "0")}
+                  </p>
+                  <p className="text-[10px] text-emerald-400 font-mono mt-1">{sched.spotifyUri}</p>
+                  {sched.lastTriggered && (
+                    <p className="text-[9px] text-muted-foreground mt-0.5">Last triggered: {new Date(sched.lastTriggered).toLocaleString()}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleMutation.mutate({ id: sched.id, isActive: !sched.isActive })}
+                    data-testid={`toggle-schedule-${sched.id}`}
+                  >
+                    {sched.isActive ? "ACTIVE" : "OFF"}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteMutation.mutate(sched.id)}
+                    data-testid={`delete-schedule-${sched.id}`}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )) : (
+            <p className="text-muted-foreground text-sm text-center py-8">No schedules set. Add one to auto-start Spotify at a set time every day.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-full pb-28">
       <div className="relative overflow-hidden mb-6">
@@ -4584,6 +4834,14 @@ export default function AdminPage() {
                 <Radio className="h-4 w-4 mr-1.5 text-orange-400" />
                 DJ Order
               </TabsTrigger>
+              <TabsTrigger value="stream-engagement" data-testid="tab-stream-engagement" className="whitespace-nowrap data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400">
+                <Activity className="h-4 w-4 mr-1.5 text-emerald-400" />
+                Stream Engagement
+              </TabsTrigger>
+              <TabsTrigger value="playback-scheduler" data-testid="tab-playback-scheduler" className="whitespace-nowrap data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400">
+                <Clock className="h-4 w-4 mr-1.5 text-blue-400" />
+                Playback Timer
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -4669,6 +4927,14 @@ export default function AdminPage() {
 
           <TabsContent value="native-order">
             <NativeOrderTab />
+          </TabsContent>
+
+          <TabsContent value="stream-engagement">
+            <StreamEngagementTab />
+          </TabsContent>
+
+          <TabsContent value="playback-scheduler">
+            <PlaybackSchedulerTab />
           </TabsContent>
         </Tabs>
         </div>
