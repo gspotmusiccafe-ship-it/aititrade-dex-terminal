@@ -50,6 +50,7 @@ export const tracks = pgTable("tracks", {
   releaseDate: timestamp("release_date"),
   genre: varchar("genre"),
   isFeatured: boolean("is_featured").default(false),
+  sortPosition: integer("sort_position").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

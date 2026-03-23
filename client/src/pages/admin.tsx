@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Shield, Users, Music, UserCheck, BarChart3, Trash2, Ban, CheckCircle, XCircle, Crown, DollarSign, Disc3, ListMusic, TrendingUp, Search, ExternalLink, Clock, Loader2, Hash, Radio, Download, Send, MessageSquare, Plus, FileText, Headphones, Wand2, Eye, Flame, Target, Pencil, RefreshCw, Link2, ShieldCheck, Trophy, Zap, Copy, Sparkles, Wifi, UserPlus, Lock, Unlock, ChevronUp, ChevronDown } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -2569,6 +2569,85 @@ function JamControlTab() {
   );
 }
 
+function NativeOrderTab() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { data: nativeTracks, isLoading } = useQuery<any[]>({ queryKey: ["/api/tracks/featured"] });
+  const [localOrder, setLocalOrder] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (nativeTracks) setLocalOrder([...nativeTracks]);
+  }, [nativeTracks]);
+
+  const moveTrack = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= localOrder.length) return;
+    const updated = [...localOrder];
+    const [moved] = updated.splice(fromIdx, 1);
+    updated.splice(toIdx, 0, moved);
+    setLocalOrder(updated);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/api/admin/native-tracks/reorder", {
+        orderedIds: localOrder.map(t => t.id),
+      }),
+    onSuccess: () => {
+      toast({ title: "DJ ORDER SAVED", description: "Native radio will now play in your order" });
+      qc.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+    },
+    onError: (err: Error) => toast({ title: "FAILED", description: err.message, variant: "destructive" }),
+  });
+
+  if (isLoading) return <div className="text-center py-10 text-zinc-500">Loading tracks...</div>;
+
+  return (
+    <div className="space-y-4" data-testid="native-order-tab">
+      <div className="bg-zinc-900/50 border border-orange-500/30 p-4">
+        <h3 className="text-orange-400 font-black text-lg mb-1">97.7 THE FLAME — DJ ORDER</h3>
+        <p className="text-zinc-500 text-xs mb-4">First track plays first. Use arrows to reorder. Save when done.</p>
+        <div className="space-y-1">
+          {localOrder.map((track, idx) => (
+            <div key={track.id} className="flex items-center gap-2 bg-black border border-zinc-800 px-3 py-2" data-testid={`dj-track-${track.id}`}>
+              <span className="text-orange-400 font-black text-sm w-8 text-center">{idx + 1}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-bold truncate">{track.title}</p>
+                <p className="text-zinc-500 text-[10px] truncate">{track.artist?.name} — ${parseFloat(track.unitPrice || "1").toFixed(2)}</p>
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                <button
+                  onClick={() => moveTrack(idx, idx - 1)}
+                  disabled={idx === 0}
+                  className="text-zinc-500 hover:text-orange-400 disabled:opacity-20 p-1"
+                  data-testid={`btn-move-up-${track.id}`}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => moveTrack(idx, idx + 1)}
+                  disabled={idx === localOrder.length - 1}
+                  className="text-zinc-500 hover:text-orange-400 disabled:opacity-20 p-1"
+                  data-testid={`btn-move-down-${track.id}`}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => saveMutation.mutate()}
+          disabled={saveMutation.isPending}
+          className="mt-4 w-full bg-orange-600 hover:bg-orange-500 text-white font-black py-2.5 text-sm transition-colors disabled:opacity-50"
+          data-testid="btn-save-dj-order"
+        >
+          {saveMutation.isPending ? "SAVING..." : "SAVE DJ ORDER"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function KineticGovernorTab() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -4501,6 +4580,10 @@ export default function AdminPage() {
                 <Zap className="h-4 w-4 mr-1.5 text-emerald-400" />
                 Kinetic Governor
               </TabsTrigger>
+              <TabsTrigger value="native-order" data-testid="tab-native-order" className="whitespace-nowrap data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-400">
+                <Radio className="h-4 w-4 mr-1.5 text-orange-400" />
+                DJ Order
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -4582,6 +4665,10 @@ export default function AdminPage() {
 
           <TabsContent value="kinetic">
             <KineticGovernorTab />
+          </TabsContent>
+
+          <TabsContent value="native-order">
+            <NativeOrderTab />
           </TabsContent>
         </Tabs>
         </div>

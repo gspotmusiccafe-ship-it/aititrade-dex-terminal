@@ -372,7 +372,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const price = parseFloat(track.unitPrice || "0.99");
+  const price = parseFloat(track.unitPrice || "1");
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
 
   const handleAcquire = async () => {

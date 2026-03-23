@@ -226,7 +226,7 @@ export async function registerRoutes(
         .from(tracks)
         .innerJoin(artists, eq(tracks.artistId, artists.id))
         .where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`)
-        .orderBy(desc(tracks.playCount));
+        .orderBy(asc(tracks.sortPosition), asc(tracks.createdAt));
       const allTracks = allResult.map(r => ({ ...r.tracks, artist: r.artists }));
       res.json(allTracks);
     } catch (error) {
@@ -679,7 +679,7 @@ export async function registerRoutes(
       if (error.message === "NOT_FOUND") return res.status(404).json({ message: "Asset not found" });
       if (error.message === "CEILING_REACHED") return res.status(409).json({ message: "POOL SETTLED — FILL-TO-CLOSE CEILING REACHED. Awaiting re-roll." });
       if (error.message === "INVALID_PRICE") return res.status(400).json({ message: "Invalid asset price" });
-      if (error.message === "MIN_TRADE") return res.status(400).json({ message: "No 99 cent trades. Minimum $2.00." });
+      if (error.message === "MIN_TRADE") return res.status(400).json({ message: "Minimum trade is $1.00." });
       console.error("Order placement error:", error);
       res.status(500).json({ message: "Order failed" });
     }
@@ -1955,7 +1955,7 @@ export async function registerRoutes(
 
         const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
         const currentSales = track.salesCount || 0;
-        const price = parseFloat(track.unitPrice || "0.99");
+        const price = parseFloat(track.unitPrice || "1");
         if (isNaN(price) || price <= 0) throw new Error("INVALID_PRICE");
 
         const GLOBAL_CEILING = 1000.00;
@@ -2069,7 +2069,7 @@ export async function registerRoutes(
 
       const isGlobal = track.releaseType === "global";
       const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
-      const price = parseFloat(track.unitPrice || "0.99");
+      const price = parseFloat(track.unitPrice || "1");
       const currentSales = track.salesCount || 0;
 
       const GLOBAL_CEILING = 1000.00;
@@ -4281,6 +4281,20 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error) {
       console.error("Error reordering global rotation:", error);
       res.status(500).json({ message: "Failed to reorder rotation" });
+    }
+  });
+
+  app.post("/api/admin/native-tracks/reorder", isAdmin, async (req: any, res) => {
+    try {
+      const { orderedIds } = req.body;
+      if (!Array.isArray(orderedIds)) return res.status(400).json({ message: "orderedIds required" });
+      for (let i = 0; i < orderedIds.length; i++) {
+        await db.update(tracks).set({ sortPosition: i }).where(eq(tracks.id, orderedIds[i]));
+      }
+      res.json({ success: true, message: `Reordered ${orderedIds.length} tracks` });
+    } catch (error) {
+      console.error("Error reordering native tracks:", error);
+      res.status(500).json({ message: "Failed to reorder native tracks" });
     }
   });
 
