@@ -155,15 +155,15 @@ export function MusicPlayer() {
             <p className="text-zinc-600 text-[9px] mt-1">54% FLOOR RETAINED • 46% CEO GROSS</p>
           </div>
           <a
-            href="https://cash.app/$AITITRADEBROKERAGE"
+            href="https://cash.app/app/JNXGD73"
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full bg-green-600 text-center py-3 text-white font-black text-sm hover:bg-green-400 transition-all shadow-[0_0_10px_rgba(34,197,94,0.4)]"
             data-testid="button-order-maker-execute"
           >
-            EXECUTE VIA CASH APP
+            OPEN BROKERAGE ACCOUNT
           </a>
-          <p className="text-[8px] text-zinc-700 mt-2 text-center">$AITITRADEBROKERAGE • NO PAYPAL</p>
+          <p className="text-[8px] text-zinc-700 mt-2 text-center truncate">$AITITRADEBROKERAGE • NO PAYPAL</p>
         </div>
       )}
       {videoOpen && hasYouTubeVideo && currentTrack && (

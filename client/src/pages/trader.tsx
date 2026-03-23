@@ -436,7 +436,7 @@ export default function TraderPage() {
                   <DollarSign className="h-4 w-4" /> OPEN BROKERAGE ACCOUNT
                 </a>
               </div>
-              <p className="text-zinc-600 text-[9px] mt-3">$25 DOWN + $19.79/MO VIA CASH APP | $AITITRADEBROKERAGE</p>
+              <p className="text-zinc-600 text-[9px] mt-3 truncate">$25 DOWN + $19.79/MO | $AITITRADEBROKERAGE</p>
             </div>
           )}
 

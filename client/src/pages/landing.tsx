@@ -664,10 +664,10 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <img src={logoImage} alt="AITIFY" className="w-5 h-5 object-cover" />
-              <span className="text-emerald-400 text-xs font-bold">AITITRADE DIGITAL ASSET EXCHANGE</span>
+              <span className="text-emerald-400 text-xs font-bold truncate">AITITRADE DEX</span>
             </div>
             <p className="text-[10px] text-emerald-500/30">
-              &copy; {new Date().getFullYear()} AITITRADE DIGITAL ASSET EXCHANGE
+              &copy; {new Date().getFullYear()} AITITRADE DEX
             </p>
           </div>
         </div>

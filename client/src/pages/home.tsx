@@ -240,7 +240,7 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
               </div>
             </div>
             <div className="text-center border-t border-emerald-500/10 pt-2">
-              <p className="text-[7px] text-emerald-500/20 tracking-widest">AITITRADE DIGITAL ASSET EXCHANGE — 100% AI-POWERED PLATFORM</p>
+              <p className="text-[7px] text-emerald-500/20 tracking-wider truncate">AITITRADE DEX — AI-POWERED</p>
             </div>
           </div>
         </div>
@@ -357,7 +357,7 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
               </div>
             </div>
             <div className="text-center border-t border-emerald-500/10 pt-2">
-              <p className="text-[7px] text-emerald-500/20 tracking-widest">AITITRADE DIGITAL ASSET EXCHANGE — 100% AI-POWERED PLATFORM</p>
+              <p className="text-[7px] text-emerald-500/20 tracking-wider truncate">AITITRADE DEX — AI-POWERED</p>
             </div>
           </div>
         </div>
@@ -425,7 +425,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
         </div>
         <div className="p-5 space-y-4">
           <div className="border border-lime-400/20 bg-lime-950/30 p-3 text-center">
-            <p className="text-[10px] text-lime-400 font-black tracking-[0.25em]">AITITRADE BROKERAGE — POSITION ORDER</p>
+            <p className="text-[9px] sm:text-[10px] text-lime-400 font-black tracking-wider truncate">AITITRADE BROKERAGE — ORDER</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
             <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
@@ -439,7 +439,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
           </div>
           <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
             <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
-            <p className="text-2xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
+            <p className="text-lg sm:text-2xl text-green-400 font-black tracking-normal sm:tracking-wider truncate">$AITITRADEBROKERAGE</p>
             <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
           </div>
           <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
@@ -486,7 +486,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
                     data-testid="img-cashapp-qr"
                   />
                 </div>
-                <p className="text-lg text-green-400 font-black mt-2">$AITITRADEBROKERAGE</p>
+                <p className="text-base sm:text-lg text-green-400 font-black mt-2 truncate">$AITITRADEBROKERAGE</p>
                 <p className="text-[10px] text-green-400/60 mt-1">AMOUNT: ${price.toFixed(2)}</p>
               </div>
               <div className="text-center">
@@ -1288,8 +1288,8 @@ export default function HomePage() {
 
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
-          <span>AITITRADE DIGITAL ASSET EXCHANGE | 97.7 THE FLAME | AityPay ENGINE</span>
-          <span>81 TRADE PORTALS | $1-$50 ENTRY | EVERY $1K TRADED = $540 SETTLEMENT | 54% DEX / 46% CEO | ACCEPT OR HOLD — NO LOSING | POWERED BY 97.7 THE FLAME</span>
+          <span className="truncate">AITITRADE DEX | 97.7 THE FLAME</span>
+          <span className="truncate hidden sm:inline">81 PORTALS | $1-$50 | $1K = $540 SETTLE | 54/46 SPLIT</span>
         </div>
       </div>
     </div>
