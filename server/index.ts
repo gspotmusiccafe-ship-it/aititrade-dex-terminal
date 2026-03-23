@@ -104,14 +104,38 @@ app.use((req, res, next) => {
   try {
     const { db } = await import("./db");
     const { sql } = await import("drizzle-orm");
-    const [cleanupCheck] = (await db.execute(sql`SELECT COUNT(*) as cnt FROM orders WHERE unit_price::numeric < 1`)).rows as any[];
-    const oldOrderCount = parseInt(cleanupCheck?.cnt || "0");
-    if (oldOrderCount > 0) {
-      await db.execute(sql`DELETE FROM orders WHERE unit_price::numeric < 1`);
-      await db.execute(sql`UPDATE tracks SET unit_price = '1' WHERE unit_price::numeric < 1`);
-      await db.execute(sql`UPDATE tracks SET sales_count = 0 WHERE sales_count > 0`);
-      await db.execute(sql`UPDATE tracks SET play_count = 0 WHERE play_count > 0`);
-      console.log(`[CLEANUP] Removed ${oldOrderCount} test orders, fixed prices to $1 minimum, reset counts`);
+    const validEntries = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
+    await db.execute(sql`DELETE FROM orders WHERE unit_price::numeric < 1`);
+    await db.execute(sql`UPDATE tracks SET sales_count = 0, play_count = 0`);
+    const allTracks = (await db.execute(sql`SELECT id, unit_price FROM tracks`)).rows as any[];
+    let fixed = 0;
+    for (const t of allTracks) {
+      const price = parseFloat(t.unit_price);
+      if (!validEntries.includes(price)) {
+        const rounded = validEntries.reduce((best, v) => Math.abs(v - price) < Math.abs(best - price) ? v : best, 1);
+        await db.execute(sql`UPDATE tracks SET unit_price = ${String(rounded)} WHERE id = ${t.id}`);
+        fixed++;
+      }
+    }
+    if (fixed > 0) console.log(`[CLEANUP] Fixed ${fixed} track prices to valid entries, reset all counts`);
+
+    const [candyCheck] = (await db.execute(sql`SELECT id FROM tracks WHERE title = 'CANDY MAN'`)).rows as any[];
+    if (!candyCheck) {
+      const [artist] = (await db.execute(sql`SELECT id FROM artists WHERE user_id = '31bohcbsxlhgbxwskjpbai674pta' LIMIT 1`)).rows as any[];
+      if (artist) {
+        const trackId = 'candy-man-real-001';
+        await db.execute(sql`INSERT INTO tracks (id, title, artist_id, duration, audio_url, unit_price, sales_count, play_count, asset_class, release_type, ai_model, genre, sort_position) VALUES (${trackId}, 'CANDY MAN', ${artist.id}, 180, '/uploads/demo-audio.wav', '5', 1, 0, 'inspirational', 'native', 'AITIFY-GEN-1', 'R&B', 1) ON CONFLICT (id) DO NOTHING`);
+        await db.execute(sql`INSERT INTO orders (id, track_id, tracking_number, buyer_email, buyer_name, unit_price, status, portal_name, creator_credit, house_take_accumulated) VALUES ('real-order-jacqueline-5', ${trackId}, 'MNT-977-CANDYMAN-001', 'tjacqueline429@gmail.com', 'JACQUELINE', '5', 'confirmed', 'STANDARD', '0.16', 0) ON CONFLICT (id) DO NOTHING`);
+        await db.execute(sql`UPDATE tracks SET sales_count = 1 WHERE id = ${trackId}`);
+        console.log(`[CLEANUP] Created CANDY MAN track + $5 real order for JACQUELINE`);
+      }
+    } else {
+      await db.execute(sql`UPDATE tracks SET sales_count = 1, unit_price = '5' WHERE id = ${candyCheck.id}`);
+      const [orderCheck] = (await db.execute(sql`SELECT id FROM orders WHERE buyer_email = 'tjacqueline429@gmail.com'`)).rows as any[];
+      if (!orderCheck) {
+        await db.execute(sql`INSERT INTO orders (id, track_id, tracking_number, buyer_email, buyer_name, unit_price, status, portal_name, creator_credit, house_take_accumulated) VALUES ('real-order-jacqueline-5', ${candyCheck.id}, 'MNT-977-CANDYMAN-001', 'tjacqueline429@gmail.com', 'JACQUELINE', '5', 'confirmed', 'STANDARD', '0.16', 0) ON CONFLICT (id) DO NOTHING`);
+        console.log(`[CLEANUP] Added $5 real order for JACQUELINE on existing CANDY MAN`);
+      }
     }
   } catch (e) {
     console.error("[CLEANUP] Non-critical cleanup error:", e);
