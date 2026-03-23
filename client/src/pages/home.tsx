@@ -62,7 +62,7 @@ function MomentumSparkline({ data, width = 120, height = 36, color }: { data: nu
   );
 }
 
-function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed }: { basePrice: number; mbbPrice: number; mbbMultiplier: number; trackSeed: number }) {
+function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed, floorROI }: { basePrice: number; mbbPrice: number; mbbMultiplier: number; trackSeed: number; floorROI?: number }) {
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const iv = setInterval(() => setTick(t => t + 1), 8000);
@@ -76,14 +76,16 @@ function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed }: { base
     const w2 = Math.sin((minuteOfDay / 360) * Math.PI * 2) * 0.02;
     const w3 = Math.sin((now / 30000) * Math.PI * 2) * 0.015;
     const swing = w1 + w2 + w3;
+    const kMult = floorROI !== undefined ? (1 + ((mbbMultiplier - 1) * (floorROI / 0.5))) : mbbMultiplier;
     const livePrice = basePrice * (1 + swing);
-    const liveMbbp = parseFloat((livePrice * mbbMultiplier).toFixed(2));
-    const pctChange = parseFloat((((liveMbbp - mbbPrice) / mbbPrice) * 100).toFixed(1));
-    const sparkData = generateSparklineData(trackSeed, mbbPrice, 24);
+    const liveMbbp = parseFloat((livePrice * kMult).toFixed(2));
+    const baseMbbp = parseFloat((basePrice * kMult).toFixed(2));
+    const pctChange = baseMbbp > 0 ? parseFloat((((liveMbbp - baseMbbp) / baseMbbp) * 100).toFixed(1)) : 0;
+    const sparkData = generateSparklineData(trackSeed, baseMbbp, 24);
     sparkData[sparkData.length - 1] = liveMbbp;
     const signal = pctChange >= 15 ? "BUY" : pctChange >= 5 ? "BUY" : pctChange <= -5 ? "SELL" : "HOLD";
     return { liveMbbp, pctChange, sparkData, signal };
-  }, [basePrice, mbbPrice, mbbMultiplier, trackSeed, tick]);
+  }, [basePrice, mbbPrice, mbbMultiplier, trackSeed, tick, floorROI]);
 
   const isUp = pctChange >= 0;
   const pctColor = pctChange >= 15 ? "text-emerald-400" : pctChange >= 5 ? "text-lime-400" : pctChange <= -5 ? "text-red-400" : "text-amber-400";
@@ -595,9 +597,11 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const portal = getPortal(price);
   const poolCeiling = isGlobal ? CEILING : portal.pool;
   const ptCap = poolCeiling * 0.50;
-  const bbPrice = parseFloat((track as any).buyBackRate || (price * portal.mbb).toFixed(2));
-  const maxPayout = parseFloat((price * portal.mbb).toFixed(2));
-  const earlyExit = parseFloat((price * portal.early).toFixed(2));
+  const floorMult = kineticState ? kineticState.floorROI : 0.5;
+  const liveMbb = 1 + ((portal.mbb - 1) * (floorMult / 0.5));
+  const bbPrice = parseFloat((track as any).buyBackRate || (price * liveMbb).toFixed(2));
+  const maxPayout = parseFloat((price * liveMbb).toFixed(2));
+  const earlyExit = parseFloat((price * (1 + ((portal.early - 1) * (floorMult / 0.5)))).toFixed(2));
   const roi = price > 0 ? parseFloat((((maxPayout - price) / price) * 100).toFixed(0)) : 0;
   const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
   const minterFeeLabel = kineticState?.splitLabel || "LIVE";
@@ -797,6 +801,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
           basePrice={price}
           mbbPrice={maxPayout}
           mbbMultiplier={portal.mbb}
+          floorROI={kineticState?.floorROI}
           trackSeed={parseInt(String(track.id).replace(/\D/g, '').slice(0, 8) || '12345')}
         />
 
