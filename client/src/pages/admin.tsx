@@ -2569,6 +2569,123 @@ function JamControlTab() {
   );
 }
 
+function KineticGovernorTab() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const { data: kineticState, isLoading } = useQuery<{
+    floorROI: number;
+    houseMBBP: number;
+    pulse: string;
+    bias: string;
+    validEntries: number[];
+    settlementFund: number;
+    grossIntake: number;
+    timestamp: number;
+  }>({
+    queryKey: ["/api/kinetic/state"],
+    refetchInterval: 5000,
+  });
+
+  const biasMutation = useMutation({
+    mutationFn: (bias: string) => apiRequest("POST", "/api/kinetic/bias", { bias }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
+      toast({ title: "KINETIC BIAS UPDATED" });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  if (isLoading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-emerald-400" /></div>;
+
+  const isHigh = kineticState?.pulse === "HIGH";
+  const currentBias = kineticState?.bias || "NATURAL";
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-emerald-500/20 bg-black/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-emerald-400">
+            <Zap className="h-5 w-5" />
+            KINETIC GOVERNOR
+          </CardTitle>
+          <CardDescription>Live pulse oscillator controlling floor ROI distribution</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">FLOOR ROI</p>
+              <p className={`text-2xl font-black ${isHigh ? "floor-high-pulse" : "text-amber-400"}`}>
+                {kineticState ? (kineticState.floorROI * 100).toFixed(0) : "—"}%
+              </p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">HOUSE MBBP</p>
+              <p className="text-2xl font-black text-red-400">
+                {kineticState ? (kineticState.houseMBBP * 100).toFixed(0) : "—"}%
+              </p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">PULSE</p>
+              <p className={`text-2xl font-black ${isHigh ? "text-emerald-400" : "text-zinc-400"}`}>
+                {kineticState?.pulse || "—"}
+              </p>
+            </div>
+            <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">BIAS</p>
+              <p className={`text-2xl font-black ${currentBias === "FLOOR_HEAVY" ? "text-emerald-400" : "text-zinc-400"}`}>
+                {currentBias}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-zinc-900 border border-zinc-800 p-4">
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">SETTLEMENT FUND</p>
+              <p className="text-xl font-black text-lime-400">${kineticState?.settlementFund?.toFixed(2) || "0.00"}</p>
+            </div>
+            <div className="bg-zinc-900 border border-zinc-800 p-4">
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">GROSS INTAKE</p>
+              <p className="text-xl font-black text-white">${kineticState?.grossIntake?.toFixed(2) || "0.00"}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-zinc-500 font-bold mb-2">VALID ENTRY AMOUNTS</p>
+            <div className="flex flex-wrap gap-2">
+              {(kineticState?.validEntries || [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]).map(v => (
+                <span key={v} className="bg-zinc-900 border border-emerald-500/20 text-emerald-400 px-3 py-1 text-xs font-bold">${v}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-800 pt-4">
+            <p className="text-xs text-zinc-500 font-bold mb-3">ADMIN BIAS CONTROL</p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => biasMutation.mutate("FLOOR_HEAVY")}
+                disabled={biasMutation.isPending || currentBias === "FLOOR_HEAVY"}
+                className={`flex-1 font-bold ${currentBias === "FLOOR_HEAVY" ? "bg-emerald-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-emerald-600 hover:text-white"}`}
+                data-testid="button-bias-floor-heavy"
+              >
+                <Zap className="h-4 w-4 mr-1.5" />
+                FLOOR HEAVY (90/10)
+              </Button>
+              <Button
+                onClick={() => biasMutation.mutate("NATURAL")}
+                disabled={biasMutation.isPending || currentBias === "NATURAL"}
+                className={`flex-1 font-bold ${currentBias === "NATURAL" ? "bg-amber-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-amber-600 hover:text-white"}`}
+                data-testid="button-bias-natural"
+              >
+                NATURAL (90/50)
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function CeoVaultTab() {
   const { toast } = useToast();
   const [themeInput, setThemeInput] = useState("");
@@ -4380,6 +4497,10 @@ export default function AdminPage() {
                 <ShieldCheck className="h-4 w-4 mr-1.5" />
                 CEO Vault
               </TabsTrigger>
+              <TabsTrigger value="kinetic" data-testid="tab-kinetic" className="whitespace-nowrap data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400">
+                <Zap className="h-4 w-4 mr-1.5 text-emerald-400" />
+                Kinetic Governor
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -4457,6 +4578,10 @@ export default function AdminPage() {
 
           <TabsContent value="vault">
             <CeoVaultTab />
+          </TabsContent>
+
+          <TabsContent value="kinetic">
+            <KineticGovernorTab />
           </TabsContent>
         </Tabs>
         </div>

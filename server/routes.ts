@@ -9,12 +9,12 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs, portalSettings } from "@shared/schema";
-import { eq, and, or, desc, sql, count } from "drizzle-orm";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue } from "@shared/schema";
+import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -5397,6 +5397,214 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error) {
       console.error("Error updating credit step:", error);
       res.status(500).json({ message: "Failed to update credit step" });
+    }
+  });
+
+  app.get("/api/kinetic/state", async (_req, res) => {
+    try {
+      const state = getKineticState();
+      const fundBalance = await getSettlementFundBalance();
+      const grossIntake = await getGrossIntake();
+      res.json({
+        ...state,
+        validEntries: VALID_ENTRIES,
+        settlementFund: fundBalance,
+        grossIntake,
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.error("Kinetic state error:", error);
+      res.status(500).json({ message: "Failed to get kinetic state" });
+    }
+  });
+
+  app.post("/api/kinetic/bias", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { bias } = req.body;
+      if (bias !== "NATURAL" && bias !== "FLOOR_HEAVY") {
+        return res.status(400).json({ message: "Invalid bias. Use NATURAL or FLOOR_HEAVY" });
+      }
+      setKineticBias(bias);
+      const state = getKineticState();
+      res.json({ message: `Bias set to ${bias}`, state });
+    } catch (error) {
+      console.error("Kinetic bias error:", error);
+      res.status(500).json({ message: "Failed to set kinetic bias" });
+    }
+  });
+
+  app.post("/api/trade/execute", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId, amount, type, lockedROI } = req.body;
+
+      if (!trackId || amount === undefined) {
+        return res.status(400).json({ message: "trackId and amount required" });
+      }
+
+      const parsedAmount = typeof amount === "number" ? amount : parseFloat(amount);
+      if (!VALID_ENTRIES.includes(parsedAmount)) {
+        return res.status(400).json({ message: `Invalid entry. Valid amounts: ${VALID_ENTRIES.join(", ")}` });
+      }
+
+      const [track] = await db.select().from(tracks).where(eq(tracks.id, trackId));
+      if (!track) return res.status(404).json({ message: "Track not found" });
+
+      const pulse = getKineticState();
+      const finalROI = type === "HOLD_LOCK" && typeof lockedROI === "number" ? lockedROI : pulse.floorROI;
+      const payout = parseFloat((parsedAmount + (parsedAmount * finalROI)).toFixed(2));
+
+      const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
+      const currentSales = track.salesCount || 0;
+      const seq = String(currentSales + 1).padStart(3, "0");
+      const trackingNum = `KNT-977-${ticker}-${seq}`;
+
+      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
+      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+
+      console.log(`[KINETIC TRADE] ${type || "IMPULSE"} | Asset: ${ticker} | Entry: $${parsedAmount} | ROI: ${(finalROI * 100).toFixed(0)}% | Payout: $${payout} | Pulse: ${pulse.pulse} | Bias: ${pulse.bias}`);
+
+      const [order] = await db.insert(orders).values({
+        trackId,
+        trackingNumber: trackingNum,
+        unitPrice: parsedAmount.toString(),
+        creatorCredit: "0.46",
+        creatorCreditAmount: ceoTake46.toString(),
+        positionHolderAmount: floor54.toString(),
+        status: "pending_cashapp",
+      }).returning();
+
+      await db.update(tracks)
+        .set({ salesCount: sql`${tracks.salesCount} + 1` })
+        .where(eq(tracks.id, trackId));
+
+      await enqueueTrader(order.id, userId, trackId, parsedAmount);
+      const settlementTriggered = await checkAndTriggerSettlement();
+      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}?note=AITITRADE%20${encodeURIComponent(trackingNum)}`;
+
+      res.json({
+        status: "POSITION_LOCKED",
+        type: type || "IMPULSE",
+        trackingNumber: trackingNum,
+        entry: parsedAmount,
+        roi: finalROI,
+        projectedPayout: payout,
+        pulse: pulse.pulse,
+        bias: pulse.bias,
+        floorROI: pulse.floorROI,
+        houseMBBP: pulse.houseMBBP,
+        url: cashAppUrl,
+        cashtag: "$AITITRADEBROKERAGE",
+        instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
+        note: `AITITRADE ${trackingNum}`,
+        floorRetained: floor54,
+        ceoGross: ceoTake46,
+        settlementTriggered,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Kinetic trade error:", error);
+      res.status(500).json({ message: "Failed to execute trade" });
+    }
+  });
+
+  app.post("/api/trade/settle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { tbiAmount, type, lockedROI } = req.body;
+
+      if (!tbiAmount) {
+        return res.status(400).json({ message: "tbiAmount required" });
+      }
+
+      const parsedTbi = typeof tbiAmount === "number" ? tbiAmount : parseFloat(tbiAmount);
+      if (!VALID_ENTRIES.includes(parsedTbi)) {
+        return res.status(400).json({ message: `Invalid TBI. Valid entries: ${VALID_ENTRIES.join(", ")}` });
+      }
+
+      const pulse = getKineticState();
+      const finalROI = (type === "HOLD_LOCK" && typeof lockedROI === "number") ? lockedROI : pulse.floorROI;
+      const payoutAmount = parseFloat((parsedTbi + (parsedTbi * finalROI)).toFixed(2));
+
+      console.log(`[KINETIC SETTLE] User: ${userId} | TBI: $${parsedTbi} | ROI: ${(finalROI * 100).toFixed(0)}% | Payout: $${payoutAmount} | Pulse: ${pulse.pulse} | Type: ${type || "IMPULSE"}`);
+
+      const queueEntries = await db.select().from(settlementQueue)
+        .where(and(
+          eq(settlementQueue.userId, userId),
+          eq(settlementQueue.status, "QUEUED"),
+          eq(settlementQueue.buyIn, parsedTbi.toString()),
+        ))
+        .orderBy(asc(settlementQueue.createdAt))
+        .limit(1);
+
+      if (queueEntries.length > 0) {
+        const entry = queueEntries[0];
+        await db.update(settlementQueue)
+          .set({
+            status: "SETTLED",
+            payoutAmount: payoutAmount.toString(),
+            acceptedMultiplier: (1 + finalROI).toString(),
+            settledAt: new Date(),
+          })
+          .where(eq(settlementQueue.id, entry.id));
+
+        console.log(`[KINETIC SETTLE] Queue entry ${entry.id} settled for $${payoutAmount}`);
+      }
+
+      res.json({
+        success: true,
+        status: "SETTLED_SUCCESS",
+        tbiAmount: parsedTbi,
+        roiApplied: finalROI,
+        payout: payoutAmount,
+        pulse: pulse.pulse,
+        bias: pulse.bias,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Kinetic settle error:", error);
+      res.status(500).json({ message: "Failed to settle trade" });
+    }
+  });
+
+  app.post("/api/admin/purge-test-data", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const testOrders = await db.select({ id: orders.id, status: orders.status })
+        .from(orders)
+        .where(eq(orders.status, "test"));
+      const testCount = testOrders.length;
+
+      if (testCount > 0) {
+        const testIds = testOrders.map(o => o.id);
+        await db.delete(settlementQueue).where(inArray(settlementQueue.orderId, testIds));
+        await db.delete(orders).where(eq(orders.status, "test"));
+      }
+
+      const [liveVolume] = await db.select({
+        total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
+        count: sql<number>`COUNT(*)`,
+      }).from(orders);
+
+      console.log(`[PURGE] Removed ${testCount} test entries. Live volume: $${liveVolume?.total || "0"} across ${liveVolume?.count || 0} orders`);
+
+      res.json({
+        purged: testCount,
+        liveVolume: parseFloat(liveVolume?.total || "0"),
+        liveOrderCount: liveVolume?.count || 0,
+        message: `Purged ${testCount} test entries. Pool refreshed.`,
+      });
+    } catch (error: any) {
+      console.error("Purge test data error:", error);
+      res.status(500).json({ message: "Failed to purge test data" });
     }
   });
 

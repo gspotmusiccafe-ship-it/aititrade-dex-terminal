@@ -331,4 +331,27 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  .floor-high-pulse {
+    animation: neon-glow 0.5s infinite;
+    color: #22c55e;
+    font-weight: 900;
+  }
+
+  @keyframes neon-glow {
+    0% { text-shadow: 0 0 5px #22c55e; }
+    50% { text-shadow: 0 0 20px #22c55e; }
+    100% { text-shadow: 0 0 5px #22c55e; }
+  }
+
+  .floor-high-active {
+    animation: neon-pulse 0.5s infinite;
+    color: #22c55e;
+    text-shadow: 0 0 15px #22c55e;
+  }
+
+  @keyframes neon-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.02); }
+  }
 }

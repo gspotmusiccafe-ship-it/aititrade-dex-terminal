@@ -989,4 +989,25 @@ export async function checkAndTriggerSettlement(): Promise<boolean> {
   return false;
 }
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES };
+const VALID_ENTRIES = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
+
+let currentSystemBias: "NATURAL" | "FLOOR_HEAVY" = "NATURAL";
+
+function getKineticState(adminBias: "NATURAL" | "FLOOR_HEAVY" = currentSystemBias) {
+  const isUpPulse = (Math.floor(Date.now() / 10000) % 2) === 1;
+  if (adminBias === "FLOOR_HEAVY") {
+    return { floorROI: isUpPulse ? 0.90 : 0.70, houseMBBP: isUpPulse ? 0.10 : 0.30, pulse: isUpPulse ? "HIGH" : "MID", bias: adminBias };
+  }
+  return { floorROI: isUpPulse ? 0.90 : 0.50, houseMBBP: isUpPulse ? 0.10 : 0.50, pulse: isUpPulse ? "HIGH" : "LOW", bias: adminBias };
+}
+
+function setKineticBias(bias: "NATURAL" | "FLOOR_HEAVY") {
+  currentSystemBias = bias;
+  console.log(`[KINETIC] Bias set to ${bias}`);
+}
+
+function getKineticBias() {
+  return currentSystemBias;
+}
+
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias };

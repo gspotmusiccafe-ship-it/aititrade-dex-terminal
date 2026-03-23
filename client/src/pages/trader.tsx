@@ -5,6 +5,41 @@ import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, B
 
 const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
 
+function KineticPulseBar() {
+  const { data: kState } = useQuery<{
+    floorROI: number;
+    houseMBBP: number;
+    pulse: string;
+    bias: string;
+  }>({
+    queryKey: ["/api/kinetic/state"],
+    refetchInterval: 5000,
+  });
+
+  if (!kState) return null;
+  const isHigh = kState.pulse === "HIGH";
+
+  return (
+    <div className="border border-emerald-500/20 bg-black/80 p-2.5 flex items-center justify-between font-mono">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <Zap className={`h-3.5 w-3.5 ${isHigh ? "text-emerald-400" : "text-zinc-500"}`} />
+          <span className="text-[9px] text-zinc-500 font-bold">KINETIC</span>
+        </div>
+        <span className={`text-xs font-black ${isHigh ? "floor-high-pulse" : "text-amber-400"}`}>
+          {(kState.floorROI * 100).toFixed(0)}% ROI
+        </span>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="text-[9px] text-zinc-600">HOUSE: {(kState.houseMBBP * 100).toFixed(0)}%</span>
+        <span className={`text-[8px] px-1.5 py-0.5 border font-extrabold ${
+          isHigh ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-amber-400 border-amber-500/30 bg-amber-500/10"
+        }`} data-testid="badge-kinetic-pulse">{kState.pulse}</span>
+      </div>
+    </div>
+  );
+}
+
 interface TraderData {
   trader: {
     id: string;
@@ -209,6 +244,7 @@ export default function TraderPage() {
         </div>
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+          <KineticPulseBar />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             <LiveIndicator
               label="POSITIONS"

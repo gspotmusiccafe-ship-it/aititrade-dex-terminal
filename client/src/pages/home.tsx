@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlayer } from "@/lib/player-context";
 import { useAuth } from "@/hooks/use-auth";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
@@ -538,6 +538,45 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const [showPayPal, setShowPayPal] = useState(false);
   const [showP2P, setShowP2P] = useState(false);
   const flashTriggeredRef = useRef(false);
+  const { toast } = useToast();
+
+  const { data: kineticState } = useQuery<{
+    floorROI: number;
+    houseMBBP: number;
+    pulse: string;
+    bias: string;
+    validEntries: number[];
+  }>({
+    queryKey: ["/api/kinetic/state"],
+    refetchInterval: 5000,
+  });
+
+  const tradeMutation = useMutation({
+    mutationFn: (params: { type: string; lockedROI?: number }) =>
+      apiRequest("POST", "/api/trade/execute", {
+        trackId: track.id,
+        amount: parseFloat((track as any).unitPrice || "2"),
+        type: params.type,
+        lockedROI: params.lockedROI,
+      }),
+    onSuccess: async (res: any) => {
+      const data = await res.json();
+      toast({ title: `${data.type} LOCKED`, description: `Position locked — $${data.projectedPayout} projected payout` });
+      queryClient.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
+    },
+    onError: (err: Error) => toast({ title: "TRADE FAILED", description: err.message, variant: "destructive" }),
+  });
+
+  const handleHoldPulse = () => {
+    if (!kineticState) return;
+    tradeMutation.mutate({ type: "HOLD_LOCK", lockedROI: kineticState.floorROI });
+  };
+
+  const handleImpulseSell = () => {
+    tradeMutation.mutate({ type: "SELL_IMPULSE" });
+  };
+
+  const isKineticHigh = kineticState?.pulse === "HIGH";
 
   const ticker = `$${(track.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 12)}`;
   const assetId = `ATFY-${String(track.id).slice(0, 5).toUpperCase()}`;
@@ -812,6 +851,32 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
           </div>
         )}
 
+        <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
+          <button
+            onClick={handleHoldPulse}
+            disabled={tradeMutation.isPending || isClosed}
+            className={`flex-1 border text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center transition-colors flex items-center justify-center gap-0.5 disabled:opacity-30 ${
+              isKineticHigh
+                ? "bg-emerald-600/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600/30 floor-high-active"
+                : "bg-amber-600/10 border-amber-500/30 text-amber-400 hover:bg-amber-600/20"
+            }`}
+            data-testid={`button-hold-lock-${track.id}`}
+          >
+            <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> HOLD
+          </button>
+          <button
+            onClick={handleImpulseSell}
+            disabled={tradeMutation.isPending || isClosed}
+            className={`flex-1 border text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center transition-colors flex items-center justify-center gap-0.5 disabled:opacity-30 ${
+              isKineticHigh
+                ? "bg-lime-600/20 border-lime-500/40 text-lime-400 hover:bg-lime-600/30 floor-high-active"
+                : "bg-violet-500/10 border-violet-500/30 text-violet-400 hover:bg-violet-500/20"
+            }`}
+            data-testid={`button-impulse-sell-${track.id}`}
+          >
+            <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> IMPULSE
+          </button>
+        </div>
         <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
           <Link
             href="/trust-vault"
