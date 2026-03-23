@@ -392,7 +392,7 @@ export async function registerRoutes(
         floor54: split.floor54,
         ceo46: split.ceo46,
         trustTithe: split.trustTithe,
-        blessing: split.blessing,
+        bounce: split.bounce,
         portalName: portal.name,
         portalCeiling,
         earlyOffer: tradeStatus.earlyOffer,
@@ -791,7 +791,7 @@ export async function registerRoutes(
             floor54: split.floor54,
             ceo46: split.ceo46,
             trustTithe: split.trustTithe,
-            blessing: split.blessing,
+            bounce: split.bounce,
             timestamp: new Date().toISOString(),
             ...(poolRecycled && recycledData ? {
               recycled: {
@@ -2139,10 +2139,10 @@ export async function registerRoutes(
         const floorTake = parseFloat((price * tFloorPct).toFixed(4));
         const ceoTake = parseFloat((price * tCeoPct).toFixed(4));
         const trustTithe10 = parseFloat((ceoTake * 0.10).toFixed(4));
-        const blessingPool36 = parseFloat((ceoTake - trustTithe10).toFixed(4));
+        const bounce36 = parseFloat((ceoTake - trustTithe10).toFixed(4));
         const isPriority = price < 21.00;
 
-        console.log(`[AITITRADE] ${isGlobal ? "GLOBAL" : "FLOOR"} Trade $${price} | Floor${Math.round(tFloorPct*100)}: $${floorTake} | CEO${Math.round(tCeoPct*100)}: $${ceoTake} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+        console.log(`[AITITRADE] ${isGlobal ? "GLOBAL" : "FLOOR"} Trade $${price} | Floor${Math.round(tFloorPct*100)}: $${floorTake} | CEO${Math.round(tCeoPct*100)}: $${ceoTake} | Tithe: $${trustTithe10} | Bounce: $${bounce36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
         const seq = String(currentSales + 1).padStart(3, "0");
         const prefix = isGlobal ? "TRST" : "MNT";
@@ -2172,10 +2172,10 @@ export async function registerRoutes(
               asset: track.title,
               ticker,
               unitPrice: price,
-              floorRetained: floor54,
-              ceoGross: ceoTake46,
+              floorRetained: floorTake,
+              ceoGross: ceoTake,
               trustTithe: trustTithe10,
-              blessingPool: blessingPool36,
+              bounce: bounce36,
               aiModel: track.aiModel || "AITIFY-GEN-1",
               releaseType: "global",
               priority: isPriority ? "HIGH" : "CYCLE_HOLD",
@@ -2195,10 +2195,10 @@ export async function registerRoutes(
             asset: track.title,
             ticker,
             unitPrice: price,
-            floorRetained: floor54,
-            ceoGross: ceoTake46,
+            floorRetained: floorTake,
+            ceoGross: ceoTake,
             trustTithe: trustTithe10,
-            blessingPool: blessingPool36,
+            bounce: bounce36,
             aiModel: track.aiModel || "AITIFY-GEN-1",
             grossSales: newGross,
             totalMints: currentSales + 1,
@@ -2257,10 +2257,10 @@ export async function registerRoutes(
       const floorTake = parseFloat((parsedAmount * floorPct).toFixed(4));
       const ceoTake = parseFloat((parsedAmount * ceoPct).toFixed(4));
       const trustTithe10 = parseFloat((ceoTake * 0.10).toFixed(4));
-      const blessingPool = parseFloat((ceoTake - trustTithe10).toFixed(4));
+      const bounce = parseFloat((ceoTake - trustTithe10).toFixed(4));
       const isPriority = parsedAmount < 21.00;
 
-      console.log(`[CASH APP TRADE] ${isGlobal ? "GLOBAL" : "FLOOR"} | Asset: ${ticker} | Total: $${parsedAmount} | Floor${Math.round(floorPct*100)}: $${floorTake} | CEO${Math.round(ceoPct*100)}: $${ceoTake} | Tithe: $${trustTithe10} | Blessing: $${blessingPool} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+      console.log(`[CASH APP TRADE] ${isGlobal ? "GLOBAL" : "FLOOR"} | Asset: ${ticker} | Total: $${parsedAmount} | Floor${Math.round(floorPct*100)}: $${floorTake} | CEO${Math.round(ceoPct*100)}: $${ceoTake} | Tithe: $${trustTithe10} | Bounce: $${bounce} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
       const seq = String(currentSales + 1).padStart(3, "0");
       const prefix = isGlobal ? "TRST" : "MNT";
@@ -2301,10 +2301,10 @@ export async function registerRoutes(
         ticker,
         asset: track.title,
         unitPrice: price,
-        floorRetained: floor54,
-        ceoGross: ceoTake46,
+        floorRetained: floorTake,
+        ceoGross: ceoTake,
         trustTithe: trustTithe10,
-        blessingPool: blessingPool36,
+        bounce: bounce,
         priority: isPriority ? "HIGH" : "CYCLE_HOLD",
         indicator: "STIMULATION_ACTIVE",
         status: newGross >= GLOBAL_CEILING ? "CLOSED" : "STIMULATION_PENDING",
@@ -2340,10 +2340,10 @@ export async function registerRoutes(
       const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
       const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
       const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
-      const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+      const bounce36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
       const isPriority = parsedAmount < 21.00;
 
-      console.log(`[SPOTIFY TRADE] Track: ${spotifyTrackId} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+      console.log(`[SPOTIFY TRADE] Track: ${spotifyTrackId} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Bounce: $${bounce36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
       const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}`;
 
@@ -2357,7 +2357,7 @@ export async function registerRoutes(
           floor: floor54,
           ceoGross: ceoTake46,
           trustTithe: trustTithe10,
-          blessing: blessingPool36,
+          bounce: bounce36,
         },
         priority: isPriority ? "HIGH" : "CYCLE_HOLD",
         indicator: "STIMULATION_ACTIVE",
@@ -2388,12 +2388,12 @@ export async function registerRoutes(
       const floor54 = parseFloat((parsedAmount * p2pPulse.floorROI).toFixed(4));
       const ceoTake46 = parseFloat((parsedAmount * p2pPulse.houseMBBP).toFixed(4));
       const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
-      const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+      const bounce36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
 
       const brokerageLink = "https://cash.app/$AITITRADEBROKERAGE";
 
       console.log(`[P2P TRADE] Buyer: ${buyerId} | Seller Trade: ${sellerTradeId} | Total: $${parsedAmount} | Split: ${Math.round(p2pPulse.floorROI*100)}/${Math.round(p2pPulse.houseMBBP*100)}`);
-      console.log(`[LEDGER] Floor: $${floor54} | CEO Blessing: $${blessingPool36} | Trust: $${trustTithe10}`);
+      console.log(`[LEDGER] Floor: $${floor54} | CEO Bounce: $${bounce36} | Trust: $${trustTithe10}`);
 
       res.json({
         status: "P2P_INITIATED",
@@ -2406,7 +2406,7 @@ export async function registerRoutes(
           floor: floor54,
           ceoGross: ceoTake46,
           trustTithe: trustTithe10,
-          blessing: blessingPool36,
+          bounce: bounce36,
         },
         indicator: "STIMULATION_ACTIVE",
         message: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE — P2P SETTLEMENT`,
@@ -2435,13 +2435,13 @@ export async function registerRoutes(
       const floor54 = parseFloat((parsedAmount * settlePulse.floorROI).toFixed(4));
       const ceoGross46 = parseFloat((parsedAmount * settlePulse.houseMBBP).toFixed(4));
       const trustTithe10 = parseFloat((ceoGross46 * 0.10).toFixed(4));
-      const yourBlessing36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
+      const bounce36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
 
       const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
       const ref = assetId || spotifyTrackId || "SPOT_ASSET";
 
       console.log(`[P2P SETTLE] Asset: ${ref} | Amount: $${parsedAmount.toFixed(2)} | Split: ${Math.round(settlePulse.floorROI*100)}/${Math.round(settlePulse.houseMBBP*100)}`);
-      console.log(`[LEDGER] Floor: $${floor54} | CEO Blessing: $${yourBlessing36} | Trust Tithe: $${trustTithe10}`);
+      console.log(`[LEDGER] Floor: $${floor54} | CEO Bounce: $${bounce36} | Trust Tithe: $${trustTithe10}`);
 
       res.json({
         status: "STIMULATION_READY",
@@ -2453,7 +2453,7 @@ export async function registerRoutes(
           floor: floor54,
           ceoGross: ceoGross46,
           trustTithe: trustTithe10,
-          blessing: yourBlessing36,
+          bounce: bounce36,
         },
         indicators: {
           floor: "STABLE",
@@ -3649,10 +3649,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const floor54 = parseFloat((unitPrice * 0.54).toFixed(4));
       const ceoGross46 = parseFloat((unitPrice * 0.46).toFixed(4));
       const trustTithe10 = parseFloat((ceoGross46 * 0.10).toFixed(4));
-      const blessing36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
+      const bounce36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
 
       console.log(`[DIRECT_PUSH] $${ticker} | Price: $${unitPrice} | Wholesale: $${wholesaleCost}`);
-      console.log(`[DIRECT_PUSH] Split — Floor: $${floor54} | Blessing: $${blessing36} | Trust: $${trustTithe10}`);
+      console.log(`[DIRECT_PUSH] Split — Floor: $${floor54} | Bounce: $${bounce36} | Trust: $${trustTithe10}`);
 
       res.json({
         status: "ASSET_LIVE",
@@ -3679,7 +3679,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           floor: floor54,
           ceoGross: ceoGross46,
           trustTithe: trustTithe10,
-          blessing: blessing36,
+          bounce: bounce36,
           mandate: "KINETIC",
         },
         settlement: "https://cash.app/$AITITRADEBROKERAGE",
@@ -3900,7 +3900,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const floor54 = parseFloat((price * FLOOR_SPLIT).toFixed(4));
       const ceo46 = parseFloat((price * CEO_SPLIT).toFixed(4));
       const trustTithe = parseFloat((ceo46 * 0.10).toFixed(4));
-      const blessing = parseFloat((ceo46 - trustTithe).toFixed(4));
+      const bounce = parseFloat((ceo46 - trustTithe).toFixed(4));
 
       res.json({
         status: "PUSHED",
@@ -3910,7 +3910,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         audio: { suno_id: audioAsset.suno_id, status: audioAsset.status, engine: "chirp-v3.5" },
         artwork: { imageUrl: visualAsset.imageUrl, status: visualAsset.status, engine: "ideogram-v2" },
         pricing: { unitPrice: price, buyBack, roi: parseFloat((((buyBack - price) / price) * 100).toFixed(1)), wholesaleCost: totalWholesale },
-        split: { floor: floor54, ceoGross: ceo46, trustTithe, blessing, mandate: "KINETIC" },
+        split: { floor: floor54, ceoGross: ceo46, trustTithe, bounce, mandate: "KINETIC" },
         ledger: {
           previousBalance: outstanding,
           debit: totalWholesale,
@@ -5616,8 +5616,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         cashtag: "$AITITRADEBROKERAGE",
         instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
         note: `AITITRADE ${trackingNum}`,
-        floorRetained: floor54,
-        ceoGross: ceoTake46,
+        floorRetained: floorTake,
+        ceoGross: ceoTake,
         settlementTriggered,
         timestamp: new Date().toISOString(),
       });

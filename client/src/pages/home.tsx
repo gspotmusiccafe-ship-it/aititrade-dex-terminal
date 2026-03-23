@@ -133,7 +133,7 @@ interface MintReceipt {
   floorRetained: number;
   ceoGross: number;
   trustTithe: number;
-  blessingPool: number;
+  bounce: number;
   aiModel: string;
   grossSales: number;
   totalMints: number;
@@ -204,8 +204,8 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
                   <p className="text-sm text-amber-400 font-bold" data-testid="text-trust-tithe">${receipt.trustTithe.toFixed(4)}</p>
                 </div>
                 <div className="bg-black/50 border border-green-500/15 p-2">
-                  <p className="text-[8px] text-green-400/50">BLESSING POOL</p>
-                  <p className="text-sm text-green-400 font-bold" data-testid="text-blessing-pool">${receipt.blessingPool.toFixed(4)}</p>
+                  <p className="text-[8px] text-green-400/50">BOUNCE</p>
+                  <p className="text-sm text-green-400 font-bold" data-testid="text-bounce">${receipt.bounce.toFixed(4)}</p>
                 </div>
               </div>
             </div>
@@ -261,7 +261,7 @@ interface TrustReceipt {
   floorRetained: number;
   ceoGross: number;
   trustTithe: number;
-  blessingPool: number;
+  bounce: number;
   aiModel: string;
   priority: string;
   indicator: string;
@@ -328,8 +328,8 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
                   <p className="text-sm text-amber-400 font-bold">${receipt.trustTithe.toFixed(4)}</p>
                 </div>
                 <div className="bg-black/50 border border-green-500/15 p-2">
-                  <p className="text-[8px] text-green-400/50">BLESSING POOL</p>
-                  <p className="text-sm text-green-400 font-bold">${receipt.blessingPool.toFixed(4)}</p>
+                  <p className="text-[8px] text-green-400/50">BOUNCE</p>
+                  <p className="text-sm text-green-400 font-bold">${receipt.bounce.toFixed(4)}</p>
                 </div>
               </div>
             </div>
@@ -405,9 +405,9 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
 
       const isGlobal = track.releaseType === "global";
       if (isGlobal) {
-        onSuccess({ type: "global", receipt: { trustId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, blessingPool: data.blessingPool, aiModel: data.aiModel, priority: data.priority, indicator: data.indicator, storeUrl: "https://payhip.com/aitifymusicstore", timestamp: data.timestamp } });
+        onSuccess({ type: "global", receipt: { trustId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, bounce: data.bounce, aiModel: data.aiModel, priority: data.priority, indicator: data.indicator, storeUrl: "https://payhip.com/aitifymusicstore", timestamp: data.timestamp } });
       } else {
-        onSuccess({ type: "native", receipt: { mintId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, blessingPool: data.blessingPool, aiModel: data.aiModel, grossSales: data.grossSales, totalMints: data.totalMints, mintCap: data.mintCap, capacityPct: data.capacityPct, priority: data.priority, indicator: data.indicator, status: data.status === "CLOSED" ? "CLOSED" : "TRADE_EXECUTED", timestamp: data.timestamp } });
+        onSuccess({ type: "native", receipt: { mintId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, bounce: data.bounce, aiModel: data.aiModel, grossSales: data.grossSales, totalMints: data.totalMints, mintCap: data.mintCap, capacityPct: data.capacityPct, priority: data.priority, indicator: data.indicator, status: data.status === "CLOSED" ? "CLOSED" : "TRADE_EXECUTED", timestamp: data.timestamp } });
       }
     } catch (e: any) {
       setError(e.message || "Failed to process trade");

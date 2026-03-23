@@ -540,7 +540,7 @@ export function computeLiquiditySplit(grossSales: number): {
   floor54: number;
   ceo46: number;
   trustTithe: number;
-  blessing: number;
+  bounce: number;
   floorPct: number;
   ceoPct: number;
 } {
@@ -548,8 +548,8 @@ export function computeLiquiditySplit(grossSales: number): {
   const floor54 = parseFloat((grossSales * split.floor).toFixed(2));
   const ceo46 = parseFloat((grossSales * split.ceo).toFixed(2));
   const trustTithe = parseFloat((ceo46 * 0.10).toFixed(2));
-  const blessing = parseFloat((ceo46 - trustTithe).toFixed(2));
-  return { floor54, ceo46, trustTithe, blessing, floorPct: Math.round(split.floor * 100), ceoPct: Math.round(split.ceo * 100) };
+  const bounce = parseFloat((ceo46 - trustTithe).toFixed(2));
+  return { floor54, ceo46, trustTithe, bounce, floorPct: Math.round(split.floor * 100), ceoPct: Math.round(split.ceo * 100) };
 }
 
 const TRUST_VAULT_SPLIT_TIERS = [0.18, 0.42, 0.50];
