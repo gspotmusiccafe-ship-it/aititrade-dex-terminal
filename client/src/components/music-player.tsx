@@ -152,7 +152,7 @@ export function MusicPlayer() {
           </div>
           <div className="bg-black border border-green-900/50 p-2.5 mb-3">
             <p className="text-white text-[10px] font-mono font-bold">STIMULATION: $7.00 FOR $21.00 MBB</p>
-            <p className="text-zinc-600 text-[9px] mt-1">54% FLOOR RETAINED • 46% CEO GROSS</p>
+            <p className="text-zinc-600 text-[9px] mt-1">KINETIC SPLIT • FLOOR / CEO LIVE RATE</p>
           </div>
           <a
             href="https://cash.app/app/JNXGD73"
@@ -312,17 +312,17 @@ export function MusicPlayer() {
         <div className="w-full bg-black border-y border-zinc-800 py-1 overflow-hidden whitespace-nowrap select-none" data-testid="singing-ticker">
           <div className="animate-marquee inline-flex items-center text-xs md:text-sm">
             <span className="text-green-500 font-black px-4 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
-            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: 54% [STABLE]</span>
+            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: LIVE [STABLE]</span>
             <span className="text-green-400 font-black px-4 border-l border-zinc-800 uppercase">CASH APP ONLY: $AITITRADEBROKERAGE</span>
             <span className="text-red-600 font-bold px-4 border-l border-zinc-800 animate-pulse">SIGNAL: 97.7 THE FLAME LIVE</span>
-            <span className="text-zinc-600 px-4 border-l border-zinc-800">54/46 G. SMOOTH MANDATE</span>
+            <span className="text-zinc-600 px-4 border-l border-zinc-800">KINETIC SPLIT — G. SMOOTH MANDATE</span>
             <span className="text-green-500 font-black px-4 border-l border-zinc-800 uppercase italic">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
             <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
             <span className="text-green-500 font-black px-8 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
-            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: 54% [STABLE]</span>
+            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: LIVE [STABLE]</span>
             <span className="text-green-400 font-black px-4 border-l border-zinc-800 uppercase">CASH APP ONLY: $AITITRADEBROKERAGE</span>
             <span className="text-red-600 font-bold px-4 border-l border-zinc-800 animate-pulse">SIGNAL: 97.7 THE FLAME LIVE</span>
-            <span className="text-zinc-600 px-4 border-l border-zinc-800">54/46 G. SMOOTH MANDATE</span>
+            <span className="text-zinc-600 px-4 border-l border-zinc-800">KINETIC SPLIT — G. SMOOTH MANDATE</span>
             <span className="text-green-500 font-black px-4 border-l border-zinc-800 uppercase italic">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
             <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
           </div>
@@ -440,7 +440,7 @@ export function MusicPlayer() {
 
               <div className="hidden md:flex bg-black border border-green-900 items-center justify-center overflow-hidden relative">
                 <span className="text-green-500 font-mono text-[9px] whitespace-nowrap animate-[marquee_12s_linear_infinite] absolute" data-testid="text-floor-data">
-                  FLOOR_CEILING: $1,000.00 | SPLIT: 54/46 PROTECTED | $AITITRADEBROKERAGE
+                  FLOOR_CEILING: $1,000.00 | KINETIC SPLIT PROTECTED | $AITITRADEBROKERAGE
                 </span>
               </div>
             </div>

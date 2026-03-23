@@ -2,8 +2,19 @@ import { db } from "./db";
 import { tracks, orders, portalSettings, settlementQueue, settlementCycles } from "@shared/schema";
 import { desc, sql, eq, asc, and, inArray } from "drizzle-orm";
 
-const FLOOR_SPLIT = 0.54;
-const CEO_SPLIT = 0.46;
+let FLOOR_SPLIT = 0.54;
+let CEO_SPLIT = 0.46;
+
+function getKineticSplit() {
+  const state = getKineticState();
+  return { floor: state.floorROI, ceo: state.houseMBBP };
+}
+
+function refreshSplitFromKinetic() {
+  const split = getKineticSplit();
+  FLOOR_SPLIT = split.floor;
+  CEO_SPLIT = split.ceo;
+}
 
 type PortalName = string;
 
@@ -337,8 +348,8 @@ export async function getMarketState(): Promise<MarketState> {
       seats: Math.max(5, Math.floor(poolCeil / price)),
       rushMultiplier: parseFloat(rushMultiplier.toFixed(3)),
       flashTriggerMinute,
-      liquiditySplit: { floor: FLOOR_SPLIT, ceo: CEO_SPLIT },
-      minterFee: FLOOR_SPLIT,
+      liquiditySplit: { floor: getKineticSplit().floor, ceo: getKineticSplit().ceo },
+      minterFee: getKineticSplit().floor,
       status,
       roi: pricing.roi,
       leaderboardRank: rank,
@@ -530,12 +541,15 @@ export function computeLiquiditySplit(grossSales: number): {
   ceo46: number;
   trustTithe: number;
   blessing: number;
+  floorPct: number;
+  ceoPct: number;
 } {
+  refreshSplitFromKinetic();
   const floor54 = parseFloat((grossSales * FLOOR_SPLIT).toFixed(2));
   const ceo46 = parseFloat((grossSales * CEO_SPLIT).toFixed(2));
   const trustTithe = parseFloat((ceo46 * 0.10).toFixed(2));
   const blessing = parseFloat((ceo46 - trustTithe).toFixed(2));
-  return { floor54, ceo46, trustTithe, blessing };
+  return { floor54, ceo46, trustTithe, blessing, floorPct: Math.round(FLOOR_SPLIT * 100), ceoPct: Math.round(CEO_SPLIT * 100) };
 }
 
 const TRUST_VAULT_SPLIT_TIERS = [0.18, 0.42, 0.50];
@@ -601,7 +615,10 @@ export async function checkTreasuryMilestones(): Promise<{ reached: number[]; to
 }
 
 const SETTLEMENT_CYCLE_THRESHOLD = 1000;
-const PAYOUT_PER_CYCLE = 540;
+function getPayoutPerCycle(): number {
+  const split = getKineticSplit();
+  return Math.round(SETTLEMENT_CYCLE_THRESHOLD * split.floor);
+}
 const EARLY_ACCEPT_MULTIPLIER = 1.25;
 const HOLD_BONUS_PER_CYCLE = 0.15;
 
@@ -696,7 +713,8 @@ export async function runSettlementCycle(): Promise<{
   const cycleNumber = completedCycles + 1;
 
   const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
-  const totalPayoutBudget = totalKsReached * PAYOUT_PER_CYCLE;
+  const lockedPayout = getPayoutPerCycle();
+  const totalPayoutBudget = totalKsReached * lockedPayout;
 
   const alreadyPaid = await getTotalPaidOut();
   const payoutBudget = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
@@ -706,7 +724,8 @@ export async function runSettlementCycle(): Promise<{
     return { cycleNumber, settled: [], holding: [], payoutBudget: 0, totalPaidOut: 0 };
   }
 
-  console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K = $${totalPayoutBudget} total owed | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
+  const kSplit = getKineticSplit();
+  console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K | KINETIC LOCK: ${Math.round(kSplit.floor*100)}/${Math.round(kSplit.ceo*100)} | Payout/K: $${lockedPayout} | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
 
   const queued = await db.select().from(settlementQueue)
     .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"]))
@@ -794,14 +813,14 @@ export async function traderAcceptOffer(queueId: string, userId: string): Promis
 
   const grossIntake = await getGrossIntake();
   const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
-  const totalPayoutBudget = totalKsReached * PAYOUT_PER_CYCLE;
+  const totalPayoutBudget = totalKsReached * getPayoutPerCycle();
   const alreadyPaid = await getTotalPaidOut();
   const available = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
 
   if (offerAmount > available) {
     return {
       success: false,
-      message: `Fund has $${available.toFixed(2)} available. Your offer is $${offerAmount.toFixed(2)}. Hold for next $1K cycle — next $540 drops when gross hits $${((totalKsReached + 1) * SETTLEMENT_CYCLE_THRESHOLD).toLocaleString()}.`,
+      message: `Fund has $${available.toFixed(2)} available. Your offer is $${offerAmount.toFixed(2)}. Hold for next $1K cycle — next $${getPayoutPerCycle()} drops when gross hits $${((totalKsReached + 1) * SETTLEMENT_CYCLE_THRESHOLD).toLocaleString()}.`,
     };
   }
 
@@ -910,8 +929,10 @@ export async function getSettlementDashboard(): Promise<{
   const grossIntake = await getGrossIntake();
   const totalPaid = await getTotalPaidOut();
   const ksReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
-  const totalOwed54 = parseFloat((ksReached * PAYOUT_PER_CYCLE).toFixed(2));
+  const currentPayoutPerK = getPayoutPerCycle();
+  const totalOwed54 = parseFloat((ksReached * currentPayoutPerK).toFixed(2));
   const fundAvailable = parseFloat((totalOwed54 - totalPaid).toFixed(2));
+  refreshSplitFromKinetic();
   const ceo46Total = parseFloat((grossIntake * CEO_SPLIT).toFixed(2));
   const nextKAt = (ksReached + 1) * SETTLEMENT_CYCLE_THRESHOLD;
 
@@ -962,7 +983,7 @@ export async function getSettlementDashboard(): Promise<{
     totalOwed54: totalOwed54,
     totalPaidOut: totalPaid,
     fundAvailable: Math.max(0, fundAvailable),
-    payoutPerK: PAYOUT_PER_CYCLE,
+    payoutPerK: getPayoutPerCycle(),
     totalTraders: parseInt(counts?.total || "0"),
     queuedCount: parseInt(counts?.queued || "0"),
     holdingCount: parseInt(counts?.holding || "0"),
@@ -993,12 +1014,25 @@ const VALID_ENTRIES = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
 
 let currentSystemBias: "NATURAL" | "FLOOR_HEAVY" = "NATURAL";
 
+const KINETIC_SPLITS = [
+  { floor: 0.90, house: 0.10, pulse: "HIGH" },
+  { floor: 0.80, house: 0.20, pulse: "HIGH" },
+  { floor: 0.70, house: 0.30, pulse: "MID" },
+  { floor: 0.60, house: 0.40, pulse: "MID" },
+  { floor: 0.50, house: 0.50, pulse: "LOW" },
+];
+
+const KINETIC_SPLITS_HEAVY = [
+  { floor: 0.90, house: 0.10, pulse: "HIGH" },
+  { floor: 0.80, house: 0.20, pulse: "HIGH" },
+  { floor: 0.70, house: 0.30, pulse: "MID" },
+];
+
 function getKineticState(adminBias: "NATURAL" | "FLOOR_HEAVY" = currentSystemBias) {
-  const isUpPulse = (Math.floor(Date.now() / 10000) % 2) === 1;
-  if (adminBias === "FLOOR_HEAVY") {
-    return { floorROI: isUpPulse ? 0.90 : 0.70, houseMBBP: isUpPulse ? 0.10 : 0.30, pulse: isUpPulse ? "HIGH" : "MID", bias: adminBias };
-  }
-  return { floorROI: isUpPulse ? 0.90 : 0.50, houseMBBP: isUpPulse ? 0.10 : 0.50, pulse: isUpPulse ? "HIGH" : "LOW", bias: adminBias };
+  const splits = adminBias === "FLOOR_HEAVY" ? KINETIC_SPLITS_HEAVY : KINETIC_SPLITS;
+  const cycleIndex = Math.floor(Date.now() / 10000) % splits.length;
+  const current = splits[cycleIndex];
+  return { floorROI: current.floor, houseMBBP: current.house, pulse: current.pulse, bias: adminBias };
 }
 
 function setKineticBias(bias: "NATURAL" | "FLOOR_HEAVY") {
@@ -1010,4 +1044,4 @@ function getKineticBias() {
   return currentSystemBias;
 }
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias };
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic };

@@ -12,7 +12,7 @@ const features = [
   "Full Sovereign Exchange access",
   "Trade ALL asset classes (native + global)",
   "2-Week Early Pre-release trading edge",
-  "54/46 Floor Split on every position",
+  "Kinetic Floor Split on every position",
   "Dynamic buy-in pricing ($3-$25 by rank)",
   "Buy-back ROI: 80-133% per position",
   "Trust Certificate on all positions",
@@ -166,7 +166,7 @@ export default function MembershipPage() {
 
           <div className="bg-zinc-900/50 border-t border-zinc-800 px-6 py-4">
             <div className="flex items-center justify-between text-[10px] font-mono text-zinc-600">
-              <span>54/46 FLOOR SPLIT ON ALL TRADES</span>
+              <span>KINETIC FLOOR SPLIT ON ALL TRADES</span>
               <span>$1K SETTLEMENT CYCLE</span>
               <span>FIFO QUEUE</span>
             </div>

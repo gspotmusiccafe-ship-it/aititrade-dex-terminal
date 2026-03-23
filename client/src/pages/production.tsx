@@ -522,7 +522,7 @@ export default function ProductionPage() {
                 {isPushing ? <><Loader2 className="h-5 w-5 animate-spin" /> PUSHING TO FLOOR...</> : <><Rocket className="h-5 w-5" /> PUSH TO GLOBAL FLOOR</>}
               </button>
               <p className="text-center text-zinc-600 text-[9px] font-mono mt-2">
-                SUNO AUDIO ($0.35) + IDEOGRAM ART ($0.03) + FLOOR LISTING — 54/46 SPLIT ACTIVE
+                SUNO AUDIO ($0.35) + IDEOGRAM ART ($0.03) + FLOOR LISTING — KINETIC SPLIT ACTIVE
               </p>
             </div>
 

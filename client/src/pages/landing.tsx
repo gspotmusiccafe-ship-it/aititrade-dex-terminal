@@ -543,11 +543,11 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
           </div>
           <div className="bg-black p-1.5 sm:p-2 text-center">
             <p className="text-[7px] text-zinc-600 font-bold">SPLIT</p>
-            <p className="text-[10px] sm:text-xs text-emerald-400 font-black">54 / 46</p>
+            <p className="text-[10px] sm:text-xs text-emerald-400 font-black">KINETIC</p>
           </div>
           <div className="bg-black p-1.5 sm:p-2 text-center">
             <p className="text-[7px] text-zinc-600 font-bold">SETTLEMENT</p>
-            <p className="text-[10px] sm:text-xs text-lime-400 font-black">$540/K</p>
+            <p className="text-[10px] sm:text-xs text-lime-400 font-black">KINETIC/K</p>
           </div>
           <div className="bg-black p-1.5 sm:p-2 text-center">
             <p className="text-[7px] text-zinc-600 font-bold">PORTALS</p>

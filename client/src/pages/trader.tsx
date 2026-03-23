@@ -307,14 +307,14 @@ export default function TraderPage() {
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <span className={`text-[9px] font-black ${cyclePct > 50 ? "text-black" : "text-zinc-400"}`}>
-                    {cyclePct.toFixed(1)}% — ${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO $540 PAYOUT
+                    {cyclePct.toFixed(1)}% — ${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO PAYOUT
                   </span>
                 </div>
               </div>
             </div>
             <div className="flex items-center justify-between mt-2 text-[9px] text-zinc-600">
-              <span>54% FLOOR RETAINED | 46% CEO GROSS</span>
-              <span>EVERY $1K TRADED = $540 SETTLEMENT</span>
+              <span>KINETIC FLOOR / CEO LIVE RATE</span>
+              <span>EVERY $1K TRADED = KINETIC SETTLEMENT</span>
             </div>
           </div>
 
@@ -442,7 +442,7 @@ export default function TraderPage() {
 
           <div className="bg-zinc-900/30 border border-zinc-800 p-3">
             <div className="flex items-center justify-between text-[9px] text-zinc-600 flex-wrap gap-2">
-              <span>54/46 FLOOR SPLIT</span>
+              <span>KINETIC FLOOR SPLIT</span>
               <span>90% ROI BUY-BACK</span>
               <span>$1K SETTLEMENT CYCLE</span>
               <span>FIFO QUEUE</span>

@@ -3561,7 +3561,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           ceoGross: ceoGross46,
           trustTithe: trustTithe10,
           blessing: blessing36,
-          mandate: "54/46",
+          mandate: "KINETIC",
         },
         settlement: "https://cash.app/$AITITRADEBROKERAGE",
         cashtag: "$AITITRADEBROKERAGE",
@@ -3812,7 +3812,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         audio: { suno_id: audioAsset.suno_id, status: audioAsset.status, engine: "chirp-v3.5" },
         artwork: { imageUrl: visualAsset.imageUrl, status: visualAsset.status, engine: "ideogram-v2" },
         pricing: { unitPrice: price, buyBack, roi: parseFloat((((buyBack - price) / price) * 100).toFixed(1)), wholesaleCost: totalWholesale },
-        split: { floor: floor54, ceoGross: ceo46, trustTithe, blessing, mandate: "54/46" },
+        split: { floor: floor54, ceoGross: ceo46, trustTithe, blessing, mandate: "KINETIC" },
         ledger: {
           previousBalance: outstanding,
           debit: totalWholesale,
@@ -3839,7 +3839,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const dashboard = await getSettlementDashboard();
       res.json({
         ...dashboard,
-        splitMandate: "54/46",
+        splitMandate: "KINETIC",
         earlyAcceptMultiplier: 1.25,
         holdBonusPerCycle: 0.15,
       });
@@ -5421,6 +5421,9 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const grossIntake = await getGrossIntake();
       res.json({
         ...state,
+        floorPct: Math.round(state.floorROI * 100),
+        ceoPct: Math.round(state.houseMBBP * 100),
+        splitLabel: `${Math.round(state.floorROI * 100)}/${Math.round(state.houseMBBP * 100)}`,
         validEntries: VALID_ENTRIES,
         settlementFund: fundBalance,
         grossIntake,

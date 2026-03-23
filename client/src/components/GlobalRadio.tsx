@@ -586,7 +586,7 @@ export default function GlobalRadio() {
 
       <div className="w-full bg-black border-b border-green-900 py-1 overflow-hidden" data-testid="spotify-asset-ticker">
         <div className="animate-marquee whitespace-nowrap text-green-400 font-mono text-[10px] uppercase">
-          LIVE SPOTIFY TRADES :: {assets.map((a, i) => `${a.ticker}: ${i % 3 === 0 ? "+4.2%" : i % 3 === 1 ? "SETTLING" : "+1.8%"}`).join(" :: ")} :: GLOBAL FLOOR: $1,000.00 :: CASH APP ONLY :: NO PAYPAL :: AITITRADE EXCHANGE :: FEEL THE HEAT :: $AITITRADEBROKERAGE :: 54/46 SPLIT PROTECTED :: LIVE SPOTIFY TRADES :: {assets.map((a, i) => `${a.ticker}: ${i % 3 === 0 ? "+4.2%" : i % 3 === 1 ? "SETTLING" : "+1.8%"}`).join(" :: ")} :: GLOBAL FLOOR: $1,000.00 :: CASH APP ONLY :: NO PAYPAL :: AITITRADE EXCHANGE :: FEEL THE HEAT ::&nbsp;&nbsp;&nbsp;&nbsp;
+          LIVE SPOTIFY TRADES :: {assets.map((a, i) => `${a.ticker}: ${i % 3 === 0 ? "+4.2%" : i % 3 === 1 ? "SETTLING" : "+1.8%"}`).join(" :: ")} :: GLOBAL FLOOR: $1,000.00 :: CASH APP ONLY :: NO PAYPAL :: AITITRADE EXCHANGE :: FEEL THE HEAT :: $AITITRADEBROKERAGE :: KINETIC SPLIT PROTECTED :: LIVE SPOTIFY TRADES :: {assets.map((a, i) => `${a.ticker}: ${i % 3 === 0 ? "+4.2%" : i % 3 === 1 ? "SETTLING" : "+1.8%"}`).join(" :: ")} :: GLOBAL FLOOR: $1,000.00 :: CASH APP ONLY :: NO PAYPAL :: AITITRADE EXCHANGE :: FEEL THE HEAT ::&nbsp;&nbsp;&nbsp;&nbsp;
         </div>
       </div>
 

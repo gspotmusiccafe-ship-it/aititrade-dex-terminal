@@ -443,7 +443,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
             <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
           </div>
           <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
-            <p className="text-[9px] text-lime-500/50">54% FLOOR RETAINED — 46% CEO GROSS (G. SMOOTH MANDATE)</p>
+            <p className="text-[9px] text-lime-500/50">{kineticState?.floorPct || 90}% FLOOR RETAINED — {kineticState?.ceoPct || 10}% CEO GROSS (G. SMOOTH MANDATE)</p>
             <p className="text-[8px] text-zinc-600 mt-1">ONCE PAID, TRADE LOCKS — STIMULATION STARTING</p>
           </div>
           {tradeData && (
@@ -546,6 +546,9 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
     pulse: string;
     bias: string;
     validEntries: number[];
+    floorPct: number;
+    ceoPct: number;
+    splitLabel: string;
   }>({
     queryKey: ["/api/kinetic/state"],
     refetchInterval: 5000,
@@ -595,7 +598,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const earlyExit = parseFloat((price * portal.early).toFixed(2));
   const roi = price > 0 ? parseFloat((((maxPayout - price) / price) * 100).toFixed(0)) : 0;
   const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
-  const minterFeeLabel = "54/46";
+  const minterFeeLabel = kineticState?.splitLabel || "LIVE";
   const grossSales = parseFloat((sales * price).toFixed(2));
 
   const globalGross = settlement?.grossIntake || 0;
@@ -604,6 +607,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const globalPct = Math.min(100, parseFloat(((globalGross % 1000) / 1000 * 100).toFixed(1)));
   const ksReached = settlement?.ksReached || 0;
   const fundAvailable = settlement?.fundAvailable || 0;
+  const kineticPayout = kineticState ? (kineticState.floorPct * 10) : 500;
 
   const capacityPct = globalPct;
   const isSettlementClose = globalRemaining <= 200 && globalRemaining > 50;
@@ -707,7 +711,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
         <div className="px-3 py-1.5 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2 animate-pulse">
           <AlertTriangle className="h-3 w-3 text-amber-400 flex-shrink-0" />
           <span className="text-[9px] text-amber-400 font-bold">
-            ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY — SETTLEMENT CLOSING — {unitsRemaining} TRADES TO $540 PAYOUT
+            ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY — SETTLEMENT CLOSING — {unitsRemaining} TRADES TO ${kineticPayout} PAYOUT
           </span>
         </div>
       )}
@@ -717,7 +721,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
           <p className="text-[10px] text-red-400 font-extrabold">
             ⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY — SETTLEMENT IMMINENT — NEXT TRADE COULD CLOSE IT ⚡
           </p>
-          <p className="text-[8px] text-red-400/70 mt-0.5">$540 PAYOUT DROPS WHEN GROSS HITS ${nextKAt.toLocaleString('en-US')} — TRADE NOW TO LOCK POSITION</p>
+          <p className="text-[8px] text-red-400/70 mt-0.5">${kineticPayout} PAYOUT DROPS WHEN GROSS HITS ${nextKAt.toLocaleString('en-US')} — TRADE NOW TO LOCK POSITION</p>
         </div>
       )}
 
@@ -832,7 +836,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
             <div className="flex items-center justify-between mt-0.5 flex-wrap gap-x-2">
               <span className="text-zinc-400 text-[8px] sm:text-[10px] font-bold">{priceLabel}/U | {portal.name}</span>
               {!isFlashZone && (
-                <span className="text-lime-400/70 text-[8px] sm:text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO $540</span>
+                <span className="text-lime-400/70 text-[8px] sm:text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO ${kineticPayout}</span>
               )}
               {isFlashZone && (
                 <span className="text-red-400 text-[8px] sm:text-[10px] font-extrabold animate-pulse">⚡ ${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })}</span>
@@ -1036,6 +1040,19 @@ export default function HomePage() {
     enabled: !!user,
   });
 
+  const { data: kineticState } = useQuery<{
+    floorROI: number;
+    houseMBBP: number;
+    pulse: string;
+    bias: string;
+    floorPct: number;
+    ceoPct: number;
+    splitLabel: string;
+  }>({
+    queryKey: ["/api/kinetic/state"],
+    refetchInterval: 5000,
+  });
+
   useEffect(() => {
     if (autopilotPoolData && autopilotPoolData.length > 0) {
       setAutopilotPool(autopilotPoolData);
@@ -1233,10 +1250,10 @@ export default function HomePage() {
           <span className="text-emerald-400">97.7 THE FLAME</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">EVERY $1K =</span>
-          <span className="text-emerald-400">$540 PAYOUT</span>
+          <span className="text-emerald-400">${kineticState ? (kineticState.floorPct * 10) : "LIVE"} PAYOUT</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">SPLIT:</span>
-          <span className="text-emerald-400">54/46</span>
+          <span className="text-emerald-400">{kineticState?.splitLabel || "LIVE"}</span>
           <span className="text-zinc-800">|</span>
           <span className="text-zinc-600">PORTALS:</span>
           <span className="text-emerald-400">81 TERMINALS</span>
@@ -1289,7 +1306,7 @@ export default function HomePage() {
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
           <span className="truncate">AITITRADE DEX | 97.7 THE FLAME</span>
-          <span className="truncate hidden sm:inline">81 PORTALS | $1-$50 | $1K = $540 SETTLE | 54/46 SPLIT</span>
+          <span className="truncate hidden sm:inline">81 PORTALS | $1-$50 | $1K SETTLE | {kineticState?.splitLabel || "LIVE"} SPLIT</span>
         </div>
       </div>
     </div>

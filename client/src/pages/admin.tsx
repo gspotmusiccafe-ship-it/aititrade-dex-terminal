@@ -4213,7 +4213,7 @@ function SettlementGovernorTab() {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="min-w-0">
           <h2 className="text-base sm:text-xl font-black text-emerald-400">SETTLEMENT GOVERNOR</h2>
-          <p className="text-[8px] sm:text-[10px] text-zinc-500">54/46 MANDATE — $1K = $540 PAYOUT</p>
+          <p className="text-[8px] sm:text-[10px] text-zinc-500">KINETIC MANDATE — $1K = LIVE SPLIT PAYOUT</p>
         </div>
         <Button
           onClick={() => runCycleMutation.mutate()}
@@ -4246,7 +4246,7 @@ function SettlementGovernorTab() {
 
       <div className="bg-zinc-900 border border-zinc-800 p-2 sm:p-3">
         <div className="flex items-center justify-between mb-1 sm:mb-2">
-          <span className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">TO NEXT $540</span>
+          <span className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">TO NEXT PAYOUT</span>
           <span className={`text-xs sm:text-sm font-black ${distToClose <= 100 ? "text-red-400 animate-pulse" : distToClose <= 200 ? "text-amber-400" : "text-lime-400"}`}>
             ${distToClose.toLocaleString('en-US', { minimumFractionDigits: 0 })}
           </span>
