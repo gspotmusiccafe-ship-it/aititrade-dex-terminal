@@ -737,11 +737,6 @@ export async function runSettlementCycle(): Promise<{
   let totalPaidOut = 0;
 
   for (const entry of queued) {
-    if (remaining <= 0) {
-      holding.push(entry.userId);
-      continue;
-    }
-
     const buyIn = parseFloat(entry.buyIn || "0");
     const baseMbb = parseFloat(entry.baseMbb || "3.00");
     const cyclesHeld = entry.cyclesHeld || 0;
@@ -753,24 +748,32 @@ export async function runSettlementCycle(): Promise<{
     ).toFixed(2));
     const offerAmount = parseFloat((buyIn * currentMult).toFixed(2));
 
-    await db.update(settlementQueue).set({
-      currentMultiplier: currentMult.toFixed(2),
-      currentOffer: offerAmount.toFixed(2),
-      cyclesHeld: cyclesHeld + 1,
-    }).where(eq(settlementQueue.id, entry.id));
-
-    if (offerAmount <= remaining) {
+    if (remaining <= 0 || offerAmount > remaining) {
       await db.update(settlementQueue).set({
-        status: "OFFERED",
+        status: "HOLDING",
         currentMultiplier: currentMult.toFixed(2),
         currentOffer: offerAmount.toFixed(2),
         cyclesHeld: cyclesHeld + 1,
       }).where(eq(settlementQueue.id, entry.id));
-
       holding.push(entry.userId);
-    } else {
-      holding.push(entry.userId);
+      console.log(`[GOVERNOR] HOLD: ${entry.userId} | Position #${entry.queuePosition} | $${buyIn} → $${offerAmount} (${currentMult}x) | Budget left: $${remaining.toFixed(2)} — waiting for next $1K`);
+      continue;
     }
+
+    await db.update(settlementQueue).set({
+      status: "SETTLED",
+      acceptedMultiplier: currentMult.toFixed(2),
+      payoutAmount: offerAmount.toFixed(2),
+      currentOffer: offerAmount.toFixed(2),
+      currentMultiplier: currentMult.toFixed(2),
+      cyclesHeld: cyclesHeld + 1,
+      settledAt: new Date(),
+    }).where(eq(settlementQueue.id, entry.id));
+
+    remaining = parseFloat((remaining - offerAmount).toFixed(2));
+    totalPaidOut = parseFloat((totalPaidOut + offerAmount).toFixed(2));
+    settled.push({ userId: entry.userId, payout: offerAmount, multiplier: currentMult });
+    console.log(`[GOVERNOR] SETTLED: ${entry.userId} | Position #${entry.queuePosition} | $${buyIn} → $${offerAmount} (${currentMult}x) | Budget left: $${remaining.toFixed(2)}`);
   }
 
   await db.insert(settlementCycles).values({
