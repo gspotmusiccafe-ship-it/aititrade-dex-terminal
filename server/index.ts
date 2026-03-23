@@ -101,6 +101,22 @@ app.use((req, res, next) => {
     console.error("[migration] Non-critical migration error:", e);
   }
 
+  try {
+    const { db } = await import("./db");
+    const { sql } = await import("drizzle-orm");
+    const [cleanupCheck] = (await db.execute(sql`SELECT COUNT(*) as cnt FROM orders WHERE unit_price::numeric < 1`)).rows as any[];
+    const oldOrderCount = parseInt(cleanupCheck?.cnt || "0");
+    if (oldOrderCount > 0) {
+      await db.execute(sql`DELETE FROM orders WHERE unit_price::numeric < 1`);
+      await db.execute(sql`UPDATE tracks SET unit_price = '1' WHERE unit_price::numeric < 1`);
+      await db.execute(sql`UPDATE tracks SET sales_count = 0 WHERE sales_count > 0`);
+      await db.execute(sql`UPDATE tracks SET play_count = 0 WHERE play_count > 0`);
+      console.log(`[CLEANUP] Removed ${oldOrderCount} test orders, fixed prices to $1 minimum, reset counts`);
+    }
+  } catch (e) {
+    console.error("[CLEANUP] Non-critical cleanup error:", e);
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
