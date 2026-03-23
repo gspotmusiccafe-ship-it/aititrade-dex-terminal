@@ -105,6 +105,7 @@ app.use((req, res, next) => {
     const { db } = await import("./db");
     const { sql } = await import("drizzle-orm");
     const validEntries = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
+    await db.execute(sql`DELETE FROM settlement_queue WHERE order_id IN (SELECT id FROM orders WHERE unit_price::numeric < 1)`);
     await db.execute(sql`DELETE FROM orders WHERE unit_price::numeric < 1`);
     await db.execute(sql`UPDATE tracks SET sales_count = 0, play_count = 0`);
     const allTracks = (await db.execute(sql`SELECT id, unit_price FROM tracks`)).rows as any[];
