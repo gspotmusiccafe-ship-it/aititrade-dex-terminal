@@ -598,11 +598,20 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const portal = getPortal(price);
   const poolCeiling = isGlobal ? CEILING : portal.pool;
   const ptCap = poolCeiling * 0.50;
-  const kPulse = kineticState ? kineticState.floorROI : 0.54;
-  const kSwing = 0.75 + (kPulse * 0.50);
-  const liveMbb = 1 + ((portal.mbb - 1) * kSwing);
-  const maxPayout = parseFloat((price * liveMbb).toFixed(2));
-  const earlyExit = parseFloat((price * (1 + ((portal.early - 1) * kSwing))).toFixed(2));
+  const maxPayout = isGlobal
+    ? parseFloat((price * portal.mbb).toFixed(2))
+    : (() => {
+        const kPulse = kineticState ? kineticState.floorROI : 0.70;
+        const kSwing = 0.85 + (kPulse * 0.30);
+        return parseFloat((price * (1 + ((portal.mbb - 1) * kSwing))).toFixed(2));
+      })();
+  const earlyExit = isGlobal
+    ? parseFloat((price * portal.early).toFixed(2))
+    : (() => {
+        const kPulse = kineticState ? kineticState.floorROI : 0.70;
+        const kSwing = 0.85 + (kPulse * 0.30);
+        return parseFloat((price * (1 + ((portal.early - 1) * kSwing))).toFixed(2));
+      })();
   const bbPrice = parseFloat((track as any).buyBackRate || maxPayout.toFixed(2));
   const roi = price > 0 ? parseFloat((((maxPayout - price) / price) * 100).toFixed(0)) : 0;
   const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
@@ -804,7 +813,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
           basePrice={price}
           mbbPrice={maxPayout}
           mbbMultiplier={portal.mbb}
-          floorROI={kineticState?.floorROI}
+          floorROI={isGlobal ? undefined : kineticState?.floorROI}
           trackSeed={parseInt(String(track.id).replace(/\D/g, '').slice(0, 8) || '12345')}
         />
 

@@ -1016,12 +1016,14 @@ export async function registerRoutes(
         return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "2.00"));
       }, 0);
 
-      const traderSettlementPool = totalVolume * 0.54;
-      const houseRetention = totalVolume * 0.46;
+      const dashPulse = getKineticState();
+      const traderSettlementPool = totalVolume * dashPulse.floorROI;
+      const houseRetention = totalVolume * dashPulse.houseMBBP;
 
       const distanceToClose = 1000 - (totalVolume % 1000);
       const cyclesCompleted = Math.floor(totalVolume / 1000);
-      const totalPaidOut = cyclesCompleted * 540;
+      const payoutPerK = Math.round(1000 * dashPulse.floorROI);
+      const totalPaidOut = cyclesCompleted * payoutPerK;
 
       const [orderStats] = await db.select({
         settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
@@ -2131,13 +2133,16 @@ export async function registerRoutes(
           if (currentGross >= GLOBAL_CEILING) throw new Error("CEILING_REACHED");
         }
 
-        const floor54 = parseFloat((price * 0.54).toFixed(4));
-        const ceoTake46 = parseFloat((price * 0.46).toFixed(4));
-        const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
-        const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+        const tradePulse = isGlobal ? null : getKineticState();
+        const tFloorPct = isGlobal ? 0.54 : tradePulse!.floorROI;
+        const tCeoPct = isGlobal ? 0.46 : tradePulse!.houseMBBP;
+        const floorTake = parseFloat((price * tFloorPct).toFixed(4));
+        const ceoTake = parseFloat((price * tCeoPct).toFixed(4));
+        const trustTithe10 = parseFloat((ceoTake * 0.10).toFixed(4));
+        const blessingPool36 = parseFloat((ceoTake - trustTithe10).toFixed(4));
         const isPriority = price < 21.00;
 
-        console.log(`[AITITRADE] Trade $${price} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+        console.log(`[AITITRADE] ${isGlobal ? "GLOBAL" : "FLOOR"} Trade $${price} | Floor${Math.round(tFloorPct*100)}: $${floorTake} | CEO${Math.round(tCeoPct*100)}: $${ceoTake} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
         const seq = String(currentSales + 1).padStart(3, "0");
         const prefix = isGlobal ? "TRST" : "MNT";
@@ -2147,9 +2152,9 @@ export async function registerRoutes(
           trackId,
           trackingNumber: trackingNum,
           unitPrice: price.toString(),
-          creatorCredit: "0.46",
-          creatorCreditAmount: ceoTake46.toString(),
-          positionHolderAmount: floor54.toString(),
+          creatorCredit: tCeoPct.toFixed(2),
+          creatorCreditAmount: ceoTake.toString(),
+          positionHolderAmount: floorTake.toString(),
           status: "verified",
         }).returning();
 
@@ -2246,13 +2251,16 @@ export async function registerRoutes(
         }
       }
 
-      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
-      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
-      const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
-      const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
+      const kineticSplit = isGlobal ? { floor: 0.54, ceo: 0.46 } : getKineticState();
+      const floorPct = isGlobal ? 0.54 : kineticSplit.floorROI;
+      const ceoPct = isGlobal ? 0.46 : kineticSplit.houseMBBP;
+      const floorTake = parseFloat((parsedAmount * floorPct).toFixed(4));
+      const ceoTake = parseFloat((parsedAmount * ceoPct).toFixed(4));
+      const trustTithe10 = parseFloat((ceoTake * 0.10).toFixed(4));
+      const blessingPool = parseFloat((ceoTake - trustTithe10).toFixed(4));
       const isPriority = parsedAmount < 21.00;
 
-      console.log(`[CASH APP TRADE] Asset: ${ticker} | Total: $${parsedAmount} | Floor54: $${floor54} | CEO46: $${ceoTake46} | Tithe: $${trustTithe10} | Blessing: $${blessingPool36} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
+      console.log(`[CASH APP TRADE] ${isGlobal ? "GLOBAL" : "FLOOR"} | Asset: ${ticker} | Total: $${parsedAmount} | Floor${Math.round(floorPct*100)}: $${floorTake} | CEO${Math.round(ceoPct*100)}: $${ceoTake} | Tithe: $${trustTithe10} | Blessing: $${blessingPool} | Priority: ${isPriority ? "HIGH" : "CYCLE_HOLD"}`);
 
       const seq = String(currentSales + 1).padStart(3, "0");
       const prefix = isGlobal ? "TRST" : "MNT";
@@ -2264,9 +2272,9 @@ export async function registerRoutes(
         trackId,
         trackingNumber: trackingNum,
         unitPrice: parsedAmount.toString(),
-        creatorCredit: "0.46",
-        creatorCreditAmount: ceoTake46.toString(),
-        positionHolderAmount: floor54.toString(),
+        creatorCredit: ceoPct.toFixed(2),
+        creatorCreditAmount: ceoTake.toString(),
+        positionHolderAmount: floorTake.toString(),
         status: "pending_cashapp",
       }).returning();
 
@@ -2274,9 +2282,11 @@ export async function registerRoutes(
         .set({ salesCount: sql`${tracks.salesCount} + 1` })
         .where(eq(tracks.id, trackId));
 
-      await enqueueTrader(order.id, userId, trackId, parsedAmount);
-
-      const settlementTriggered = await checkAndTriggerSettlement();
+      let settlementTriggered = false;
+      if (!isGlobal) {
+        await enqueueTrader(order.id, userId, trackId, parsedAmount);
+        settlementTriggered = await checkAndTriggerSettlement();
+      }
 
       const newGross = parseFloat(((currentSales + 1) * price).toFixed(2));
       const capacityPct = Math.min(100, parseFloat(((newGross / GLOBAL_CEILING) * 100).toFixed(1)));
@@ -2374,15 +2384,16 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid amount" });
       }
 
-      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
-      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const p2pPulse = getKineticState();
+      const floor54 = parseFloat((parsedAmount * p2pPulse.floorROI).toFixed(4));
+      const ceoTake46 = parseFloat((parsedAmount * p2pPulse.houseMBBP).toFixed(4));
       const trustTithe10 = parseFloat((ceoTake46 * 0.10).toFixed(4));
       const blessingPool36 = parseFloat((ceoTake46 - trustTithe10).toFixed(4));
 
       const brokerageLink = "https://cash.app/$AITITRADEBROKERAGE";
 
-      console.log(`[P2P TRADE] Buyer: ${buyerId} | Seller Trade: ${sellerTradeId} | Total: $${parsedAmount}`);
-      console.log(`[LEDGER] Floor54: $${floor54} | CEO Blessing: $${blessingPool36} | Trust: $${trustTithe10}`);
+      console.log(`[P2P TRADE] Buyer: ${buyerId} | Seller Trade: ${sellerTradeId} | Total: $${parsedAmount} | Split: ${Math.round(p2pPulse.floorROI*100)}/${Math.round(p2pPulse.houseMBBP*100)}`);
+      console.log(`[LEDGER] Floor: $${floor54} | CEO Blessing: $${blessingPool36} | Trust: $${trustTithe10}`);
 
       res.json({
         status: "P2P_INITIATED",
@@ -2420,15 +2431,16 @@ export async function registerRoutes(
         return res.status(400).json({ message: "Invalid amount" });
       }
 
-      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
-      const ceoGross46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const settlePulse = getKineticState();
+      const floor54 = parseFloat((parsedAmount * settlePulse.floorROI).toFixed(4));
+      const ceoGross46 = parseFloat((parsedAmount * settlePulse.houseMBBP).toFixed(4));
       const trustTithe10 = parseFloat((ceoGross46 * 0.10).toFixed(4));
       const yourBlessing36 = parseFloat((ceoGross46 - trustTithe10).toFixed(4));
 
       const cashAppUrl = "https://cash.app/$AITITRADEBROKERAGE";
       const ref = assetId || spotifyTrackId || "SPOT_ASSET";
 
-      console.log(`[P2P SETTLE] Asset: ${ref} | Amount: $${parsedAmount.toFixed(2)}`);
+      console.log(`[P2P SETTLE] Asset: ${ref} | Amount: $${parsedAmount.toFixed(2)} | Split: ${Math.round(settlePulse.floorROI*100)}/${Math.round(settlePulse.houseMBBP*100)}`);
       console.log(`[LEDGER] Floor: $${floor54} | CEO Blessing: $${yourBlessing36} | Trust Tithe: $${trustTithe10}`);
 
       res.json({
@@ -5566,18 +5578,18 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const seq = String(currentSales + 1).padStart(3, "0");
       const trackingNum = `KNT-977-${ticker}-${seq}`;
 
-      const floor54 = parseFloat((parsedAmount * 0.54).toFixed(4));
-      const ceoTake46 = parseFloat((parsedAmount * 0.46).toFixed(4));
+      const floorTake = parseFloat((parsedAmount * pulse.floorROI).toFixed(4));
+      const ceoTake = parseFloat((parsedAmount * pulse.houseMBBP).toFixed(4));
 
-      console.log(`[KINETIC TRADE] ${type || "IMPULSE"} | Asset: ${ticker} | Entry: $${parsedAmount} | ROI: ${(finalROI * 100).toFixed(0)}% | Payout: $${payout} | Pulse: ${pulse.pulse} | Bias: ${pulse.bias}`);
+      console.log(`[KINETIC TRADE] ${type || "IMPULSE"} | Asset: ${ticker} | Entry: $${parsedAmount} | ROI: ${(finalROI * 100).toFixed(0)}% | Split: ${Math.round(pulse.floorROI*100)}/${Math.round(pulse.houseMBBP*100)} | Payout: $${payout} | Pulse: ${pulse.pulse} | Bias: ${pulse.bias}`);
 
       const [order] = await db.insert(orders).values({
         trackId,
         trackingNumber: trackingNum,
         unitPrice: parsedAmount.toString(),
-        creatorCredit: "0.46",
-        creatorCreditAmount: ceoTake46.toString(),
-        positionHolderAmount: floor54.toString(),
+        creatorCredit: pulse.houseMBBP.toFixed(2),
+        creatorCreditAmount: ceoTake.toString(),
+        positionHolderAmount: floorTake.toString(),
         status: "pending_cashapp",
       }).returning();
 
