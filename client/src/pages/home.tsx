@@ -885,13 +885,13 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
           >
             <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> VAULT
           </Link>
-          <Link
-            href="/artist-portal"
-            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center hover:bg-violet-500/20 transition-colors flex items-center justify-center gap-0.5"
+          <button
+            disabled
+            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center opacity-50 cursor-not-allowed flex items-center justify-center gap-0.5"
             data-testid={`button-mentor-link-${track.id}`}
           >
             <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> MENTOR
-          </Link>
+          </button>
         </div>
         <div className="flex gap-0.5 sm:gap-1">
           {isClosed || isReconciling ? (
