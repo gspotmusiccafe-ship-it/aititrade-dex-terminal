@@ -58,6 +58,9 @@ export default function ProductionPage() {
   const { data: trustStatus } = useQuery<TrustStatus>({
     queryKey: ["/api/trust/status"],
   });
+  const { data: kineticState } = useQuery<{ floorPct: number; ceoPct: number; splitLabel: string }>({
+    queryKey: ["/api/kinetic/state"],
+  });
 
   if (adminLoading) {
     return (
@@ -529,18 +532,18 @@ export default function ProductionPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="border border-zinc-800 bg-zinc-900/30 p-3 text-center">
                 <Zap className="h-4 w-4 text-green-500/40 mx-auto mb-1" />
-                <p className="text-zinc-500 text-[9px] font-mono font-bold">54% FLOOR</p>
-                <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * 0.54).toFixed(2)}</p>
+                <p className="text-zinc-500 text-[9px] font-mono font-bold">{kineticState?.floorPct ?? 54}% FLOOR</p>
+                <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * ((kineticState?.floorPct ?? 54) / 100)).toFixed(2)}</p>
               </div>
               <div className="border border-zinc-800 bg-zinc-900/30 p-3 text-center">
                 <DollarSign className="h-4 w-4 text-green-500/40 mx-auto mb-1" />
-                <p className="text-zinc-500 text-[9px] font-mono font-bold">46% CEO</p>
-                <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * 0.46).toFixed(2)}</p>
+                <p className="text-zinc-500 text-[9px] font-mono font-bold">{kineticState?.ceoPct ?? 46}% CEO</p>
+                <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * ((kineticState?.ceoPct ?? 46) / 100)).toFixed(2)}</p>
               </div>
               <div className="border border-zinc-800 bg-zinc-900/30 p-3 text-center">
                 <Radio className="h-4 w-4 text-green-500/40 mx-auto mb-1" />
                 <p className="text-zinc-500 text-[9px] font-mono font-bold">TRUST TITHE</p>
-                <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * 0.46 * 0.10).toFixed(2)}</p>
+                <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * ((kineticState?.ceoPct ?? 46) / 100) * 0.10).toFixed(2)}</p>
               </div>
             </div>
           </div>

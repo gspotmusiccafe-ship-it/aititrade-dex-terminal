@@ -1310,7 +1310,7 @@ export async function registerRoutes(
       })
       .from(tracks)
       .innerJoin(artists, eq(tracks.artistId, artists.id))
-      .where(and(eq(artists.approvalStatus, "approved"), eq(tracks.isPrerelease, false)))
+      .where(eq(tracks.isPrerelease, false))
       .orderBy(desc(tracks.playCount))
       .limit(50);
 
@@ -1351,8 +1351,8 @@ export async function registerRoutes(
         usrId: orders.buyerEmail,
         buyerName: orders.buyerName,
         totalInvested: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
-        tradeCount: sql<number>`COUNT(*)`,
-        earlyExits: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
+        tradeCount: sql<number>`CAST(COUNT(*) AS INTEGER)`,
+        earlyExits: sql<number>`CAST(COUNT(CASE WHEN status = 'settled_early' THEN 1 END) AS INTEGER)`,
         totalPayout: sql<string>`COALESCE(SUM(CAST(final_payout AS DECIMAL)), 0)`,
         avgPrice: sql<string>`ROUND(AVG(CAST(unit_price AS DECIMAL)), 2)`,
       })
@@ -1385,7 +1385,7 @@ export async function registerRoutes(
       });
 
       const totalVolume = traders.reduce((s, t) => s + t.totalInvested, 0);
-      const totalTrades = traders.reduce((s, t) => s + t.tradeCount, 0);
+      const totalTrades = traders.reduce((s, t) => s + Number(t.tradeCount), 0);
 
       res.json({
         traders,
