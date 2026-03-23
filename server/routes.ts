@@ -3734,27 +3734,40 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const { prompt, style, voiceType, makeInstrumental, title } = req.body;
       if (!prompt) return res.status(400).json({ message: "Prompt required" });
 
-      if (!isSunoConfigured()) {
-        return res.status(503).json({ message: "SUNO_API_KEY not configured — add it in Secrets to enable beat production" });
+      if (isSunoConfigured()) {
+        const vocalGender: "m" | "f" | undefined = voiceType?.includes("female") ? "f" : voiceType?.includes("male") ? "m" : undefined;
+
+        console.log(`[BEAT-GEN] Submitting to Suno: style=${style}, vocal=${vocalGender}, instrumental=${makeInstrumental}`);
+
+        const taskId = await sunoGenerate({
+          prompt: prompt.slice(0, 5000),
+          style: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+          title: (title || "AITIFY Beat").slice(0, 80),
+          instrumental: !!makeInstrumental,
+          vocalGender,
+        });
+
+        res.json({
+          taskId,
+          status: "GENERATING",
+          message: "Beat submitted to Suno — poll /api/production/beat-status for updates",
+        });
+      } else {
+        console.log(`[BEAT-GEN] No Suno key — using AI vocal engine: style=${style}, voice=${voiceType}`);
+        const voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
+        const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
+        const audioId = `beat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const audioPath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
+        fs.writeFileSync(audioPath, audioBuffer);
+        const audioUrl = `/uploads/${audioId}.mp3`;
+        console.log(`[BEAT-GEN] AI vocal generated: ${audioUrl} (${audioBuffer.length} bytes)`);
+
+        res.json({
+          audioUrl,
+          sunoId: audioId,
+          status: "READY",
+        });
       }
-
-      const vocalGender: "m" | "f" | undefined = voiceType?.includes("female") ? "f" : voiceType?.includes("male") ? "m" : undefined;
-
-      console.log(`[BEAT-GEN] Submitting to Suno: style=${style}, vocal=${vocalGender}, instrumental=${makeInstrumental}`);
-
-      const taskId = await sunoGenerate({
-        prompt: prompt.slice(0, 5000),
-        style: (style || "R&B, Smooth, Melodic").slice(0, 1000),
-        title: (title || "AITIFY Beat").slice(0, 80),
-        instrumental: !!makeInstrumental,
-        vocalGender,
-      });
-
-      res.json({
-        taskId,
-        status: "GENERATING",
-        message: "Beat submitted to Suno — poll /api/production/beat-status for updates",
-      });
     } catch (error: any) {
       console.error("[BEAT-GEN] Error:", error.message);
       res.status(500).json({ message: error.message || "Beat generation failed" });

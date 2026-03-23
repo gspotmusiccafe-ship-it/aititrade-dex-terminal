@@ -374,7 +374,7 @@ export default function ProductionPage() {
             <div className="border-2 border-green-600/50 bg-green-950/10 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Music className="h-5 w-5 text-green-400" />
-                <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — BEAT MACHINE (SUNO)</h3>
+                <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — BEAT MACHINE</h3>
                 <span className="text-zinc-600 text-[9px] font-mono ml-auto">$0.35/TRACK</span>
               </div>
 
