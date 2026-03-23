@@ -328,7 +328,7 @@ export function MusicPlayer() {
           </div>
         </div>
       <div className="bg-zinc-950 border-t border-zinc-800 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
-        <div className="px-4 py-3 flex items-center gap-4 max-w-screen-2xl mx-auto">
+        <div className="px-2 sm:px-4 py-3 flex items-center gap-2 sm:gap-4 max-w-screen-2xl mx-auto overflow-hidden">
 
           <div className="relative group w-20 h-20 md:w-24 md:h-24 border-2 border-zinc-800 rounded-sm overflow-hidden flex-shrink-0" data-testid="deck-a-art">
             {currentTrack.coverImage ? (
@@ -347,7 +347,7 @@ export function MusicPlayer() {
                 <h2 className="text-white font-black italic text-base md:text-xl tracking-tighter uppercase truncate" data-testid="text-current-track-title">
                   {currentTrack.title.toUpperCase()} <span className="text-green-500 not-italic text-xs md:text-sm">// ASSET_ACTIVE</span>
                 </h2>
-                <p className="text-zinc-500 font-mono text-[9px] md:text-[10px] uppercase tracking-widest truncate" data-testid="text-current-track-artist">
+                <p className="text-zinc-500 font-mono text-[9px] md:text-[10px] uppercase tracking-widest truncate max-w-full overflow-hidden" data-testid="text-current-track-artist">
                   {currentTrack.artist?.name} | TICKER: {ticker} | MARKET: AITITRADE_SOVEREIGN
                   {broadcast && broadcastUptime > 0 && (
                     <span className="text-zinc-600 ml-2">
@@ -410,11 +410,11 @@ export function MusicPlayer() {
               </div>
 
               <button
-                onClick={() => window.open("https://cash.app/$AITITRADEBROKERAGE", "_blank", "noopener,noreferrer")}
-                className="bg-zinc-900 border border-zinc-700 text-green-500 font-bold text-[10px] hover:bg-green-900 hover:text-white transition-all uppercase flex items-center justify-center gap-1"
+                onClick={() => window.open("https://cash.app/app/JNXGD73", "_blank", "noopener,noreferrer")}
+                className="bg-zinc-900 border border-zinc-700 text-green-500 font-bold text-[9px] sm:text-[10px] hover:bg-green-900 hover:text-white transition-all uppercase flex items-center justify-center gap-1 min-w-0 px-1"
                 data-testid="button-quick-acquire"
               >
-                <DollarSign className="h-3 w-3" /> Acquire Position
+                <DollarSign className="h-3 w-3 flex-shrink-0" /> <span className="truncate">Open Brokerage</span>
               </button>
 
               <div className="hidden md:flex items-center gap-1">

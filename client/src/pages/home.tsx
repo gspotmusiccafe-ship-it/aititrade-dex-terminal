@@ -415,8 +415,8 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-black border-2 border-lime-500/60 font-mono max-w-sm w-full shadow-2xl shadow-lime-500/20 relative overflow-hidden" onClick={e => e.stopPropagation()} data-testid={`trade-cashapp-dialog-${track.id}`}>
-        <div className="border-b border-lime-500/30 px-4 py-2.5 flex items-center justify-between bg-lime-950/80">
+      <div className="bg-black border-2 border-lime-500/60 font-mono max-w-sm w-full shadow-2xl shadow-lime-500/20 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid={`trade-cashapp-dialog-${track.id}`}>
+        <div className="border-b border-lime-500/30 px-4 py-2.5 flex items-center justify-between bg-lime-950/80 sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-lime-400" />
             <span className="text-[11px] text-lime-400 font-bold tracking-wider">ACQUIRE POSITION — CASH APP</span>
@@ -654,7 +654,7 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const headerBg = isClosed ? "border-red-500/20 bg-red-500/5" : isHighCapacity ? "border-yellow-500/20 bg-yellow-500/5" : isGlobal ? "border-amber-500/20 bg-amber-500/5" : isInspirational ? "border-violet-500/20 bg-violet-500/5" : "border-emerald-500/10 bg-emerald-500/5";
 
   return (
-    <div className={`bg-black border font-mono group transition-all ${borderColor}`} data-testid={`asset-card-${track.id}`}>
+    <div className={`bg-black border font-mono group transition-all overflow-hidden ${borderColor}`} data-testid={`asset-card-${track.id}`}>
       <div className={`border-b px-2 sm:px-3 py-1 sm:py-1.5 ${headerBg}`}>
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 overflow-hidden">
@@ -931,29 +931,29 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
         </div>
       </div>
       {showP2P && (
-        <div className="border-t-2 border-green-600 bg-black p-4 shadow-[0_0_15px_rgba(0,255,0,0.1)]" data-testid={`p2p-terminal-${track.id}`}>
-          <h3 className="text-white font-black italic text-lg mb-2 uppercase truncate">
-            {track.title} <span className="text-green-500 text-sm not-italic">P2P FLOOR</span>
+        <div className="border-t-2 border-green-600 bg-black p-3 sm:p-4 shadow-[0_0_15px_rgba(0,255,0,0.1)] overflow-hidden" data-testid={`p2p-terminal-${track.id}`}>
+          <h3 className="text-white font-black italic text-sm sm:text-lg mb-2 uppercase truncate">
+            {track.title} <span className="text-green-500 text-xs sm:text-sm not-italic">P2P FLOOR</span>
           </h3>
           <div className="flex justify-between items-end mb-3">
-            <div>
-              <p className="text-zinc-500 text-[9px] font-bold tracking-wider">CURRENT TBI (BUY-IN)</p>
-              <p className="text-white text-2xl font-black">${price.toFixed(2)}</p>
+            <div className="min-w-0">
+              <p className="text-zinc-500 text-[8px] sm:text-[9px] font-bold tracking-wider">CURRENT TBI (BUY-IN)</p>
+              <p className="text-white text-xl sm:text-2xl font-black">${price.toFixed(2)}</p>
             </div>
-            <div className="text-right">
-              <p className="text-zinc-500 text-[9px] font-bold tracking-wider">MBB TARGET</p>
-              <p className="text-green-400 text-lg font-bold">$21.00</p>
+            <div className="text-right flex-shrink-0 ml-2">
+              <p className="text-zinc-500 text-[8px] sm:text-[9px] font-bold tracking-wider">MBB TARGET</p>
+              <p className="text-green-400 text-base sm:text-lg font-bold">$21.00</p>
             </div>
           </div>
           <button
             onClick={() => window.open("https://cash.app/app/JNXGD73", "_blank", "noopener,noreferrer")}
-            className="w-full bg-green-600 hover:bg-green-400 text-white py-3 font-black text-sm transition-all border-b-4 border-green-900 active:border-b-0 flex items-center justify-center gap-2"
+            className="w-full bg-green-600 hover:bg-green-400 text-white py-2.5 sm:py-3 font-black text-xs sm:text-sm transition-all border-b-4 border-green-900 active:border-b-0 flex items-center justify-center gap-1.5"
             data-testid={`button-p2p-execute-${track.id}`}
           >
-            <DollarSign className="h-4 w-4" /> OPEN BROKERAGE ACCOUNT
+            <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> OPEN BROKERAGE ACCOUNT
           </button>
-          <p className="text-[9px] text-zinc-600 mt-2 text-center uppercase tracking-widest">
-            No PayPal • Direct Peer-to-Peer Settlement • 54% Floor Protected
+          <p className="text-[8px] sm:text-[9px] text-zinc-600 mt-2 text-center uppercase tracking-wider sm:tracking-widest break-words">
+            No PayPal • Direct P2P Settlement • 54% Floor Protected
           </p>
         </div>
       )}

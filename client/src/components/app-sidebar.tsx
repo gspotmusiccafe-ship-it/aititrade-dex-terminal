@@ -341,6 +341,7 @@ export function AppSidebar() {
           </div>
         ) : null}
       </SidebarFooter>
+      <div className="pb-44" />
     </Sidebar>
   );
 }
