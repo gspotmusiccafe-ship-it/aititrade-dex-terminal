@@ -8,7 +8,7 @@ import { spawn } from "child_process";
 import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
-import { openai } from "./replit_integrations/audio/client";
+import { openai, textToSpeech } from "./replit_integrations/audio/client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
@@ -3510,15 +3510,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       console.log(`[AUDIO_GEN] Style: ${style || "default"} | Instrumental: ${!!makeInstrumental}`);
 
       const voice = makeInstrumental ? "alloy" : "nova";
-      const speechRes = await openai.audio.speech.create({
-        model: "tts-1-hd",
-        voice,
-        input: prompt.slice(0, 4096),
-        response_format: "mp3",
-        speed: 0.95,
-      });
-
-      const audioBuffer = Buffer.from(await speechRes.arrayBuffer());
+      const audioBuffer = await textToSpeech(prompt.slice(0, 4096), voice, "mp3");
       const audioId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
       fs.writeFileSync(audioFilePath, audioBuffer);
@@ -3612,14 +3604,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       try {
         const voice = makeInstrumental ? "alloy" : "nova";
-        const speechRes = await openai.audio.speech.create({
-          model: "tts-1-hd",
-          voice,
-          input: audioPrompt.slice(0, 4096),
-          response_format: "mp3",
-          speed: 0.95,
-        });
-        const audioBuffer = Buffer.from(await speechRes.arrayBuffer());
+        const audioBuffer = await textToSpeech(audioPrompt.slice(0, 4096), voice, "mp3");
         const audioId = `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
         fs.writeFileSync(audioFilePath, audioBuffer);
@@ -3711,17 +3696,9 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       console.log(`[BEAT-GEN] Generating audio: style=${style}, voice=${voiceType}, instrumental=${makeInstrumental}`);
 
-      const voice = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
+      const voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
 
-      const speechResponse = await openai.audio.speech.create({
-        model: "tts-1-hd",
-        voice,
-        input: prompt.slice(0, 4096),
-        response_format: "mp3",
-        speed: 0.95,
-      });
-
-      const audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
+      const audioBuffer = await textToSpeech(prompt.slice(0, 4096), voice, "mp3");
       const audioId = `beat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       const audioPath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
       fs.writeFileSync(audioPath, audioBuffer);
@@ -3827,14 +3804,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       } else {
         try {
           const voice = makeInstrumental ? "alloy" : "nova";
-          const speechRes = await openai.audio.speech.create({
-            model: "tts-1-hd",
-            voice,
-            input: (audioPrompt || title).slice(0, 4096),
-            response_format: "mp3",
-            speed: 0.95,
-          });
-          const audioBuffer = Buffer.from(await speechRes.arrayBuffer());
+          const audioBuffer = await textToSpeech((audioPrompt || title).slice(0, 4096), voice, "mp3");
           const audioId = `push-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
           fs.writeFileSync(audioFilePath, audioBuffer);
