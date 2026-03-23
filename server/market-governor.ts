@@ -544,12 +544,11 @@ export function computeLiquiditySplit(grossSales: number): {
   floorPct: number;
   ceoPct: number;
 } {
-  refreshSplitFromKinetic();
-  const floor54 = parseFloat((grossSales * FLOOR_SPLIT).toFixed(2));
-  const ceo46 = parseFloat((grossSales * CEO_SPLIT).toFixed(2));
+  const floor54 = parseFloat((grossSales * LOCKED_FLOOR_SPLIT).toFixed(2));
+  const ceo46 = parseFloat((grossSales * LOCKED_CEO_SPLIT).toFixed(2));
   const trustTithe = parseFloat((ceo46 * 0.10).toFixed(2));
   const blessing = parseFloat((ceo46 - trustTithe).toFixed(2));
-  return { floor54, ceo46, trustTithe, blessing, floorPct: Math.round(FLOOR_SPLIT * 100), ceoPct: Math.round(CEO_SPLIT * 100) };
+  return { floor54, ceo46, trustTithe, blessing, floorPct: Math.round(LOCKED_FLOOR_SPLIT * 100), ceoPct: Math.round(LOCKED_CEO_SPLIT * 100) };
 }
 
 const TRUST_VAULT_SPLIT_TIERS = [0.18, 0.42, 0.50];
@@ -572,7 +571,7 @@ export function computeGlobalRoyaltySplit(
     trustVaultRate = 0.18;
   }
 
-  const minterFeeAmount = parseFloat((grossGlobalSales * FLOOR_SPLIT).toFixed(2));
+  const minterFeeAmount = parseFloat((grossGlobalSales * LOCKED_FLOOR_SPLIT).toFixed(2));
   const afterMinterFee = grossGlobalSales - minterFeeAmount;
   const trustVaultAmount = parseFloat((afterMinterFee * trustVaultRate).toFixed(2));
   const platformAmount = parseFloat((afterMinterFee - trustVaultAmount).toFixed(2));
@@ -615,9 +614,10 @@ export async function checkTreasuryMilestones(): Promise<{ reached: number[]; to
 }
 
 const SETTLEMENT_CYCLE_THRESHOLD = 1000;
+const LOCKED_FLOOR_SPLIT = 0.54;
+const LOCKED_CEO_SPLIT = 0.46;
 function getPayoutPerCycle(): number {
-  const split = getKineticSplit();
-  return Math.round(SETTLEMENT_CYCLE_THRESHOLD * split.floor);
+  return Math.round(SETTLEMENT_CYCLE_THRESHOLD * LOCKED_FLOOR_SPLIT);
 }
 const EARLY_ACCEPT_MULTIPLIER = 1.25;
 const HOLD_BONUS_PER_CYCLE = 0.15;
@@ -690,8 +690,9 @@ export async function getTotalPaidOut(): Promise<number> {
 export async function getSettlementFundBalance(): Promise<number> {
   const grossIntake = await getGrossIntake();
   const totalPaid = await getTotalPaidOut();
-  const totalOwed = parseFloat((grossIntake * FLOOR_SPLIT).toFixed(2));
-  return parseFloat((totalOwed - totalPaid).toFixed(2));
+  const ksReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
+  const totalOwed = parseFloat((ksReached * getPayoutPerCycle()).toFixed(2));
+  return parseFloat(Math.max(0, totalOwed - totalPaid).toFixed(2));
 }
 
 export async function getCompletedCycleCount(): Promise<number> {
@@ -724,8 +725,7 @@ export async function runSettlementCycle(): Promise<{
     return { cycleNumber, settled: [], holding: [], payoutBudget: 0, totalPaidOut: 0 };
   }
 
-  const kSplit = getKineticSplit();
-  console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K | KINETIC LOCK: ${Math.round(kSplit.floor*100)}/${Math.round(kSplit.ceo*100)} | Payout/K: $${lockedPayout} | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
+  console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K | LOCKED SPLIT: ${Math.round(LOCKED_FLOOR_SPLIT*100)}/${Math.round(LOCKED_CEO_SPLIT*100)} | Payout/K: $${lockedPayout} | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
 
   const queued = await db.select().from(settlementQueue)
     .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"]))
@@ -935,8 +935,7 @@ export async function getSettlementDashboard(): Promise<{
   const currentPayoutPerK = getPayoutPerCycle();
   const totalOwed54 = parseFloat((ksReached * currentPayoutPerK).toFixed(2));
   const fundAvailable = parseFloat((totalOwed54 - totalPaid).toFixed(2));
-  refreshSplitFromKinetic();
-  const ceo46Total = parseFloat((grossIntake * CEO_SPLIT).toFixed(2));
+  const ceo46Total = parseFloat((grossIntake * LOCKED_CEO_SPLIT).toFixed(2));
   const nextKAt = (ksReached + 1) * SETTLEMENT_CYCLE_THRESHOLD;
 
   const [counts] = await db.select({

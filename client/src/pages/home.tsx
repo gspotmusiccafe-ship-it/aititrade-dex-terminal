@@ -76,7 +76,8 @@ function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed, floorROI
     const w2 = Math.sin((minuteOfDay / 360) * Math.PI * 2) * 0.02;
     const w3 = Math.sin((now / 30000) * Math.PI * 2) * 0.015;
     const swing = w1 + w2 + w3;
-    const kMult = floorROI !== undefined ? (1 + ((mbbMultiplier - 1) * (floorROI / 0.5))) : mbbMultiplier;
+    const kSwing = floorROI !== undefined ? (0.75 + (floorROI * 0.50)) : 1.0;
+    const kMult = 1 + ((mbbMultiplier - 1) * kSwing);
     const livePrice = basePrice * (1 + swing);
     const liveMbbp = parseFloat((livePrice * kMult).toFixed(2));
     const baseMbbp = parseFloat((basePrice * kMult).toFixed(2));
@@ -597,11 +598,12 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const portal = getPortal(price);
   const poolCeiling = isGlobal ? CEILING : portal.pool;
   const ptCap = poolCeiling * 0.50;
-  const floorMult = kineticState ? kineticState.floorROI : 0.5;
-  const liveMbb = 1 + ((portal.mbb - 1) * (floorMult / 0.5));
-  const bbPrice = parseFloat((track as any).buyBackRate || (price * liveMbb).toFixed(2));
+  const kPulse = kineticState ? kineticState.floorROI : 0.54;
+  const kSwing = 0.75 + (kPulse * 0.50);
+  const liveMbb = 1 + ((portal.mbb - 1) * kSwing);
   const maxPayout = parseFloat((price * liveMbb).toFixed(2));
-  const earlyExit = parseFloat((price * (1 + ((portal.early - 1) * (floorMult / 0.5)))).toFixed(2));
+  const earlyExit = parseFloat((price * (1 + ((portal.early - 1) * kSwing))).toFixed(2));
+  const bbPrice = parseFloat((track as any).buyBackRate || maxPayout.toFixed(2));
   const roi = price > 0 ? parseFloat((((maxPayout - price) / price) * 100).toFixed(0)) : 0;
   const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
   const minterFeeLabel = kineticState?.splitLabel || "LIVE";

@@ -9,7 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai } from "./replit_integrations/audio/client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -2263,7 +2263,7 @@ export async function registerRoutes(
       const [order] = await db.insert(orders).values({
         trackId,
         trackingNumber: trackingNum,
-        unitPrice: price.toString(),
+        unitPrice: parsedAmount.toString(),
         creatorCredit: "0.46",
         creatorCreditAmount: ceoTake46.toString(),
         positionHolderAmount: floor54.toString(),
@@ -3494,49 +3494,33 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(400).json({ message: "prompt required" });
       }
 
-      const sunoKey = process.env.SUNO_API_KEY;
-      if (!sunoKey) {
-        return res.status(503).json({ message: "SUNO_API_KEY not configured" });
-      }
+      console.log(`[AUDIO_GEN] Initiating Generation: ${prompt}`);
+      console.log(`[AUDIO_GEN] Style: ${style || "default"} | Instrumental: ${!!makeInstrumental}`);
 
-      console.log(`[SUNO_PUSH] Initiating Generation: ${prompt}`);
-      console.log(`[SUNO_PUSH] Style: ${style || "default"} | Instrumental: ${!!makeInstrumental}`);
-
-      const sunoResponse = await fetch("https://api.suno.ai/v1/generate", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${sunoKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          tags: style || "pop",
-          mv: "chirp-v3.5",
-          make_instrumental: !!makeInstrumental,
-        }),
+      const voice = makeInstrumental ? "alloy" : "nova";
+      const speechRes = await openai.audio.speech.create({
+        model: "tts-1-hd",
+        voice,
+        input: prompt.slice(0, 4096),
+        response_format: "mp3",
+        speed: 0.95,
       });
 
-      if (!sunoResponse.ok) {
-        const errText = await sunoResponse.text();
-        console.error(`[SUNO_PUSH] API Error: ${sunoResponse.status} — ${errText}`);
-        return res.status(sunoResponse.status).json({
-          message: "Suno API error",
-          detail: errText,
-        });
-      }
-
-      const sunoData = await sunoResponse.json();
+      const audioBuffer = Buffer.from(await speechRes.arrayBuffer());
+      const audioId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
+      fs.writeFileSync(audioFilePath, audioBuffer);
 
       const wholesaleCost = 0.35;
       const floor54 = parseFloat((wholesaleCost * 0.54).toFixed(4));
       const ceoGross46 = parseFloat((wholesaleCost * 0.46).toFixed(4));
 
-      console.log(`[SUNO_PUSH] Generated: ${sunoData.id || "pending"} | Wholesale: $${wholesaleCost}`);
+      console.log(`[AUDIO_GEN] Generated: ${audioId} | Wholesale: $${wholesaleCost}`);
 
       res.json({
         status: "MINTING_PENDING",
-        suno_id: sunoData.id || null,
-        suno_data: sunoData,
+        suno_id: audioId,
+        audioUrl: `/uploads/${audioId}.mp3`,
         asset_class: "AI_GENERATED_AUDIO",
         wholesale_cost: wholesaleCost,
         trade_status: "MINTING_PENDING",
@@ -3546,12 +3530,12 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         },
         prompt,
         style: style || "pop",
-        engine: "chirp-v3.5",
+        engine: "openai-tts-1-hd",
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("[SUNO_PUSH] Generation error:", error);
-      res.status(500).json({ message: "Failed to generate Suno asset" });
+      console.error("[AUDIO_GEN] Generation error:", error);
+      res.status(500).json({ message: "Failed to generate audio asset" });
     }
   });
 
@@ -3563,43 +3547,23 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(400).json({ message: "trackTitle or customPrompt required" });
       }
 
-      const ideogramKey = process.env.IDEOGRAM_API_KEY;
-      if (!ideogramKey) {
-        return res.status(503).json({ message: "IDEOGRAM_API_KEY not configured" });
-      }
-
       const prompt = customPrompt || `Cinematic trading floor style album art for "${trackTitle}", neon green and obsidian, high-tech digital asset style`;
 
-      console.log(`[IDEOGRAM_PUSH] Generating art for: ${trackTitle || "custom"}`);
-      console.log(`[IDEOGRAM_PUSH] Prompt: ${prompt.slice(0, 80)}...`);
+      console.log(`[ART_GEN] Generating art for: ${trackTitle || "custom"}`);
+      console.log(`[ART_GEN] Prompt: ${prompt.slice(0, 80)}...`);
 
-      const ideogramResponse = await fetch("https://api.ideogram.ai/generate", {
-        method: "POST",
-        headers: {
-          "Api-Key": ideogramKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          aspect_ratio: aspectRatio || "1:1",
-          model: "v-2",
-        }),
+      const dalleRes = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "hd",
       });
 
-      if (!ideogramResponse.ok) {
-        const errText = await ideogramResponse.text();
-        console.error(`[IDEOGRAM_PUSH] API Error: ${ideogramResponse.status} — ${errText}`);
-        return res.status(ideogramResponse.status).json({
-          message: "Ideogram API error",
-          detail: errText,
-        });
-      }
-
-      const artData = await ideogramResponse.json();
-      const imageUrl = artData.data?.[0]?.url || artData.url || null;
+      const imageUrl = dalleRes.data?.[0]?.url || null;
       const wholesaleCost = 0.03;
 
-      console.log(`[IDEOGRAM_PUSH] Generated: ${imageUrl ? "OK" : "NO_URL"} | Cost: $${wholesaleCost}`);
+      console.log(`[ART_GEN] Generated: ${imageUrl ? "OK" : "NO_URL"} | Cost: $${wholesaleCost}`);
 
       res.json({
         status: "ART_READY",
@@ -3607,14 +3571,14 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         asset_class: "AI_GENERATED_ARTWORK",
         wholesale_cost: wholesaleCost,
         prompt,
-        model: "v-2",
+        model: "dall-e-3",
         aspect_ratio: aspectRatio || "1:1",
         trackTitle: trackTitle || null,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("[IDEOGRAM_PUSH] Generation error:", error);
-      res.status(500).json({ message: "Failed to generate Ideogram art" });
+      console.error("[ART_GEN] Generation error:", error);
+      res.status(500).json({ message: "Failed to generate artwork" });
     }
   });
 
@@ -3626,69 +3590,45 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(400).json({ message: "title required" });
       }
 
-      const sunoKey = process.env.SUNO_API_KEY;
-      const ideogramKey = process.env.IDEOGRAM_API_KEY;
-
-      if (!sunoKey || !ideogramKey) {
-        const missing = [];
-        if (!sunoKey) missing.push("SUNO_API_KEY");
-        if (!ideogramKey) missing.push("IDEOGRAM_API_KEY");
-        return res.status(503).json({ message: `Missing keys: ${missing.join(", ")}` });
-      }
-
       console.log(`[DIRECT_PUSH] Initiating full asset pipeline: "${title}"`);
 
       const audioPrompt = prompt || title;
       const artPrompt = `Cinematic trading floor style album art for "${title}", neon green and obsidian, high-tech digital asset style`;
 
-      const [sunoResponse, ideogramResponse] = await Promise.all([
-        fetch("https://api.suno.ai/v1/generate", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${sunoKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: audioPrompt,
-            tags: style || "Global Trade Beat",
-            mv: "chirp-v3.5",
-            make_instrumental: !!makeInstrumental,
-          }),
-        }),
-        fetch("https://api.ideogram.ai/generate", {
-          method: "POST",
-          headers: {
-            "Api-Key": ideogramKey,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: artPrompt,
-            aspect_ratio: aspectRatio || "1:1",
-            model: "v-2",
-          }),
-        }),
-      ]);
-
-      let audioAsset = { suno_id: null as string | null, status: "FAILED" };
+      let audioAsset = { suno_id: null as string | null, audioUrl: null as string | null, status: "FAILED" };
       let visualAsset = { imageUrl: null as string | null, status: "FAILED" };
 
-      if (sunoResponse.ok) {
-        const sunoData = await sunoResponse.json();
-        audioAsset = { suno_id: sunoData.id || null, status: "MINTING_PENDING" };
-        console.log(`[DIRECT_PUSH] Audio generated: ${audioAsset.suno_id || "pending"}`);
-      } else {
-        console.error(`[DIRECT_PUSH] Suno failed: ${sunoResponse.status}`);
+      try {
+        const voice = makeInstrumental ? "alloy" : "nova";
+        const speechRes = await openai.audio.speech.create({
+          model: "tts-1-hd",
+          voice,
+          input: audioPrompt.slice(0, 4096),
+          response_format: "mp3",
+          speed: 0.95,
+        });
+        const audioBuffer = Buffer.from(await speechRes.arrayBuffer());
+        const audioId = `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
+        fs.writeFileSync(audioFilePath, audioBuffer);
+        audioAsset = { suno_id: audioId, audioUrl: `/uploads/${audioId}.mp3`, status: "MINTING_PENDING" };
+        console.log(`[DIRECT_PUSH] Audio generated: ${audioId}`);
+      } catch (e: any) {
+        console.error(`[DIRECT_PUSH] Audio failed: ${e.message}`);
       }
 
-      if (ideogramResponse.ok) {
-        const artData = await ideogramResponse.json();
-        visualAsset = {
-          imageUrl: artData.data?.[0]?.url || artData.url || null,
-          status: "ART_READY",
-        };
+      try {
+        const dalleRes = await openai.images.generate({
+          model: "dall-e-3",
+          prompt: artPrompt,
+          n: 1,
+          size: "1024x1024",
+          quality: "hd",
+        });
+        visualAsset = { imageUrl: dalleRes.data?.[0]?.url || null, status: "ART_READY" };
         console.log(`[DIRECT_PUSH] Artwork generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
-      } else {
-        console.error(`[DIRECT_PUSH] Ideogram failed: ${ideogramResponse.status}`);
+      } catch (e: any) {
+        console.error(`[DIRECT_PUSH] Art failed: ${e.message}`);
       }
 
       const ticker = title.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 6);
@@ -3709,12 +3649,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         audio: {
           suno_id: audioAsset.suno_id,
           status: audioAsset.status,
-          engine: "chirp-v3.5",
+          audioUrl: audioAsset.audioUrl,
+          engine: "openai-tts-1-hd",
         },
         artwork: {
           imageUrl: visualAsset.imageUrl,
           status: visualAsset.status,
-          engine: "ideogram-v2",
+          engine: "dall-e-3",
         },
         pricing: {
           unitPrice,
@@ -3756,37 +3697,30 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const { prompt, style, voiceType, makeInstrumental } = req.body;
       if (!prompt) return res.status(400).json({ message: "Prompt required" });
 
-      const sunoKey = process.env.SUNO_API_KEY;
-      if (!sunoKey) {
-        return res.status(400).json({ message: "Suno API key not configured. Add SUNO_API_KEY to secrets." });
-      }
+      console.log(`[BEAT-GEN] Generating audio: style=${style}, voice=${voiceType}, instrumental=${makeInstrumental}`);
 
-      console.log(`[BEAT-GEN] Generating beat: style=${style}, voice=${voiceType}, instrumental=${makeInstrumental}`);
+      const voice = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
 
-      const sunoRes = await fetch("https://api.suno.ai/v1/generate", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${sunoKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          tags: style || "Global Trade Beat",
-          mv: "chirp-v3.5",
-          make_instrumental: !!makeInstrumental,
-        }),
+      const speechResponse = await openai.audio.speech.create({
+        model: "tts-1-hd",
+        voice,
+        input: prompt.slice(0, 4096),
+        response_format: "mp3",
+        speed: 0.95,
       });
 
-      if (!sunoRes.ok) {
-        const errText = await sunoRes.text();
-        console.error(`[BEAT-GEN] Suno error ${sunoRes.status}: ${errText}`);
-        return res.status(500).json({ message: `Suno API error: ${sunoRes.status}` });
-      }
+      const audioBuffer = Buffer.from(await speechResponse.arrayBuffer());
+      const audioId = `beat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const audioPath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
+      fs.writeFileSync(audioPath, audioBuffer);
 
-      const sunoData = await sunoRes.json();
-      console.log(`[BEAT-GEN] Suno response:`, JSON.stringify(sunoData).slice(0, 200));
+      const audioUrl = `/uploads/${audioId}.mp3`;
+      console.log(`[BEAT-GEN] Audio generated: ${audioUrl} (${audioBuffer.length} bytes)`);
 
       res.json({
-        audioUrl: sunoData.audio_url || null,
-        sunoId: sunoData.id || null,
-        status: sunoData.audio_url ? "READY" : "PENDING",
+        audioUrl,
+        sunoId: audioId,
+        status: "READY",
       });
     } catch (error: any) {
       console.error("[BEAT-GEN] Error:", error.message);
@@ -3803,28 +3737,20 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       }
 
       const { prompt } = req.body;
-      const ideogramKey = process.env.IDEOGRAM_API_KEY;
-      if (!ideogramKey) {
-        return res.status(400).json({ message: "Ideogram API key not configured. Add IDEOGRAM_API_KEY to secrets." });
-      }
+      const artPrompt = prompt || "Cinematic album artwork, neon green and obsidian, high-tech digital asset trading floor style";
 
-      console.log(`[ART-GEN] Generating artwork`);
+      console.log(`[ART-GEN] Generating artwork via DALL-E`);
 
-      const ideogramRes = await fetch("https://api.ideogram.ai/generate", {
-        method: "POST",
-        headers: { "Api-Key": ideogramKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, aspect_ratio: "1:1", model: "v-2" }),
+      const dalleRes = await openai.images.generate({
+        model: "dall-e-3",
+        prompt: artPrompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "hd",
       });
 
-      if (!ideogramRes.ok) {
-        const errText = await ideogramRes.text();
-        console.error(`[ART-GEN] Ideogram error ${ideogramRes.status}: ${errText}`);
-        return res.status(500).json({ message: `Ideogram API error: ${ideogramRes.status}` });
-      }
-
-      const artData = await ideogramRes.json();
-      const imageUrl = artData.data?.[0]?.url || artData.url || null;
-      console.log(`[ART-GEN] Ideogram result: ${imageUrl ? "OK" : "NO_URL"}`);
+      const imageUrl = dalleRes.data?.[0]?.url || null;
+      console.log(`[ART-GEN] DALL-E result: ${imageUrl ? "OK" : "NO_URL"}`);
 
       res.json({ imageUrl, status: imageUrl ? "READY" : "NO_URL" });
     } catch (error: any) {
@@ -3873,9 +3799,6 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       console.log(`[PUSHER] ${userId} pushing asset: "${title}" | Trust: ${tm.trustId} | Balance: $${outstanding}`);
 
-      const sunoKey = process.env.SUNO_API_KEY;
-      const ideogramKey = process.env.IDEOGRAM_API_KEY;
-
       let audioAsset = { suno_id: null as string | null, audioUrl: null as string | null, status: "SKIPPED" };
       let visualAsset = { imageUrl: null as string | null, status: "SKIPPED" };
 
@@ -3883,56 +3806,53 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const wholesaleArt = 0.03;
       const totalWholesale = wholesaleAudio + wholesaleArt;
 
-      if (sunoKey) {
-        try {
-          const sunoRes = await fetch("https://api.suno.ai/v1/generate", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${sunoKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              prompt: audioPrompt || title,
-              tags: style || "Global Trade Beat",
-              mv: "chirp-v3.5",
-              make_instrumental: !!makeInstrumental,
-            }),
-          });
-          if (sunoRes.ok) {
-            const sunoData = await sunoRes.json();
-            audioAsset = { suno_id: sunoData.id || null, audioUrl: sunoData.audio_url || null, status: "MINTING_PENDING" };
-            console.log(`[PUSHER] Suno generated: ${audioAsset.suno_id || "pending"}`);
-          } else {
-            console.error(`[PUSHER] Suno API error: ${sunoRes.status}`);
-            audioAsset.status = "API_ERROR";
-          }
-        } catch (e: any) {
-          console.error(`[PUSHER] Suno fetch error:`, e.message);
-          audioAsset.status = "FETCH_ERROR";
-        }
+      const preGenAudio = req.body.preGeneratedAudioUrl;
+      const preGenArt = req.body.preGeneratedArtUrl;
+
+      if (preGenAudio) {
+        audioAsset = { suno_id: req.body.preGeneratedSunoId || null, audioUrl: preGenAudio, status: "MINTING_PENDING" };
+        console.log(`[PUSHER] Using pre-generated audio: ${preGenAudio}`);
       } else {
-        audioAsset.status = "NO_KEY";
+        try {
+          const voice = makeInstrumental ? "alloy" : "nova";
+          const speechRes = await openai.audio.speech.create({
+            model: "tts-1-hd",
+            voice,
+            input: (audioPrompt || title).slice(0, 4096),
+            response_format: "mp3",
+            speed: 0.95,
+          });
+          const audioBuffer = Buffer.from(await speechRes.arrayBuffer());
+          const audioId = `push-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
+          fs.writeFileSync(audioFilePath, audioBuffer);
+          audioAsset = { suno_id: audioId, audioUrl: `/uploads/${audioId}.mp3`, status: "MINTING_PENDING" };
+          console.log(`[PUSHER] Audio generated via TTS: ${audioAsset.audioUrl}`);
+        } catch (e: any) {
+          console.error(`[PUSHER] Audio gen error:`, e.message);
+          audioAsset.status = "GEN_ERROR";
+        }
       }
 
-      if (ideogramKey) {
+      if (preGenArt) {
+        visualAsset = { imageUrl: preGenArt, status: "ART_READY" };
+        console.log(`[PUSHER] Using pre-generated art: ${preGenArt}`);
+      } else {
         try {
           const artPrompt = visualPrompt || `Cinematic trading floor style album art for "${title}", neon green and obsidian, high-tech digital asset style`;
-          const ideogramRes = await fetch("https://api.ideogram.ai/generate", {
-            method: "POST",
-            headers: { "Api-Key": ideogramKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: artPrompt, aspect_ratio: "1:1", model: "v-2" }),
+          const dalleRes = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: artPrompt,
+            n: 1,
+            size: "1024x1024",
+            quality: "hd",
           });
-          if (ideogramRes.ok) {
-            const artData = await ideogramRes.json();
-            visualAsset = { imageUrl: artData.data?.[0]?.url || artData.url || null, status: "ART_READY" };
-            console.log(`[PUSHER] Ideogram generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
-          } else {
-            console.error(`[PUSHER] Ideogram API error: ${ideogramRes.status}`);
-            visualAsset.status = "API_ERROR";
-          }
+          visualAsset = { imageUrl: dalleRes.data?.[0]?.url || null, status: "ART_READY" };
+          console.log(`[PUSHER] DALL-E generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
         } catch (e: any) {
-          console.error(`[PUSHER] Ideogram fetch error:`, e.message);
-          visualAsset.status = "FETCH_ERROR";
+          console.error(`[PUSHER] Art gen error:`, e.message);
+          visualAsset.status = "GEN_ERROR";
         }
-      } else {
-        visualAsset.status = "NO_KEY";
       }
 
       const ticker = title.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);

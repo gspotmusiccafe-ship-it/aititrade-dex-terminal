@@ -21,7 +21,7 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Database**: PostgreSQL, managed with Drizzle ORM.
 -   **Authentication**: Primary authentication via email/password, with optional Spotify OAuth 2.0 integration for enhanced features.
 -   **Payments**: Cash App ($AITITRADEBROKERAGE) handles ALL transactions — asset trading via `/api/exchange/trade` and account activation ($25 down + $19.79/mo). PayPal used only for artist tipping.
--   **Access Control**: Two-tier model — (1) AuthGate: any logged-in user accesses trading floor, trader portal, search, library, leaderboard. (2) PremiumGate: Sovereign Trust members access Spotify/Global room (radio), Trust Vault, CEO Class, Dashboard. Trading floor is open to ALL account holders. After signup/login, users redirect to `/trader` page.
+-   **Access Control**: Two-tier model — (1) AuthGate: any logged-in user accesses trading floor (Home), trader portal, leaderboard. Sidebar shows only Trading Floor section + Upgrade link. (2) PremiumGate: Sovereign Trust members access Global Trades (radio), Trust Vault, CEO Class, Trust Certificate, Search, Library, Liked Songs. Sidebar shows full Sovereign Trust section. Admin sees everything. After signup/login, users redirect to `/trader` page.
 
 **Key Features & Technical Implementations:**
 
@@ -38,7 +38,7 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Asset Classes**: Tracks can be `standard` (emerald styling) or `inspirational` (violet styling with higher yield bands).
 -   **Autopilot Radio**: A DJ console feature that automatically queues high-velocity assets from the pool, prioritizing 2-week pre-release tracks. CEOs can save priority rotations.
 -   **2-Week Early Trading Edge**: Pre-release assets are tradeable two weeks before general retail distribution, incentivizing early adoption.
--   **Production Terminal**: Full asset production & distribution console at `/production`. Integrates Suno v3.5 ($0.35/track) for audio generation, Ideogram v2 ($0.03/image) for artwork, and direct-push pipeline ($0.38 total wholesale) to list assets on the trading floor. Shows ledger status, 54/46 split breakdown, and pipeline status tracking.
+-   **Production Terminal**: Full asset production & distribution console at `/production`. Uses OpenAI TTS-1-HD ($0.35/track) for audio generation and DALL-E 3 ($0.03/image) for artwork via Replit AI integration (no external API keys needed). Direct-push pipeline ($0.38 total wholesale) lists assets on the trading floor. Shows ledger status, 54/46 split breakdown, and pipeline status tracking.
 -   **CEO CLASS — 12-Step Business Credit Program**: An interactive checklist on the dashboard guiding users through business credit development steps, with progress tracking.
 -   **Access Gating**: AuthGate (login-only) protects trading floor and standard pages. PremiumGate (trust membership required) protects Spotify room, Trust Vault, CEO Class, Dashboard. Sidebar shows lock icons on premium items for non-members. Admin section (Mint Factory, Production Center, Admin Portal) hidden from non-admins.
 -   **Artist Portal**: Provides artists with tools for profile management, track uploads, pre-release scheduling, AI Lyrics Generation (using OpenAI), and Audio Mastering (using ffmpeg).
