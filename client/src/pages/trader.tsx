@@ -3,7 +3,7 @@ import { useRoute, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight } from "lucide-react";
 
-const CASH_APP_URL = "https://cash.app/$AITITRADEBROKERAGE";
+const CASH_APP_REFERRAL = "https://cash.app/app/JNXGD73";
 
 function KineticPulseBar() {
   const { data: kState } = useQuery<{
@@ -426,6 +426,15 @@ export default function TraderPage() {
                 >
                   VIEW PREMIUM OPTIONS
                 </Link>
+                <a
+                  href={CASH_APP_REFERRAL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-600 hover:bg-green-500 text-white px-6 py-2.5 font-black text-sm transition-colors flex items-center gap-2"
+                  data-testid="link-open-brokerage"
+                >
+                  <DollarSign className="h-4 w-4" /> OPEN BROKERAGE ACCOUNT
+                </a>
               </div>
               <p className="text-zinc-600 text-[9px] mt-3">$25 DOWN + $19.79/MO VIA CASH APP | $AITITRADEBROKERAGE</p>
             </div>

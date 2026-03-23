@@ -946,11 +946,11 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
             </div>
           </div>
           <button
-            onClick={() => window.open("https://cash.app/$AITITRADEBROKERAGE", "_blank", "noopener,noreferrer")}
+            onClick={() => window.open("https://cash.app/app/JNXGD73", "_blank", "noopener,noreferrer")}
             className="w-full bg-green-600 hover:bg-green-400 text-white py-3 font-black text-sm transition-all border-b-4 border-green-900 active:border-b-0 flex items-center justify-center gap-2"
             data-testid={`button-p2p-execute-${track.id}`}
           >
-            <DollarSign className="h-4 w-4" /> EXECUTE P2P TRADE — $AITITRADEBROKERAGE
+            <DollarSign className="h-4 w-4" /> OPEN BROKERAGE ACCOUNT
           </button>
           <p className="text-[9px] text-zinc-600 mt-2 text-center uppercase tracking-widest">
             No PayPal • Direct Peer-to-Peer Settlement • 54% Floor Protected
