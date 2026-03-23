@@ -43,6 +43,7 @@ export default function ProductionPage() {
   const [generatedSunoId, setGeneratedSunoId] = useState<string | null>(null);
   const [generatingBeat, setGeneratingBeat] = useState(false);
   const [beatApproved, setBeatApproved] = useState(false);
+  const [beatProgress, setBeatProgress] = useState("");
 
   const [visualPrompt, setVisualPrompt] = useState("");
   const [generatedArtUrl, setGeneratedArtUrl] = useState<string | null>(null);
@@ -133,6 +134,7 @@ export default function ProductionPage() {
     setGeneratingBeat(true);
     setBeatApproved(false);
     setGeneratedAudioUrl(null);
+    setBeatProgress("Submitting to Suno...");
     try {
       const fullPrompt = audioPrompt || assetTitle;
       const fullStyle = `${audioStyle}${voiceTag}`;
@@ -144,6 +146,7 @@ export default function ProductionPage() {
           style: fullStyle,
           voiceType,
           makeInstrumental,
+          title: assetTitle || "AITIFY Beat",
         }),
       });
       if (!res.ok) {
@@ -151,10 +154,36 @@ export default function ProductionPage() {
         throw new Error(err.message || "Beat generation failed");
       }
       const data = await res.json();
-      setGeneratedAudioUrl(data.audioUrl || null);
-      setGeneratedSunoId(data.sunoId || null);
-      toast({ title: "BEAT GENERATED", description: data.audioUrl ? "Preview ready — listen and approve" : "Beat queued — check back shortly" });
+
+      if (data.taskId) {
+        setBeatProgress("Generating beat... ~30-40 seconds");
+        const maxPolls = 60;
+        for (let i = 0; i < maxPolls; i++) {
+          await new Promise(r => setTimeout(r, 3000));
+          const statusRes = await fetch(`/api/production/beat-status/${data.taskId}`);
+          if (!statusRes.ok) continue;
+          const statusData = await statusRes.json();
+
+          if (statusData.status === "READY") {
+            setGeneratedAudioUrl(statusData.audioUrl || null);
+            setGeneratedSunoId(statusData.sunoId || null);
+            setBeatProgress("");
+            toast({ title: "BEAT READY", description: "Real music generated — listen and approve!" });
+            return;
+          } else if (statusData.status === "FAILED") {
+            throw new Error("Suno generation failed");
+          }
+          setBeatProgress(`Generating... ${Math.min(90, Math.round((i / maxPolls) * 100))}%`);
+        }
+        throw new Error("Generation timed out — try again");
+      } else {
+        setGeneratedAudioUrl(data.audioUrl || null);
+        setGeneratedSunoId(data.sunoId || null);
+        setBeatProgress("");
+        toast({ title: "BEAT GENERATED", description: "Preview ready — listen and approve" });
+      }
     } catch (err: any) {
+      setBeatProgress("");
       toast({ title: "BEAT GENERATION FAILED", description: err.message, variant: "destructive" });
     } finally {
       setGeneratingBeat(false);
@@ -335,7 +364,7 @@ export default function ProductionPage() {
                     <button type="button" onClick={feedLyricsToBeatMachine}
                       className="w-full bg-green-700 hover:bg-green-600 text-white font-mono font-black py-3 text-sm flex items-center justify-center gap-2 transition-all active:scale-[0.98] border border-green-500/30"
                       data-testid="button-feed-to-beat">
-                      <ArrowDown className="h-4 w-4" /> FEED LYRICS TO VOCAL PERFORMER
+                      <ArrowDown className="h-4 w-4" /> FEED LYRICS INTO BEAT MACHINE
                     </button>
                   </div>
                 )}
@@ -345,7 +374,7 @@ export default function ProductionPage() {
             <div className="border-2 border-green-600/50 bg-green-950/10 p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Music className="h-5 w-5 text-green-400" />
-                <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — VOCAL PERFORMANCE (AI)</h3>
+                <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — BEAT MACHINE (SUNO)</h3>
                 <span className="text-zinc-600 text-[9px] font-mono ml-auto">$0.35/TRACK</span>
               </div>
 
@@ -378,7 +407,7 @@ export default function ProductionPage() {
               </div>
 
               <textarea value={audioPrompt} onChange={(e) => { setAudioPrompt(e.target.value); setBeatApproved(false); setGeneratedAudioUrl(null); }}
-                placeholder="Paste lyrics here... Lyrics from Step 1 auto-fill when you click 'Feed'. AI will sing/perform these with your selected voice and style."
+                placeholder="Paste lyrics here... Lyrics from Step 1 auto-fill when you click 'Feed'. Suno will produce a full beat with vocals in your selected style."
                 className="w-full bg-black border border-green-700/50 p-3 text-white text-sm font-mono h-32 resize-none focus:border-green-400 focus:outline-none"
                 data-testid="textarea-audio-prompt" />
 
@@ -394,12 +423,12 @@ export default function ProductionPage() {
               <button type="button" onClick={handleGenerateBeat} disabled={generatingBeat || (!audioPrompt.trim() && !assetTitle.trim())}
                 className="w-full mt-4 bg-green-700 hover:bg-green-600 text-white font-mono font-black py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-[0.98] border border-green-500/30"
                 data-testid="button-generate-beat">
-                {generatingBeat ? <><Loader2 className="h-4 w-4 animate-spin" /> GENERATING VOCAL...</> : <><Music className="h-4 w-4" /> GENERATE VOCAL PERFORMANCE</>}
+                {generatingBeat ? <><Loader2 className="h-4 w-4 animate-spin" /> {beatProgress || "GENERATING..."}</> : <><Music className="h-4 w-4" /> GENERATE BEAT</>}
               </button>
 
               {generatedAudioUrl && (
                 <div className="mt-4 p-4 border border-green-600/40 bg-green-950/30">
-                  <p className="text-green-400 text-[10px] font-mono font-bold mb-3">PREVIEW YOUR VOCAL:</p>
+                  <p className="text-green-400 text-[10px] font-mono font-bold mb-3">PREVIEW YOUR BEAT:</p>
                   <div className="flex items-center gap-3 mb-3">
                     <button type="button" onClick={togglePlayback}
                       className="bg-green-600 hover:bg-green-500 text-black p-3 transition-all active:scale-95"
@@ -525,7 +554,7 @@ export default function ProductionPage() {
                 {isPushing ? <><Loader2 className="h-5 w-5 animate-spin" /> PUSHING TO FLOOR...</> : <><Rocket className="h-5 w-5" /> PUSH TO GLOBAL FLOOR</>}
               </button>
               <p className="text-center text-zinc-600 text-[9px] font-mono mt-2">
-                AI VOCAL ($0.35) + DALL-E ART ($0.03) + FLOOR LISTING — KINETIC SPLIT ACTIVE
+                SUNO BEAT ($0.35) + DALL-E ART ($0.03) + FLOOR LISTING — KINETIC SPLIT ACTIVE
               </p>
             </div>
 

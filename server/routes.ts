@@ -9,6 +9,7 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/client";
+import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
@@ -3509,22 +3510,42 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       console.log(`[AUDIO_GEN] Initiating Generation: ${prompt}`);
       console.log(`[AUDIO_GEN] Style: ${style || "default"} | Instrumental: ${!!makeInstrumental}`);
 
-      const voice = makeInstrumental ? "alloy" : "nova";
-      const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
-      const audioId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
-      fs.writeFileSync(audioFilePath, audioBuffer);
+      let audioUrl: string;
+      let sunoId: string;
+      let engineUsed: string;
+
+      if (isSunoConfigured()) {
+        const songs = await sunoGenerateAndWait({
+          prompt: prompt.slice(0, 5000),
+          style: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+          title: (prompt.split("\n")[0] || "Admin Beat").slice(0, 80),
+          instrumental: !!makeInstrumental,
+        });
+        if (!songs.length) throw new Error("Suno returned no songs");
+        const localId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        audioUrl = await downloadSunoAudio(songs[0].audioUrl, localId);
+        sunoId = songs[0].id;
+        engineUsed = "suno-v4.5";
+      } else {
+        const voice = makeInstrumental ? "alloy" : "nova";
+        const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
+        sunoId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const audioFilePath = path.join(process.cwd(), "uploads", `${sunoId}.mp3`);
+        fs.writeFileSync(audioFilePath, audioBuffer);
+        audioUrl = `/uploads/${sunoId}.mp3`;
+        engineUsed = "ai-vocal-fallback";
+      }
 
       const wholesaleCost = 0.35;
       const floor54 = parseFloat((wholesaleCost * 0.54).toFixed(4));
       const ceoGross46 = parseFloat((wholesaleCost * 0.46).toFixed(4));
 
-      console.log(`[AUDIO_GEN] Generated: ${audioId} | Wholesale: $${wholesaleCost}`);
+      console.log(`[AUDIO_GEN] Generated: ${sunoId} | Engine: ${engineUsed} | Wholesale: $${wholesaleCost}`);
 
       res.json({
         status: "MINTING_PENDING",
-        suno_id: audioId,
-        audioUrl: `/uploads/${audioId}.mp3`,
+        suno_id: sunoId,
+        audioUrl,
         asset_class: "AI_GENERATED_AUDIO",
         wholesale_cost: wholesaleCost,
         trade_status: "MINTING_PENDING",
@@ -3534,7 +3555,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         },
         prompt,
         style: style || "pop",
-        engine: "openai-tts-1-hd",
+        engine: engineUsed,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
@@ -3602,16 +3623,35 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       let audioAsset = { suno_id: null as string | null, audioUrl: null as string | null, status: "FAILED" };
       let visualAsset = { imageUrl: null as string | null, status: "FAILED" };
 
-      try {
-        const voice = makeInstrumental ? "alloy" : "nova";
-        const audioBuffer = await performVocal(audioPrompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
-        const audioId = `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
-        fs.writeFileSync(audioFilePath, audioBuffer);
-        audioAsset = { suno_id: audioId, audioUrl: `/uploads/${audioId}.mp3`, status: "MINTING_PENDING" };
-        console.log(`[DIRECT_PUSH] Audio generated: ${audioId}`);
-      } catch (e: any) {
-        console.error(`[DIRECT_PUSH] Audio failed: ${e.message}`);
+      if (isSunoConfigured()) {
+        try {
+          const songs = await sunoGenerateAndWait({
+            prompt: audioPrompt.slice(0, 5000),
+            style: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+            title: (title || "AITIFY Beat").slice(0, 80),
+            instrumental: !!makeInstrumental,
+          });
+          if (songs.length > 0) {
+            const localId = `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            const localUrl = await downloadSunoAudio(songs[0].audioUrl, localId);
+            audioAsset = { suno_id: songs[0].id, audioUrl: localUrl, status: "MINTING_PENDING" };
+            console.log(`[DIRECT_PUSH] Suno audio: ${localUrl}`);
+          }
+        } catch (e: any) {
+          console.error(`[DIRECT_PUSH] Suno audio failed: ${e.message}`);
+        }
+      } else {
+        try {
+          const voice = makeInstrumental ? "alloy" : "nova";
+          const audioBuffer = await performVocal(audioPrompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
+          const audioId = `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
+          fs.writeFileSync(audioFilePath, audioBuffer);
+          audioAsset = { suno_id: audioId, audioUrl: `/uploads/${audioId}.mp3`, status: "MINTING_PENDING" };
+          console.log(`[DIRECT_PUSH] AI vocal fallback: ${audioId}`);
+        } catch (e: any) {
+          console.error(`[DIRECT_PUSH] Audio failed: ${e.message}`);
+        }
       }
 
       try {
@@ -3691,29 +3731,70 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(403).json({ message: "ADMIN ACCESS ONLY" });
       }
 
-      const { prompt, style, voiceType, makeInstrumental } = req.body;
+      const { prompt, style, voiceType, makeInstrumental, title } = req.body;
       if (!prompt) return res.status(400).json({ message: "Prompt required" });
 
-      console.log(`[BEAT-GEN] Generating audio: style=${style}, voice=${voiceType}, instrumental=${makeInstrumental}`);
+      if (!isSunoConfigured()) {
+        return res.status(503).json({ message: "SUNO_API_KEY not configured — add it in Secrets to enable beat production" });
+      }
 
-      const voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
+      const vocalGender: "m" | "f" | undefined = voiceType?.includes("female") ? "f" : voiceType?.includes("male") ? "m" : undefined;
 
-      const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
-      const audioId = `beat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const audioPath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
-      fs.writeFileSync(audioPath, audioBuffer);
+      console.log(`[BEAT-GEN] Submitting to Suno: style=${style}, vocal=${vocalGender}, instrumental=${makeInstrumental}`);
 
-      const audioUrl = `/uploads/${audioId}.mp3`;
-      console.log(`[BEAT-GEN] Audio generated: ${audioUrl} (${audioBuffer.length} bytes)`);
+      const taskId = await sunoGenerate({
+        prompt: prompt.slice(0, 5000),
+        style: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+        title: (title || "AITIFY Beat").slice(0, 80),
+        instrumental: !!makeInstrumental,
+        vocalGender,
+      });
 
       res.json({
-        audioUrl,
-        sunoId: audioId,
-        status: "READY",
+        taskId,
+        status: "GENERATING",
+        message: "Beat submitted to Suno — poll /api/production/beat-status for updates",
       });
     } catch (error: any) {
       console.error("[BEAT-GEN] Error:", error.message);
       res.status(500).json({ message: error.message || "Beat generation failed" });
+    }
+  });
+
+  app.get("/api/production/beat-status/:taskId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { taskId } = req.params;
+      if (!taskId) return res.status(400).json({ message: "taskId required" });
+
+      const result = await sunoCheckStatus(taskId);
+
+      if (result.status === "SUCCESS" && result.songs && result.songs.length > 0) {
+        const song = result.songs[0];
+        const localId = `suno-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const localUrl = await downloadSunoAudio(song.audioUrl, localId);
+
+        res.json({
+          status: "READY",
+          audioUrl: localUrl,
+          sunoId: song.id,
+          imageUrl: song.imageUrl || null,
+          duration: song.duration || 0,
+          songs: result.songs.map(s => ({
+            id: s.id,
+            audioUrl: s.audioUrl,
+            imageUrl: s.imageUrl,
+            title: s.title,
+            duration: s.duration,
+          })),
+        });
+      } else if (result.status === "FAILED") {
+        res.json({ status: "FAILED", message: "Suno generation failed" });
+      } else {
+        res.json({ status: "GENERATING", message: "Still generating..." });
+      }
+    } catch (error: any) {
+      console.error("[BEAT-STATUS] Error:", error.message);
+      res.status(500).json({ message: error.message || "Status check failed" });
     }
   });
 
@@ -3801,6 +3882,25 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (preGenAudio) {
         audioAsset = { suno_id: req.body.preGeneratedSunoId || null, audioUrl: preGenAudio, status: "MINTING_PENDING" };
         console.log(`[PUSHER] Using pre-generated audio: ${preGenAudio}`);
+      } else if (isSunoConfigured()) {
+        try {
+          const vocalGender: "m" | "f" | undefined = makeInstrumental ? undefined : "m";
+          const songs = await sunoGenerateAndWait({
+            prompt: (audioPrompt || title).slice(0, 5000),
+            style: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+            title: title.slice(0, 80),
+            instrumental: !!makeInstrumental,
+            vocalGender,
+          });
+          if (songs.length > 0) {
+            const localId = `push-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            const localUrl = await downloadSunoAudio(songs[0].audioUrl, localId);
+            audioAsset = { suno_id: songs[0].id, audioUrl: localUrl, status: "MINTING_PENDING" };
+            console.log(`[PUSHER] Suno audio: ${localUrl}`);
+          }
+        } catch (e: any) {
+          console.error(`[PUSHER] Suno audio failed: ${e.message}`);
+        }
       } else {
         try {
           const voice = makeInstrumental ? "alloy" : "nova";
@@ -3809,7 +3909,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
           fs.writeFileSync(audioFilePath, audioBuffer);
           audioAsset = { suno_id: audioId, audioUrl: `/uploads/${audioId}.mp3`, status: "MINTING_PENDING" };
-          console.log(`[PUSHER] Audio generated via TTS: ${audioAsset.audioUrl}`);
+          console.log(`[PUSHER] Audio generated via AI vocal fallback: ${audioAsset.audioUrl}`);
         } catch (e: any) {
           console.error(`[PUSHER] Audio gen error:`, e.message);
           audioAsset.status = "GEN_ERROR";
