@@ -61,20 +61,6 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
   const currentIndexRef = useRef(currentIndex);
   currentIndexRef.current = currentIndex;
 
-  const sessionStartRef = useRef<string | null>(null);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sessionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const scheduleCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const autopilotRef = useRef(true);
-  const assetsRef = useRef(assets);
-  const deviceIdRef = useRef<string | null>(null);
-  const isAdvancingRef = useRef(false);
-  const lastTrackRef = useRef<string | null>(null);
-  const streamStartRef = useRef<number>(0);
-  assetsRef.current = assets;
-  deviceIdRef.current = deviceId;
-
   const { data: dbRotation } = useQuery<GlobalRotation[]>({
     queryKey: ["/api/global-rotation"],
     staleTime: 60000,
@@ -92,7 +78,21 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
       }))
     : rotation.rotation;
 
-  const currentAsset = assets[currentIndex % assets.length] || assets[0];
+  const currentAsset = assets[currentIndex % (assets.length || 1)] || assets[0];
+
+  const sessionStartRef = useRef<string | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const watchdogRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const scheduleCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autopilotRef = useRef(true);
+  const assetsRef = useRef(assets);
+  const deviceIdRef = useRef<string | null>(null);
+  const isAdvancingRef = useRef(false);
+  const lastTrackRef = useRef<string | null>(null);
+  const streamStartRef = useRef<number>(0);
+  assetsRef.current = assets;
+  deviceIdRef.current = deviceId;
 
   const { data: spotifyProfile } = useQuery<{ connected: boolean; isPremium?: boolean }>({
     queryKey: ["/api/spotify/me"],
