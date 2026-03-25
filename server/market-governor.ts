@@ -1528,11 +1528,8 @@ function buildMonitor(): MonitorSnapshot {
   };
 }
 
-let monitorTickCounter = 0;
-
 setInterval(() => {
-  monitorTickCounter++;
-  if (monitorTickCounter % 5 === 0 && engineIO) {
+  if (engineIO) {
     const snapshot = buildMonitor();
     engineIO.emit("monitor", snapshot);
 
