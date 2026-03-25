@@ -1062,9 +1062,12 @@ class MarketEngine {
     amount: number;
     entryPrice: number;
     timestamp: number;
-    status: "holding" | "discount_exit" | "settled";
+    status: "holding" | "discount_exit" | "settled" | "rollover";
     discountPrice?: number;
     discountAcceptedAt?: number;
+    isRollover?: boolean;
+    rolloverWeight?: number;
+    originalCycle?: number;
   }>;
   floorPercent: number;
   housePercent: number;
@@ -1191,18 +1194,21 @@ class MarketEngine {
     };
   }
 
-  settleQueue(): Array<{ userId: string; amount: number; payout: number; type: "discount" | "mbbp" }> {
+  settleQueue(): Array<{ userId: string; amount: number; payout: number; type: "discount" | "mbbp"; position: number }> {
     const floorPool = this.totalVolume * this.floorPercent;
     let remaining = floorPool;
-    const payouts: Array<{ userId: string; amount: number; payout: number; type: "discount" | "mbbp" }> = [];
+    const payouts: Array<{ userId: string; amount: number; payout: number; type: "discount" | "mbbp"; position: number }> = [];
 
     const sorted = [...this.queue].sort((a, b) => {
       if (a.status === "discount_exit" && b.status !== "discount_exit") return -1;
       if (b.status === "discount_exit" && a.status !== "discount_exit") return 1;
+      if (a.isRollover && !b.isRollover) return -1;
+      if (b.isRollover && !a.isRollover) return 1;
       return a.timestamp - b.timestamp;
     });
 
-    for (const trader of sorted) {
+    for (let i = 0; i < sorted.length; i++) {
+      const trader = sorted[i];
       if (remaining <= 0) break;
 
       let payout: number;
@@ -1220,24 +1226,80 @@ class MarketEngine {
       remaining -= payout;
 
       trader.status = "settled";
-      payouts.push({ userId: trader.userId, amount: trader.amount, payout, type });
+      payouts.push({ userId: trader.userId, amount: trader.amount, payout, type, position: i + 1 });
     }
 
     return payouts;
   }
 
+  getRolloverPositions(): Array<{ userId: string; amount: number; unpaid: number; originalCycle: number }> {
+    const settled = new Set(this.queue.filter(q => q.status === "settled").map(q => q.userId + q.timestamp));
+    const unsettled = this.queue.filter(q => {
+      const key = q.userId + q.timestamp;
+      return !settled.has(key) && q.status !== "settled";
+    });
+
+    const MIN_WEIGHT = 0.10;
+
+    return unsettled
+      .map(q => {
+        const expectedPayout = q.status === "discount_exit" && q.discountPrice
+          ? q.amount * q.discountPrice
+          : q.amount * this.mbbp;
+        return {
+          userId: q.userId,
+          amount: q.amount,
+          unpaid: parseFloat(expectedPayout.toFixed(2)),
+          originalCycle: q.originalCycle || this.cycle,
+        };
+      })
+      .filter(r => r.unpaid >= MIN_WEIGHT);
+  }
+
   resetCycle(): void {
+    const rollovers = this.getRolloverPositions();
+
+    settlementHistory.push({
+      cycle: this.cycle,
+      closePrice: this.closePrice,
+      mbbp: this.mbbp,
+      floorPool: parseFloat((this.totalVolume * this.floorPercent).toFixed(2)),
+      housePool: parseFloat((this.totalVolume * this.housePercent).toFixed(2)),
+      traders: this.queue.length,
+      rolloverCount: rollovers.length,
+      time: Date.now(),
+    });
+    if (settlementHistory.length > 20) settlementHistory.shift();
+
     this.P_current = 0.01;
     this.totalVolume = 0;
     this.demand = 0;
     this.supply = 0;
-    this.queue = [];
     this.cycle += 1;
     this.settled = false;
     this.marketOpen = true;
     this.mbbp = 1.01;
     this.discountOffer = 0;
     this.closePrice = 0;
+
+    this.queue = rollovers.map(r => {
+      const weight = parseFloat((r.unpaid / 1.0).toFixed(2));
+      return {
+        userId: r.userId,
+        amount: weight,
+        entryPrice: 0.01,
+        timestamp: Date.now() - 1,
+        status: "holding" as const,
+        isRollover: true,
+        rolloverWeight: weight,
+        originalCycle: r.originalCycle,
+      };
+    });
+
+    if (rollovers.length > 0) {
+      console.log(`[ENGINE] Rolled over ${rollovers.length} positions into cycle ${this.cycle}`);
+      logError("ROLLOVER", `${rollovers.length} positions carried forward from cycle ${this.cycle - 1}`);
+    }
   }
 
   adjustBalance(floorPercent: number): void {
@@ -1742,7 +1804,7 @@ interface MonitorSnapshot {
 let lastPriceUpdate = Date.now();
 let lastPrice = 0;
 let priceStallCount = 0;
-let settlementHistory: Array<{ cycle: number; closePrice: number; mbbp: number; floorPool: number; housePool: number; traders: number; time: number }> = [];
+let settlementHistory: Array<{ cycle: number; closePrice: number; mbbp: number; floorPool: number; housePool: number; traders: number; rolloverCount?: number; time: number }> = [];
 let errorLog: Array<{ type: string; message: string; time: number }> = [];
 
 function logError(type: string, message: string) {
