@@ -618,14 +618,25 @@ export default function LandingPage() {
           <div className="text-center mb-6">
             <div className="flex items-center justify-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              <span className="text-[10px] text-red-400 font-bold tracking-widest">LIVE TRADING FLOOR</span>
+              <span className="text-[10px] text-red-400 font-bold tracking-widest">POWERED BY 97.7 THE FLAME</span>
             </div>
             <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-white mb-2" data-testid="text-radio-hero-title">
-              AITITRADE <span className="text-emerald-400">DEX</span>
+              SOVEREIGN <span className="text-emerald-400">PORTAL</span>
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-500 max-w-lg mx-auto">
-              DIGITAL ASSET EXCHANGE — AI-POWERED MUSIC ASSETS
-            </p>
+            <div className="max-w-lg mx-auto space-y-2 mt-3">
+              <div className="flex items-center gap-2 justify-center">
+                <DollarSign className="h-3.5 w-3.5 text-lime-400" />
+                <p className="text-[11px] sm:text-xs text-lime-400 font-extrabold tracking-wide">MINIMUM TRADE BUY-IN STARTS AT $2.00</p>
+              </div>
+              <div className="flex items-center gap-2 justify-center">
+                <BarChart3 className="h-3.5 w-3.5 text-amber-400" />
+                <p className="text-[11px] sm:text-xs text-amber-400 font-extrabold tracking-wide">TRADES SETTLE IN POOLS — $700 TO $5,000</p>
+              </div>
+              <div className="flex items-center gap-2 justify-center">
+                <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
+                <p className="text-[11px] sm:text-xs text-cyan-400 font-extrabold tracking-wide">ACCEPT A SYSTEM OFFER (150%–285%) — GET PAID NOW</p>
+              </div>
+            </div>
           </div>
 
           <StimulationBoard onSignup={() => openAuth("signup")} />
@@ -640,11 +651,11 @@ export default function LandingPage() {
               className="px-8 sm:px-12 py-3.5 sm:py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm sm:text-base tracking-wider transition-all border border-emerald-400/30"
               data-testid="button-hero-cta"
             >
-              OPEN TRADING ACCOUNT
+              ENTER TRADING FLOOR
             </button>
             <div className="mt-3 flex items-center justify-center gap-3 sm:gap-4 text-[8px] sm:text-[9px]">
               <span className="text-lime-400/80 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> LIVE FLOOR
+                <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> LIVE NOW
               </span>
               <span className="text-zinc-700">|</span>
               <span className="text-emerald-400/80 font-bold flex items-center gap-1">
@@ -652,7 +663,7 @@ export default function LandingPage() {
               </span>
               <span className="text-zinc-700">|</span>
               <span className="text-amber-400/80 font-bold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> $1-$50 ENTRY
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> $2-$50 BUY-IN
               </span>
             </div>
           </div>

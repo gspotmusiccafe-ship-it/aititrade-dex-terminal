@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight } from "lucide-react";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight, BarChart3 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -103,7 +103,7 @@ function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSe
         <div>
           <p className={`text-xs sm:text-sm font-black ${mbbpColor}`}>MBBP ${liveMbbp.toFixed(2)}</p>
           {discountOffer > 0 && (
-            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">DISCOUNT: ${discountOffer.toFixed(2)}</p>
+            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">SYSTEM OFFER: ${discountOffer.toFixed(2)} — GET PAID NOW</p>
           )}
           {discountOffer === 0 && (
             <p className="text-[7px] sm:text-[8px] text-zinc-600">$0.01 — $1.00 RANGE</p>
@@ -785,7 +785,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveMbbp > 1.00 ? "text-amber-400" : "text-lime-400"}`} data-testid="card-mbbp">{mbbpLabel}</p>
           </div>
           <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">DISCOUNT</p>
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">SYSTEM OFFER</p>
             <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveDiscount > 0 ? "text-yellow-400 animate-pulse" : "text-zinc-600"}`} data-testid="card-discount">{discountLabel}</p>
           </div>
           <div className={`bg-zinc-900/80 p-0.5 sm:p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
@@ -870,7 +870,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             }`}
             data-testid={`button-hold-lock-${track.id}`}
           >
-            <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> HOLD
+            <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> ENTER POSITION
           </button>
           <button
             onClick={handleDiscountExit}
@@ -882,7 +882,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             }`}
             data-testid={`button-discount-exit-${track.id}`}
           >
-            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> DISCOUNT
+            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> SYSTEM OFFER
           </button>
         </div>
         <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
@@ -919,7 +919,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
               className="flex-1 bg-lime-600 text-white text-[8px] sm:text-[11px] font-extrabold py-1.5 sm:py-2 text-center hover:bg-lime-700 transition-colors flex items-center justify-center gap-0.5"
               data-testid={`button-acquire-${track.id}`}
             >
-              <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> ACQUIRE
+              <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> TRADE NOW
             </button>
           )}
           <button
@@ -1125,6 +1125,27 @@ export default function HomePage() {
               <p className="text-[7px] sm:text-[9px] text-zinc-600">CLOSED</p>
               <p className="text-[10px] sm:text-sm font-bold"><span className="text-red-400">{closedCount}</span><span className="text-zinc-600">/{displayTracks.length}</span></p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="border-b border-emerald-500/10 bg-gradient-to-r from-emerald-950/30 via-black to-emerald-950/30 px-4 py-2.5">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
+          <span className="text-[10px] sm:text-[11px] text-red-400 font-extrabold tracking-widest">POWERED BY 97.7 THE FLAME</span>
+        </div>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-3 w-3 text-lime-400 flex-shrink-0" />
+            <p className="text-[10px] sm:text-[11px] text-lime-400 font-extrabold tracking-wide">MIN TRADE BUY-IN STARTS AT $2.00 — RIGHT HERE, RIGHT NOW</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-3 w-3 text-amber-400 flex-shrink-0" />
+            <p className="text-[10px] sm:text-[11px] text-amber-400 font-extrabold tracking-wide">POOLS $700–$5,000 — LARGER TBI = LARGER POOL</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-3 w-3 text-cyan-400 flex-shrink-0" />
+            <p className="text-[10px] sm:text-[11px] text-cyan-400 font-extrabold tracking-wide">SYSTEM OFFER 150%–285% — GET PAID IMMEDIATELY</p>
           </div>
         </div>
       </div>
