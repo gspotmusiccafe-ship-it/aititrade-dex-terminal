@@ -18,11 +18,12 @@ function headers() {
 }
 
 export interface SonicGenerateOptions {
-  prompt: string;
-  tags: string;
-  title: string;
+  prompt?: string;
+  tags?: string;
+  title?: string;
   instrumental?: boolean;
   model?: "sonic-v4-5" | "sonic-v4" | "sonic-v3-5";
+  gptDescription?: string;
 }
 
 export interface SonicSongResult {
@@ -43,19 +44,26 @@ export interface SonicTaskResult {
 }
 
 export async function sonicGenerate(options: SonicGenerateOptions): Promise<string> {
+  const isAutoMode = !!options.gptDescription && !options.prompt;
+
   const body: any = {
-    custom_mode: true,
+    custom_mode: !isAutoMode,
     mv: options.model || "sonic-v4-5",
-    title: options.title.slice(0, 80),
-    tags: options.tags.slice(0, 1000),
-    prompt: options.prompt.slice(0, 5000),
   };
+
+  if (isAutoMode) {
+    body.gpt_description_prompt = options.gptDescription!.slice(0, 2000);
+    console.log(`[SONIC] Auto mode: "${options.gptDescription!.slice(0, 80)}..." model=${body.mv}`);
+  } else {
+    body.title = (options.title || "AITIFY Beat").slice(0, 80);
+    body.tags = (options.tags || "R&B, Smooth").slice(0, 1000);
+    body.prompt = (options.prompt || "").slice(0, 5000);
+    console.log(`[SONIC] Custom mode: "${body.title}" tags="${body.tags}" model=${body.mv}`);
+  }
 
   if (options.instrumental) {
     body.instrumental = true;
   }
-
-  console.log(`[SONIC] Submitting generation: "${options.title}" tags="${options.tags}" model=${body.mv}`);
 
   const res = await fetch(`${SONIC_API_BASE}/create`, {
     method: "POST",

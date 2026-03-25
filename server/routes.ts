@@ -3732,17 +3732,19 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(403).json({ message: "ADMIN ACCESS ONLY" });
       }
 
-      const { prompt, style, voiceType, makeInstrumental, title } = req.body;
-      if (!prompt) return res.status(400).json({ message: "Prompt required" });
+      const { prompt, style, voiceType, makeInstrumental, title, description } = req.body;
+      if (!prompt && !description) return res.status(400).json({ message: "Prompt or description required" });
 
       if (isSonicConfigured()) {
-        console.log(`[BEAT-GEN] Submitting to Sonic (MusicAPI.ai): tags=${style}, instrumental=${makeInstrumental}`);
+        const isAutoMode = !!description && !prompt;
+        console.log(`[BEAT-GEN] Submitting to Sonic (MusicAPI.ai): mode=${isAutoMode ? "auto" : "custom"}, tags=${style}, instrumental=${makeInstrumental}`);
 
         const taskId = await sonicGenerate({
-          prompt: prompt.slice(0, 5000),
+          prompt: prompt ? prompt.slice(0, 5000) : undefined,
           tags: (style || "R&B, Smooth, Melodic").slice(0, 1000),
           title: (title || "AITIFY Beat").slice(0, 80),
           instrumental: !!makeInstrumental,
+          gptDescription: isAutoMode ? description.slice(0, 2000) : undefined,
         });
 
         res.json({
