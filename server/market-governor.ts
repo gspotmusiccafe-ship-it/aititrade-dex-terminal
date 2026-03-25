@@ -1451,11 +1451,37 @@ setInterval(() => {
       console.log(`[ENGINE] SAFE STOP TRIGGERED — Price: ${stop.price.toFixed(4)} | Cycle frozen`);
     }
 
+    engineIO.emit("queue_update", {
+      marketId: "FLOOR",
+      queue: liveEngine.queue.slice(0, 20).map((q, i) => ({
+        position: i + 1,
+        userId: q.userId,
+        amount: q.amount,
+        timestamp: q.timestamp,
+        status: q.status,
+      })),
+      total: liveEngine.queue.length,
+    });
+
     if (liveEngine.totalVolume >= liveEngine.targetVolume && !liveEngine.settled) {
       liveEngine.settled = true;
       const settlementPrice = liveEngine.P_current;
       const floorPool = liveEngine.totalVolume * liveEngine.floorPercent;
       const housePool = liveEngine.totalVolume * liveEngine.housePercent;
+
+      const payouts: Array<{ userId: string; amount: number; position: number; payout: number }> = [];
+      const perTraderShare = liveEngine.queue.length > 0 ? floorPool / liveEngine.queue.length : 0;
+      liveEngine.queue.forEach((q, i) => {
+        const earlyBonus = i < liveEngine.queue.length * 0.25 ? 1.25 : 1.0;
+        const payout = parseFloat((perTraderShare * earlyBonus).toFixed(2));
+        payouts.push({
+          userId: q.userId,
+          amount: q.amount,
+          position: i + 1,
+          payout,
+        });
+      });
+
       const settlementData = {
         marketId: "FLOOR",
         cycle: liveEngine.cycle,
@@ -1464,12 +1490,13 @@ setInterval(() => {
         floorPool,
         housePool,
         queueSize: liveEngine.queue.length,
+        payouts,
         time: Date.now(),
       };
 
       engineIO.emit("settlement", settlementData);
-      logEvent("AUTO_SETTLEMENT", settlementData);
-      console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${liveEngine.cycle} | Price: ${settlementPrice.toFixed(4)} | Floor: $${floorPool.toFixed(2)} | House: $${housePool.toFixed(2)} | Resetting in 5s...`);
+      logEvent("AUTO_SETTLEMENT", { ...settlementData, payouts: payouts.length });
+      console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${liveEngine.cycle} | Price: ${settlementPrice.toFixed(4)} | Floor: $${floorPool.toFixed(2)} | House: $${housePool.toFixed(2)} | Payouts: ${payouts.length} | Resetting in 5s...`);
 
       setTimeout(() => {
         liveEngine.resetCycle();
