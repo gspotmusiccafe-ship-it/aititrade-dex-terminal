@@ -1129,27 +1129,6 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="border-b border-emerald-500/10 bg-gradient-to-r from-emerald-950/30 via-black to-emerald-950/30 px-4 py-2.5">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse flex-shrink-0" />
-          <span className="text-[10px] sm:text-[11px] text-red-400 font-extrabold tracking-widest">POWERED BY 97.7 THE FLAME</span>
-        </div>
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-3 w-3 text-lime-400 flex-shrink-0" />
-            <p className="text-[10px] sm:text-[11px] text-lime-400 font-extrabold tracking-wide">MIN TRADE BUY-IN STARTS AT $2.00 — RIGHT HERE, RIGHT NOW</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-3 w-3 text-amber-400 flex-shrink-0" />
-            <p className="text-[10px] sm:text-[11px] text-amber-400 font-extrabold tracking-wide">POOLS $700–$5,000 — LARGER TBI = LARGER POOL</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-3 w-3 text-cyan-400 flex-shrink-0" />
-            <p className="text-[10px] sm:text-[11px] text-cyan-400 font-extrabold tracking-wide">SYSTEM OFFER 150%–285% — GET PAID IMMEDIATELY</p>
-          </div>
-        </div>
-      </div>
-
       <div className="p-1.5 sm:p-2 px-3 sm:px-4 bg-black border-b border-zinc-800" data-testid="trade-indicators-bar">
         <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
           <span className="text-[8px] sm:text-[9px] text-zinc-500 font-bold uppercase tracking-wider">SECTORS</span>
