@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>System Monitor</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      background: #0b0f14;
+      color: #d1d4dc;
+      font-family: Arial;
+      padding: 20px;
+      margin: 0;
+    }
+
+    h2 {
+      color: #f0b90b;
+      margin-top: 0;
+    }
+
+    .box {
+      background: #111827;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 6px;
+      border: 1px solid #1e2a3a;
+    }
+
+    .box h3 {
+      margin: 0 0 10px 0;
+      color: #8899aa;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 14px;
+      border-bottom: 1px solid #1a2332;
+    }
+
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      color: #6b7685;
+    }
+
+    .stat-value {
+      font-weight: bold;
+      font-family: monospace;
+    }
+
+    .alert {
+      color: #ff4d4d;
+      font-size: 12px;
+      padding: 4px 0;
+    }
+
+    .alert.warning {
+      color: #ffaa00;
+    }
+
+    .alert.info {
+      color: #4d94ff;
+    }
+
+    .good {
+      color: #00ff99;
+    }
+
+    .warning-text {
+      color: #ffaa00;
+    }
+
+    .critical-text {
+      color: #ff4d4d;
+    }
+
+    .health-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .health-HEALTHY { background: #00ff9920; color: #00ff99; }
+    .health-WARNING { background: #ffaa0020; color: #ffaa00; }
+    .health-CRITICAL { background: #ff4d4d20; color: #ff4d4d; }
+    .health-HALTED { background: #ff000030; color: #ff0000; }
+
+    .progress-bar {
+      background: #1a2332;
+      border-radius: 4px;
+      height: 8px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    .no-alerts {
+      color: #00ff99;
+      font-size: 13px;
+    }
+
+    .timestamp {
+      color: #4a5568;
+      font-size: 11px;
+      text-align: right;
+      margin-top: 8px;
+    }
+
+    .diff-positive { color: #00ff99; }
+    .diff-negative { color: #ff4d4d; }
+    .diff-zero { color: #6b7685; }
+  </style>
+</head>
+<body>
+
+<h2>&#9889; SYSTEM MONITOR</h2>
+
+<div class="box" id="stats">
+  <h3>Engine Status</h3>
+  <div style="color:#6b7685">Connecting...</div>
+</div>
+
+<div class="box" id="cash">
+  <h3>Cash Flow</h3>
+  <div style="color:#6b7685">Waiting for data...</div>
+</div>
+
+<div class="box" id="alerts">
+  <h3>Alerts</h3>
+  <div class="no-alerts">No alerts</div>
+</div>
+
+<div class="timestamp" id="lastUpdate"></div>
+
+<script src="monitor.js"></script>
+
+</body>
+</html>
