@@ -5857,5 +5857,19 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.use("/live", express.static(path.join(process.cwd(), "public")));
+
+  app.get("/buy", (req, res) => {
+    const userId = (req.query.user as string) || "anon";
+    const pos = liveEngine.enterMarket(userId, 1);
+    res.json({ status: "ok", queuePosition: pos, price: liveEngine.P_current });
+  });
+
+  app.get("/impulse", (req, res) => {
+    const amt = Number(req.query.amount || 1);
+    liveEngine.impulse(amt);
+    res.json({ status: "impulse fired", price: liveEngine.P_current });
+  });
+
   return httpServer;
 }
