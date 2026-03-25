@@ -2,10 +2,17 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { Server as SocketServer } from "socket.io";
 import { seedDatabase } from "./seed";
 
 const app = express();
 const httpServer = createServer(app);
+const io = new SocketServer(httpServer, {
+  cors: { origin: "*" },
+  path: "/ws",
+});
+
+export { io };
 
 declare module "http" {
   interface IncomingMessage {
@@ -143,6 +150,9 @@ app.use((req, res, next) => {
   }
 
   await registerRoutes(httpServer, app);
+
+  const { setEngineIO } = await import("./market-governor");
+  setEngineIO(io);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

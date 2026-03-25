@@ -1176,12 +1176,45 @@ function syncEngineWithKinetic(): void {
 syncEngineWithKinetic();
 setInterval(syncEngineWithKinetic, 10000);
 
+let engineIO: any = null;
+
+function setEngineIO(io: any) {
+  engineIO = io;
+
+  io.on("connection", (socket: any) => {
+    console.log(`[ENGINE] Trader connected: ${socket.id}`);
+    socket.emit("price", liveEngine.P_current);
+    socket.emit("engineState", liveEngine.getState());
+
+    socket.on("disconnect", () => {
+      console.log(`[ENGINE] Trader disconnected: ${socket.id}`);
+    });
+  });
+}
+
 setInterval(() => {
-  liveEngine.updatePrice();
+  const price = liveEngine.updatePrice();
   const stop = liveEngine.safeStop();
-  if (stop.stopped) {
-    console.log(`[ENGINE] SAFE STOP TRIGGERED — Price: ${stop.price.toFixed(4)} | Cycle frozen`);
+
+  const candle = {
+    time: Math.floor(Date.now() / 1000),
+    open: parseFloat((price * 0.999).toFixed(4)),
+    high: parseFloat((price * 1.002).toFixed(4)),
+    low: parseFloat((price * 0.997).toFixed(4)),
+    close: parseFloat(price.toFixed(4)),
+    volume: liveEngine.totalVolume,
+  };
+
+  if (engineIO) {
+    engineIO.emit("price", parseFloat(price.toFixed(4)));
+    engineIO.emit("candle", candle);
+    engineIO.emit("engineState", liveEngine.getState());
+
+    if (stop.stopped) {
+      engineIO.emit("halt", stop);
+      console.log(`[ENGINE] SAFE STOP TRIGGERED — Price: ${stop.price.toFixed(4)} | Cycle frozen`);
+    }
   }
 }, 1000);
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic, MarketEngine, liveEngine };
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic, MarketEngine, liveEngine, setEngineIO };
