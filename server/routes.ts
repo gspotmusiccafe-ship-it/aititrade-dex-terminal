@@ -5769,6 +5769,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(400).json({ message: `Invalid entry. Valid amounts: ${VALID_ENTRIES.join(", ")}` });
       }
 
+      if (!liveEngine.marketOpen) {
+        return res.status(400).json({ message: "Market is closed — wait for next cycle" });
+      }
+
       const [track] = await db.select().from(tracks).where(eq(tracks.id, trackId));
       if (!track) return res.status(404).json({ message: "Track not found" });
 

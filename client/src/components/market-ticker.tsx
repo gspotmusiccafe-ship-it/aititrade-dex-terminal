@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEngineSocket } from "@/hooks/use-engine-socket";
 
 interface TickerAsset {
   id: string;
@@ -22,6 +23,8 @@ function generateTicker(title: string): string {
 }
 
 export function MarketTicker() {
+  const { mbbp: engineMbbp, price: enginePrice } = useEngineSocket();
+
   const { data: liveAssets } = useQuery<any[]>({
     queryKey: ["/api/market-ticker"],
     refetchInterval: 30000,
@@ -92,7 +95,7 @@ export function MarketTicker() {
               <span className={`font-extrabold ${isFlash ? "text-red-400" : "text-lime-400"}`}>${asset.ticker}</span>
               <span className="text-white font-bold">{asset.title.slice(0, 20)}</span>
               <span className="text-lime-400 font-extrabold">${asset.price.toFixed(2)}</span>
-              <span className="text-emerald-300">ROI {((asset.salesCount * asset.price * 0.16) > 0 ? ((asset.salesCount * asset.price * 0.16) / asset.price * 100).toFixed(0) : "0")}%</span>
+              <span className="text-emerald-300">MBBP ${engineMbbp.toFixed(2)}</span>
               <span className={`font-bold ${isFlash ? "text-red-400" : "text-lime-500"}`}>
                 {isPoolClosed ? "SETTLED" : `${poolPct.toFixed(1)}% TO 1K`}
               </span>

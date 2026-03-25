@@ -621,7 +621,8 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   const remaining = globalRemaining;
   const unitsRemaining = price > 0 ? Math.ceil(remaining / price) : 0;
   const poolLabel = `$1K CYCLE #${ksReached + 1}`;
-  const yieldPct = capacityPct >= 45 ? "45%" : capacityPct >= 30 ? "30%" : "16%";
+  const mbbpReturn = engineMbbp > 0 ? ((engineMbbp - enginePrice) / enginePrice * 100).toFixed(0) : "0";
+  const yieldPct = `${mbbpReturn}%`;
 
   const urgencyColor = isSettlementImminent ? "text-red-400" : isSettlementClose ? "text-amber-400" : "text-lime-400";
   const urgencyBg = isSettlementImminent ? "bg-red-500" : isSettlementClose ? "bg-amber-500" : "bg-emerald-500";
@@ -854,7 +855,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
         {isInspirational && !isGlobal && (
           <div className="mb-1 px-2 py-1 border border-violet-500/20 bg-violet-500/5 flex items-center justify-between">
             <span className="text-[8px] text-violet-400 font-bold">◆ INSPIRATIONAL CLASS</span>
-            <span className="text-[8px] text-violet-300">YIELD BAND: 30%–45%</span>
+            <span className="text-[8px] text-violet-300">MBBP: ${engineMbbp.toFixed(2)}</span>
           </div>
         )}
 

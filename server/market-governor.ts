@@ -1222,7 +1222,9 @@ class MarketEngine {
         type = "mbbp";
       }
 
-      if (payout > remaining) payout = parseFloat(remaining.toFixed(2));
+      if (payout > remaining) {
+        break;
+      }
       remaining -= payout;
 
       trader.status = "settled";
@@ -1298,7 +1300,7 @@ class MarketEngine {
 
     if (rollovers.length > 0) {
       console.log(`[ENGINE] Rolled over ${rollovers.length} positions into cycle ${this.cycle}`);
-      logError("ROLLOVER", `${rollovers.length} positions carried forward from cycle ${this.cycle - 1}`);
+      logEvent("ROLLOVER", { count: rollovers.length, fromCycle: this.cycle - 1, toCycle: this.cycle });
     }
   }
 
@@ -1311,6 +1313,7 @@ class MarketEngine {
 
   safeStop(threshold: number = 0.005): { stopped: boolean; price: number } {
     if (this.P_current <= threshold) {
+      this.marketOpen = false;
       return { stopped: true, price: this.P_current };
     }
     return { stopped: false, price: this.P_current };
@@ -1363,6 +1366,8 @@ import * as path from "path";
 const STATE_FILE = path.join(process.cwd(), "engine-state.json");
 const AUDIT_FILE = path.join(process.cwd(), "audit.json");
 
+let settlementHistory: Array<{ cycle: number; closePrice: number; mbbp: number; floorPool: number; housePool: number; traders: number; rolloverCount?: number; time: number }> = [];
+
 function saveState(): void {
   try {
     const snapshot = {
@@ -1378,6 +1383,9 @@ function saveState(): void {
       mbbp: liveEngine.mbbp,
       closePrice: liveEngine.closePrice,
       settled: liveEngine.settled,
+      queue: liveEngine.queue,
+      wallets,
+      settlementHistory,
       savedAt: Date.now(),
     };
     fs.writeFileSync(STATE_FILE, JSON.stringify(snapshot, null, 2));
@@ -1391,14 +1399,14 @@ function loadState(): void {
     if (!fs.existsSync(STATE_FILE)) return;
     const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
     if (typeof data.P_current === "number") liveEngine.P_current = data.P_current;
-    if (data.totalVolume) liveEngine.totalVolume = data.totalVolume;
+    if (typeof data.totalVolume === "number") liveEngine.totalVolume = data.totalVolume;
     if (data.cycle) liveEngine.cycle = data.cycle;
-    if (data.demand) liveEngine.demand = data.demand;
-    if (data.supply) liveEngine.supply = data.supply;
+    if (typeof data.demand === "number") liveEngine.demand = data.demand;
+    if (typeof data.supply === "number") liveEngine.supply = data.supply;
     if (typeof data.marketOpen === "boolean") liveEngine.marketOpen = data.marketOpen;
-    if (data.mbbp) liveEngine.mbbp = data.mbbp;
-    if (data.closePrice) liveEngine.closePrice = data.closePrice;
-    if (data.settled) liveEngine.settled = data.settled;
+    if (typeof data.mbbp === "number") liveEngine.mbbp = data.mbbp;
+    if (typeof data.closePrice === "number") liveEngine.closePrice = data.closePrice;
+    if (typeof data.settled === "boolean") liveEngine.settled = data.settled;
     if (data.cash) {
       liveEngine.cash = {
         deposits: data.cash.deposits || 0,
@@ -1408,7 +1416,24 @@ function loadState(): void {
         lastEntry: data.cash.lastEntry || 0,
       };
     }
-    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: $${liveEngine.P_current.toFixed(4)}, MBBP: $${liveEngine.mbbp.toFixed(4)}, Market: ${liveEngine.marketOpen ? "OPEN" : "CLOSED"}`);
+    if (Array.isArray(data.queue) && data.queue.length > 0) {
+      liveEngine.queue = data.queue;
+      console.log(`[ENGINE] Restored ${data.queue.length} queue positions`);
+    }
+    if (data.wallets && typeof data.wallets === "object") {
+      for (const [userId, w] of Object.entries(data.wallets)) {
+        wallets[userId] = w as Wallet;
+      }
+      console.log(`[ENGINE] Restored ${Object.keys(data.wallets).length} wallets`);
+    }
+    if (Array.isArray(data.settlementHistory)) {
+      settlementHistory = data.settlementHistory;
+    }
+    if (liveEngine.settled && !liveEngine.marketOpen) {
+      console.log(`[ENGINE] Detected stuck settlement state — auto-resetting cycle`);
+      liveEngine.resetCycle();
+    }
+    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: $${liveEngine.P_current.toFixed(4)}, MBBP: $${liveEngine.mbbp.toFixed(4)}, Market: ${liveEngine.marketOpen ? "OPEN" : "CLOSED"}, Queue: ${liveEngine.queue.length}`);
   } catch (e) {
     console.error("[ENGINE] State load error:", e);
   }
@@ -1416,6 +1441,23 @@ function loadState(): void {
 
 loadState();
 setInterval(saveState, 5000);
+
+let eventLog: Array<{ id: string; type: string; payload: any; time: number }> = [];
+
+function loadAudit(): void {
+  try {
+    if (!fs.existsSync(AUDIT_FILE)) return;
+    const data = JSON.parse(fs.readFileSync(AUDIT_FILE, "utf-8"));
+    if (Array.isArray(data) && data.length > 0) {
+      eventLog = data.slice(-5000);
+      console.log(`[ENGINE] Restored ${eventLog.length} audit events`);
+    }
+  } catch (e) {
+    console.error("[ENGINE] Audit load error:", e);
+  }
+}
+
+loadAudit();
 
 function saveAudit(): void {
   try {
@@ -1426,8 +1468,6 @@ function saveAudit(): void {
 }
 
 setInterval(saveAudit, 5000);
-
-let eventLog: Array<{ id: string; type: string; payload: any; time: number }> = [];
 
 function logEvent(type: string, payload: any) {
   const event = {
@@ -1804,7 +1844,6 @@ interface MonitorSnapshot {
 let lastPriceUpdate = Date.now();
 let lastPrice = 0;
 let priceStallCount = 0;
-let settlementHistory: Array<{ cycle: number; closePrice: number; mbbp: number; floorPool: number; housePool: number; traders: number; rolloverCount?: number; time: number }> = [];
 let errorLog: Array<{ type: string; message: string; time: number }> = [];
 
 function logError(type: string, message: string) {
@@ -1849,9 +1888,8 @@ function buildMonitor(): MonitorSnapshot {
     if (volumeDiff > 5) logError("VOLUME_MISMATCH", `Floor pool off by $${volumeDiff.toFixed(2)}`);
   }
 
-  const queuedCount = liveEngine.queue.filter(q => q.status === "queued").length;
-  const nonQueued = liveEngine.queue.length - queuedCount;
-  if (liveEngine.queue.length > 0 && queuedCount === 0 && !state.marketOpen) {
+  const holdingCount = liveEngine.queue.filter(q => q.status === "holding").length;
+  if (liveEngine.queue.length > 0 && holdingCount > 0 && !state.marketOpen) {
     alerts.push({
       level: "WARNING",
       market: "FLOOR",
