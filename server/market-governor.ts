@@ -1310,6 +1310,79 @@ function getPortfolio(userId: string) {
   return portfolios[userId] || [];
 }
 
+interface WalletEntry {
+  type: "DEPOSIT" | "ENTRY" | "PAYOUT" | "WITHDRAWAL";
+  amount: number;
+  time: number;
+  meta?: string;
+}
+
+interface Wallet {
+  balance: number;
+  deposited: number;
+  withdrawn: number;
+  earned: number;
+  history: WalletEntry[];
+}
+
+const wallets: Record<string, Wallet> = {};
+
+function getWallet(userId: string): Wallet {
+  if (!wallets[userId]) {
+    wallets[userId] = { balance: 0, deposited: 0, withdrawn: 0, earned: 0, history: [] };
+  }
+  return wallets[userId];
+}
+
+function recordWalletDeposit(userId: string, amount: number): Wallet {
+  const w = getWallet(userId);
+  w.balance += amount;
+  w.deposited += amount;
+  w.history.push({ type: "DEPOSIT", amount, time: Date.now() });
+  liveEngine.recordDeposit(amount);
+  logEvent("WALLET_DEPOSIT", { userId, amount, balance: w.balance });
+  return w;
+}
+
+function recordWalletEntry(userId: string, amount: number): Wallet {
+  const w = getWallet(userId);
+  w.balance -= amount;
+  w.history.push({ type: "ENTRY", amount, time: Date.now() });
+  logEvent("WALLET_ENTRY", { userId, amount, balance: w.balance });
+  return w;
+}
+
+function recordWalletPayout(userId: string, amount: number, meta?: string): Wallet {
+  const w = getWallet(userId);
+  w.balance += amount;
+  w.earned += amount;
+  w.history.push({ type: "PAYOUT", amount, time: Date.now(), meta });
+  logEvent("WALLET_PAYOUT", { userId, amount, balance: w.balance, meta });
+  return w;
+}
+
+function recordWalletWithdrawal(userId: string, amount: number): Wallet | null {
+  const w = getWallet(userId);
+  if (w.balance < amount) return null;
+  w.balance -= amount;
+  w.withdrawn += amount;
+  w.history.push({ type: "WITHDRAWAL", amount, time: Date.now() });
+  logEvent("WALLET_WITHDRAWAL", { userId, amount, balance: w.balance });
+  return w;
+}
+
+function getWalletSummary(userId: string) {
+  const w = getWallet(userId);
+  return {
+    balance: parseFloat(w.balance.toFixed(2)),
+    deposited: parseFloat(w.deposited.toFixed(2)),
+    withdrawn: parseFloat(w.withdrawn.toFixed(2)),
+    earned: parseFloat(w.earned.toFixed(2)),
+    transactions: w.history.length,
+    recentHistory: w.history.slice(-20),
+  };
+}
+
 function computeGlobalIndex(): number {
   return parseFloat(liveEngine.P_current.toFixed(4));
 }
@@ -1647,6 +1720,7 @@ export {
   MarketEngine, liveEngine, setEngineIO, getEngineIO,
   logEvent, getEventLog,
   addPosition, getPortfolioValue, getPortfolio,
+  getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary,
   computeGlobalIndex, buildMonitor,
   safeExecute, enterSafe, clampPrice, emergencyReset, liquidationCheck,
   generateOrderBook, saveState, loadState, saveAudit,
