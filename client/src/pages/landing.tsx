@@ -164,7 +164,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
-      toast({ title: "ACCOUNT CREATED", description: "Welcome to AITITRADE — your trader portal is ready" });
+      toast({ title: "ACCOUNT CREATED", description: "Welcome to the AITITRADE DEX — the place where the penny is KING" });
       onSuccess?.();
     },
     onError: (err: Error) => setError(err.message),
