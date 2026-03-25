@@ -16,7 +16,7 @@ import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, computeGlobalIndex, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -5965,6 +5965,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.get("/api/engine/portfolio/positions", (req, res) => {
     const userId = (req.query.user as string) || "anon";
     res.json(getPortfolio(userId));
+  });
+
+  app.get("/api/engine/monitor", (_req: any, res: any) => {
+    res.json(buildMonitor());
   });
 
   app.get("/api/engine/global-index", (_req: any, res: any) => {

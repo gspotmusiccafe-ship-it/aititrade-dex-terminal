@@ -1419,6 +1419,131 @@ setInterval(() => {
   }
 }, 1000);
 
+interface MonitorAlert {
+  level: "INFO" | "WARNING" | "CRITICAL";
+  market: string;
+  message: string;
+  value: number;
+  time: number;
+}
+
+interface MonitorSnapshot {
+  totalMarkets: number;
+  activeMarkets: number;
+  totalVolume: number;
+  avgPrice: number;
+  alerts: MonitorAlert[];
+  engineHealth: "HEALTHY" | "WARNING" | "CRITICAL" | "HALTED";
+  queueDepth: number;
+  cycleProgress: number;
+  kineticPulse: string;
+  time: number;
+}
+
+function buildMonitor(): MonitorSnapshot {
+  const alerts: MonitorAlert[] = [];
+  const now = Date.now();
+  const state = liveEngine.getState();
+  const kinetic = getKineticState();
+
+  if (state.price < 0.05) {
+    alerts.push({
+      level: "CRITICAL",
+      market: "FLOOR",
+      message: `CRITICAL LOW PRICE: ${state.price.toFixed(4)}`,
+      value: state.price,
+      time: now,
+    });
+  } else if (state.price < 0.20) {
+    alerts.push({
+      level: "WARNING",
+      market: "FLOOR",
+      message: `Low price warning: ${state.price.toFixed(4)}`,
+      value: state.price,
+      time: now,
+    });
+  }
+
+  if (state.totalVolume > 900) {
+    alerts.push({
+      level: "WARNING",
+      market: "FLOOR",
+      message: `Near settlement threshold: ${state.totalVolume}/1000`,
+      value: state.totalVolume,
+      time: now,
+    });
+  }
+
+  if (state.queueSize > 50) {
+    alerts.push({
+      level: "INFO",
+      market: "FLOOR",
+      message: `Deep queue: ${state.queueSize} traders`,
+      value: state.queueSize,
+      time: now,
+    });
+  }
+
+  if (liquidationCheck()) {
+    alerts.push({
+      level: "CRITICAL",
+      market: "FLOOR",
+      message: `LIQUIDATION ZONE — Price ${state.price.toFixed(4)} with ${state.queueSize} in queue`,
+      value: state.price,
+      time: now,
+    });
+  }
+
+  let engineHealth: MonitorSnapshot["engineHealth"] = "HEALTHY";
+  if (state.price < 0.05 || liquidationCheck()) {
+    engineHealth = "CRITICAL";
+  } else if (state.price < 0.20 || state.totalVolume > 900) {
+    engineHealth = "WARNING";
+  }
+  const stopCheck = liveEngine.safeStop();
+  if (stopCheck.stopped) {
+    engineHealth = "HALTED";
+    alerts.push({
+      level: "CRITICAL",
+      market: "FLOOR",
+      message: "ENGINE HALTED — Safe stop triggered",
+      value: state.price,
+      time: now,
+    });
+  }
+
+  const cycleProgress = state.totalVolume / liveEngine.targetVolume;
+
+  return {
+    totalMarkets: 1,
+    activeMarkets: state.totalVolume > 0 ? 1 : 0,
+    totalVolume: state.totalVolume,
+    avgPrice: state.price,
+    alerts,
+    engineHealth,
+    queueDepth: state.queueSize,
+    cycleProgress: parseFloat(Math.min(cycleProgress, 1).toFixed(4)),
+    kineticPulse: kinetic.pulse,
+    time: now,
+  };
+}
+
+let monitorTickCounter = 0;
+
+setInterval(() => {
+  monitorTickCounter++;
+  if (monitorTickCounter % 5 === 0 && engineIO) {
+    const snapshot = buildMonitor();
+    engineIO.emit("monitor", snapshot);
+
+    if (snapshot.alerts.some(a => a.level === "CRITICAL")) {
+      for (const alert of snapshot.alerts.filter(a => a.level === "CRITICAL")) {
+        console.log(`[MONITOR] ${alert.level}: ${alert.message}`);
+      }
+    }
+  }
+}, 1000);
+
 export {
   POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS,
   PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD,
@@ -1427,7 +1552,7 @@ export {
   MarketEngine, liveEngine, setEngineIO, getEngineIO,
   logEvent, getEventLog,
   addPosition, getPortfolioValue, getPortfolio,
-  computeGlobalIndex,
+  computeGlobalIndex, buildMonitor,
   safeExecute, enterSafe, clampPrice, emergencyReset, liquidationCheck,
   generateOrderBook, saveState, loadState, saveAudit,
 };
