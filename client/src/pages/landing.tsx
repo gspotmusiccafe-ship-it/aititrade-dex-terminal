@@ -623,35 +623,7 @@ export default function LandingPage() {
             <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-white mb-2" data-testid="text-radio-hero-title">
               AITITRADE <span className="text-emerald-400">DEX</span>
             </h1>
-            <p className="text-[11px] sm:text-xs text-emerald-400/80 font-extrabold tracking-wider mb-4">WHERE THE PENNY IS "KING"</p>
-
-            <div className="max-w-lg mx-auto space-y-4 mt-3 text-left">
-              <div className="border border-lime-500/20 bg-lime-500/5 p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <DollarSign className="h-3.5 w-3.5 text-lime-400 flex-shrink-0" />
-                  <p className="text-[11px] sm:text-xs text-lime-400 font-extrabold tracking-wide">1. MINIMUM ENTRY</p>
-                </div>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 leading-relaxed pl-5.5">Minimum Trade Buy-In (TBI) starts at $2.00. Powered by 97.7 THE FLAME.</p>
-              </div>
-
-              <div className="border border-amber-500/20 bg-amber-500/5 p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <BarChart3 className="h-3.5 w-3.5 text-amber-400 flex-shrink-0" />
-                  <p className="text-[11px] sm:text-xs text-amber-400 font-extrabold tracking-wide">2. PORTAL SETTLEMENT</p>
-                </div>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 leading-relaxed pl-5.5">Trades move through pools ($700 - $5,000). Larger TBI trades settle in larger pools.</p>
-              </div>
-
-              <div className="border border-cyan-500/20 bg-cyan-500/5 p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <TrendingUp className="h-3.5 w-3.5 text-cyan-400 flex-shrink-0" />
-                  <p className="text-[11px] sm:text-xs text-cyan-400 font-extrabold tracking-wide">3. THE EARLY EXIT (PAID FIRST)</p>
-                </div>
-                <p className="text-[10px] sm:text-[11px] text-zinc-400 leading-relaxed pl-5.5">You may accept a "System Offer" (150%-285%) to get paid immediately. The house retains the remaining balance to fund global liquidity.</p>
-              </div>
-            </div>
-
-            <p className="text-[10px] sm:text-[11px] text-white font-extrabold tracking-wider mt-5 leading-relaxed max-w-md mx-auto">WELCOME TO THE AITITRADE DEX — HIGH VELOCITY PENNY TRADING. HERE PENNIES HELP PENNIES PROSPER!</p>
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-lg mx-auto mt-4">WELCOME TO THE AITITRADE DEX, THE PLACE WHERE THE PENNY IS KING. YOU HAVE ENTERED THE PLACE OF HIGH VELOCITY PENNY TRADING, HERE PENNIES HELP OTHER PENNIES PROSPER, COME IN AND ENJOY THE POWER OF COMPOUNDING THE VALUE OF THE PENNY</p>
           </div>
 
           <StimulationBoard onSignup={() => openAuth("signup")} />
