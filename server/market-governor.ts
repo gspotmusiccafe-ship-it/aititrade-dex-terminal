@@ -1576,6 +1576,10 @@ setInterval(() => {
         time: Date.now(),
       };
 
+      payouts.forEach(p => {
+        recordWalletPayout(p.userId, p.payout, `Settlement cycle ${liveEngine.cycle}`);
+      });
+
       engineIO.emit("settlement", settlementData);
       logEvent("AUTO_SETTLEMENT", { ...settlementData, payouts: payouts.length });
       console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${liveEngine.cycle} | Price: ${settlementPrice.toFixed(4)} | Floor: $${floorPool.toFixed(2)} | House: $${housePool.toFixed(2)} | Payouts: ${payouts.length} | Resetting in 5s...`);
