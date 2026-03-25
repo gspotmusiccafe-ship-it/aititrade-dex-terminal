@@ -634,7 +634,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-2 justify-center">
                 <TrendingUp className="h-3.5 w-3.5 text-cyan-400" />
-                <p className="text-[11px] sm:text-xs text-cyan-400 font-extrabold tracking-wide">ACCEPT A SYSTEM OFFER (150%–285%) — GET PAID NOW</p>
+                <p className="text-[11px] sm:text-xs text-cyan-400 font-extrabold tracking-wide">SYSTEM OFFER — EXIT EARLY AT LIVE MARKET PRICE, GET PAID NOW</p>
               </div>
             </div>
           </div>
