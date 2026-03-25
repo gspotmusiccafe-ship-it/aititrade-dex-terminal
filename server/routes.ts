@@ -3732,19 +3732,34 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(403).json({ message: "ADMIN ACCESS ONLY" });
       }
 
-      const { prompt, style, voiceType, makeInstrumental, title, description } = req.body;
+      const {
+        prompt, style, voiceType, makeInstrumental, title, description,
+        autoLyrics, negativeTags, styleWeight, weirdnessConstraint,
+        taskType, continueClipId, audioWeight,
+      } = req.body;
       if (!prompt && !description) return res.status(400).json({ message: "Prompt or description required" });
 
       if (isSonicConfigured()) {
         const isAutoMode = !!description && !prompt;
-        console.log(`[BEAT-GEN] Submitting to Sonic (MusicAPI.ai): mode=${isAutoMode ? "auto" : "custom"}, tags=${style}, instrumental=${makeInstrumental}`);
+        const mode = taskType === "cover_music" ? "cover" : isAutoMode ? "auto" : autoLyrics ? "custom+autoLyrics" : "custom";
+        console.log(`[BEAT-GEN] Sonic (MusicAPI.ai): mode=${mode}, tags=${style}, instrumental=${makeInstrumental}`);
+
+        const vocalGender: "m" | "f" | undefined = voiceType?.includes("female") ? "f" : voiceType?.includes("male") ? "m" : undefined;
 
         const taskId = await sonicGenerate({
           prompt: prompt ? prompt.slice(0, 5000) : undefined,
           tags: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+          negativeTags: negativeTags || undefined,
           title: (title || "AITIFY Beat").slice(0, 80),
           instrumental: !!makeInstrumental,
           gptDescription: isAutoMode ? description.slice(0, 2000) : undefined,
+          autoLyrics: !!autoLyrics,
+          vocalGender,
+          styleWeight: typeof styleWeight === "number" ? styleWeight : undefined,
+          weirdnessConstraint: typeof weirdnessConstraint === "number" ? weirdnessConstraint : undefined,
+          taskType: taskType || "generate",
+          continueClipId: continueClipId || undefined,
+          audioWeight: typeof audioWeight === "number" ? audioWeight : undefined,
         });
 
         res.json({

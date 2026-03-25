@@ -20,10 +20,20 @@ function headers() {
 export interface SonicGenerateOptions {
   prompt?: string;
   tags?: string;
+  negativeTags?: string;
   title?: string;
   instrumental?: boolean;
   model?: "sonic-v4-5" | "sonic-v4" | "sonic-v3-5";
   gptDescription?: string;
+  autoLyrics?: boolean;
+  vocalGender?: "m" | "f";
+  styleWeight?: number;
+  weirdnessConstraint?: number;
+  taskType?: "generate" | "cover_music";
+  continueClipId?: string;
+  audioWeight?: number;
+  webhookUrl?: string;
+  webhookSecret?: string;
 }
 
 export interface SonicSongResult {
@@ -47,22 +57,52 @@ export async function sonicGenerate(options: SonicGenerateOptions): Promise<stri
   const isAutoMode = !!options.gptDescription && !options.prompt;
 
   const body: any = {
-    custom_mode: !isAutoMode,
     mv: options.model || "sonic-v4-5",
   };
 
-  if (isAutoMode) {
+  if (options.taskType === "cover_music") {
+    body.task_type = "cover_music";
+    body.custom_mode = true;
+    body.prompt = (options.prompt || "").slice(0, 5000);
+    body.tags = (options.tags || "").slice(0, 1000);
+    body.title = (options.title || "AITIFY Cover").slice(0, 80);
+    if (options.continueClipId) body.continue_clip_id = options.continueClipId;
+    if (typeof options.audioWeight === "number") body.audio_weight = Math.max(0, Math.min(1, options.audioWeight));
+    console.log(`[SONIC] Cover mode: clip=${options.continueClipId} weight=${options.audioWeight} tags="${body.tags}"`);
+  } else if (isAutoMode) {
+    body.custom_mode = false;
     body.gpt_description_prompt = options.gptDescription!.slice(0, 2000);
+    if (options.instrumental) body.make_instrumental = true;
     console.log(`[SONIC] Auto mode: "${options.gptDescription!.slice(0, 80)}..." model=${body.mv}`);
   } else {
+    body.custom_mode = true;
     body.title = (options.title || "AITIFY Beat").slice(0, 80);
     body.tags = (options.tags || "R&B, Smooth").slice(0, 1000);
     body.prompt = (options.prompt || "").slice(0, 5000);
-    console.log(`[SONIC] Custom mode: "${body.title}" tags="${body.tags}" model=${body.mv}`);
+    if (options.autoLyrics) body.auto_lyrics = true;
+    if (options.instrumental) body.instrumental = true;
+    console.log(`[SONIC] Custom mode: "${body.title}" tags="${body.tags}" autoLyrics=${!!options.autoLyrics} model=${body.mv}`);
   }
 
-  if (options.instrumental) {
-    body.instrumental = true;
+  if (options.negativeTags) {
+    body.negative_tags = options.negativeTags.slice(0, 1000);
+  }
+
+  if (options.vocalGender) {
+    body.vocal_gender = options.vocalGender;
+  }
+
+  if (typeof options.styleWeight === "number") {
+    body.style_weight = Math.max(0, Math.min(1, options.styleWeight));
+  }
+
+  if (typeof options.weirdnessConstraint === "number") {
+    body.weirdness_constraint = Math.max(0, Math.min(1, options.weirdnessConstraint));
+  }
+
+  if (options.webhookUrl) {
+    body.webhook_url = options.webhookUrl;
+    if (options.webhookSecret) body.webhook_secret = options.webhookSecret;
   }
 
   const res = await fetch(`${SONIC_API_BASE}/create`, {
