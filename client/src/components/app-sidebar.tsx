@@ -308,6 +308,14 @@ export function AppSidebar() {
             )}
           </>
         )}
+        {isAuthenticated && user && !spotifyConnected && (
+          <Button asChild variant="outline" size="sm" className="w-full gap-2 border-[#1DB954]/30 hover:bg-[#1DB954]/10 text-[#1DB954]" data-testid="button-connect-spotify">
+            <a href="/api/login/spotify">
+              <SiSpotify className="h-4 w-4" />
+              Connect Spotify (Radio JAM)
+            </a>
+          </Button>
+        )}
         {isAuthenticated && user ? (
           <div className="flex items-center gap-3 p-2 rounded-xl bg-gradient-to-r from-primary/5 to-transparent border border-border/30">
             <Avatar className="h-9 w-9 ring-2 ring-primary/20">

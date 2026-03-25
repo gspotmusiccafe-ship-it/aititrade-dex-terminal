@@ -685,41 +685,51 @@ export default function GlobalRadio() {
           )}
 
           <div className="flex items-center gap-2">
-            {!tunedIn ? (
-              <button
-                onClick={handleTuneIn}
-                disabled={connecting}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-lime-600 hover:bg-lime-700 text-black font-extrabold text-sm transition-colors disabled:opacity-50"
-                data-testid="button-tune-in"
-              >
-                <Radio className="h-5 w-5" />
-                {connecting ? "CONNECTING..." : "GO LIVE"}
-              </button>
+            {isConnected ? (
+              !tunedIn ? (
+                <button
+                  onClick={handleTuneIn}
+                  disabled={connecting}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-lime-600 hover:bg-lime-700 text-black font-extrabold text-sm transition-colors disabled:opacity-50"
+                  data-testid="button-tune-in"
+                >
+                  <SiSpotify className="h-5 w-5" />
+                  {connecting ? "CONNECTING SDK..." : "GO LIVE — SPOTIFY"}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleNextAsset((currentAssetIndex - 1 + assets.length) % assets.length)}
+                    className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
+                    data-testid="button-prev-asset"
+                  >
+                    <SkipBack className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={handlePause}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-lime-500/30 text-lime-400 hover:bg-lime-500/10 font-extrabold text-sm transition-colors"
+                    data-testid="button-pause-stream"
+                  >
+                    {playerState?.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                    {playerState?.isPlaying ? "PAUSE" : "RESUME"}
+                  </button>
+                  <button
+                    onClick={() => handleNextAsset()}
+                    className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
+                    data-testid="button-next-asset"
+                  >
+                    <SkipForward className="h-4 w-4" />
+                  </button>
+                </>
+              )
             ) : (
-              <>
-                <button
-                  onClick={() => handleNextAsset((currentAssetIndex - 1 + assets.length) % assets.length)}
-                  className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
-                  data-testid="button-prev-asset"
-                >
-                  <SkipBack className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={handlePause}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-lime-500/30 text-lime-400 hover:bg-lime-500/10 font-extrabold text-sm transition-colors"
-                  data-testid="button-pause-stream"
-                >
-                  {playerState?.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  {playerState?.isPlaying ? "PAUSE" : "RESUME"}
-                </button>
-                <button
-                  onClick={() => handleNextAsset()}
-                  className="px-3 py-2.5 border border-lime-500/20 text-lime-400 hover:bg-lime-500/10 transition-colors"
-                  data-testid="button-next-asset"
-                >
-                  <SkipForward className="h-4 w-4" />
-                </button>
-              </>
+              <a
+                href="/api/login/spotify"
+                className="flex-1 flex items-center justify-center gap-2 py-3 border border-green-500/30 text-green-400 font-extrabold text-[11px] hover:bg-green-500/10 transition-colors"
+                data-testid="link-connect-spotify"
+              >
+                <SiSpotify className="h-4 w-4" /> CONNECT SPOTIFY TO JAM
+              </a>
             )}
           </div>
 
