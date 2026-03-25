@@ -1452,22 +1452,32 @@ setInterval(() => {
     }
 
     if (liveEngine.totalVolume >= liveEngine.targetVolume && !liveEngine.settled) {
-      const settlement = liveEngine.settle();
-      if (settlement) {
-        liveEngine.settled = true;
-        engineIO.emit("settlement", {
-          marketId: "FLOOR",
-          cycle: settlement.cycle,
-          settlementPrice: settlement.settlementPrice,
-          roi: settlement.roi,
-          floorPool: settlement.floorPool,
-          housePool: settlement.housePool,
-          queueSize: settlement.queueSize,
-          time: Date.now(),
-        });
-        logEvent("AUTO_SETTLEMENT", settlement);
-        console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${settlement.cycle} | Price: ${settlement.settlementPrice.toFixed(4)} | Floor: $${settlement.floorPool.toFixed(2)} | House: $${settlement.housePool.toFixed(2)}`);
-      }
+      liveEngine.settled = true;
+      const settlementPrice = liveEngine.P_current;
+      const floorPool = liveEngine.totalVolume * liveEngine.floorPercent;
+      const housePool = liveEngine.totalVolume * liveEngine.housePercent;
+      const settlementData = {
+        marketId: "FLOOR",
+        cycle: liveEngine.cycle,
+        settlementPrice,
+        roi: settlementPrice - 1,
+        floorPool,
+        housePool,
+        queueSize: liveEngine.queue.length,
+        time: Date.now(),
+      };
+
+      engineIO.emit("settlement", settlementData);
+      logEvent("AUTO_SETTLEMENT", settlementData);
+      console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${liveEngine.cycle} | Price: ${settlementPrice.toFixed(4)} | Floor: $${floorPool.toFixed(2)} | House: $${housePool.toFixed(2)} | Resetting in 5s...`);
+
+      setTimeout(() => {
+        liveEngine.resetCycle();
+        if (engineIO) {
+          engineIO.emit("market_reset", { cycle: liveEngine.cycle, time: Date.now() });
+        }
+        console.log(`[ENGINE] Market reset — New cycle ${liveEngine.cycle} started`);
+      }, 5000);
     }
   }
 }, 1000);
