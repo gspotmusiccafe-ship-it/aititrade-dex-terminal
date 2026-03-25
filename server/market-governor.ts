@@ -1051,4 +1051,129 @@ function getKineticBias() {
   return currentSystemBias;
 }
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic };
+class MarketEngine {
+  P_current: number;
+  totalVolume: number;
+  targetVolume: number;
+  demand: number;
+  supply: number;
+  queue: Array<{ userId: string; amount: number; timestamp: number; status: string }>;
+  floorPercent: number;
+  housePercent: number;
+  cycle: number;
+
+  constructor() {
+    this.P_current = 1.0;
+    this.totalVolume = 0;
+    this.targetVolume = 1000;
+    this.demand = 0;
+    this.supply = 0;
+    this.queue = [];
+    this.floorPercent = 0.5;
+    this.housePercent = 0.5;
+    this.cycle = 1;
+  }
+
+  updatePrice(): number {
+    const imbalance = this.demand - this.supply;
+    const ALPHA = 0.01;
+    this.P_current += ALPHA * imbalance;
+    if (this.P_current < 0.01) this.P_current = 0.01;
+    return this.P_current;
+  }
+
+  enterMarket(userId: string, amount: number = 1): number {
+    this.queue.push({
+      userId,
+      amount,
+      timestamp: Date.now(),
+      status: "pending",
+    });
+    this.totalVolume += amount;
+    this.demand += amount;
+    return this.queue.length;
+  }
+
+  impulse(amount: number): void {
+    this.demand += amount;
+    this.P_current += amount * 0.001;
+  }
+
+  settle(): {
+    cycle: number;
+    settlementPrice: number;
+    roi: number;
+    floorPool: number;
+    housePool: number;
+    queueSize: number;
+  } | null {
+    if (this.totalVolume < this.targetVolume) return null;
+
+    const settlementPrice = this.P_current;
+    const floorPool = this.totalVolume * this.floorPercent;
+    const housePool = this.totalVolume * this.housePercent;
+
+    const result = {
+      cycle: this.cycle,
+      settlementPrice,
+      roi: settlementPrice - 1,
+      floorPool,
+      housePool,
+      queueSize: this.queue.length,
+    };
+
+    this.resetCycle();
+    return result;
+  }
+
+  resetCycle(): void {
+    this.P_current = 1.0;
+    this.totalVolume = 0;
+    this.demand = 0;
+    this.supply = 0;
+    this.queue = [];
+    this.cycle += 1;
+  }
+
+  adjustBalance(floorPercent: number): void {
+    if (floorPercent < 0.5) floorPercent = 0.5;
+    if (floorPercent > 0.9) floorPercent = 0.9;
+    this.floorPercent = floorPercent;
+    this.housePercent = 1 - floorPercent;
+  }
+
+  safeStop(threshold: number = 0.25): { stopped: boolean; price: number } {
+    if (this.P_current <= threshold) {
+      return { stopped: true, price: this.P_current };
+    }
+    return { stopped: false, price: this.P_current };
+  }
+
+  getState() {
+    return {
+      price: parseFloat(this.P_current.toFixed(4)),
+      totalVolume: parseFloat(this.totalVolume.toFixed(2)),
+      targetVolume: this.targetVolume,
+      demand: this.demand,
+      supply: this.supply,
+      floorPercent: this.floorPercent,
+      housePercent: this.housePercent,
+      cycle: this.cycle,
+      queueSize: this.queue.length,
+      fillPct: parseFloat(((this.totalVolume / this.targetVolume) * 100).toFixed(1)),
+      safeStop: this.safeStop(),
+    };
+  }
+}
+
+const liveEngine = new MarketEngine();
+
+function syncEngineWithKinetic(): void {
+  const kinetic = getKineticState();
+  liveEngine.adjustBalance(kinetic.floorROI);
+}
+
+syncEngineWithKinetic();
+setInterval(syncEngineWithKinetic, 10000);
+
+export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic, MarketEngine, liveEngine };

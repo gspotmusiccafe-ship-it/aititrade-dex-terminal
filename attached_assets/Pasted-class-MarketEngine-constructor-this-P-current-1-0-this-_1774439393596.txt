@@ -1,0 +1,125 @@
+class MarketEngine {
+  constructor() {
+    this.P_current = 1.0;
+
+    this.totalVolume = 0;
+    this.targetVolume = 1000;
+
+    this.demand = 0;
+    this.supply = 0;
+
+    this.queue = [];
+
+    this.floorPercent = 0.5; // starts 50/50
+    this.housePercent = 0.5;
+
+    this.cycle = 1;
+  }
+
+  // ----------------------------
+  // PRICE ENGINE (BREATHING SYSTEM)
+  // ----------------------------
+  updatePrice() {
+    const imbalance = this.demand - this.supply;
+
+    const ALPHA = 0.01; // sensitivity
+
+    this.P_current += ALPHA * imbalance;
+
+    if (this.P_current < 0.01) this.P_current = 0.01;
+
+    return this.P_current;
+  }
+
+  // ----------------------------
+  // ORDER ENTRY (BUY INTO SYSTEM)
+  // ----------------------------
+  enterMarket(userId, amount = 1) {
+    this.queue.push({
+      userId,
+      amount,
+      timestamp: Date.now(),
+      status: "pending"
+    });
+
+    this.totalVolume += amount;
+    this.demand += amount;
+
+    return this.queue.length;
+  }
+
+  // ----------------------------
+  // IMPULSE (LIQUIDITY SHOCK)
+  // ----------------------------
+  impulse(amount) {
+    this.demand += amount;
+
+    // strengthens floor pressure temporarily
+    this.P_current += amount * 0.001;
+  }
+
+  // ----------------------------
+  // SETTLEMENT ENGINE
+  // ----------------------------
+  settle() {
+    if (this.totalVolume < this.targetVolume) return null;
+
+    const settlementPrice = this.P_current;
+
+    const floorPool = this.totalVolume * this.floorPercent;
+    const housePool = this.totalVolume * this.housePercent;
+
+    const result = {
+      cycle: this.cycle,
+      settlementPrice,
+      roi: settlementPrice - 1,
+      floorPool,
+      housePool,
+      queueSize: this.queue.length
+    };
+
+    this.resetCycle();
+
+    return result;
+  }
+
+  // ----------------------------
+  // RESET AFTER CLOSE
+  // ----------------------------
+  resetCycle() {
+    this.P_current = 1.0;
+    this.totalVolume = 0;
+    this.demand = 0;
+    this.supply = 0;
+    this.queue = [];
+
+    this.cycle += 1;
+  }
+
+  // ----------------------------
+  // FLOOR/HOUSE GOVERNOR (YOUR RULE)
+  // ----------------------------
+  adjustBalance(floorPercent) {
+    if (floorPercent < 0.5) floorPercent = 0.5;
+    if (floorPercent > 0.9) floorPercent = 0.9;
+
+    this.floorPercent = floorPercent;
+    this.housePercent = 1 - floorPercent;
+  }
+
+  // ----------------------------
+  // SAFE STOP (RISK CONTROL)
+  // ----------------------------
+  safeStop(threshold = 0.25) {
+    if (this.P_current <= threshold) {
+      return {
+        stopped: true,
+        price: this.P_current
+      };
+    }
+
+    return { stopped: false };
+  }
+}
+
+module.exports = MarketEngine;

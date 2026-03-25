@@ -15,7 +15,7 @@ import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, liveEngine } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -5616,6 +5616,50 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/engine/state", async (_req, res) => {
+    try {
+      res.json(liveEngine.getState());
+    } catch (error) {
+      console.error("Engine state error:", error);
+      res.status(500).json({ message: "Failed to get engine state" });
+    }
+  });
+
+  app.post("/api/engine/impulse", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { amount } = req.body;
+      const impulseAmount = parseFloat(amount || "10");
+      liveEngine.impulse(impulseAmount);
+      liveEngine.updatePrice();
+      console.log(`[ENGINE] Impulse injected: ${impulseAmount} | New price: ${liveEngine.P_current.toFixed(4)}`);
+      res.json({ message: `Impulse of ${impulseAmount} injected`, state: liveEngine.getState() });
+    } catch (error) {
+      console.error("Engine impulse error:", error);
+      res.status(500).json({ message: "Failed to inject impulse" });
+    }
+  });
+
+  app.post("/api/engine/safe-stop", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { threshold } = req.body;
+      const result = liveEngine.safeStop(parseFloat(threshold || "0.25"));
+      res.json(result);
+    } catch (error) {
+      console.error("Engine safe-stop error:", error);
+      res.status(500).json({ message: "Failed to check safe stop" });
+    }
+  });
+
   app.post("/api/kinetic/bias", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -5679,6 +5723,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       await db.update(tracks)
         .set({ salesCount: sql`${tracks.salesCount} + 1` })
         .where(eq(tracks.id, trackId));
+
+      liveEngine.enterMarket(userId, parsedAmount);
+      liveEngine.updatePrice();
+      const engineSettlement = liveEngine.settle();
+      if (engineSettlement) {
+        console.log(`[ENGINE] Cycle #${engineSettlement.cycle} settled! Price: ${engineSettlement.settlementPrice.toFixed(4)} | ROI: ${(engineSettlement.roi * 100).toFixed(1)}% | Floor: $${engineSettlement.floorPool.toFixed(2)} | House: $${engineSettlement.housePool.toFixed(2)}`);
+      }
 
       await enqueueTrader(order.id, userId, trackId, parsedAmount);
       const settlementTriggered = await checkAndTriggerSettlement();
