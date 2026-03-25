@@ -5932,12 +5932,17 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.get("/buy", (req, res) => {
     const userId = (req.query.user as string) || "anon";
     const amount = Number(req.query.amount || 1);
-    const pos = enterSafe(userId);
-    if (pos === null) {
-      return res.status(429).json({ status: "busy", message: "Queue locked, try again" });
+    const result = enterSafe(userId, amount);
+    if (!result.ok) {
+      if (result.error === "QUEUE_LOCKED") {
+        return res.status(429).json({ status: "busy", message: "Queue locked, try again" });
+      }
+      if (result.error === "INSUFFICIENT_FUNDS") {
+        return res.status(400).json({ status: "error", message: "Insufficient funds — deposit first" });
+      }
+      return res.status(400).json({ status: "error", message: result.error });
     }
-    addPosition(userId, amount, liveEngine.P_current);
-    res.json({ status: "ok", queuePosition: pos, price: liveEngine.P_current });
+    res.json({ status: "ok", queuePosition: result.position, price: liveEngine.P_current });
   });
 
   app.get("/impulse", (req, res) => {

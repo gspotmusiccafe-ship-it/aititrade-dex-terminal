@@ -1402,13 +1402,22 @@ function safeExecute(eventId: string, fn: () => void): boolean {
 
 let queueLock = false;
 
-function enterSafe(userId: string): number | null {
-  if (queueLock) return null;
+function enterSafe(userId: string, amount: number = 1): { ok: boolean; position?: number; error?: string } {
+  if (queueLock) return { ok: false, error: "QUEUE_LOCKED" };
+
+  const w = getWallet(userId);
+  if (w.balance < amount) {
+    return { ok: false, error: "INSUFFICIENT_FUNDS" };
+  }
+
   queueLock = true;
-  const pos = liveEngine.enterMarket(userId, 1);
+  recordWalletEntry(userId, amount);
+  const pos = liveEngine.enterMarket(userId, amount);
+  addPosition(userId, amount, liveEngine.P_current);
   queueLock = false;
-  logEvent("market_enter", { userId, position: pos, price: liveEngine.P_current });
-  return pos;
+
+  logEvent("market_enter", { userId, amount, position: pos, price: liveEngine.P_current, walletBalance: w.balance });
+  return { ok: true, position: pos };
 }
 
 function clampPrice(): void {
