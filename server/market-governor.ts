@@ -1180,6 +1180,7 @@ class MarketEngine {
         deposits: parseFloat(this.cash.deposits.toFixed(2)),
         entries: parseFloat(this.cash.entries.toFixed(2)),
         totalIn: parseFloat(this.cash.totalIn.toFixed(2)),
+        diff: parseFloat((this.cash.deposits - this.cash.entries).toFixed(2)),
         lastDeposit: this.cash.lastDeposit,
         lastEntry: this.cash.lastEntry,
       },
