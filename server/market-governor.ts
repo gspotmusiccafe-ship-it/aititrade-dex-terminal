@@ -1485,6 +1485,26 @@ function getWalletSummary(userId: string) {
   };
 }
 
+function getGlobalWalletSummary() {
+  let totalBalance = 0, totalDeposited = 0, totalEarned = 0, totalWithdrawn = 0, walletCount = 0;
+  for (const userId of Object.keys(wallets)) {
+    const w = wallets[userId];
+    totalBalance += w.balance;
+    totalDeposited += w.deposited;
+    totalEarned += w.earned;
+    totalWithdrawn += w.withdrawn;
+    walletCount++;
+  }
+  return {
+    walletCount,
+    totalBalance: parseFloat(totalBalance.toFixed(2)),
+    totalDeposited: parseFloat(totalDeposited.toFixed(2)),
+    totalEarned: parseFloat(totalEarned.toFixed(2)),
+    totalWithdrawn: parseFloat(totalWithdrawn.toFixed(2)),
+    netFlow: parseFloat((totalDeposited - totalWithdrawn).toFixed(2)),
+  };
+}
+
 function computeGlobalIndex(): number {
   return parseFloat(liveEngine.P_current.toFixed(4));
 }
@@ -1719,11 +1739,66 @@ interface MonitorSnapshot {
   time: number;
 }
 
+let lastPriceUpdate = Date.now();
+let lastPrice = 0;
+let priceStallCount = 0;
+let settlementHistory: Array<{ cycle: number; closePrice: number; mbbp: number; floorPool: number; housePool: number; traders: number; time: number }> = [];
+let errorLog: Array<{ type: string; message: string; time: number }> = [];
+
+function logError(type: string, message: string) {
+  errorLog.push({ type, message, time: Date.now() });
+  if (errorLog.length > 100) errorLog.shift();
+  console.log(`[MONITOR ERROR] ${type}: ${message}`);
+}
+
 function buildMonitor(): MonitorSnapshot {
   const alerts: MonitorAlert[] = [];
   const now = Date.now();
   const state = liveEngine.getState();
   const kinetic = getKineticState();
+
+  if (Math.abs(state.price - lastPrice) > 0.0001) {
+    lastPriceUpdate = now;
+    lastPrice = state.price;
+    priceStallCount = 0;
+  } else if (now - lastPriceUpdate > 30000) {
+    priceStallCount++;
+    alerts.push({
+      level: priceStallCount > 5 ? "CRITICAL" : "WARNING",
+      market: "FLOOR",
+      message: `PRICE STALL: No movement for ${Math.floor((now - lastPriceUpdate) / 1000)}s (count: ${priceStallCount})`,
+      value: state.price,
+      time: now,
+    });
+    if (priceStallCount > 5) logError("PRICE_STALL", `Stalled at $${state.price.toFixed(4)} for ${Math.floor((now - lastPriceUpdate) / 1000)}s`);
+  }
+
+  const expectedFloor = parseFloat((state.totalVolume * state.floorPercent).toFixed(2));
+  const actualFloor = state.floorPool;
+  const volumeDiff = Math.abs(expectedFloor - actualFloor);
+  if (volumeDiff > 0.50 && state.totalVolume > 10) {
+    alerts.push({
+      level: volumeDiff > 5 ? "CRITICAL" : "WARNING",
+      market: "FLOOR",
+      message: `VOLUME MISMATCH: Expected floor $${expectedFloor.toFixed(2)} vs actual $${actualFloor.toFixed(2)} (diff: $${volumeDiff.toFixed(2)})`,
+      value: volumeDiff,
+      time: now,
+    });
+    if (volumeDiff > 5) logError("VOLUME_MISMATCH", `Floor pool off by $${volumeDiff.toFixed(2)}`);
+  }
+
+  const queuedCount = liveEngine.queue.filter(q => q.status === "queued").length;
+  const nonQueued = liveEngine.queue.length - queuedCount;
+  if (liveEngine.queue.length > 0 && queuedCount === 0 && !state.marketOpen) {
+    alerts.push({
+      level: "WARNING",
+      market: "FLOOR",
+      message: `QUEUE LOCK: ${liveEngine.queue.length} entries but none queued — market closed`,
+      value: liveEngine.queue.length,
+      time: now,
+    });
+    logError("QUEUE_LOCK", `${liveEngine.queue.length} entries stuck, market closed`);
+  }
 
   if (state.price < 0.05) {
     alerts.push({
@@ -1743,11 +1818,19 @@ function buildMonitor(): MonitorSnapshot {
     });
   }
 
-  if (state.totalVolume > 900) {
+  if (state.totalVolume >= 950) {
+    alerts.push({
+      level: "CRITICAL",
+      market: "FLOOR",
+      message: `READY TO SETTLE: $${state.totalVolume.toFixed(2)} / $1000 — ${(1000 - state.totalVolume).toFixed(2)} remaining`,
+      value: state.totalVolume,
+      time: now,
+    });
+  } else if (state.totalVolume > 800) {
     alerts.push({
       level: "WARNING",
       market: "FLOOR",
-      message: `Near settlement threshold: ${state.totalVolume}/1000`,
+      message: `Near settlement: $${state.totalVolume.toFixed(2)} / $1000 (${((state.totalVolume / 1000) * 100).toFixed(1)}%)`,
       value: state.totalVolume,
       time: now,
     });
@@ -1773,10 +1856,22 @@ function buildMonitor(): MonitorSnapshot {
     });
   }
 
+  const depositsVsEntries = state.cash.deposits - state.cash.entries;
+  if (depositsVsEntries < -1) {
+    alerts.push({
+      level: "CRITICAL",
+      market: "FLOOR",
+      message: `CASH DEFICIT: Entries ($${state.cash.entries.toFixed(2)}) exceed deposits ($${state.cash.deposits.toFixed(2)}) by $${Math.abs(depositsVsEntries).toFixed(2)}`,
+      value: depositsVsEntries,
+      time: now,
+    });
+    logError("CASH_DEFICIT", `Entries exceed deposits by $${Math.abs(depositsVsEntries).toFixed(2)}`);
+  }
+
   let engineHealth: MonitorSnapshot["engineHealth"] = "HEALTHY";
-  if (state.price < 0.05 || liquidationCheck()) {
+  if (state.price < 0.05 || liquidationCheck() || depositsVsEntries < -5) {
     engineHealth = "CRITICAL";
-  } else if (state.price < 0.20 || state.totalVolume > 900) {
+  } else if (state.price < 0.20 || state.totalVolume > 900 || priceStallCount > 3) {
     engineHealth = "WARNING";
   }
   const stopCheck = liveEngine.safeStop();
@@ -1793,10 +1888,13 @@ function buildMonitor(): MonitorSnapshot {
 
   const cycleProgress = state.totalVolume / liveEngine.targetVolume;
 
+  const walletSummary = getGlobalWalletSummary();
+
   return {
     totalMarkets: 1,
     activeMarkets: state.totalVolume > 0 ? 1 : 0,
     totalVolume: state.totalVolume,
+    targetVolume: liveEngine.targetVolume,
     avgPrice: state.price,
     mbbp: state.mbbp,
     discountOffer: state.discountOffer,
@@ -1804,12 +1902,21 @@ function buildMonitor(): MonitorSnapshot {
     closePrice: state.closePrice,
     floorPool: state.floorPool,
     housePool: state.housePool,
+    floorSplit: state.floorPercent,
+    houseSplit: state.housePercent,
+    cycle: state.cycle,
     alerts,
     engineHealth,
     queueDepth: state.queueSize,
     cycleProgress: parseFloat(Math.min(cycleProgress, 1).toFixed(4)),
     kineticPulse: kinetic.pulse,
+    kineticBias: kinetic.bias,
+    kineticFloor: kinetic.floorROI,
+    kineticHouse: kinetic.houseMBBP,
     cash: state.cash,
+    walletSummary,
+    errorLog: errorLog.slice(-20),
+    settlementHistory: settlementHistory.slice(-10),
     queue: liveEngine.queue.slice(0, 50).map((q, i) => ({
       position: i + 1,
       userId: q.userId.slice(0, 8) + "...",
@@ -1843,7 +1950,7 @@ export {
   MarketEngine, liveEngine, setEngineIO, getEngineIO,
   logEvent, getEventLog,
   addPosition, getPortfolioValue, getPortfolio,
-  getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary,
+  getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, getGlobalWalletSummary,
   computeGlobalIndex, buildMonitor,
   safeExecute, enterSafe, clampPrice, emergencyReset, liquidationCheck,
   generateOrderBook, saveState, loadState, saveAudit,

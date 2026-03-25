@@ -1,199 +1,426 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>System Monitor</title>
+  <title>AITITRADE Control Room</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      background: #0b0f14;
-      color: #d1d4dc;
-      font-family: Arial;
-      padding: 20px;
-      margin: 0;
+      background: #080c12;
+      color: #c8cdd5;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      padding: 16px;
+      min-height: 100vh;
     }
-
-    h2 {
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, #0d1117 0%, #111922 100%);
+      border: 1px solid #1e2d3d;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header h1 {
+      font-size: 18px;
+      font-weight: 700;
       color: #f0b90b;
-      margin-top: 0;
-    }
-
-    .box {
-      background: #111827;
-      padding: 15px;
-      margin-bottom: 10px;
-      border-radius: 6px;
-      border: 1px solid #1e2a3a;
-    }
-
-    .box h3 {
-      margin: 0 0 10px 0;
-      color: #8899aa;
-      font-size: 13px;
-      text-transform: uppercase;
       letter-spacing: 1px;
     }
+    .header .subtitle {
+      font-size: 11px;
+      color: #5a6a7a;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .pulse-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #00ff99;
+      animation: pulse 2s infinite;
+    }
+    .pulse-dot.warn { background: #ffaa00; }
+    .pulse-dot.crit { background: #ff4d4d; }
+    .pulse-dot.dead { background: #333; animation: none; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,255,153,0.4); }
+      50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(0,255,153,0); }
+    }
+    .connection-status {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+    .conn-live { background: #00ff9915; color: #00ff99; border: 1px solid #00ff9930; }
+    .conn-dead { background: #ff4d4d15; color: #ff4d4d; border: 1px solid #ff4d4d30; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .panel {
+      background: #0d1117;
+      border: 1px solid #1a2536;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #111827;
+      border-bottom: 1px solid #1a2536;
+    }
+    .panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #6b7a8a;
+    }
+    .panel-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .panel-body { padding: 12px 14px; }
 
     .stat-row {
       display: flex;
       justify-content: space-between;
-      padding: 4px 0;
-      font-size: 14px;
-      border-bottom: 1px solid #1a2332;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #111d2a;
+      font-size: 13px;
     }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: #5a6a7a; font-size: 12px; }
+    .stat-value { font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
 
-    .stat-row:last-child {
-      border-bottom: none;
-    }
-
-    .stat-label {
-      color: #6b7685;
-    }
-
-    .stat-value {
-      font-weight: bold;
-      font-family: monospace;
-    }
-
-    .alert {
-      color: #ff4d4d;
-      font-size: 12px;
-      padding: 4px 0;
-    }
-
-    .alert.warning {
-      color: #ffaa00;
-    }
-
-    .alert.info {
-      color: #4d94ff;
-    }
-
-    .good {
-      color: #00ff99;
-    }
-
-    .warning-text {
-      color: #ffaa00;
-    }
-
-    .critical-text {
-      color: #ff4d4d;
-    }
+    .good { color: #00e887; }
+    .warn { color: #f5a623; }
+    .crit { color: #ff4757; }
+    .gold { color: #f0b90b; }
+    .blue { color: #4da6ff; }
+    .muted { color: #4a5568; }
 
     .health-badge {
       display: inline-block;
-      padding: 2px 8px;
+      padding: 3px 10px;
       border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
     }
+    .health-HEALTHY { background: #00e88715; color: #00e887; border: 1px solid #00e88730; }
+    .health-WARNING { background: #f5a62315; color: #f5a623; border: 1px solid #f5a62330; }
+    .health-CRITICAL { background: #ff475715; color: #ff4757; border: 1px solid #ff475730; }
+    .health-HALTED { background: #ff000020; color: #ff0000; border: 1px solid #ff000040; }
 
-    .health-HEALTHY { background: #00ff9920; color: #00ff99; }
-    .health-WARNING { background: #ffaa0020; color: #ffaa00; }
-    .health-CRITICAL { background: #ff4d4d20; color: #ff4d4d; }
-    .health-HALTED { background: #ff000030; color: #ff0000; }
-
-    .progress-bar {
-      background: #1a2332;
-      border-radius: 4px;
-      height: 8px;
-      margin-top: 4px;
+    .progress-track {
+      background: #111d2a;
+      border-radius: 6px;
+      height: 10px;
       overflow: hidden;
+      margin-top: 6px;
     }
-
     .progress-fill {
       height: 100%;
-      border-radius: 4px;
-      transition: width 0.3s ease;
+      border-radius: 6px;
+      transition: width 0.5s ease;
     }
+
+    .big-number {
+      font-size: 28px;
+      font-weight: 800;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      line-height: 1;
+    }
+    .big-label {
+      font-size: 10px;
+      color: #4a5568;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 2px;
+    }
+    .big-row {
+      display: flex;
+      gap: 24px;
+      padding: 8px 0;
+    }
+    .big-cell { flex: 1; }
+
+    .alert-item {
+      padding: 6px 10px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .alert-CRITICAL { background: #ff475710; border-left: 3px solid #ff4757; color: #ff8a94; }
+    .alert-WARNING { background: #f5a62310; border-left: 3px solid #f5a623; color: #f5c96a; }
+    .alert-INFO { background: #4da6ff10; border-left: 3px solid #4da6ff; color: #80c0ff; }
+    .alert-tag {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .tag-CRITICAL { background: #ff4757; color: #fff; }
+    .tag-WARNING { background: #f5a623; color: #000; }
+    .tag-INFO { background: #4da6ff; color: #000; }
 
     .no-alerts {
-      color: #00ff99;
+      text-align: center;
+      padding: 16px;
+      color: #00e887;
       font-size: 13px;
-    }
-
-    .timestamp {
-      color: #4a5568;
-      font-size: 11px;
-      text-align: right;
-      margin-top: 8px;
-    }
-
-    .diff-positive { color: #00ff99; }
-    .diff-negative { color: #ff4d4d; }
-    .diff-zero { color: #6b7685; }
-
-    .queue-list {
-      margin-top: 6px;
-      max-height: 200px;
-      overflow-y: auto;
+      font-weight: 600;
     }
 
     .queue-entry {
+      font-size: 11px;
+      font-family: monospace;
+      padding: 4px 0;
+      border-bottom: 1px solid #111d2a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .queue-entry:last-child { border-bottom: none; }
+
+    .error-entry {
+      font-size: 11px;
+      font-family: monospace;
+      padding: 4px 0;
+      border-bottom: 1px solid #111d2a;
+      color: #ff8a94;
+    }
+
+    .event-log {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .event-log::-webkit-scrollbar { width: 4px; }
+    .event-log::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 2px; }
+
+    .settlement-card {
+      background: #0a1520;
+      border: 1px solid #1a2536;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    .wallet-input-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .wallet-input-row input {
+      flex: 1;
+      background: #111d2a;
+      border: 1px solid #1e2d3d;
+      color: #c8cdd5;
+      padding: 6px 10px;
+      border-radius: 4px;
       font-size: 12px;
       font-family: monospace;
-      padding: 3px 0;
-      border-bottom: 1px solid #1a2332;
     }
-
-    .queue-user {
-      color: #f0b90b;
+    .wallet-input-row input:focus { outline: none; border-color: #f0b90b; }
+    .wallet-input-row button {
+      background: #f0b90b;
+      color: #000;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
     }
+    .wallet-input-row button:hover { background: #d4a30a; }
 
-    .queue-age {
-      color: #6b7685;
-    }
-
-    .queue-status {
-      color: #4d94ff;
-      text-transform: uppercase;
+    .footer {
+      text-align: center;
+      padding: 12px;
+      color: #2a3a4a;
       font-size: 10px;
+      letter-spacing: 1px;
     }
 
-    .queue-more {
-      color: #6b7685;
-      font-size: 11px;
-      padding-top: 4px;
+    .market-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .market-open { background: #00e88720; color: #00e887; }
+    .market-closed { background: #ff475720; color: #ff4757; }
+
+    .diff-pos { color: #00e887; }
+    .diff-neg { color: #ff4757; }
+    .diff-zero { color: #4a5568; }
+
+    .settle-ready {
+      background: linear-gradient(135deg, #f0b90b15 0%, #f0b90b05 100%);
+      border: 1px solid #f0b90b40;
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .settle-ready .label {
+      font-size: 14px;
+      font-weight: 800;
+      color: #f0b90b;
+      letter-spacing: 1px;
     }
   </style>
 </head>
 <body>
 
-<h2>&#9889; SYSTEM MONITOR</h2>
-
-<div class="box" id="stats">
-  <h3>Engine Status</h3>
-  <div style="color:#6b7685">Connecting...</div>
-</div>
-
-<div class="box" id="cash">
-  <h3>Cash Flow</h3>
-  <div style="color:#6b7685">Waiting for data...</div>
-</div>
-
-<div class="box" id="wallet">
-  <h3>Wallet</h3>
-  <div style="color:#6b7685">Enter user ID to load wallet</div>
-  <div style="margin-top:8px">
-    <input id="walletUser" type="text" placeholder="User ID" style="background:#1a2332;border:1px solid #2a3a4a;color:#d1d4dc;padding:6px 10px;border-radius:4px;font-size:13px;width:180px;">
-    <button onclick="loadWallet()" style="background:#f0b90b;color:#000;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:4px;">Load</button>
+<div class="header">
+  <div class="header-left">
+    <div class="pulse-dot" id="pulseIndicator"></div>
+    <div>
+      <h1>AITITRADE CONTROL ROOM</h1>
+      <div class="subtitle">Live System Monitor</div>
+    </div>
   </div>
-  <div id="walletData" style="margin-top:8px"></div>
+  <div>
+    <span class="connection-status conn-dead" id="connStatus">CONNECTING</span>
+  </div>
 </div>
 
-<div class="box" id="queue">
-  <h3>Settlement Queue</h3>
-  <div style="color:#6b7685">Waiting for data...</div>
+<div class="grid">
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Engine Status</span>
+      <span id="healthBadge" class="health-badge health-HEALTHY">HEALTHY</span>
+    </div>
+    <div class="panel-body" id="enginePanel">
+      <div style="color:#4a5568">Connecting...</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Cash Flow & Reconciliation</span>
+      <span class="panel-badge" style="background:#f0b90b20;color:#f0b90b">MANUAL TRACK</span>
+    </div>
+    <div class="panel-body" id="cashPanel">
+      <div style="color:#4a5568">Waiting for data...</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Settlement Status</span>
+      <span id="settleBadge" class="panel-badge" style="background:#4a556820;color:#4a5568">IDLE</span>
+    </div>
+    <div class="panel-body" id="settlePanel">
+      <div style="color:#4a5568">Waiting for data...</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Global Wallets</span>
+      <span id="walletCountBadge" class="panel-badge" style="background:#4da6ff20;color:#4da6ff">0</span>
+    </div>
+    <div class="panel-body" id="walletPanel">
+      <div style="color:#4a5568">Waiting for data...</div>
+    </div>
+  </div>
+
 </div>
 
-<div class="box" id="alerts">
-  <h3>Alerts</h3>
-  <div class="no-alerts">No alerts</div>
+<div class="grid">
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Alerts & Errors</span>
+      <span id="alertCount" class="panel-badge" style="background:#00e88720;color:#00e887">0</span>
+    </div>
+    <div class="panel-body event-log" id="alertPanel">
+      <div class="no-alerts">ALL CLEAR</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Error Watch</span>
+      <span id="errorCount" class="panel-badge" style="background:#ff475720;color:#ff4757">0</span>
+    </div>
+    <div class="panel-body event-log" id="errorPanel">
+      <div class="no-alerts">NO ERRORS</div>
+    </div>
+  </div>
+
 </div>
 
-<div class="timestamp" id="lastUpdate"></div>
+<div class="grid">
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Settlement Queue</span>
+      <span id="queueBadge" class="panel-badge" style="background:#f0b90b20;color:#f0b90b">0</span>
+    </div>
+    <div class="panel-body event-log" id="queuePanel">
+      <div style="color:#4a5568">Waiting for data...</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">Wallet Lookup</span>
+      <span class="panel-badge" style="background:#4da6ff20;color:#4da6ff">SEARCH</span>
+    </div>
+    <div class="panel-body">
+      <div class="wallet-input-row">
+        <input id="walletUser" type="text" placeholder="Enter User ID...">
+        <button onclick="loadWallet()">LOOKUP</button>
+      </div>
+      <div id="walletData" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="grid" style="margin-top:0">
+  <div class="panel" style="grid-column: 1 / -1;">
+    <div class="panel-header">
+      <span class="panel-title">Live Event Feed</span>
+      <span class="panel-badge" style="background:#00e88720;color:#00e887">STREAMING</span>
+    </div>
+    <div class="panel-body event-log" id="eventFeed" style="max-height:200px;">
+      <div style="color:#4a5568;text-align:center">Waiting for events...</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span id="lastUpdate">—</span> &nbsp;|&nbsp; AITITRADE BROKERAGE CONTROL ROOM
+</div>
 
 <script src="monitor.js"></script>
-
 </body>
 </html>
