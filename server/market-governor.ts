@@ -1107,20 +1107,20 @@ class MarketEngine {
 
     const fillRatio = this.totalVolume / this.targetVolume;
 
-    const volatility = 0.03 + Math.random() * 0.07;
+    const volatility = 0.005 + Math.random() * 0.02;
 
     this.bounceTicks++;
-    const bounceLen = 6 + Math.floor(Math.random() * 10);
+    const bounceLen = 15 + Math.floor(Math.random() * 25);
     if (this.bounceTicks >= bounceLen) {
       this.bounceDir *= -1;
       this.bounceTicks = 0;
     }
 
-    if (this.P_current <= 0.03) this.bounceDir = 1;
+    if (this.P_current <= 0.02) this.bounceDir = 1;
     if (this.P_current >= 0.95) this.bounceDir = -1;
 
     const jitter = (Math.random() - 0.5) * volatility * 0.3;
-    const push = this.bounceDir * volatility * (0.6 + Math.random() * 0.5);
+    const push = this.bounceDir * volatility * (0.5 + Math.random() * 0.5);
     this.P_current += push + jitter;
 
     if (this.P_current < 0.01) this.P_current = 0.01;

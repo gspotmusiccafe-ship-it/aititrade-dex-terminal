@@ -63,7 +63,7 @@ function MomentumSparkline({ data, width = 120, height = 36, color }: { data: nu
   );
 }
 
-function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSeed }: { livePrice: number; liveMbbp: number; discountOffer: number; marketOpen: boolean; trackSeed: number }) {
+function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSeed, tbi }: { livePrice: number; liveMbbp: number; discountOffer: number; marketOpen: boolean; trackSeed: number; tbi: number }) {
   const [history, setHistory] = useState<number[]>([]);
   const [prevPrice, setPrevPrice] = useState(livePrice);
 
@@ -101,9 +101,9 @@ function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSe
       </div>
       <div className="flex items-end justify-between gap-1.5 sm:gap-2">
         <div>
-          <p className={`text-xs sm:text-sm font-black ${mbbpColor}`}>MBBP ${liveMbbp.toFixed(2)}</p>
+          <p className={`text-xs sm:text-sm font-black ${mbbpColor}`}>MBBP ${(liveMbbp * tbi).toFixed(2)}</p>
           {discountOffer > 0 && (
-            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">SYSTEM OFFER: ${discountOffer.toFixed(2)} — GET PAID NOW</p>
+            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">SYSTEM OFFER: ${(discountOffer * tbi).toFixed(2)} — GET PAID NOW</p>
           )}
           {discountOffer === 0 && (
             <p className="text-[7px] sm:text-[8px] text-zinc-600">$0.01 — $1.00 RANGE</p>
@@ -595,8 +595,10 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   const ptCap = poolCeiling * 0.50;
   const liveMbbp = engineMbbp;
   const liveDiscount = engineDiscount;
-  const mbbpLabel = `$${liveMbbp.toFixed(2)}`;
-  const discountLabel = liveDiscount > 0 ? `$${liveDiscount.toFixed(2)}` : "—";
+  const mbbpDollar = parseFloat((liveMbbp * price).toFixed(2));
+  const discountDollar = liveDiscount > 0 ? parseFloat((liveDiscount * price).toFixed(2)) : 0;
+  const mbbpLabel = `$${mbbpDollar.toFixed(2)}`;
+  const discountLabel = discountDollar > 0 ? `$${discountDollar.toFixed(2)}` : "—";
   const minterFeeLabel = kineticState?.splitLabel || "LIVE";
   const grossSales = parseFloat((sales * price).toFixed(2));
 
@@ -800,6 +802,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
           discountOffer={liveDiscount}
           marketOpen={engineMarketOpen}
           trackSeed={parseInt(String(track.id).replace(/\D/g, '').slice(0, 8) || '12345')}
+          tbi={price}
         />
 
         {isGlobal ? (
