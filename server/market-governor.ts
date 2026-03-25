@@ -1062,6 +1062,7 @@ class MarketEngine {
   housePercent: number;
   cycle: number;
   cash: { deposits: number; entries: number; totalIn: number; lastDeposit: number; lastEntry: number };
+  settled: boolean;
 
   constructor() {
     this.P_current = 1.0;
@@ -1074,6 +1075,7 @@ class MarketEngine {
     this.housePercent = 0.5;
     this.cycle = 1;
     this.cash = { deposits: 0, entries: 0, totalIn: 0, lastDeposit: 0, lastEntry: 0 };
+    this.settled = false;
   }
 
   updatePrice(): number {
@@ -1147,6 +1149,7 @@ class MarketEngine {
     this.supply = 0;
     this.queue = [];
     this.cycle += 1;
+    this.settled = false;
   }
 
   adjustBalance(floorPercent: number): void {
@@ -1446,6 +1449,25 @@ setInterval(() => {
       engineIO.emit("halt", stop);
       logEvent("safe_stop", { price: stop.price });
       console.log(`[ENGINE] SAFE STOP TRIGGERED — Price: ${stop.price.toFixed(4)} | Cycle frozen`);
+    }
+
+    if (liveEngine.totalVolume >= liveEngine.targetVolume && !liveEngine.settled) {
+      const settlement = liveEngine.settle();
+      if (settlement) {
+        liveEngine.settled = true;
+        engineIO.emit("settlement", {
+          marketId: "FLOOR",
+          cycle: settlement.cycle,
+          settlementPrice: settlement.settlementPrice,
+          roi: settlement.roi,
+          floorPool: settlement.floorPool,
+          housePool: settlement.housePool,
+          queueSize: settlement.queueSize,
+          time: Date.now(),
+        });
+        logEvent("AUTO_SETTLEMENT", settlement);
+        console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${settlement.cycle} | Price: ${settlement.settlementPrice.toFixed(4)} | Floor: $${settlement.floorPool.toFixed(2)} | House: $${settlement.housePool.toFixed(2)}`);
+      }
     }
   }
 }, 1000);
