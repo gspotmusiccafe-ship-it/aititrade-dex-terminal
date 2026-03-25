@@ -5695,22 +5695,28 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.post("/api/engine/impulse", isAuthenticated, async (req: any, res) => {
+  app.post("/api/engine/discount-exit", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) return res.status(401).json({ message: "Authentication required" });
-      const user = await storage.getUser(userId);
-      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
 
-      const { amount } = req.body;
-      const impulseAmount = parseFloat(amount || "10");
-      liveEngine.impulse(impulseAmount);
-      liveEngine.updatePrice();
-      console.log(`[ENGINE] Impulse injected: ${impulseAmount} | New price: ${liveEngine.P_current.toFixed(4)}`);
-      res.json({ message: `Impulse of ${impulseAmount} injected`, state: liveEngine.getState() });
+      if (!liveEngine.marketOpen) {
+        return res.status(400).json({ message: "Market is closed" });
+      }
+
+      const result = liveEngine.acceptDiscount(userId);
+      if (!result.ok) {
+        return res.status(400).json({ message: result.error || "Not in queue" });
+      }
+
+      const { recordWalletPayout } = await import("./market-governor");
+      recordWalletPayout(userId, result.payout, `Discount exit @ $${liveEngine.discountOffer}`);
+
+      console.log(`[ENGINE] Discount exit: ${userId} took $${result.payout} @ $${liveEngine.discountOffer}`);
+      res.json({ message: "Discount exit accepted", payout: result.payout, state: liveEngine.getState() });
     } catch (error) {
-      console.error("Engine impulse error:", error);
-      res.status(500).json({ message: "Failed to inject impulse" });
+      console.error("Engine discount exit error:", error);
+      res.status(500).json({ message: "Failed to process discount exit" });
     }
   });
 
@@ -5796,10 +5802,6 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       liveEngine.enterMarket(userId, parsedAmount);
       liveEngine.updatePrice();
-      const engineSettlement = liveEngine.settle();
-      if (engineSettlement) {
-        console.log(`[ENGINE] Cycle #${engineSettlement.cycle} settled! Price: ${engineSettlement.settlementPrice.toFixed(4)} | ROI: ${(engineSettlement.roi * 100).toFixed(1)}% | Floor: $${engineSettlement.floorPool.toFixed(2)} | House: $${engineSettlement.housePool.toFixed(2)}`);
-      }
 
       await enqueueTrader(order.id, userId, trackId, parsedAmount);
       const settlementTriggered = await checkAndTriggerSettlement();
