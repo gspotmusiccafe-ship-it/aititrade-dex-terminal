@@ -1099,20 +1099,32 @@ class MarketEngine {
     this.minMBBP = 1.01;
   }
 
+  private bounceDir: number = 1;
+  private bounceTicks: number = 0;
+
   updatePrice(): number {
     if (!this.marketOpen) return this.P_current;
 
     const fillRatio = this.totalVolume / this.targetVolume;
+    const ceiling = 0.01 + fillRatio * 0.89 + 0.10;
 
-    const baseVol = 0.001;
-    const maxVol = 0.03;
+    const baseVol = 0.005;
+    const maxVol = 0.04;
     const volatility = baseVol + (fillRatio * fillRatio) * (maxVol - baseVol);
 
-    const pullback = (this.P_current / 1.00) * 0.03;
-    const momentum = fillRatio * 0.02;
-    const gravity = 0.5 - pullback + momentum;
-    const drift = (Math.random() - gravity) * volatility;
-    this.P_current += drift;
+    this.bounceTicks++;
+    const bounceLen = 8 + Math.floor(Math.random() * 12);
+    if (this.bounceTicks >= bounceLen) {
+      this.bounceDir *= -1;
+      this.bounceTicks = 0;
+    }
+
+    if (this.P_current <= 0.015) this.bounceDir = 1;
+    if (this.P_current >= ceiling * 0.9) this.bounceDir = -1;
+
+    const jitter = (Math.random() - 0.5) * volatility * 0.4;
+    const push = this.bounceDir * volatility * (0.6 + Math.random() * 0.4);
+    this.P_current += push + jitter;
 
     if (this.P_current < 0.01) this.P_current = 0.01;
     if (this.P_current > 1.00) this.P_current = 1.00;
@@ -1120,7 +1132,7 @@ class MarketEngine {
     this.mbbp = parseFloat((1.00 + this.P_current).toFixed(4));
     if (this.mbbp < this.minMBBP) this.mbbp = this.minMBBP;
 
-    const discountSpread = 0.01 + fillRatio * 0.04 + Math.random() * 0.03;
+    const discountSpread = 0.005 + fillRatio * 0.02 + Math.random() * 0.015;
     this.discountOffer = parseFloat(Math.max(this.minMBBP, this.mbbp - discountSpread).toFixed(4));
 
     return this.P_current;
