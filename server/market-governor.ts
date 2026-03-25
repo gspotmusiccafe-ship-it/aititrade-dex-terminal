@@ -1588,6 +1588,13 @@ function buildMonitor(): MonitorSnapshot {
     cycleProgress: parseFloat(Math.min(cycleProgress, 1).toFixed(4)),
     kineticPulse: kinetic.pulse,
     cash: state.cash,
+    queue: liveEngine.queue.slice(0, 50).map((q, i) => ({
+      position: i + 1,
+      userId: q.userId.slice(0, 8) + "...",
+      amount: q.amount,
+      age: Math.floor((now - q.timestamp) / 1000),
+      status: q.status,
+    })),
     time: now,
   };
 }

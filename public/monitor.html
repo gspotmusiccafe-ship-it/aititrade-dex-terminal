@@ -122,6 +122,39 @@
     .diff-positive { color: #00ff99; }
     .diff-negative { color: #ff4d4d; }
     .diff-zero { color: #6b7685; }
+
+    .queue-list {
+      margin-top: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .queue-entry {
+      font-size: 12px;
+      font-family: monospace;
+      padding: 3px 0;
+      border-bottom: 1px solid #1a2332;
+    }
+
+    .queue-user {
+      color: #f0b90b;
+    }
+
+    .queue-age {
+      color: #6b7685;
+    }
+
+    .queue-status {
+      color: #4d94ff;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+
+    .queue-more {
+      color: #6b7685;
+      font-size: 11px;
+      padding-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -135,6 +168,11 @@
 
 <div class="box" id="cash">
   <h3>Cash Flow</h3>
+  <div style="color:#6b7685">Waiting for data...</div>
+</div>
+
+<div class="box" id="queue">
+  <h3>Settlement Queue</h3>
   <div style="color:#6b7685">Waiting for data...</div>
 </div>
 
