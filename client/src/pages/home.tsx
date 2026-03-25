@@ -13,6 +13,7 @@ import { Link } from "wouter";
 import { getPortal, PortalBadge, LivingTicker, usePortalConfigs } from "@/components/TradePortal";
 import { TrustTutorial } from "@/components/TrustTutorial";
 import GlobalTradePortal from "@/components/GlobalTradePortal";
+import { useEngineSocket } from "@/hooks/use-engine-socket";
 
 function generateSparklineData(seed: number, basePrice: number, points: number = 24): number[] {
   let s = seed;
@@ -62,55 +63,51 @@ function MomentumSparkline({ data, width = 120, height = 36, color }: { data: nu
   );
 }
 
-function MBBPIndicator({ basePrice, mbbPrice, mbbMultiplier, trackSeed, floorROI }: { basePrice: number; mbbPrice: number; mbbMultiplier: number; trackSeed: number; floorROI?: number }) {
-  const [tick, setTick] = useState(0);
+function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSeed }: { livePrice: number; liveMbbp: number; discountOffer: number; marketOpen: boolean; trackSeed: number }) {
+  const [history, setHistory] = useState<number[]>([]);
+  const [prevPrice, setPrevPrice] = useState(livePrice);
+
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 8000);
-    return () => clearInterval(iv);
-  }, []);
+    setHistory(prev => {
+      const next = [...prev, livePrice];
+      if (next.length > 24) next.shift();
+      return next;
+    });
+    setPrevPrice(livePrice);
+  }, [livePrice]);
 
-  const { liveMbbp, pctChange, sparkData, signal } = useMemo(() => {
-    const now = Date.now();
-    const minuteOfDay = new Date().getHours() * 60 + new Date().getMinutes();
-    const w1 = Math.sin((minuteOfDay / 1440) * Math.PI * 2) * 0.03;
-    const w2 = Math.sin((minuteOfDay / 360) * Math.PI * 2) * 0.02;
-    const w3 = Math.sin((now / 30000) * Math.PI * 2) * 0.015;
-    const swing = w1 + w2 + w3;
-    const kSwing = floorROI !== undefined ? (0.75 + (floorROI * 0.50)) : 1.0;
-    const kMult = 1 + ((mbbMultiplier - 1) * kSwing);
-    const livePrice = basePrice * (1 + swing);
-    const liveMbbp = parseFloat((livePrice * kMult).toFixed(2));
-    const baseMbbp = parseFloat((basePrice * kMult).toFixed(2));
-    const pctChange = baseMbbp > 0 ? parseFloat((((liveMbbp - baseMbbp) / baseMbbp) * 100).toFixed(1)) : 0;
-    const sparkData = generateSparklineData(trackSeed, baseMbbp, 24);
-    sparkData[sparkData.length - 1] = liveMbbp;
-    const signal = pctChange >= 15 ? "BUY" : pctChange >= 5 ? "BUY" : pctChange <= -5 ? "SELL" : "HOLD";
-    return { liveMbbp, pctChange, sparkData, signal };
-  }, [basePrice, mbbPrice, mbbMultiplier, trackSeed, tick, floorROI]);
-
-  const isUp = pctChange >= 0;
-  const pctColor = pctChange >= 15 ? "text-emerald-400" : pctChange >= 5 ? "text-lime-400" : pctChange <= -5 ? "text-red-400" : "text-amber-400";
+  const direction = livePrice >= prevPrice ? "UP" : "DOWN";
+  const isUp = direction === "UP";
+  const priceColor = isUp ? "text-emerald-400" : "text-red-400";
+  const mbbpColor = liveMbbp > 1.00 ? "text-amber-400" : "text-lime-400";
   const chartColor = isUp ? "#4ade80" : "#f87171";
-  const signalColor = signal === "BUY" ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : signal === "SELL" ? "text-red-400 bg-red-500/10 border-red-500/30" : "text-amber-400 bg-amber-500/10 border-amber-500/30";
+  const sparkData = history.length >= 2 ? history : generateSparklineData(trackSeed, livePrice, 24);
 
   return (
     <div className="bg-zinc-900/80 border border-zinc-800 p-1.5 sm:p-2 mb-1.5 sm:mb-2" data-testid="mbbp-indicator">
       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
         <div className="flex items-center gap-1">
-          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">MBBP</span>
-          <span className={`text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
+          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">LIVE PRICE</span>
+          <span className={`text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 border font-extrabold ${marketOpen ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : "text-red-400 bg-red-500/10 border-red-500/30"}`}>
+            {marketOpen ? "OPEN" : "CLOSED"}
+          </span>
         </div>
         <div className="flex items-center gap-0.5">
           {isUp ? <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-emerald-400" /> : <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-400" />}
-          <span className={`text-[9px] sm:text-[10px] font-extrabold ${pctColor}`}>
-            {isUp ? "+" : ""}{pctChange}%
+          <span className={`text-[9px] sm:text-[10px] font-extrabold ${priceColor}`}>
+            ${livePrice.toFixed(2)}
           </span>
         </div>
       </div>
       <div className="flex items-end justify-between gap-1.5 sm:gap-2">
         <div>
-          <p className={`text-xs sm:text-sm font-black ${isUp ? "text-emerald-400" : "text-red-400"}`}>${liveMbbp.toFixed(2)}</p>
-          <p className="text-[7px] sm:text-[8px] text-zinc-600">BASE: ${mbbPrice.toFixed(2)}</p>
+          <p className={`text-xs sm:text-sm font-black ${mbbpColor}`}>MBBP ${liveMbbp.toFixed(2)}</p>
+          {discountOffer > 0 && (
+            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">DISCOUNT: ${discountOffer.toFixed(2)}</p>
+          )}
+          {discountOffer === 0 && (
+            <p className="text-[7px] sm:text-[8px] text-zinc-600">$0.01 — $1.00 RANGE</p>
+          )}
         </div>
         <MomentumSparkline data={sparkData} color={chartColor} />
       </div>
@@ -533,7 +530,7 @@ function useSettlementStatus() {
   });
 }
 
-function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; settlement?: SettlementStatus }) {
+function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineDiscount, engineMarketOpen, engineState }: { track: TrackWithArtist; onPlay: (t: TrackWithArtist) => void; settlement?: SettlementStatus; enginePrice: number; engineMbbp: number; engineDiscount: number; engineMarketOpen: boolean; engineState: any }) {
   const { currentTrack, isPlaying, togglePlay } = usePlayer();
   const isCurrentTrack = currentTrack?.id === track.id;
   const [mintReceipt, setMintReceipt] = useState<MintReceipt | null>(null);
@@ -560,24 +557,22 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   });
 
   const tradeMutation = useMutation({
-    mutationFn: (params: { type: string; lockedROI?: number }) =>
+    mutationFn: (params: { type: string }) =>
       apiRequest("POST", "/api/trade/execute", {
         trackId: track.id,
         amount: parseFloat((track as any).unitPrice || "2"),
         type: params.type,
-        lockedROI: params.lockedROI,
       }),
     onSuccess: async (res: any) => {
       const data = await res.json();
-      toast({ title: `${data.type} LOCKED`, description: `Position locked — $${data.projectedPayout} projected payout` });
+      toast({ title: `${data.type} LOCKED`, description: `Position locked — MBBP settlement queue` });
       queryClient.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
     },
     onError: (err: Error) => toast({ title: "TRADE FAILED", description: err.message, variant: "destructive" }),
   });
 
   const handleHoldPulse = () => {
-    if (!kineticState) return;
-    tradeMutation.mutate({ type: "HOLD_LOCK", lockedROI: kineticState.floorROI });
+    tradeMutation.mutate({ type: "HOLD_LOCK" });
   };
 
   const handleDiscountExit = () => {
@@ -598,23 +593,10 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const portal = getPortal(price);
   const poolCeiling = isGlobal ? CEILING : portal.pool;
   const ptCap = poolCeiling * 0.50;
-  const maxPayout = isGlobal
-    ? parseFloat((price * portal.mbb).toFixed(2))
-    : (() => {
-        const kPulse = kineticState ? kineticState.floorROI : 0.70;
-        const kSwing = 0.85 + (kPulse * 0.30);
-        return parseFloat((price * (1 + ((portal.mbb - 1) * kSwing))).toFixed(2));
-      })();
-  const earlyExit = isGlobal
-    ? parseFloat((price * portal.early).toFixed(2))
-    : (() => {
-        const kPulse = kineticState ? kineticState.floorROI : 0.70;
-        const kSwing = 0.85 + (kPulse * 0.30);
-        return parseFloat((price * (1 + ((portal.early - 1) * kSwing))).toFixed(2));
-      })();
-  const bbPrice = parseFloat((track as any).buyBackRate || maxPayout.toFixed(2));
-  const roi = price > 0 ? parseFloat((((maxPayout - price) / price) * 100).toFixed(0)) : 0;
-  const bbLabel = `$${maxPayout.toFixed(2)} (${roi}% ROI)`;
+  const liveMbbp = engineMbbp;
+  const liveDiscount = engineDiscount;
+  const mbbpLabel = `$${liveMbbp.toFixed(2)}`;
+  const discountLabel = liveDiscount > 0 ? `$${liveDiscount.toFixed(2)}` : "—";
   const minterFeeLabel = kineticState?.splitLabel || "LIVE";
   const grossSales = parseFloat((sales * price).toFixed(2));
 
@@ -625,6 +607,8 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
   const ksReached = settlement?.ksReached || 0;
   const fundAvailable = settlement?.fundAvailable || 0;
   const kineticPayout = kineticState ? (kineticState.floorPct * 10) : 500;
+  const floorPoolLive = engineState?.floorPool || 0;
+  const housePoolLive = engineState?.housePool || 0;
 
   const capacityPct = globalPct;
   const isSettlementClose = globalRemaining <= 200 && globalRemaining > 50;
@@ -796,24 +780,24 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
         </div>
         <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
           <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">BUY-BACK</p>
-            <p className={`text-[9px] sm:text-[11px] font-extrabold ${bbPrice >= 0.42 ? "text-amber-400" : "text-lime-400"}`}>▲ {bbLabel}</p>
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">MBBP</p>
+            <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveMbbp > 1.00 ? "text-amber-400" : "text-lime-400"}`} data-testid="card-mbbp">{mbbpLabel}</p>
           </div>
           <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">SPLIT</p>
-            <p className="text-[9px] sm:text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">DISCOUNT</p>
+            <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveDiscount > 0 ? "text-yellow-400 animate-pulse" : "text-zinc-600"}`} data-testid="card-discount">{discountLabel}</p>
           </div>
           <div className={`bg-zinc-900/80 p-0.5 sm:p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">YIELD</p>
-            <p className={`text-[9px] sm:text-[11px] font-extrabold ${isInspirational ? "text-violet-400" : capacityPct >= 45 ? "text-amber-400" : capacityPct >= 30 ? "text-lime-400" : "text-zinc-300"}`}>▲ {yieldPct}</p>
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">SPLIT</p>
+            <p className="text-[9px] sm:text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
           </div>
         </div>
 
         <MBBPIndicator
-          basePrice={price}
-          mbbPrice={maxPayout}
-          mbbMultiplier={portal.mbb}
-          floorROI={isGlobal ? undefined : kineticState?.floorROI}
+          livePrice={enginePrice}
+          liveMbbp={liveMbbp}
+          discountOffer={liveDiscount}
+          marketOpen={engineMarketOpen}
           trackSeed={parseInt(String(track.id).replace(/\D/g, '').slice(0, 8) || '12345')}
         />
 
@@ -1029,6 +1013,7 @@ export default function HomePage() {
   const autoPlayedRef = useRef(false);
   const [showIntel, setShowIntel] = useState(false);
   usePortalConfigs();
+  const { price: enginePrice, mbbp: engineMbbp, discountOffer: engineDiscount, marketOpen: engineMarketOpen, engineState, connected: engineConnected } = useEngineSocket();
 
   const { data: trustStatus } = useQuery<{ isMember: boolean }>({
     queryKey: ["/api/trust/status"],
@@ -1265,22 +1250,37 @@ export default function HomePage() {
 
       <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-4 text-[10px]">
-          <span className="text-zinc-600">POWERED BY:</span>
-          <span className="text-emerald-400">97.7 THE FLAME</span>
+          <span className={`font-bold ${engineConnected ? "text-emerald-400" : "text-red-400"}`}>
+            {engineConnected ? "● LIVE" : "○ OFFLINE"}
+          </span>
           <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">EVERY $1K =</span>
-          <span className="text-emerald-400">${kineticState ? (kineticState.floorPct * 10) : "LIVE"} PAYOUT</span>
+          <span className="text-zinc-600">PRICE:</span>
+          <span className="text-lime-400 font-bold">${enginePrice.toFixed(2)}</span>
           <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">SPLIT:</span>
-          <span className="text-emerald-400">{kineticState?.splitLabel || "LIVE"}</span>
+          <span className="text-zinc-600">MBBP:</span>
+          <span className="text-amber-400 font-bold">${engineMbbp.toFixed(2)}</span>
           <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">PORTALS:</span>
-          <span className="text-emerald-400">81 TERMINALS</span>
+          <span className="text-zinc-600">MARKET:</span>
+          <span className={`font-bold ${engineMarketOpen ? "text-emerald-400" : "text-red-400"}`}>
+            {engineMarketOpen ? "OPEN" : "CLOSED"}
+          </span>
           <span className="text-zinc-800">|</span>
+          <span className="text-zinc-600">QUEUE:</span>
+          <span className="text-white font-bold">{engineState?.queueSize || 0}</span>
+          <span className="text-zinc-800">|</span>
+          <span className="text-zinc-600">VOL:</span>
+          <span className="text-white font-bold">${engineState?.totalVolume?.toFixed(2) || "0.00"} / ${engineState?.targetVolume || 1000}</span>
+          {engineDiscount > 0 && (
+            <>
+              <span className="text-zinc-800">|</span>
+              <span className="text-yellow-400 font-bold animate-pulse">DISCOUNT: ${engineDiscount.toFixed(2)}</span>
+            </>
+          )}
           {settlementData && (
             <>
+              <span className="text-zinc-800">|</span>
               <span className={`font-bold ${(settlementData.nextKAt - settlementData.grossIntake) <= 100 ? "text-red-400 animate-pulse" : "text-lime-400"}`}>
-                ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 2 })} AWAY
+                ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 2 })} TO SETTLE
               </span>
             </>
           )}
@@ -1309,6 +1309,11 @@ export default function HomePage() {
                 track={track}
                 onPlay={(t) => playTrack(t, displayTracks)}
                 settlement={settlementData}
+                enginePrice={enginePrice}
+                engineMbbp={engineMbbp}
+                engineDiscount={engineDiscount}
+                engineMarketOpen={engineMarketOpen}
+                engineState={engineState}
               />
             ))}
             <GlobalTradePortal portalIndex={0} />

@@ -2687,21 +2687,23 @@ function KineticGovernorTab() {
             <Zap className="h-5 w-5" />
             KINETIC GOVERNOR
           </CardTitle>
-          <CardDescription>Live pulse oscillator controlling floor ROI distribution</CardDescription>
+          <CardDescription>Live pulse oscillator controlling floor/house split distribution</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
-              <p className="text-[10px] text-zinc-500 font-bold mb-1">FLOOR ROI</p>
-              <p className={`text-2xl font-black ${isHigh ? "floor-high-pulse" : "text-amber-400"}`}>
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">FLOOR SPLIT</p>
+              <p className={`text-2xl font-black ${isHigh ? "floor-high-pulse" : "text-lime-400"}`}>
                 {kineticState ? (kineticState.floorROI * 100).toFixed(0) : "—"}%
               </p>
+              <p className="text-[8px] text-zinc-600 mt-1">INVESTOR POOL</p>
             </div>
             <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
-              <p className="text-[10px] text-zinc-500 font-bold mb-1">HOUSE MBBP</p>
+              <p className="text-[10px] text-zinc-500 font-bold mb-1">HOUSE SPLIT</p>
               <p className="text-2xl font-black text-red-400">
                 {kineticState ? (kineticState.houseMBBP * 100).toFixed(0) : "—"}%
               </p>
+              <p className="text-[8px] text-zinc-600 mt-1">BROKERAGE TAKE</p>
             </div>
             <div className="bg-zinc-900 border border-emerald-500/20 p-4 text-center">
               <p className="text-[10px] text-zinc-500 font-bold mb-1">PULSE</p>
@@ -3894,13 +3896,11 @@ function PortalControlPanel() {
           <thead>
             <tr className="text-zinc-500 uppercase border-b border-zinc-800">
               <th className="text-left p-2">Portal</th>
-              <th className="text-right p-2">TBI ($)</th>
-              <th className="text-right p-2">MBB (x)</th>
-              <th className="text-right p-2">BB Price ($)</th>
-              <th className="text-right p-2">Early (x)</th>
-              <th className="text-right p-2">Early Price ($)</th>
-              <th className="text-right p-2">House Spread ($)</th>
+              <th className="text-right p-2">Entry ($)</th>
+              <th className="text-right p-2">Target Vol</th>
               <th className="text-right p-2">Pool ($)</th>
+              <th className="text-center p-2">Price Range</th>
+              <th className="text-center p-2">MBBP Rule</th>
               <th className="text-center p-2">Active</th>
               <th className="text-center p-2">Action</th>
             </tr>
@@ -3908,11 +3908,6 @@ function PortalControlPanel() {
           <tbody>
             {portals?.map((p) => {
               const tbi = parseFloat(p.tbi);
-              const mbb = parseFloat(p.mbb);
-              const early = parseFloat(p.early);
-              const bbPrice = (tbi * mbb).toFixed(2);
-              const earlyPrice = (tbi * early).toFixed(2);
-              const houseSpread = ((tbi * mbb) - (tbi * early)).toFixed(2);
               const isEditing = editing === p.id;
 
               return (
@@ -3922,12 +3917,10 @@ function PortalControlPanel() {
                   {isEditing ? (
                     <>
                       <td className="p-2"><input type="number" step="0.01" className="bg-black border border-lime-700 text-lime-400 p-1 w-20 text-right" value={form.tbi} onChange={e => setForm({...form, tbi: e.target.value})} data-testid="input-edit-tbi" /></td>
-                      <td className="p-2"><input type="number" step="0.01" className="bg-black border border-lime-700 text-lime-400 p-1 w-16 text-right" value={form.mbb} onChange={e => setForm({...form, mbb: e.target.value})} data-testid="input-edit-mbb" /></td>
-                      <td className="p-2 text-zinc-400 text-right">${(parseFloat(form.tbi || "0") * parseFloat(form.mbb || "0")).toFixed(2)}</td>
-                      <td className="p-2"><input type="number" step="0.01" className="bg-black border border-yellow-700 text-yellow-400 p-1 w-16 text-right" value={form.early} onChange={e => setForm({...form, early: e.target.value})} data-testid="input-edit-early" /></td>
-                      <td className="p-2 text-yellow-500 text-right">${(parseFloat(form.tbi || "0") * parseFloat(form.early || "0")).toFixed(2)}</td>
-                      <td className="p-2 text-lime-400 text-right font-bold">${((parseFloat(form.tbi || "0") * parseFloat(form.mbb || "0")) - (parseFloat(form.tbi || "0") * parseFloat(form.early || "0"))).toFixed(2)}</td>
+                      <td className="p-2 text-zinc-400 text-center">1K</td>
                       <td className="p-2"><input type="number" step="100" className="bg-black border border-zinc-700 text-white p-1 w-20 text-right" value={form.pool} onChange={e => setForm({...form, pool: e.target.value})} data-testid="input-edit-pool" /></td>
+                      <td className="p-2 text-amber-400 text-center">$0.01 — $1.00</td>
+                      <td className="p-2 text-lime-400 text-center">CLOSE + $1.00</td>
                       <td className="p-2 text-center">
                         <button onClick={() => setForm({...form, isActive: !form.isActive})} className={`text-[10px] px-2 py-0.5 border ${form.isActive ? "border-lime-500 text-lime-400" : "border-red-500 text-red-400"}`} data-testid="button-toggle-active">
                           {form.isActive ? "ON" : "OFF"}
@@ -3956,12 +3949,10 @@ function PortalControlPanel() {
                   ) : (
                     <>
                       <td className="p-2 text-white text-right">${tbi.toFixed(2)}</td>
-                      <td className="p-2 text-zinc-300 text-right">{mbb.toFixed(2)}x</td>
-                      <td className="p-2 text-zinc-400 text-right">${bbPrice}</td>
-                      <td className="p-2 text-yellow-500 text-right">{early.toFixed(2)}x</td>
-                      <td className="p-2 text-yellow-500 text-right">${earlyPrice}</td>
-                      <td className="p-2 text-lime-400 text-right font-bold">${houseSpread}</td>
+                      <td className="p-2 text-zinc-300 text-center">1K</td>
                       <td className="p-2 text-white text-right">${p.pool.toLocaleString()}</td>
+                      <td className="p-2 text-amber-400 text-center">$0.01 — $1.00</td>
+                      <td className="p-2 text-lime-400 text-center font-bold">CLOSE + $1.00</td>
                       <td className="p-2 text-center">
                         <span className={`text-[10px] ${p.isActive ? "text-lime-400" : "text-red-400"}`}>{p.isActive ? "ON" : "OFF"}</span>
                       </td>
@@ -3987,34 +3978,30 @@ function PortalControlPanel() {
       {msg && <p className={`mt-3 text-[10px] ${msg.includes("UPDATED") || msg.includes("Saved") ? "text-lime-500" : "text-red-500"}`}>{msg}</p>}
 
       <div className="mt-6 p-4 border border-lime-700/30 bg-lime-950/10">
-        <p className="text-lime-400 text-xs font-mono font-bold mb-3 uppercase">UPDATE ALL TERMINALS AT ONCE</p>
-        <div className="flex gap-3 items-end flex-wrap">
-          <div>
-            <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">NEW MBB (x) FOR ALL</label>
-            <input type="number" step="0.01" value={bulkMbb} onChange={e => setBulkMbb(e.target.value)}
-              placeholder="e.g. 3.50"
-              className="bg-black border border-lime-700 text-lime-400 p-2 w-24 text-right text-xs font-mono"
-              data-testid="input-bulk-mbb" />
+        <p className="text-lime-400 text-xs font-mono font-bold mb-3 uppercase">ENGINE MATH SUMMARY</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+          <div className="bg-zinc-900 border border-zinc-800 p-3">
+            <p className="text-[9px] text-zinc-500 font-bold">PRICE RANGE</p>
+            <p className="text-sm text-amber-400 font-black">$0.01 — $1.00</p>
           </div>
-          <div>
-            <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">NEW EARLY (x) FOR ALL</label>
-            <input type="number" step="0.01" value={bulkEarly} onChange={e => setBulkEarly(e.target.value)}
-              placeholder="e.g. 2.00"
-              className="bg-black border border-yellow-700 text-yellow-400 p-2 w-24 text-right text-xs font-mono"
-              data-testid="input-bulk-early" />
+          <div className="bg-zinc-900 border border-zinc-800 p-3">
+            <p className="text-[9px] text-zinc-500 font-bold">MBBP FORMULA</p>
+            <p className="text-sm text-lime-400 font-black">CLOSE + $1.00</p>
           </div>
-          <button type="button" onClick={updateAllPortals}
-            disabled={bulkSaving || (!bulkMbb && !bulkEarly)}
-            className="relative z-10 cursor-pointer bg-lime-600 hover:bg-lime-500 text-black font-mono font-black py-2 px-6 text-xs disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 transition-all"
-            data-testid="button-update-all-terminals">
-            {bulkSaving ? "UPDATING..." : "UPDATE ALL TERMINALS"}
-          </button>
+          <div className="bg-zinc-900 border border-zinc-800 p-3">
+            <p className="text-[9px] text-zinc-500 font-bold">CLOSE AT</p>
+            <p className="text-sm text-white font-black">1K VOLUME</p>
+          </div>
+          <div className="bg-zinc-900 border border-zinc-800 p-3">
+            <p className="text-[9px] text-zinc-500 font-bold">SETTLEMENT</p>
+            <p className="text-sm text-emerald-400 font-black">FIFO QUEUE</p>
+          </div>
         </div>
-        <p className="text-zinc-600 text-[9px] font-mono mt-2">Set a value in either field and hit UPDATE — applies to all 6 portals instantly.</p>
+        <p className="text-zinc-600 text-[9px] font-mono mt-3">Price bounces $0.01–$1.00 while market is open. At 1K volume, market closes. MBBP = close price + $1.00. Discounters settle first in queue. All payouts from floor pool.</p>
       </div>
 
       <div className="mt-4 text-[10px] text-zinc-600 italic">
-        *TBI = Trade Buy-In threshold. MBB = Max Buy-Back multiplier. Early = Early Exit multiplier. Pool = Pool ceiling in USD.
+        *TBI = Trade Buy-In entry price. Pool = Pool ceiling in USD. MBBP = Maximum Buy-Back Price (close + $1.00). Settlement is FIFO — first in, first paid.
       </div>
     </div>
   );
@@ -4036,7 +4023,7 @@ function GlobalLedger() {
 
   return (
     <div className="mt-6 border border-zinc-800 bg-black p-4 font-mono text-[11px]" data-testid="global-ledger">
-      <h3 className="text-zinc-400 text-xs font-bold uppercase mb-3 tracking-wider">Early Exit Ledger</h3>
+      <h3 className="text-zinc-400 text-xs font-bold uppercase mb-3 tracking-wider">Discount Exit Ledger</h3>
       <div className="grid grid-cols-5 text-zinc-500 uppercase border-b border-zinc-800 pb-2 mb-2">
         <span>Asset ID</span>
         <span>Buy-In (TBI)</span>
@@ -4380,7 +4367,7 @@ function TreasuryDashboard() {
         </h2>
         <div className="text-[10px] text-zinc-500 text-right">
           STATUS: SYSTEM ACTIVE<br />
-          PORTALS: 700 / 1K / 2K / 3K / 5K
+          PRICE RANGE: $0.01 — $1.00 | MBBP = CLOSE + $1.00
         </div>
       </div>
 
@@ -4390,7 +4377,7 @@ function TreasuryDashboard() {
           <p className="text-3xl text-white font-bold" data-testid="treasury-total-revenue">
             ${stats?.totalRevenue?.toLocaleString() || "0.00"}
           </p>
-          <p className="text-[10px] text-lime-600 mt-2">↑ 150% Spread Retention Active</p>
+          <p className="text-[10px] text-lime-600 mt-2">↑ House pool from all cycles</p>
         </div>
 
         <div className="bg-zinc-950 p-4 border-l-2 border-zinc-700">
@@ -4402,24 +4389,24 @@ function TreasuryDashboard() {
         </div>
 
         <div className="bg-zinc-950 p-4 border-l-2 border-yellow-600">
-          <p className="text-zinc-500 text-xs uppercase mb-1">Early Payouts Issued</p>
+          <p className="text-zinc-500 text-xs uppercase mb-1">Discount Payouts Issued</p>
           <p className="text-3xl text-yellow-500 font-bold" data-testid="treasury-early-payouts">
             ${stats?.earlyPayouts?.toLocaleString() || "0.00"}
           </p>
-          <p className="text-[10px] text-zinc-600 mt-2">Users paid first at lower offers</p>
+          <p className="text-[10px] text-zinc-600 mt-2">Discount exits settled first in queue</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-6 mt-6">
         <div className="bg-zinc-950 p-4 border border-zinc-800">
-          <p className="text-zinc-500 text-xs uppercase mb-1">Early Exits</p>
+          <p className="text-zinc-500 text-xs uppercase mb-1">Discount Exits</p>
           <p className="text-2xl text-lime-400 font-bold" data-testid="treasury-settled-count">{stats?.settledCount || 0}</p>
-          <p className="text-[10px] text-zinc-600 mt-1">Positions closed at early rate</p>
+          <p className="text-[10px] text-zinc-600 mt-1">Positions closed at discount rate</p>
         </div>
         <div className="bg-zinc-950 p-4 border border-zinc-800">
           <p className="text-zinc-500 text-xs uppercase mb-1">Active Positions</p>
           <p className="text-2xl text-white font-bold" data-testid="treasury-holding-count">{stats?.holdingCount || 0}</p>
-          <p className="text-[10px] text-zinc-600 mt-1">Holding for MBB settlement</p>
+          <p className="text-[10px] text-zinc-600 mt-1">Holding for MBBP settlement at close</p>
         </div>
       </div>
 

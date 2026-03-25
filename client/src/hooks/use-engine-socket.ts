@@ -12,12 +12,18 @@ export interface EngineCandle {
 
 export interface EngineState {
   price: number;
+  mbbp: number;
+  discountOffer: number;
+  marketOpen: boolean;
+  closePrice: number;
   totalVolume: number;
   targetVolume: number;
   demand: number;
   supply: number;
   floorPercent: number;
   housePercent: number;
+  floorPool: number;
+  housePool: number;
   cycle: number;
   queueSize: number;
   fillPct: number;
@@ -25,7 +31,10 @@ export interface EngineState {
 }
 
 export function useEngineSocket() {
-  const [price, setPrice] = useState(1.0);
+  const [price, setPrice] = useState(0.01);
+  const [mbbp, setMbbp] = useState(1.01);
+  const [discountOffer, setDiscountOffer] = useState(0);
+  const [marketOpen, setMarketOpen] = useState(true);
   const [candle, setCandle] = useState<EngineCandle | null>(null);
   const [candles, setCandles] = useState<EngineCandle[]>([]);
   const [engineState, setEngineState] = useState<EngineState | null>(null);
@@ -51,14 +60,31 @@ export function useEngineSocket() {
       });
     });
 
-    socket.on("engineState", (s: EngineState) => setEngineState(s));
+    socket.on("engineState", (s: EngineState) => {
+      setEngineState(s);
+      setMbbp(s.mbbp);
+      setDiscountOffer(s.discountOffer);
+      setMarketOpen(s.marketOpen);
+    });
+
+    socket.on("mbbp", (data: { mbbp: number; discountOffer: number; marketOpen: boolean }) => {
+      setMbbp(data.mbbp);
+      setDiscountOffer(data.discountOffer);
+      setMarketOpen(data.marketOpen);
+    });
 
     socket.on("halt", () => setHalted(true));
+
+    socket.on("market_reset", () => {
+      setMarketOpen(true);
+      setPrice(0.01);
+      setMbbp(1.01);
+    });
 
     return () => {
       socket.disconnect();
     };
   }, []);
 
-  return { price, candle, candles, engineState, halted, connected };
+  return { price, mbbp, discountOffer, marketOpen, candle, candles, engineState, halted, connected };
 }
