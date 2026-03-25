@@ -1061,6 +1061,7 @@ class MarketEngine {
   floorPercent: number;
   housePercent: number;
   cycle: number;
+  cash: { deposits: number; entries: number; totalIn: number; lastDeposit: number; lastEntry: number };
 
   constructor() {
     this.P_current = 1.0;
@@ -1072,6 +1073,7 @@ class MarketEngine {
     this.floorPercent = 0.5;
     this.housePercent = 0.5;
     this.cycle = 1;
+    this.cash = { deposits: 0, entries: 0, totalIn: 0, lastDeposit: 0, lastEntry: 0 };
   }
 
   updatePrice(): number {
@@ -1092,7 +1094,17 @@ class MarketEngine {
     });
     this.totalVolume += amount;
     this.demand += amount;
+    this.cash.entries += amount;
+    this.cash.totalIn += amount;
+    this.cash.lastEntry = Date.now();
     return this.queue.length;
+  }
+
+  recordDeposit(amount: number): void {
+    this.cash.deposits += amount;
+    this.cash.totalIn += amount;
+    this.cash.lastDeposit = Date.now();
+    logEvent("DEPOSIT", { amount, totalDeposits: this.cash.deposits, totalIn: this.cash.totalIn });
   }
 
   impulse(amount: number): void {
@@ -1164,6 +1176,13 @@ class MarketEngine {
       queueSize: this.queue.length,
       fillPct: parseFloat(((this.totalVolume / this.targetVolume) * 100).toFixed(1)),
       safeStop: this.safeStop(),
+      cash: {
+        deposits: parseFloat(this.cash.deposits.toFixed(2)),
+        entries: parseFloat(this.cash.entries.toFixed(2)),
+        totalIn: parseFloat(this.cash.totalIn.toFixed(2)),
+        lastDeposit: this.cash.lastDeposit,
+        lastEntry: this.cash.lastEntry,
+      },
     };
   }
 }
@@ -1194,6 +1213,7 @@ function saveState(): void {
       cycle: liveEngine.cycle,
       demand: liveEngine.demand,
       supply: liveEngine.supply,
+      cash: liveEngine.cash,
       savedAt: Date.now(),
     };
     fs.writeFileSync(STATE_FILE, JSON.stringify(snapshot, null, 2));
@@ -1211,7 +1231,16 @@ function loadState(): void {
     if (data.cycle) liveEngine.cycle = data.cycle;
     if (data.demand) liveEngine.demand = data.demand;
     if (data.supply) liveEngine.supply = data.supply;
-    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: ${liveEngine.P_current.toFixed(4)}`);
+    if (data.cash) {
+      liveEngine.cash = {
+        deposits: data.cash.deposits || 0,
+        entries: data.cash.entries || 0,
+        totalIn: data.cash.totalIn || 0,
+        lastDeposit: data.cash.lastDeposit || 0,
+        lastEntry: data.cash.lastEntry || 0,
+      };
+    }
+    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: ${liveEngine.P_current.toFixed(4)}, Cash: $${liveEngine.cash.totalIn.toFixed(2)}`);
   } catch (e) {
     console.error("[ENGINE] State load error:", e);
   }
@@ -1311,13 +1340,14 @@ function clampPrice(): void {
 }
 
 function emergencyReset(): void {
-  logEvent("emergency_reset", { priceBefore: liveEngine.P_current, cycleBefore: liveEngine.cycle });
+  logEvent("emergency_reset", { priceBefore: liveEngine.P_current, cycleBefore: liveEngine.cycle, cashSnapshot: { ...liveEngine.cash } });
   liveEngine.queue = [];
   liveEngine.demand = 0;
   liveEngine.supply = 0;
   liveEngine.totalVolume = 0;
   liveEngine.P_current = 1.0;
-  console.log("[ENGINE] EMERGENCY RESET — All positions cleared, price reset to 1.0");
+  liveEngine.cash = { deposits: 0, entries: 0, totalIn: 0, lastDeposit: 0, lastEntry: 0 };
+  console.log("[ENGINE] EMERGENCY RESET — All positions cleared, price reset to 1.0, cash zeroed");
 }
 
 function liquidationCheck(): boolean {
@@ -1524,6 +1554,7 @@ function buildMonitor(): MonitorSnapshot {
     queueDepth: state.queueSize,
     cycleProgress: parseFloat(Math.min(cycleProgress, 1).toFixed(4)),
     kineticPulse: kinetic.pulse,
+    cash: state.cash,
     time: now,
   };
 }
