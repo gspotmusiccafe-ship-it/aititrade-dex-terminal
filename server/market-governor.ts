@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { tracks, orders, portalSettings, settlementQueue, settlementCycles } from "@shared/schema";
-import { desc, sql, eq, asc, and, inArray } from "drizzle-orm";
+import { desc, sql, eq, asc, and, inArray, isNotNull } from "drizzle-orm";
 
 let FLOOR_SPLIT = 0.54;
 let CEO_SPLIT = 0.46;
@@ -679,7 +679,12 @@ export async function enqueueTrader(
 export async function getGrossIntake(): Promise<number> {
   const [result] = await db.select({
     total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
-  }).from(orders);
+  }).from(orders).where(
+    and(
+      isNotNull(orders.buyerEmail),
+      sql`${orders.buyerEmail} != ''`
+    )
+  );
   return parseFloat(result?.total || "0");
 }
 

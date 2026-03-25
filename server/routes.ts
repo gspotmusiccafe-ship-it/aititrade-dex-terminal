@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
-import { eq, and, or, desc, asc, sql, count, inArray, isNull } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
@@ -1359,6 +1359,7 @@ export async function registerRoutes(
         avgPrice: sql<string>`ROUND(AVG(CAST(unit_price AS DECIMAL)), 2)`,
       })
       .from(orders)
+      .where(and(isNotNull(orders.buyerEmail), sql`${orders.buyerEmail} != ''`))
       .groupBy(orders.buyerEmail, orders.buyerName)
       .orderBy(sql`SUM(CAST(unit_price AS DECIMAL)) DESC`)
       .limit(50);

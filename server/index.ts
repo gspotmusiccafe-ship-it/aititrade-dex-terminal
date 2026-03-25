@@ -127,6 +127,16 @@ app.use((req, res, next) => {
     }
     if (fixed > 0) console.log(`[CLEANUP] Fixed ${fixed} track prices to valid entries, reset all counts`);
 
+    const fakeOrders = (await db.execute(sql`SELECT id FROM orders WHERE buyer_email IS NULL OR buyer_email = ''`)).rows as any[];
+    if (fakeOrders.length > 0) {
+      const fakeIds = fakeOrders.map((o: any) => o.id);
+      for (const fid of fakeIds) {
+        await db.execute(sql`DELETE FROM settlement_queue WHERE order_id = ${fid}`);
+        await db.execute(sql`DELETE FROM orders WHERE id = ${fid}`);
+      }
+      console.log(`[CLEANUP] Purged ${fakeOrders.length} fake orders (no buyer email)`);
+    }
+
     const [candyCheck] = (await db.execute(sql`SELECT id FROM tracks WHERE title = 'CANDY MAN'`)).rows as any[];
     if (!candyCheck) {
       const [artist] = (await db.execute(sql`SELECT id FROM artists WHERE user_id = '31bohcbsxlhgbxwskjpbai674pta' LIMIT 1`)).rows as any[];

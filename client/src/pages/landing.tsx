@@ -623,7 +623,9 @@ export default function LandingPage() {
             <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-white mb-2" data-testid="text-radio-hero-title">
               AITITRADE <span className="text-emerald-400">DEX</span>
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-lg mx-auto mt-4">WELCOME TO THE AITITRADE DEX, THE PLACE WHERE THE PENNY IS KING. YOU HAVE ENTERED THE PLACE OF HIGH VELOCITY PENNY TRADING, HERE PENNIES HELP OTHER PENNIES PROSPER, COME IN AND ENJOY THE POWER OF COMPOUNDING THE VALUE OF THE PENNY</p>
+            <p className="text-xs sm:text-sm text-zinc-500 max-w-lg mx-auto">
+              DIGITAL ASSET EXCHANGE — AI-POWERED MUSIC ASSETS
+            </p>
           </div>
 
           <StimulationBoard onSignup={() => openAuth("signup")} />
