@@ -1176,4 +1176,12 @@ function syncEngineWithKinetic(): void {
 syncEngineWithKinetic();
 setInterval(syncEngineWithKinetic, 10000);
 
+setInterval(() => {
+  liveEngine.updatePrice();
+  const stop = liveEngine.safeStop();
+  if (stop.stopped) {
+    console.log(`[ENGINE] SAFE STOP TRIGGERED — Price: ${stop.price.toFixed(4)} | Cycle frozen`);
+  }
+}, 1000);
+
 export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic, MarketEngine, liveEngine };
