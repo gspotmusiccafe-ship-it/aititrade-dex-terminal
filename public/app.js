@@ -1,6 +1,6 @@
-const socket = io(window.location.origin, { path: "/ws" });
+var socket = io(window.location.origin, { path: "/ws" });
 
-const chart = LightweightCharts.createChart(document.getElementById("chart"), {
+var chart = LightweightCharts.createChart(document.getElementById("chart"), {
   layout: {
     background: { color: "#0b0f14" },
     textColor: "#d1d4dc",
@@ -24,7 +24,7 @@ const chart = LightweightCharts.createChart(document.getElementById("chart"), {
   },
 });
 
-const candleSeries = chart.addCandlestickSeries({
+var candleSeries = chart.addCandlestickSeries({
   upColor: "#00ff99",
   downColor: "#ff4d4d",
   borderUpColor: "#00ff99",
@@ -33,7 +33,7 @@ const candleSeries = chart.addCandlestickSeries({
   wickDownColor: "#ff4d4d88",
 });
 
-const volumeSeries = chart.addHistogramSeries({
+var volumeSeries = chart.addHistogramSeries({
   priceFormat: { type: "volume" },
   priceScaleId: "",
   color: "#26a69a",
@@ -42,37 +42,37 @@ volumeSeries.priceScale().applyOptions({
   scaleMargins: { top: 0.85, bottom: 0 },
 });
 
-window.addEventListener("resize", () => {
-  const el = document.getElementById("chart");
+window.addEventListener("resize", function () {
+  var el = document.getElementById("chart");
   chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
 });
-setTimeout(() => {
-  const el = document.getElementById("chart");
+setTimeout(function () {
+  var el = document.getElementById("chart");
   chart.applyOptions({ width: el.clientWidth, height: el.clientHeight });
 }, 100);
 
-let lastPrice = 1.0;
-let prevPrice = 1.0;
+var lastPrice = 1.0;
+var prevPrice = 1.0;
 
-socket.on("connect", () => {
+socket.on("connect", function () {
   document.getElementById("statusDot").classList.add("live");
   document.getElementById("statusText").textContent = "LIVE";
 });
 
-socket.on("disconnect", () => {
+socket.on("disconnect", function () {
   document.getElementById("statusDot").classList.remove("live");
   document.getElementById("statusText").textContent = "OFFLINE";
 });
 
-socket.on("price", (p) => {
+socket.on("price", function (p) {
   prevPrice = lastPrice;
   lastPrice = p;
-  const priceEl = document.getElementById("topPrice");
+  var priceEl = document.getElementById("topPrice");
   priceEl.textContent = p.toFixed(4);
   priceEl.classList.toggle("down", p < prevPrice);
 });
 
-socket.on("candle", (c) => {
+socket.on("candle", function (c) {
   candleSeries.update(c);
 
   volumeSeries.update({
@@ -81,12 +81,12 @@ socket.on("candle", (c) => {
     color: c.close >= c.open ? "#00ff9933" : "#ff4d4d33",
   });
 
-  const type = c.close >= prevPrice ? "buy" : "sell";
+  var type = c.close >= prevPrice ? "buy" : "sell";
   addTrade(type, c.close, c.time);
   prevPrice = c.close;
 });
 
-socket.on("engineState", (s) => {
+socket.on("engineState", function (s) {
   document.getElementById("topVolume").textContent = "$" + s.totalVolume.toFixed(2);
   document.getElementById("topCycle").textContent = s.cycle;
   document.getElementById("topFill").textContent = s.fillPct.toFixed(1) + "%";
@@ -95,23 +95,23 @@ socket.on("engineState", (s) => {
   document.getElementById("mSupply").textContent = s.supply;
   document.getElementById("mQueue").textContent = s.queueSize;
 
-  const fillPct = Math.min(100, s.fillPct);
-  const fillBar = document.getElementById("fillBar");
+  var fillPct = Math.min(100, s.fillPct);
+  var fillBar = document.getElementById("fillBar");
   fillBar.style.width = fillPct + "%";
   if (fillPct >= 90) fillBar.style.background = "#ff4d4d";
   else if (fillPct >= 50) fillBar.style.background = "#f59e0b";
   else fillBar.style.background = "#00ff99";
 
-  const floorPct = Math.round(s.floorPercent * 100);
-  const housePct = Math.round(s.housePercent * 100);
-  const sf = document.getElementById("splitFloor");
-  const sh = document.getElementById("splitHouse");
+  var floorPct = Math.round(s.floorPercent * 100);
+  var housePct = Math.round(s.housePercent * 100);
+  var sf = document.getElementById("splitFloor");
+  var sh = document.getElementById("splitHouse");
   sf.style.width = floorPct + "%";
   sf.textContent = "FLOOR " + floorPct + "%";
   sh.style.width = housePct + "%";
   sh.textContent = "HOUSE " + housePct + "%";
 
-  const safeEl = document.getElementById("mSafe");
+  var safeEl = document.getElementById("mSafe");
   if (s.safeStop.stopped) {
     safeEl.textContent = "HALTED";
     safeEl.className = "metric-value red";
@@ -119,14 +119,6 @@ socket.on("engineState", (s) => {
     safeEl.textContent = "OK";
     safeEl.className = "metric-value green";
   }
-
-  const book = generateOrderBook(s.price);
-  renderBook(book.bids, "bids", "bid");
-  renderBook(book.asks, "asks", "ask");
-  const spread = book.asks.length && book.bids.length
-    ? (book.asks[0].price - book.bids[0].price).toFixed(4)
-    : "—";
-  document.getElementById("spreadRow").textContent = "SPREAD: " + spread;
 
   document.getElementById("tickerTape").textContent =
     "AITITRADE | CYCLE #" + s.cycle +
@@ -139,35 +131,114 @@ socket.on("engineState", (s) => {
     " | " + new Date().toLocaleTimeString();
 });
 
-socket.on("halt", () => {
+socket.on("global_index", function (data) {
+  var el = document.getElementById("globalIndex");
+  if (el) el.textContent = data.value.toFixed(4);
+});
+
+socket.on("orderbook", function (book) {
+  renderBook(book.bids, "bids", "bid");
+  renderBook(book.asks, "asks", "ask");
+  var spread = book.asks.length && book.bids.length
+    ? (book.asks[0].price - book.bids[0].price).toFixed(4)
+    : "---";
+  document.getElementById("spreadRow").textContent = "SPREAD: " + spread;
+});
+
+socket.on("impulse", function (data) {
+  triggerImpulseEffect(data.amount, data.price);
+
+  document.getElementById("bids").style.background = "rgba(0,255,150,0.05)";
+  document.getElementById("asks").style.background = "rgba(255,0,0,0.05)";
+  setTimeout(function () {
+    document.getElementById("bids").style.background = "transparent";
+    document.getElementById("asks").style.background = "transparent";
+  }, 200);
+});
+
+socket.on("liquidation", function (data) {
+  var chartEl = document.getElementById("chart");
+  chartEl.style.background = "rgba(255,0,0,0.15)";
+  setTimeout(function () {
+    chartEl.style.background = "transparent";
+  }, 400);
+
+  var liqDiv = document.createElement("div");
+  liqDiv.className = "trade-row sell";
+  liqDiv.innerHTML =
+    '<span class="trade-price" style="color:#ff4d4d;font-weight:900;">LIQUIDATION @ $' +
+    data.price.toFixed(4) + '</span>' +
+    '<span class="trade-time">INT: ' + data.intensity.toFixed(1) + '</span>';
+  var trades = document.getElementById("trades");
+  trades.prepend(liqDiv);
+  if (trades.children.length > 30) {
+    trades.removeChild(trades.lastChild);
+  }
+});
+
+socket.on("replay_event", function (event) {
+  console.log("REPLAY:", event.type, event.payload);
+  var div = document.createElement("div");
+  div.className = "trade-row buy";
+  div.innerHTML =
+    '<span class="trade-price" style="color:#a78bfa;font-weight:700;">REPLAY: ' +
+    event.type + '</span>' +
+    '<span class="trade-time">' + new Date(event.time).toLocaleTimeString() + '</span>';
+  var trades = document.getElementById("trades");
+  trades.prepend(div);
+  if (trades.children.length > 30) {
+    trades.removeChild(trades.lastChild);
+  }
+});
+
+socket.on("halt", function () {
   document.getElementById("haltOverlay").classList.add("active");
 });
 
-function generateOrderBook(price) {
-  const bids = [];
-  const asks = [];
-  for (let i = 0; i < 10; i++) {
-    bids.push({
-      price: +(price - (i + 1) * 0.0050).toFixed(4),
-      size: +(Math.random() * 5 + 0.1).toFixed(2),
-    });
-    asks.push({
-      price: +(price + (i + 1) * 0.0050).toFixed(4),
-      size: +(Math.random() * 5 + 0.1).toFixed(2),
-    });
-  }
-  return { bids, asks };
+function triggerImpulseEffect(amount, price) {
+  var chartEl = document.getElementById("chart");
+
+  var pulse = document.createElement("div");
+  pulse.style.position = "absolute";
+  pulse.style.left = "50%";
+  pulse.style.top = "40%";
+  pulse.style.transform = "translate(-50%, -50%)";
+  pulse.style.width = "20px";
+  pulse.style.height = "20px";
+  pulse.style.borderRadius = "50%";
+  pulse.style.background = "rgba(0,255,150,0.6)";
+  pulse.style.boxShadow = "0 0 30px rgba(0,255,150,0.8)";
+  pulse.style.zIndex = "999";
+  pulse.style.pointerEvents = "none";
+
+  chartEl.style.position = "relative";
+  chartEl.appendChild(pulse);
+
+  var scale = 1;
+  var opacity = 1;
+
+  var anim = setInterval(function () {
+    scale += 0.2;
+    opacity -= 0.05;
+    pulse.style.transform = "translate(-50%, -50%) scale(" + scale + ")";
+    pulse.style.opacity = opacity;
+
+    if (opacity <= 0) {
+      clearInterval(anim);
+      pulse.remove();
+    }
+  }, 30);
 }
 
 function renderBook(levels, containerId, side) {
-  const container = document.getElementById(containerId);
+  var container = document.getElementById(containerId);
   container.innerHTML = "";
-  const maxSize = Math.max(...levels.map((l) => l.size), 1);
+  var maxSize = Math.max.apply(null, levels.map(function (l) { return l.size; }).concat([1]));
 
-  levels.forEach((level) => {
-    const div = document.createElement("div");
+  levels.forEach(function (level) {
+    var div = document.createElement("div");
     div.className = "book-row " + side;
-    const bgWidth = ((level.size / maxSize) * 100).toFixed(0);
+    var bgWidth = ((level.size / maxSize) * 100).toFixed(0);
     div.innerHTML =
       '<div class="book-bg" style="width:' + bgWidth + '%"></div>' +
       '<span class="book-price">' + level.price.toFixed(4) + "</span>" +
@@ -177,15 +248,15 @@ function renderBook(levels, containerId, side) {
 }
 
 function addTrade(type, price, time) {
-  const div = document.createElement("div");
+  var div = document.createElement("div");
   div.className = "trade-row " + type;
-  const ts = new Date(time * 1000);
-  const timeStr = ts.toLocaleTimeString();
+  var ts = new Date(time * 1000);
+  var timeStr = ts.toLocaleTimeString();
   div.innerHTML =
     '<span class="trade-price">' + type.toUpperCase() + " @ $" + price.toFixed(4) + "</span>" +
     '<span class="trade-time">' + timeStr + "</span>";
 
-  const trades = document.getElementById("trades");
+  var trades = document.getElementById("trades");
   trades.prepend(div);
   if (trades.children.length > 30) {
     trades.removeChild(trades.lastChild);
@@ -193,15 +264,15 @@ function addTrade(type, price, time) {
 }
 
 function doBuy() {
-  fetch("/buy?user=live-trader-" + Date.now())
-    .then((r) => r.json())
-    .then((d) => console.log("BUY:", d))
-    .catch((e) => console.error("BUY ERROR:", e));
+  fetch("/buy?user=live-trader-" + Date.now() + "&amount=1")
+    .then(function (r) { return r.json(); })
+    .then(function (d) { console.log("BUY:", d); })
+    .catch(function (e) { console.error("BUY ERROR:", e); });
 }
 
 function doImpulse() {
   fetch("/impulse?amount=10")
-    .then((r) => r.json())
-    .then((d) => console.log("IMPULSE:", d))
-    .catch((e) => console.error("IMPULSE ERROR:", e));
+    .then(function (r) { return r.json(); })
+    .then(function (d) { console.log("IMPULSE:", d); })
+    .catch(function (e) { console.error("IMPULSE ERROR:", e); });
 }

@@ -15,7 +15,7 @@ import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, liveEngine } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, computeGlobalIndex, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -5861,14 +5861,85 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.get("/buy", (req, res) => {
     const userId = (req.query.user as string) || "anon";
-    const pos = liveEngine.enterMarket(userId, 1);
+    const amount = Number(req.query.amount || 1);
+    const pos = enterSafe(userId);
+    if (pos === null) {
+      return res.status(429).json({ status: "busy", message: "Queue locked, try again" });
+    }
+    addPosition(userId, amount, liveEngine.P_current);
     res.json({ status: "ok", queuePosition: pos, price: liveEngine.P_current });
   });
 
   app.get("/impulse", (req, res) => {
     const amt = Number(req.query.amount || 1);
     liveEngine.impulse(amt);
+
+    const eio = getEngineIO();
+    if (eio) {
+      eio.emit("impulse", {
+        amount: amt,
+        price: liveEngine.P_current,
+        time: Date.now(),
+      });
+    }
+    logEvent("impulse", { amount: amt, price: liveEngine.P_current });
+
     res.json({ status: "impulse fired", price: liveEngine.P_current });
+  });
+
+  app.get("/api/engine/portfolio", (req, res) => {
+    const userId = (req.query.user as string) || "anon";
+    res.json(getPortfolioValue(userId));
+  });
+
+  app.get("/api/engine/portfolio/positions", (req, res) => {
+    const userId = (req.query.user as string) || "anon";
+    res.json(getPortfolio(userId));
+  });
+
+  app.get("/api/engine/global-index", (_req: any, res: any) => {
+    res.json({ value: computeGlobalIndex(), time: Date.now() });
+  });
+
+  app.get("/api/engine/events", (req, res) => {
+    const limit = Math.min(Number(req.query.limit || 100), 500);
+    const events = getEventLog();
+    res.json(events.slice(-limit));
+  });
+
+  app.post("/api/engine/emergency-reset", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Auth required" });
+    const user = await storage.getUser(userId);
+    if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+    emergencyReset();
+    res.json({ status: "reset", price: liveEngine.P_current });
+  });
+
+  app.post("/api/engine/replay", isAuthenticated, async (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    if (!userId) return res.status(401).json({ message: "Auth required" });
+    const user = await storage.getUser(userId);
+    if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+    const events = getEventLog();
+    const limit = Math.min(Number(req.body.limit || 50), 200);
+    const replayEvents = events.slice(-limit);
+
+    const eio = getEngineIO();
+    if (eio) {
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i >= replayEvents.length) {
+          clearInterval(interval);
+          return;
+        }
+        eio.emit("replay_event", replayEvents[i]);
+        i++;
+      }, 100);
+    }
+
+    res.json({ status: "replaying", count: replayEvents.length });
   });
 
   return httpServer;

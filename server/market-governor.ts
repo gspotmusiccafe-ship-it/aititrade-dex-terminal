@@ -1083,6 +1083,7 @@ class MarketEngine {
   }
 
   enterMarket(userId: string, amount: number = 1): number {
+    logEvent("BUY", { userId, amount, price: this.P_current });
     this.queue.push({
       userId,
       amount,
@@ -1095,6 +1096,7 @@ class MarketEngine {
   }
 
   impulse(amount: number): void {
+    logEvent("IMPULSE", { amount, price: this.P_current });
     this.demand += amount;
     this.P_current += amount * 0.001;
   }
@@ -1176,15 +1178,192 @@ function syncEngineWithKinetic(): void {
 syncEngineWithKinetic();
 setInterval(syncEngineWithKinetic, 10000);
 
+import * as fs from "fs";
+import * as path from "path";
+
+const STATE_FILE = path.join(process.cwd(), "engine-state.json");
+const AUDIT_FILE = path.join(process.cwd(), "audit.json");
+
+function saveState(): void {
+  try {
+    const snapshot = {
+      P_current: liveEngine.P_current,
+      totalVolume: liveEngine.totalVolume,
+      floorPercent: liveEngine.floorPercent,
+      housePercent: liveEngine.housePercent,
+      cycle: liveEngine.cycle,
+      demand: liveEngine.demand,
+      supply: liveEngine.supply,
+      savedAt: Date.now(),
+    };
+    fs.writeFileSync(STATE_FILE, JSON.stringify(snapshot, null, 2));
+  } catch (e) {
+    console.error("[ENGINE] State save error:", e);
+  }
+}
+
+function loadState(): void {
+  try {
+    if (!fs.existsSync(STATE_FILE)) return;
+    const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    if (data.P_current) liveEngine.P_current = data.P_current;
+    if (data.totalVolume) liveEngine.totalVolume = data.totalVolume;
+    if (data.cycle) liveEngine.cycle = data.cycle;
+    if (data.demand) liveEngine.demand = data.demand;
+    if (data.supply) liveEngine.supply = data.supply;
+    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: ${liveEngine.P_current.toFixed(4)}`);
+  } catch (e) {
+    console.error("[ENGINE] State load error:", e);
+  }
+}
+
+loadState();
+setInterval(saveState, 5000);
+
+function saveAudit(): void {
+  try {
+    fs.writeFileSync(AUDIT_FILE, JSON.stringify(eventLog, null, 2));
+  } catch (e) {
+    console.error("[ENGINE] Audit save error:", e);
+  }
+}
+
+setInterval(saveAudit, 5000);
+
+let eventLog: Array<{ id: string; type: string; payload: any; time: number }> = [];
+
+function logEvent(type: string, payload: any) {
+  const event = {
+    id: Date.now() + "-" + Math.random().toString(36).slice(2, 8),
+    type,
+    payload,
+    time: Date.now(),
+  };
+  eventLog.push(event);
+  if (eventLog.length > 5000) eventLog.shift();
+  return event;
+}
+
+function getEventLog() {
+  return eventLog;
+}
+
+const portfolios: Record<string, Array<{ amount: number; entryPrice: number; timestamp: number }>> = {};
+
+function addPosition(userId: string, amount: number, price: number): void {
+  if (!portfolios[userId]) portfolios[userId] = [];
+  portfolios[userId].push({
+    amount,
+    entryPrice: price,
+    timestamp: Date.now(),
+  });
+  logEvent("position_open", { userId, amount, price });
+}
+
+function getPortfolioValue(userId: string): { positions: number; pnl: number; currentPrice: number } {
+  const positions = portfolios[userId] || [];
+  let pnl = 0;
+  positions.forEach((p) => {
+    pnl += (liveEngine.P_current - p.entryPrice) * p.amount;
+  });
+  return {
+    positions: positions.length,
+    pnl: parseFloat(pnl.toFixed(4)),
+    currentPrice: parseFloat(liveEngine.P_current.toFixed(4)),
+  };
+}
+
+function getPortfolio(userId: string) {
+  return portfolios[userId] || [];
+}
+
+function computeGlobalIndex(): number {
+  return parseFloat(liveEngine.P_current.toFixed(4));
+}
+
+const processedEvents = new Set<string>();
+
+function safeExecute(eventId: string, fn: () => void): boolean {
+  if (processedEvents.has(eventId)) return false;
+  processedEvents.add(eventId);
+  if (processedEvents.size > 10000) {
+    const first = processedEvents.values().next().value;
+    if (first) processedEvents.delete(first);
+  }
+  fn();
+  return true;
+}
+
+let queueLock = false;
+
+function enterSafe(userId: string): number | null {
+  if (queueLock) return null;
+  queueLock = true;
+  const pos = liveEngine.enterMarket(userId, 1);
+  queueLock = false;
+  logEvent("market_enter", { userId, position: pos, price: liveEngine.P_current });
+  return pos;
+}
+
+function clampPrice(): void {
+  if (liveEngine.P_current < 0.01) liveEngine.P_current = 0.01;
+  if (liveEngine.P_current > 1000) liveEngine.P_current = 1000;
+}
+
+function emergencyReset(): void {
+  logEvent("emergency_reset", { priceBefore: liveEngine.P_current, cycleBefore: liveEngine.cycle });
+  liveEngine.queue = [];
+  liveEngine.demand = 0;
+  liveEngine.supply = 0;
+  liveEngine.totalVolume = 0;
+  liveEngine.P_current = 1.0;
+  console.log("[ENGINE] EMERGENCY RESET — All positions cleared, price reset to 1.0");
+}
+
+function liquidationCheck(): boolean {
+  if (liveEngine.P_current <= 0.15 && liveEngine.queue.length > 0) {
+    return true;
+  }
+  return false;
+}
+
+function generateOrderBook(price: number): { bids: Array<{ price: number; size: number }>; asks: Array<{ price: number; size: number }> } {
+  const bids = [];
+  const asks = [];
+  const bidPressure = Math.random() * 10;
+  const askPressure = Math.random() * 10;
+
+  for (let i = 0; i < 15; i++) {
+    bids.push({
+      price: parseFloat((price - i * 0.01).toFixed(4)),
+      size: parseFloat((bidPressure * Math.random()).toFixed(2)),
+    });
+    asks.push({
+      price: parseFloat((price + i * 0.01).toFixed(4)),
+      size: parseFloat((askPressure * Math.random()).toFixed(2)),
+    });
+  }
+
+  return { bids, asks };
+}
+
 let engineIO: any = null;
+
+function getEngineIO() {
+  return engineIO;
+}
 
 function setEngineIO(io: any) {
   engineIO = io;
 
   io.on("connection", (socket: any) => {
     console.log(`[ENGINE] Trader connected: ${socket.id}`);
-    socket.emit("price", liveEngine.P_current);
+    socket.emit("price", parseFloat(liveEngine.P_current.toFixed(4)));
     socket.emit("engineState", liveEngine.getState());
+    socket.emit("global_index", { value: computeGlobalIndex(), time: Date.now() });
+
+    const book = generateOrderBook(liveEngine.P_current);
+    socket.emit("orderbook", book);
 
     socket.on("disconnect", () => {
       console.log(`[ENGINE] Trader disconnected: ${socket.id}`);
@@ -1192,9 +1371,17 @@ function setEngineIO(io: any) {
   });
 }
 
+let tickCounter = 0;
+
 setInterval(() => {
   const price = liveEngine.updatePrice();
+  clampPrice();
   const stop = liveEngine.safeStop();
+
+  tickCounter++;
+  if (tickCounter % 10 === 0) {
+    logEvent("PRICE_TICK", { price: parseFloat(price.toFixed(4)), volume: liveEngine.totalVolume });
+  }
 
   const candle = {
     time: Math.floor(Date.now() / 1000),
@@ -1206,15 +1393,41 @@ setInterval(() => {
   };
 
   if (engineIO) {
-    engineIO.emit("price", parseFloat(price.toFixed(4)));
+    const roundedPrice = parseFloat(price.toFixed(4));
+    engineIO.emit("price", roundedPrice);
     engineIO.emit("candle", candle);
     engineIO.emit("engineState", liveEngine.getState());
+    engineIO.emit("global_index", { value: computeGlobalIndex(), time: Date.now() });
+
+    const book = generateOrderBook(roundedPrice);
+    engineIO.emit("orderbook", book);
+
+    if (liquidationCheck()) {
+      engineIO.emit("liquidation", {
+        intensity: Math.random() * 10,
+        price: roundedPrice,
+        queueSize: liveEngine.queue.length,
+      });
+      logEvent("liquidation", { price: roundedPrice, queue: liveEngine.queue.length });
+    }
 
     if (stop.stopped) {
       engineIO.emit("halt", stop);
+      logEvent("safe_stop", { price: stop.price });
       console.log(`[ENGINE] SAFE STOP TRIGGERED — Price: ${stop.price.toFixed(4)} | Cycle frozen`);
     }
   }
 }, 1000);
 
-export { POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS, PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD, PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic, MarketEngine, liveEngine, setEngineIO };
+export {
+  POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS,
+  PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD,
+  PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES,
+  getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic,
+  MarketEngine, liveEngine, setEngineIO, getEngineIO,
+  logEvent, getEventLog,
+  addPosition, getPortfolioValue, getPortfolio,
+  computeGlobalIndex,
+  safeExecute, enterSafe, clampPrice, emergencyReset, liquidationCheck,
+  generateOrderBook, saveState, loadState, saveAudit,
+};

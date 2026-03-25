@@ -1,0 +1,185 @@
+function computeGlobalIndex(engines) {
+  let total = 0;
+
+  for (let id in engines) {
+    total += engines[id].P_current;
+  }
+
+  return total / Object.keys(engines).length;
+}
+
+
+setInterval(() => {
+  const index = computeGlobalIndex(engines);
+
+  io.emit("global_index", {
+    value: index,
+    time: Date.now()
+  });
+}, 1000);
+
+function generateOrderBook(price) {
+  const bids = [];
+  const asks = [];
+
+  let bidPressure = Math.random() * 10;
+  let askPressure = Math.random() * 10;
+
+  for (let i = 0; i < 15; i++) {
+    bids.push({
+      price: +(price - i * 0.01).toFixed(4),
+      size: +(bidPressure * Math.random()).toFixed(2)
+    });
+
+    asks.push({
+      price: +(price + i * 0.01).toFixed(4),
+      size: +(askPressure * Math.random()).toFixed(2)
+    });
+  }
+
+  return { bids, asks };
+}
+
+
+
+
+
+
+
+const portfolios = {};
+
+function addPosition(userId, marketId, amount, price) {
+  if (!portfolios[userId]) {
+    portfolios[userId] = [];
+  }
+
+  portfolios[userId].push({
+    marketId,
+    amount,
+    entryPrice: price,
+    timestamp: Date.now()
+  });
+}
+
+
+function getPortfolioValue(userId) {
+  const positions = portfolios[userId] || [];
+
+  let total = 0;
+
+  positions.forEach(p => {
+    const currentPrice = engines[p.marketId].P_current;
+    total += (currentPrice - p.entryPrice) * p.amount;
+  });
+
+  return total;
+}
+
+
+function liquidationEvent(io, marketId) {
+  io.emit("liquidation", {
+    marketId,
+    intensity: Math.random() * 10
+  });
+}
+
+
+socket.on("liquidation", (data) => {
+  const tile = tiles[data.marketId];
+  if (!tile) return;
+
+  tile.style.background = "rgba(255,0,0,0.3)";
+
+  setTimeout(() => {
+    tile.style.background = "#111827";
+  }, 300);
+});
+tile.onclick = () => {
+  fetch(`/buy?user=USER1&market=${i}&amount=1`);
+};
+
+
+const fs = require("fs");
+
+function saveState(engines) {
+  const snapshot = {};
+
+  for (let id in engines) {
+    snapshot[id] = {
+      P_current: engines[id].P_current,
+      totalVolume: engines[id].totalVolume,
+      floorPercent: engines[id].floorPercent,
+      housePercent: engines[id].housePercent,
+      cycle: engines[id].cycle
+    };
+  }
+
+  fs.writeFileSync("state.json", JSON.stringify(snapshot, null, 2));
+}
+
+setInterval(() => {
+  saveState(engines);
+}, 5000);
+
+
+
+function loadState(engines) {
+  if (!fs.existsSync("state.json")) return;
+
+  const data = JSON.parse(fs.readFileSync("state.json"));
+
+  for (let id in data) {
+    if (!engines[id]) continue;
+
+    Object.assign(engines[id], data[id]);
+  }
+}
+
+
+
+
+
+
+
+
+const processedEvents = new Set();
+
+function safeExecute(eventId, fn) {
+  if (processedEvents.has(eventId)) return;
+
+  processedEvents.add(eventId);
+  fn();
+}
+
+let queueLock = false;
+
+function enterSafe(engine, userId) {
+  if (queueLock) return;
+
+  queueLock = true;
+
+  engine.enterMarket(userId, 1);
+
+  queueLock = false;
+}
+
+
+function clampPrice(engine) {
+  if (engine.P_current < 0.01) engine.P_current = 0.01;
+  if (engine.P_current > 1000) engine.P_current = 1000;
+}
+
+setInterval(() => {
+  for (let id in engines) {
+    clampPrice(engines[id]);
+  }
+}, 1000);
+
+function emergencyReset(engine) {
+  engine.queue = [];
+  engine.demand = 0;
+  engine.supply = 0;
+  engine.totalVolume = 0;
+
+  engine.P_current = 1.0;
+}
