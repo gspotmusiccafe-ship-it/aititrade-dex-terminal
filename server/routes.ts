@@ -5961,21 +5961,50 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     res.json({ ok: true, balance: parseFloat(wallet.balance.toFixed(2)) });
   });
 
-  app.get("/impulse", (req, res) => {
-    const amt = Number(req.query.amount || 1);
-    liveEngine.impulse(amt);
+  app.get("/discount", (req, res) => {
+    const userId = req.query.user as string;
+    if (!userId) return res.status(400).json({ error: "user required" });
+
+    if (!liveEngine.marketOpen) {
+      return res.status(400).json({ error: "Market is closed" });
+    }
+
+    const result = liveEngine.acceptDiscount(userId);
+    if (!result.ok) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    recordWalletPayout(userId, result.payout, `Discount exit @ $${liveEngine.discountOffer}`);
 
     const eio = getEngineIO();
     if (eio) {
-      eio.emit("impulse", {
-        amount: amt,
-        price: liveEngine.P_current,
+      eio.emit("discount_exit", {
+        userId,
+        payout: result.payout,
+        discountPrice: liveEngine.discountOffer,
+        mbbp: liveEngine.mbbp,
         time: Date.now(),
       });
     }
-    logEvent("impulse", { amount: amt, price: liveEngine.P_current });
 
-    res.json({ status: "impulse fired", price: liveEngine.P_current });
+    res.json({ status: "ok", payout: result.payout, discountPrice: liveEngine.discountOffer });
+  });
+
+  app.get("/market-status", (_req, res) => {
+    res.json({
+      price: parseFloat(liveEngine.P_current.toFixed(4)),
+      mbbp: parseFloat(liveEngine.mbbp.toFixed(4)),
+      discountOffer: parseFloat(liveEngine.discountOffer.toFixed(4)),
+      marketOpen: liveEngine.marketOpen,
+      volume: parseFloat(liveEngine.totalVolume.toFixed(2)),
+      target: liveEngine.targetVolume,
+      fillPct: parseFloat(((liveEngine.totalVolume / liveEngine.targetVolume) * 100).toFixed(1)),
+      cycle: liveEngine.cycle,
+      queueSize: liveEngine.queue.length,
+      floorPool: parseFloat((liveEngine.totalVolume * liveEngine.floorPercent).toFixed(2)),
+      housePool: parseFloat((liveEngine.totalVolume * liveEngine.housePercent).toFixed(2)),
+      split: `${Math.round(liveEngine.floorPercent * 100)}/${Math.round(liveEngine.housePercent * 100)}`,
+    });
   });
 
   app.get("/api/engine/portfolio", (req, res) => {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown } from "lucide-react";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -580,8 +580,8 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
     tradeMutation.mutate({ type: "HOLD_LOCK", lockedROI: kineticState.floorROI });
   };
 
-  const handleImpulseSell = () => {
-    tradeMutation.mutate({ type: "SELL_IMPULSE" });
+  const handleDiscountExit = () => {
+    tradeMutation.mutate({ type: "DISCOUNT_EXIT" });
   };
 
   const isKineticHigh = kineticState?.pulse === "HIGH";
@@ -888,16 +888,16 @@ function AssetCard({ track, onPlay, settlement }: { track: TrackWithArtist; onPl
             <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> HOLD
           </button>
           <button
-            onClick={handleImpulseSell}
+            onClick={handleDiscountExit}
             disabled={tradeMutation.isPending || isClosed}
             className={`flex-1 border text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center transition-colors flex items-center justify-center gap-0.5 disabled:opacity-30 ${
               isKineticHigh
-                ? "bg-lime-600/20 border-lime-500/40 text-lime-400 hover:bg-lime-600/30 floor-high-active"
-                : "bg-violet-500/10 border-violet-500/30 text-violet-400 hover:bg-violet-500/20"
+                ? "bg-cyan-600/20 border-cyan-500/40 text-cyan-400 hover:bg-cyan-600/30"
+                : "bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
             }`}
-            data-testid={`button-impulse-sell-${track.id}`}
+            data-testid={`button-discount-exit-${track.id}`}
           >
-            <Zap className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> IMPULSE
+            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> DISCOUNT
           </button>
         </div>
         <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">

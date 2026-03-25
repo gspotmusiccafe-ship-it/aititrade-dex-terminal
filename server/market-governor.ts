@@ -1057,15 +1057,28 @@ class MarketEngine {
   targetVolume: number;
   demand: number;
   supply: number;
-  queue: Array<{ userId: string; amount: number; timestamp: number; status: string }>;
+  queue: Array<{
+    userId: string;
+    amount: number;
+    entryPrice: number;
+    timestamp: number;
+    status: "holding" | "discount_exit" | "settled";
+    discountPrice?: number;
+    discountAcceptedAt?: number;
+  }>;
   floorPercent: number;
   housePercent: number;
   cycle: number;
   cash: { deposits: number; entries: number; totalIn: number; lastDeposit: number; lastEntry: number };
   settled: boolean;
+  marketOpen: boolean;
+  mbbp: number;
+  discountOffer: number;
+  closePrice: number;
+  minMBBP: number;
 
   constructor() {
-    this.P_current = 1.0;
+    this.P_current = 0.01;
     this.totalVolume = 0;
     this.targetVolume = 1000;
     this.demand = 0;
@@ -1076,23 +1089,40 @@ class MarketEngine {
     this.cycle = 1;
     this.cash = { deposits: 0, entries: 0, totalIn: 0, lastDeposit: 0, lastEntry: 0 };
     this.settled = false;
+    this.marketOpen = true;
+    this.mbbp = 1.01;
+    this.discountOffer = 0;
+    this.closePrice = 0;
+    this.minMBBP = 0.10;
   }
 
   updatePrice(): number {
-    const imbalance = this.demand - this.supply;
-    const ALPHA = 0.01;
-    this.P_current += ALPHA * imbalance;
+    if (!this.marketOpen) return this.P_current;
+
+    const volatility = 0.02 + (this.totalVolume / this.targetVolume) * 0.03;
+    const drift = (Math.random() - 0.48) * volatility;
+    this.P_current += drift;
+
     if (this.P_current < 0.01) this.P_current = 0.01;
+    if (this.P_current > 1.00) this.P_current = 1.00;
+
+    this.mbbp = parseFloat((1.00 + this.P_current).toFixed(4));
+    if (this.mbbp < this.minMBBP) this.mbbp = this.minMBBP;
+
+    const discountSpread = 0.05 + Math.random() * 0.10;
+    this.discountOffer = parseFloat(Math.max(this.minMBBP, this.mbbp - discountSpread).toFixed(4));
+
     return this.P_current;
   }
 
   enterMarket(userId: string, amount: number = 1): number {
-    logEvent("BUY", { userId, amount, price: this.P_current });
+    logEvent("BUY", { userId, amount, price: this.P_current, mbbp: this.mbbp });
     this.queue.push({
       userId,
       amount,
+      entryPrice: this.P_current,
       timestamp: Date.now(),
-      status: "pending",
+      status: "holding",
     });
     this.totalVolume += amount;
     this.demand += amount;
@@ -1102,6 +1132,24 @@ class MarketEngine {
     return this.queue.length;
   }
 
+  acceptDiscount(userId: string): { ok: boolean; payout: number; error?: string } {
+    const idx = this.queue.findIndex(q => q.userId === userId && q.status === "holding");
+    if (idx === -1) return { ok: false, payout: 0, error: "NOT_IN_QUEUE" };
+
+    const trader = this.queue[idx];
+    trader.status = "discount_exit";
+    trader.discountPrice = this.discountOffer;
+    trader.discountAcceptedAt = Date.now();
+
+    const payout = parseFloat((trader.amount * this.discountOffer).toFixed(2));
+
+    this.queue.splice(idx, 1);
+    this.queue.unshift(trader);
+
+    logEvent("DISCOUNT_EXIT", { userId, discountPrice: this.discountOffer, payout, mbbp: this.mbbp });
+    return { ok: true, payout };
+  }
+
   recordDeposit(amount: number): void {
     this.cash.deposits += amount;
     this.cash.totalIn += amount;
@@ -1109,47 +1157,87 @@ class MarketEngine {
     logEvent("DEPOSIT", { amount, totalDeposits: this.cash.deposits, totalIn: this.cash.totalIn });
   }
 
-  impulse(amount: number): void {
-    logEvent("IMPULSE", { amount, price: this.P_current });
-    this.demand += amount;
-    this.P_current += amount * 0.001;
-  }
-
-  settle(): {
+  closeMarket(): {
     cycle: number;
-    settlementPrice: number;
-    roi: number;
+    closePrice: number;
+    mbbp: number;
     floorPool: number;
     housePool: number;
     queueSize: number;
-  } | null {
-    if (this.totalVolume < this.targetVolume) return null;
+  } {
+    this.marketOpen = false;
+    this.closePrice = this.P_current;
+    this.mbbp = parseFloat((1.00 + this.closePrice).toFixed(4));
+    if (this.mbbp < this.minMBBP) this.mbbp = this.minMBBP;
 
-    const settlementPrice = this.P_current;
-    const floorPool = this.totalVolume * this.floorPercent;
-    const housePool = this.totalVolume * this.housePercent;
+    const floorPool = parseFloat((this.totalVolume * this.floorPercent).toFixed(2));
+    const housePool = parseFloat((this.totalVolume * this.housePercent).toFixed(2));
 
-    const result = {
+    logEvent("MARKET_CLOSE", {
       cycle: this.cycle,
-      settlementPrice,
-      roi: settlementPrice - 1,
+      closePrice: this.closePrice,
+      mbbp: this.mbbp,
+      floorPool, housePool,
+      queueSize: this.queue.length,
+    });
+
+    return {
+      cycle: this.cycle,
+      closePrice: this.closePrice,
+      mbbp: this.mbbp,
       floorPool,
       housePool,
       queueSize: this.queue.length,
     };
+  }
 
-    this.resetCycle();
-    return result;
+  settleQueue(): Array<{ userId: string; amount: number; payout: number; type: "discount" | "mbbp" }> {
+    const floorPool = this.totalVolume * this.floorPercent;
+    let remaining = floorPool;
+    const payouts: Array<{ userId: string; amount: number; payout: number; type: "discount" | "mbbp" }> = [];
+
+    const sorted = [...this.queue].sort((a, b) => {
+      if (a.status === "discount_exit" && b.status !== "discount_exit") return -1;
+      if (b.status === "discount_exit" && a.status !== "discount_exit") return 1;
+      return a.timestamp - b.timestamp;
+    });
+
+    for (const trader of sorted) {
+      if (remaining <= 0) break;
+
+      let payout: number;
+      let type: "discount" | "mbbp";
+
+      if (trader.status === "discount_exit" && trader.discountPrice) {
+        payout = parseFloat((trader.amount * trader.discountPrice).toFixed(2));
+        type = "discount";
+      } else {
+        payout = parseFloat((trader.amount * this.mbbp).toFixed(2));
+        type = "mbbp";
+      }
+
+      if (payout > remaining) payout = parseFloat(remaining.toFixed(2));
+      remaining -= payout;
+
+      trader.status = "settled";
+      payouts.push({ userId: trader.userId, amount: trader.amount, payout, type });
+    }
+
+    return payouts;
   }
 
   resetCycle(): void {
-    this.P_current = 1.0;
+    this.P_current = 0.01;
     this.totalVolume = 0;
     this.demand = 0;
     this.supply = 0;
     this.queue = [];
     this.cycle += 1;
     this.settled = false;
+    this.marketOpen = true;
+    this.mbbp = 1.01;
+    this.discountOffer = 0;
+    this.closePrice = 0;
   }
 
   adjustBalance(floorPercent: number): void {
@@ -1159,7 +1247,7 @@ class MarketEngine {
     this.housePercent = 1 - floorPercent;
   }
 
-  safeStop(threshold: number = 0.25): { stopped: boolean; price: number } {
+  safeStop(threshold: number = 0.005): { stopped: boolean; price: number } {
     if (this.P_current <= threshold) {
       return { stopped: true, price: this.P_current };
     }
@@ -1169,12 +1257,18 @@ class MarketEngine {
   getState() {
     return {
       price: parseFloat(this.P_current.toFixed(4)),
+      mbbp: parseFloat(this.mbbp.toFixed(4)),
+      discountOffer: parseFloat(this.discountOffer.toFixed(4)),
+      marketOpen: this.marketOpen,
+      closePrice: parseFloat(this.closePrice.toFixed(4)),
       totalVolume: parseFloat(this.totalVolume.toFixed(2)),
       targetVolume: this.targetVolume,
       demand: this.demand,
       supply: this.supply,
       floorPercent: this.floorPercent,
       housePercent: this.housePercent,
+      floorPool: parseFloat((this.totalVolume * this.floorPercent).toFixed(2)),
+      housePool: parseFloat((this.totalVolume * this.housePercent).toFixed(2)),
       cycle: this.cycle,
       queueSize: this.queue.length,
       fillPct: parseFloat(((this.totalVolume / this.targetVolume) * 100).toFixed(1)),
@@ -1218,6 +1312,10 @@ function saveState(): void {
       demand: liveEngine.demand,
       supply: liveEngine.supply,
       cash: liveEngine.cash,
+      marketOpen: liveEngine.marketOpen,
+      mbbp: liveEngine.mbbp,
+      closePrice: liveEngine.closePrice,
+      settled: liveEngine.settled,
       savedAt: Date.now(),
     };
     fs.writeFileSync(STATE_FILE, JSON.stringify(snapshot, null, 2));
@@ -1230,11 +1328,15 @@ function loadState(): void {
   try {
     if (!fs.existsSync(STATE_FILE)) return;
     const data = JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
-    if (data.P_current) liveEngine.P_current = data.P_current;
+    if (typeof data.P_current === "number") liveEngine.P_current = data.P_current;
     if (data.totalVolume) liveEngine.totalVolume = data.totalVolume;
     if (data.cycle) liveEngine.cycle = data.cycle;
     if (data.demand) liveEngine.demand = data.demand;
     if (data.supply) liveEngine.supply = data.supply;
+    if (typeof data.marketOpen === "boolean") liveEngine.marketOpen = data.marketOpen;
+    if (data.mbbp) liveEngine.mbbp = data.mbbp;
+    if (data.closePrice) liveEngine.closePrice = data.closePrice;
+    if (data.settled) liveEngine.settled = data.settled;
     if (data.cash) {
       liveEngine.cash = {
         deposits: data.cash.deposits || 0,
@@ -1244,7 +1346,7 @@ function loadState(): void {
         lastEntry: data.cash.lastEntry || 0,
       };
     }
-    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: ${liveEngine.P_current.toFixed(4)}, Cash: $${liveEngine.cash.totalIn.toFixed(2)}`);
+    console.log(`[ENGINE] State restored — Cycle: ${liveEngine.cycle}, Price: $${liveEngine.P_current.toFixed(4)}, MBBP: $${liveEngine.mbbp.toFixed(4)}, Market: ${liveEngine.marketOpen ? "OPEN" : "CLOSED"}`);
   } catch (e) {
     console.error("[ENGINE] State load error:", e);
   }
@@ -1404,6 +1506,7 @@ let queueLock = false;
 
 function enterSafe(userId: string, amount: number = 1): { ok: boolean; position?: number; error?: string } {
   if (queueLock) return { ok: false, error: "QUEUE_LOCKED" };
+  if (!liveEngine.marketOpen) return { ok: false, error: "MARKET_CLOSED" };
 
   const w = getWallet(userId);
   if (w.balance < amount) {
@@ -1416,13 +1519,13 @@ function enterSafe(userId: string, amount: number = 1): { ok: boolean; position?
   addPosition(userId, amount, liveEngine.P_current);
   queueLock = false;
 
-  logEvent("market_enter", { userId, amount, position: pos, price: liveEngine.P_current, walletBalance: w.balance });
+  logEvent("market_enter", { userId, amount, position: pos, price: liveEngine.P_current, mbbp: liveEngine.mbbp, walletBalance: w.balance });
   return { ok: true, position: pos };
 }
 
 function clampPrice(): void {
   if (liveEngine.P_current < 0.01) liveEngine.P_current = 0.01;
-  if (liveEngine.P_current > 1000) liveEngine.P_current = 1000;
+  if (liveEngine.P_current > 1.00) liveEngine.P_current = 1.00;
 }
 
 function emergencyReset(): void {
@@ -1431,9 +1534,14 @@ function emergencyReset(): void {
   liveEngine.demand = 0;
   liveEngine.supply = 0;
   liveEngine.totalVolume = 0;
-  liveEngine.P_current = 1.0;
+  liveEngine.P_current = 0.01;
+  liveEngine.marketOpen = true;
+  liveEngine.mbbp = 1.01;
+  liveEngine.discountOffer = 0;
+  liveEngine.closePrice = 0;
+  liveEngine.settled = false;
   liveEngine.cash = { deposits: 0, entries: 0, totalIn: 0, lastDeposit: 0, lastEntry: 0 };
-  console.log("[ENGINE] EMERGENCY RESET — All positions cleared, price reset to 1.0, cash zeroed");
+  console.log("[ENGINE] EMERGENCY RESET — All positions cleared, price reset to $0.01, market OPEN, cash zeroed");
 }
 
 function liquidationCheck(): boolean {
@@ -1539,57 +1647,52 @@ setInterval(() => {
         position: i + 1,
         userId: q.userId,
         amount: q.amount,
+        entryPrice: q.entryPrice,
         timestamp: q.timestamp,
         status: q.status,
       })),
       total: liveEngine.queue.length,
     });
 
-    if (liveEngine.totalVolume >= liveEngine.targetVolume && !liveEngine.settled) {
-      liveEngine.settled = true;
-      const settlementPrice = liveEngine.P_current;
-      const floorPool = liveEngine.totalVolume * liveEngine.floorPercent;
-      const housePool = liveEngine.totalVolume * liveEngine.housePercent;
+    engineIO.emit("mbbp", {
+      mbbp: parseFloat(liveEngine.mbbp.toFixed(4)),
+      discountOffer: parseFloat(liveEngine.discountOffer.toFixed(4)),
+      marketOpen: liveEngine.marketOpen,
+      time: Date.now(),
+    });
 
-      const payouts: Array<{ userId: string; amount: number; position: number; payout: number }> = [];
-      const perTraderShare = liveEngine.queue.length > 0 ? floorPool / liveEngine.queue.length : 0;
-      liveEngine.queue.forEach((q, i) => {
-        const earlyBonus = i < liveEngine.queue.length * 0.25 ? 1.25 : 1.0;
-        const payout = parseFloat((perTraderShare * earlyBonus).toFixed(2));
-        payouts.push({
-          userId: q.userId,
-          amount: q.amount,
-          position: i + 1,
-          payout,
-        });
+    if (liveEngine.totalVolume >= liveEngine.targetVolume && !liveEngine.settled && liveEngine.marketOpen) {
+      liveEngine.settled = true;
+
+      const closeData = liveEngine.closeMarket();
+      const payouts = liveEngine.settleQueue();
+
+      payouts.forEach(p => {
+        recordWalletPayout(p.userId, p.payout, `Cycle ${liveEngine.cycle} ${p.type === "discount" ? "discount exit" : "MBBP settlement"}`);
       });
 
       const settlementData = {
         marketId: "FLOOR",
-        cycle: liveEngine.cycle,
-        settlementPrice,
-        roi: settlementPrice - 1,
-        floorPool,
-        housePool,
-        queueSize: liveEngine.queue.length,
-        payouts,
+        cycle: closeData.cycle,
+        closePrice: closeData.closePrice,
+        mbbp: closeData.mbbp,
+        floorPool: closeData.floorPool,
+        housePool: closeData.housePool,
+        queueSize: closeData.queueSize,
+        payouts: payouts.map((p, i) => ({ ...p, position: i + 1 })),
         time: Date.now(),
       };
 
-      payouts.forEach(p => {
-        recordWalletPayout(p.userId, p.payout, `Settlement cycle ${liveEngine.cycle}`);
-      });
-
       engineIO.emit("settlement", settlementData);
-      logEvent("AUTO_SETTLEMENT", { ...settlementData, payouts: payouts.length });
-      console.log(`[ENGINE] AUTO-SETTLEMENT — Cycle ${liveEngine.cycle} | Price: ${settlementPrice.toFixed(4)} | Floor: $${floorPool.toFixed(2)} | House: $${housePool.toFixed(2)} | Payouts: ${payouts.length} | Resetting in 5s...`);
+      logEvent("AUTO_SETTLEMENT", { ...settlementData, payoutCount: payouts.length, totalPaid: payouts.reduce((s, p) => s + p.payout, 0) });
+      console.log(`[ENGINE] MARKET CLOSED — Cycle ${closeData.cycle} | Close: $${closeData.closePrice.toFixed(4)} | MBBP: $${closeData.mbbp.toFixed(4)} | Floor: $${closeData.floorPool.toFixed(2)} | House: $${closeData.housePool.toFixed(2)} | Paid: ${payouts.length} traders | Resetting in 5s...`);
 
       setTimeout(() => {
         liveEngine.resetCycle();
         if (engineIO) {
           engineIO.emit("market_reset", { cycle: liveEngine.cycle, time: Date.now() });
         }
-        console.log(`[ENGINE] Market reset — New cycle ${liveEngine.cycle} started`);
+        console.log(`[ENGINE] Market reset — New cycle ${liveEngine.cycle} | Price: $0.01 | Market OPEN`);
       }, 5000);
     }
   }
@@ -1695,6 +1798,12 @@ function buildMonitor(): MonitorSnapshot {
     activeMarkets: state.totalVolume > 0 ? 1 : 0,
     totalVolume: state.totalVolume,
     avgPrice: state.price,
+    mbbp: state.mbbp,
+    discountOffer: state.discountOffer,
+    marketOpen: state.marketOpen,
+    closePrice: state.closePrice,
+    floorPool: state.floorPool,
+    housePool: state.housePool,
     alerts,
     engineHealth,
     queueDepth: state.queueSize,
@@ -1705,6 +1814,7 @@ function buildMonitor(): MonitorSnapshot {
       position: i + 1,
       userId: q.userId.slice(0, 8) + "...",
       amount: q.amount,
+      entryPrice: q.entryPrice,
       age: Math.floor((now - q.timestamp) / 1000),
       status: q.status,
     })),
