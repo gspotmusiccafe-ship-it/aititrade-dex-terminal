@@ -1096,7 +1096,7 @@ class MarketEngine {
     this.mbbp = 1.01;
     this.discountOffer = 0;
     this.closePrice = 0;
-    this.minMBBP = 0.10;
+    this.minMBBP = 1.01;
   }
 
   updatePrice(): number {
@@ -1120,7 +1120,7 @@ class MarketEngine {
     this.mbbp = parseFloat((1.00 + this.P_current).toFixed(4));
     if (this.mbbp < this.minMBBP) this.mbbp = this.minMBBP;
 
-    const discountSpread = 0.01 + fillRatio * 0.09 + Math.random() * 0.05;
+    const discountSpread = 0.01 + fillRatio * 0.04 + Math.random() * 0.03;
     this.discountOffer = parseFloat(Math.max(this.minMBBP, this.mbbp - discountSpread).toFixed(4));
 
     return this.P_current;

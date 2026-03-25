@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
-import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
+import { eq, and, or, desc, asc, sql, count, inArray, isNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
@@ -5905,13 +5905,19 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       const testOrders = await db.select({ id: orders.id, status: orders.status })
         .from(orders)
-        .where(eq(orders.status, "test"));
+        .where(
+          or(
+            eq(orders.status, "test"),
+            isNull(orders.buyerEmail),
+            eq(orders.buyerEmail, ""),
+          )
+        );
       const testCount = testOrders.length;
 
       if (testCount > 0) {
         const testIds = testOrders.map(o => o.id);
         await db.delete(settlementQueue).where(inArray(settlementQueue.orderId, testIds));
-        await db.delete(orders).where(eq(orders.status, "test"));
+        await db.delete(orders).where(inArray(orders.id, testIds));
       }
 
       const [liveVolume] = await db.select({
