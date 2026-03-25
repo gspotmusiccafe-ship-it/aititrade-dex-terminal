@@ -171,6 +171,16 @@
   <div style="color:#6b7685">Waiting for data...</div>
 </div>
 
+<div class="box" id="wallet">
+  <h3>Wallet</h3>
+  <div style="color:#6b7685">Enter user ID to load wallet</div>
+  <div style="margin-top:8px">
+    <input id="walletUser" type="text" placeholder="User ID" style="background:#1a2332;border:1px solid #2a3a4a;color:#d1d4dc;padding:6px 10px;border-radius:4px;font-size:13px;width:180px;">
+    <button onclick="loadWallet()" style="background:#f0b90b;color:#000;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;font-size:13px;margin-left:4px;">Load</button>
+  </div>
+  <div id="walletData" style="margin-top:8px"></div>
+</div>
+
 <div class="box" id="queue">
   <h3>Settlement Queue</h3>
   <div style="color:#6b7685">Waiting for data...</div>

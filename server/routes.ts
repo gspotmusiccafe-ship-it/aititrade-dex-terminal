@@ -5945,6 +5945,22 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     res.json({ status: "ok", queuePosition: result.position, price: liveEngine.P_current });
   });
 
+  app.get("/wallet", (req, res) => {
+    const user = req.query.user as string;
+    if (!user) return res.status(400).json({ error: "user required" });
+    res.json(getWalletSummary(user));
+  });
+
+  app.get("/withdraw", (req, res) => {
+    const user = req.query.user as string;
+    const amount = Number(req.query.amount || 0);
+    if (!user) return res.status(400).json({ error: "user required" });
+    if (!amount || amount <= 0) return res.status(400).json({ error: "valid amount required" });
+    const wallet = recordWalletWithdrawal(user, amount);
+    if (!wallet) return res.json({ ok: false, error: "NOT ENOUGH BALANCE" });
+    res.json({ ok: true, balance: parseFloat(wallet.balance.toFixed(2)) });
+  });
+
   app.get("/impulse", (req, res) => {
     const amt = Number(req.query.amount || 1);
     liveEngine.impulse(amt);

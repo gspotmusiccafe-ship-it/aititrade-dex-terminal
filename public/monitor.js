@@ -90,6 +90,41 @@ socket.on("market_reset", (data) => {
   `;
 });
 
+function loadWallet() {
+  const user = document.getElementById("walletUser").value.trim();
+  if (!user) return;
+  const el = document.getElementById("walletData");
+  el.innerHTML = "Loading...";
+
+  fetch(`/wallet?user=${encodeURIComponent(user)}`)
+    .then(r => r.json())
+    .then(w => {
+      if (w.error) {
+        el.innerHTML = `<span class="alert">${w.error}</span>`;
+        return;
+      }
+      let historyHTML = "";
+      if (w.recentHistory && w.recentHistory.length > 0) {
+        historyHTML = "<br><b>Recent:</b><br>";
+        w.recentHistory.slice(-5).forEach(h => {
+          const color = h.type === "PAYOUT" || h.type === "DEPOSIT" ? "good" : "alert";
+          historyHTML += `<div style="font-size:11px;font-family:monospace;padding:1px 0;"><span class="${color}">${h.type}</span> $${h.amount} — ${new Date(h.time).toLocaleTimeString()}</div>`;
+        });
+      }
+      el.innerHTML = `
+        <b>Balance:</b> <span class="good">$${w.balance.toFixed(2)}</span><br>
+        <b>Deposited:</b> $${w.deposited.toFixed(2)}<br>
+        <b>Earned:</b> $${w.earned.toFixed(2)}<br>
+        <b>Withdrawn:</b> $${w.withdrawn.toFixed(2)}<br>
+        <b>Transactions:</b> ${w.transactions}
+        ${historyHTML}
+      `;
+    })
+    .catch(() => {
+      el.innerHTML = "<span class='alert'>Failed to load wallet</span>";
+    });
+}
+
 socket.on("connect", () => {
   console.log("[MONITOR] Connected");
 });
