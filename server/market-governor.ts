@@ -1102,8 +1102,16 @@ class MarketEngine {
   updatePrice(): number {
     if (!this.marketOpen) return this.P_current;
 
-    const volatility = 0.02 + (this.totalVolume / this.targetVolume) * 0.03;
-    const drift = (Math.random() - 0.48) * volatility;
+    const fillRatio = this.totalVolume / this.targetVolume;
+
+    const baseVol = 0.001;
+    const maxVol = 0.03;
+    const volatility = baseVol + (fillRatio * fillRatio) * (maxVol - baseVol);
+
+    const pullback = (this.P_current / 1.00) * 0.03;
+    const momentum = fillRatio * 0.02;
+    const gravity = 0.5 - pullback + momentum;
+    const drift = (Math.random() - gravity) * volatility;
     this.P_current += drift;
 
     if (this.P_current < 0.01) this.P_current = 0.01;
@@ -1112,7 +1120,7 @@ class MarketEngine {
     this.mbbp = parseFloat((1.00 + this.P_current).toFixed(4));
     if (this.mbbp < this.minMBBP) this.mbbp = this.minMBBP;
 
-    const discountSpread = 0.05 + Math.random() * 0.10;
+    const discountSpread = 0.01 + fillRatio * 0.09 + Math.random() * 0.05;
     this.discountOffer = parseFloat(Math.max(this.minMBBP, this.mbbp - discountSpread).toFixed(4));
 
     return this.P_current;
