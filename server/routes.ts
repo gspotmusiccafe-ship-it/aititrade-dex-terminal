@@ -10,6 +10,7 @@ import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/client";
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
+import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
@@ -3734,7 +3735,23 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const { prompt, style, voiceType, makeInstrumental, title } = req.body;
       if (!prompt) return res.status(400).json({ message: "Prompt required" });
 
-      if (isSunoConfigured()) {
+      if (isSonicConfigured()) {
+        console.log(`[BEAT-GEN] Submitting to Sonic (MusicAPI.ai): tags=${style}, instrumental=${makeInstrumental}`);
+
+        const taskId = await sonicGenerate({
+          prompt: prompt.slice(0, 5000),
+          tags: (style || "R&B, Smooth, Melodic").slice(0, 1000),
+          title: (title || "AITIFY Beat").slice(0, 80),
+          instrumental: !!makeInstrumental,
+        });
+
+        res.json({
+          taskId,
+          engine: "sonic",
+          status: "GENERATING",
+          message: "Beat submitted to Sonic — poll /api/production/beat-status for updates",
+        });
+      } else if (isSunoConfigured()) {
         const vocalGender: "m" | "f" | undefined = voiceType?.includes("female") ? "f" : voiceType?.includes("male") ? "m" : undefined;
 
         console.log(`[BEAT-GEN] Submitting to Suno: style=${style}, vocal=${vocalGender}, instrumental=${makeInstrumental}`);
@@ -3749,11 +3766,12 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
         res.json({
           taskId,
+          engine: "suno",
           status: "GENERATING",
           message: "Beat submitted to Suno — poll /api/production/beat-status for updates",
         });
       } else {
-        console.log(`[BEAT-GEN] No Suno key — using AI vocal engine: style=${style}, voice=${voiceType}`);
+        console.log(`[BEAT-GEN] No music API key — using AI vocal engine: style=${style}, voice=${voiceType}`);
         const voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
         const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
         const audioId = `beat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -3765,6 +3783,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         res.json({
           audioUrl,
           sunoId: audioId,
+          engine: "vocal",
           status: "READY",
         });
       }
@@ -3779,31 +3798,65 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const { taskId } = req.params;
       if (!taskId) return res.status(400).json({ message: "taskId required" });
 
-      const result = await sunoCheckStatus(taskId);
+      const engine = (req.query.engine as string) || "auto";
 
-      if (result.status === "SUCCESS" && result.songs && result.songs.length > 0) {
-        const song = result.songs[0];
-        const localId = `suno-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        const localUrl = await downloadSunoAudio(song.audioUrl, localId);
+      if (engine === "sonic" || (engine === "auto" && isSonicConfigured())) {
+        const result = await sonicCheckStatus(taskId);
 
-        res.json({
-          status: "READY",
-          audioUrl: localUrl,
-          sunoId: song.id,
-          imageUrl: song.imageUrl || null,
-          duration: song.duration || 0,
-          songs: result.songs.map(s => ({
-            id: s.id,
-            audioUrl: s.audioUrl,
-            imageUrl: s.imageUrl,
-            title: s.title,
-            duration: s.duration,
-          })),
-        });
-      } else if (result.status === "FAILED") {
-        res.json({ status: "FAILED", message: "Suno generation failed" });
+        if ((result.status === "SUCCESS" || result.status === "complete") && result.songs && result.songs.length > 0) {
+          const song = result.songs[0];
+          const localId = `sonic-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const audioSrc = song.audioUrl || song.streamUrl || "";
+          const localUrl = audioSrc ? await downloadSonicAudio(audioSrc, localId) : "";
+
+          res.json({
+            status: "READY",
+            audioUrl: localUrl,
+            songId: song.id,
+            imageUrl: song.imageUrl || null,
+            duration: song.duration || 0,
+            engine: "sonic",
+            songs: result.songs.map(s => ({
+              id: s.id,
+              audioUrl: s.audioUrl,
+              imageUrl: s.imageUrl,
+              title: s.title,
+              duration: s.duration,
+            })),
+          });
+        } else if (result.status === "FAILED") {
+          res.json({ status: "FAILED", engine: "sonic", message: "Sonic generation failed" });
+        } else {
+          res.json({ status: "GENERATING", engine: "sonic", message: "Still generating..." });
+        }
       } else {
-        res.json({ status: "GENERATING", message: "Still generating..." });
+        const result = await sunoCheckStatus(taskId);
+
+        if (result.status === "SUCCESS" && result.songs && result.songs.length > 0) {
+          const song = result.songs[0];
+          const localId = `suno-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          const localUrl = await downloadSunoAudio(song.audioUrl, localId);
+
+          res.json({
+            status: "READY",
+            audioUrl: localUrl,
+            songId: song.id,
+            imageUrl: song.imageUrl || null,
+            duration: song.duration || 0,
+            engine: "suno",
+            songs: result.songs.map(s => ({
+              id: s.id,
+              audioUrl: s.audioUrl,
+              imageUrl: s.imageUrl,
+              title: s.title,
+              duration: s.duration,
+            })),
+          });
+        } else if (result.status === "FAILED") {
+          res.json({ status: "FAILED", engine: "suno", message: "Suno generation failed" });
+        } else {
+          res.json({ status: "GENERATING", engine: "suno", message: "Still generating..." });
+        }
       }
     } catch (error: any) {
       console.error("[BEAT-STATUS] Error:", error.message);
