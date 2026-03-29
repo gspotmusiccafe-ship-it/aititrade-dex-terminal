@@ -1027,17 +1027,11 @@ const VALID_ENTRIES = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
 let currentSystemBias: "NATURAL" | "FLOOR_HEAVY" = "NATURAL";
 
 const KINETIC_SPLITS = [
-  { floor: 0.90, house: 0.10, pulse: "HIGH" },
-  { floor: 0.80, house: 0.20, pulse: "HIGH" },
-  { floor: 0.70, house: 0.30, pulse: "MID" },
-  { floor: 0.60, house: 0.40, pulse: "MID" },
-  { floor: 0.50, house: 0.50, pulse: "LOW" },
+  { floor: 0.54, house: 0.46, pulse: "LOCKED" },
 ];
 
 const KINETIC_SPLITS_HEAVY = [
-  { floor: 0.90, house: 0.10, pulse: "HIGH" },
-  { floor: 0.80, house: 0.20, pulse: "HIGH" },
-  { floor: 0.70, house: 0.30, pulse: "MID" },
+  { floor: 0.54, house: 0.46, pulse: "LOCKED" },
 ];
 
 function getKineticState(adminBias: "NATURAL" | "FLOOR_HEAVY" = currentSystemBias) {
