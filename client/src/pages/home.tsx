@@ -187,11 +187,11 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
               <p className="text-[8px] text-yellow-400/60 mb-1.5 text-center tracking-widest">G. SMOOTH GLOBAL MANDATE — DISBURSEMENT</p>
               <div className="grid grid-cols-2 gap-1.5 text-center mb-1.5">
                 <div className="bg-black/50 border border-emerald-500/15 p-2">
-                  <p className="text-[8px] text-emerald-500/50">FLOOR RETAINED (54%)</p>
+                  <p className="text-[8px] text-emerald-500/50">FLOOR RETAINED</p>
                   <p className="text-sm text-emerald-400 font-bold" data-testid="text-floor-retained">${receipt.floorRetained.toFixed(4)}</p>
                 </div>
                 <div className="bg-black/50 border border-yellow-500/15 p-2">
-                  <p className="text-[8px] text-yellow-400/50">CEO GROSS (46%)</p>
+                  <p className="text-[8px] text-yellow-400/50">CEO GROSS</p>
                   <p className="text-sm text-yellow-400 font-bold" data-testid="text-ceo-gross">${receipt.ceoGross.toFixed(4)}</p>
                 </div>
               </div>
@@ -445,7 +445,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
             <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
           </div>
           <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
-            <p className="text-[9px] text-lime-500/50">{kineticState?.floorPct || 90}% FLOOR RETAINED — {kineticState?.ceoPct || 10}% CEO GROSS (G. SMOOTH MANDATE)</p>
+            <p className="text-[9px] text-lime-500/50">FLOOR RETAINED — CEO GROSS (G. SMOOTH MANDATE)</p>
             <p className="text-[8px] text-zinc-600 mt-1">ONCE PAID, TRADE LOCKS — STIMULATION STARTING</p>
           </div>
           {tradeData && (
@@ -829,7 +829,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
                 style={{ width: `${capacityPct}%` }}
               />
               {capacityPct >= 50 && capacityPct < 90 && (
-                <div className="absolute left-1/2 top-0 h-full w-px bg-amber-500/40" title="54% Settlement Line" />
+                <div className="absolute left-1/2 top-0 h-full w-px bg-amber-500/40" title="Settlement Line" />
               )}
               {isFlashZone && (
                 <div className="absolute right-0 top-0 h-full w-[10%] bg-red-500/30 animate-pulse" />
@@ -964,7 +964,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> OPEN BROKERAGE ACCOUNT
           </button>
           <p className="text-[8px] sm:text-[9px] text-zinc-600 mt-2 text-center uppercase tracking-wider sm:tracking-widest break-words">
-            No PayPal • Direct P2P Settlement • 54% Floor Protected
+            No PayPal • Direct P2P Settlement • Floor Protected
           </p>
         </div>
       )}
