@@ -4256,11 +4256,11 @@ function SettlementGovernorTab() {
           <p className="text-sm sm:text-lg text-emerald-400 font-black">${dashboard.grossIntake.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
         </div>
         <div className="bg-zinc-900 border border-emerald-500/20 p-1.5 sm:p-3">
-          <p className="text-[7px] sm:text-[9px] text-zinc-500 tracking-wider">54% POOL</p>
+          <p className="text-[7px] sm:text-[9px] text-zinc-500 tracking-wider">FLOOR POOL</p>
           <p className="text-sm sm:text-lg text-lime-400 font-black">${dashboard.totalOwed54.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
         </div>
         <div className="bg-zinc-900 border border-emerald-500/20 p-1.5 sm:p-3">
-          <p className="text-[7px] sm:text-[9px] text-zinc-500 tracking-wider">46% CEO</p>
+          <p className="text-[7px] sm:text-[9px] text-zinc-500 tracking-wider">CEO TAKE</p>
           <p className="text-sm sm:text-lg text-amber-400 font-black">${dashboard.ceo46Total.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
         </div>
         <div className="bg-zinc-900 border border-emerald-500/20 p-1.5 sm:p-3">
