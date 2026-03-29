@@ -1842,25 +1842,25 @@ function GlobalRotationTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-black flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-lime-500/15 flex items-center justify-center">
+          <h3 className="text-base sm:text-lg font-black flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-lime-500/15 flex items-center justify-center flex-shrink-0">
               <Disc3 className="h-4 w-4 text-lime-400" />
             </div>
             GLOBAL RADIO — Rotation Manager
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Self-load assets into the Global Radio DJ Console rotation. Add Spotify URIs, audio URLs, or cover art.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-sm bg-lime-500/10 text-lime-400" data-testid="badge-rotation-count">
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge variant="secondary" className="text-xs sm:text-sm bg-lime-500/10 text-lime-400" data-testid="badge-rotation-count">
             {count} asset{count !== 1 ? "s" : ""} in rotation
           </Badge>
           <Button size="sm" onClick={() => { resetForm(); setShowAdd(true); }} className="bg-lime-600 hover:bg-lime-700 text-black font-bold" data-testid="button-add-rotation">
             <Plus className="h-4 w-4 mr-1" />
-            ADD ASSET
+            ADD
           </Button>
         </div>
       </div>
@@ -1874,7 +1874,7 @@ function GlobalRotationTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs font-bold">TICKER *</Label>
                 <Input
@@ -1894,7 +1894,7 @@ function GlobalRotationTab() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-xs font-bold">ARTIST NAME</Label>
                 <Input
@@ -4489,8 +4489,8 @@ export default function AdminPage() {
             </CardContent></Card>
           </div>
         )}
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="border rounded-lg overflow-x-auto">
+          <table className="w-full text-xs min-w-[600px]">
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left p-2 font-bold">TIME</th>
@@ -4733,7 +4733,7 @@ export default function AdminPage() {
           </div>
         </div>
       </div>
-      <div className="px-6">
+      <div className="px-3 sm:px-6">
         <div className="max-w-6xl mx-auto">
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="overflow-x-auto -mx-6 px-6 pb-2">
