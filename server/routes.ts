@@ -2271,9 +2271,15 @@ export async function registerRoutes(
 
       const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}?note=AITITRADE%20${encodeURIComponent(trackingNum)}`;
 
+      const tradeUser = await storage.getUser(userId);
+      const tradeBuyerEmail = tradeUser?.email || "";
+      const tradeBuyerName = (tradeUser?.displayName || tradeUser?.email?.split("@")[0] || "TRADER").toUpperCase();
+
       const [order] = await db.insert(orders).values({
         trackId,
         trackingNumber: trackingNum,
+        buyerEmail: tradeBuyerEmail,
+        buyerName: tradeBuyerName,
         unitPrice: parsedAmount.toString(),
         creatorCredit: ceoPct.toFixed(2),
         creatorCreditAmount: ceoTake.toString(),
@@ -5791,9 +5797,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       console.log(`[KINETIC TRADE] ${type || "IMPULSE"} | Asset: ${ticker} | Entry: $${parsedAmount} | ROI: ${(finalROI * 100).toFixed(0)}% | Split: ${Math.round(pulse.floorROI*100)}/${Math.round(pulse.houseMBBP*100)} | Payout: $${payout} | Pulse: ${pulse.pulse} | Bias: ${pulse.bias}`);
 
+      const user = await storage.getUser(userId);
+      const buyerEmail = user?.email || "";
+      const buyerName = user?.displayName || user?.email?.split("@")[0] || "TRADER";
+
       const [order] = await db.insert(orders).values({
         trackId,
         trackingNumber: trackingNum,
+        buyerEmail,
+        buyerName: buyerName.toUpperCase(),
         unitPrice: parsedAmount.toString(),
         creatorCredit: pulse.houseMBBP.toFixed(2),
         creatorCreditAmount: ceoTake.toString(),
