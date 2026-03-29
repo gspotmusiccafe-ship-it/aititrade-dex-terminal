@@ -1252,45 +1252,27 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="px-4 py-2 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-4 text-[10px]">
+      <div className="px-3 sm:px-4 py-1.5 sm:py-2 border-b border-zinc-800 bg-zinc-900/50">
+        <div className="flex items-center gap-2 sm:gap-4 text-[9px] sm:text-[10px] flex-wrap">
           <span className={`font-bold ${engineConnected ? "text-emerald-400" : "text-red-400"}`}>
-            {engineConnected ? "● LIVE" : "○ OFFLINE"}
+            {engineConnected ? "● LIVE" : "○ OFF"}
           </span>
-          <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">PRICE:</span>
           <span className="text-lime-400 font-bold">${enginePrice.toFixed(2)}</span>
-          <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">MBBP:</span>
-          <span className="text-amber-400 font-bold">${engineMbbp.toFixed(2)}</span>
-          <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">MARKET:</span>
+          <span className="text-amber-400 font-bold">MBBP ${engineMbbp.toFixed(2)}</span>
           <span className={`font-bold ${engineMarketOpen ? "text-emerald-400" : "text-red-400"}`}>
             {engineMarketOpen ? "OPEN" : "CLOSED"}
           </span>
-          <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">QUEUE:</span>
-          <span className="text-white font-bold">{engineState?.queueSize || 0}</span>
-          <span className="text-zinc-800">|</span>
-          <span className="text-zinc-600">VOL:</span>
-          <span className="text-white font-bold">${engineState?.totalVolume?.toFixed(2) || "0.00"} / ${engineState?.targetVolume || 1000}</span>
+          <span className="hidden sm:inline text-white font-bold">Q:{engineState?.queueSize || 0}</span>
+          <span className="hidden sm:inline text-white font-bold">${engineState?.totalVolume?.toFixed(0) || "0"}/{engineState?.targetVolume || 1000}</span>
           {engineDiscount > 0 && (
-            <>
-              <span className="text-zinc-800">|</span>
-              <span className="text-yellow-400 font-bold animate-pulse">DISCOUNT: ${engineDiscount.toFixed(2)}</span>
-            </>
+            <span className="text-yellow-400 font-bold animate-pulse">OFFER ${engineDiscount.toFixed(2)}</span>
           )}
           {settlementData && (
-            <>
-              <span className="text-zinc-800">|</span>
-              <span className={`font-bold ${(settlementData.nextKAt - settlementData.grossIntake) <= 100 ? "text-red-400 animate-pulse" : "text-lime-400"}`}>
-                ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 2 })} TO SETTLE
-              </span>
-            </>
+            <span className={`font-bold ${(settlementData.nextKAt - settlementData.grossIntake) <= 100 ? "text-red-400 animate-pulse" : "text-lime-400"}`}>
+              ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 0 })} TO SETTLE
+            </span>
           )}
-        </div>
-        <div className="flex items-center gap-2 text-[10px]">
-          <span className="text-zinc-600">{user?.firstName || user?.email || "PUBLIC"}</span>
+          <span className="ml-auto text-zinc-600 text-[8px] sm:text-[10px]">{user?.firstName || user?.email || "PUBLIC"}</span>
         </div>
       </div>
 

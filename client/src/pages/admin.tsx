@@ -2777,7 +2777,7 @@ function KineticGovernorTab() {
 
           <div className="border-t border-zinc-800 pt-4">
             <p className="text-xs text-zinc-500 font-bold mb-3">ADMIN BIAS CONTROL</p>
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button
                 onClick={() => biasMutation.mutate("FLOOR_HEAVY")}
                 disabled={biasMutation.isPending || currentBias === "FLOOR_HEAVY"}
@@ -2785,7 +2785,7 @@ function KineticGovernorTab() {
                 data-testid="button-bias-floor-heavy"
               >
                 <Zap className="h-4 w-4 mr-1.5" />
-                FLOOR HEAVY (90/10)
+                FLOOR HEAVY
               </Button>
               <Button
                 onClick={() => biasMutation.mutate("NATURAL")}
@@ -2793,7 +2793,7 @@ function KineticGovernorTab() {
                 className={`flex-1 font-bold ${currentBias === "NATURAL" ? "bg-amber-600 text-white" : "bg-zinc-800 text-zinc-400 hover:bg-amber-600 hover:text-white"}`}
                 data-testid="button-bias-natural"
               >
-                NATURAL (90/50)
+                NATURAL
               </Button>
             </div>
           </div>
@@ -4175,6 +4175,65 @@ function WithdrawalTool() {
   );
 }
 
+function PendingPaymentsSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: pendingOrders, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/pending-payments"],
+    refetchInterval: 15000,
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: async (orderId: number) => {
+      const res = await apiRequest("POST", "/api/admin/confirm-payment", { orderId });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Payment Confirmed", description: "Position activated and trader enqueued" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+    },
+    onError: (err: any) => toast({ title: "Confirm Failed", description: err.message, variant: "destructive" }),
+  });
+
+  if (isLoading) return null;
+  if (!pendingOrders || pendingOrders.length === 0) return null;
+
+  return (
+    <div className="bg-zinc-900 border border-yellow-500/30">
+      <div className="px-2 sm:px-3 py-1.5 sm:py-2 border-b border-yellow-500/20 bg-yellow-500/5">
+        <span className="text-[8px] sm:text-[10px] text-yellow-400 font-extrabold tracking-wider animate-pulse">PENDING CASH APP PAYMENTS</span>
+        <span className="text-[8px] sm:text-[9px] text-zinc-500 ml-2">{pendingOrders.length} awaiting confirmation</span>
+      </div>
+      <div className="divide-y divide-zinc-800">
+        {pendingOrders.map((order: any) => (
+          <div key={order.id} className="px-2 sm:px-3 py-1.5 sm:py-2 hover:bg-zinc-800/50 transition-colors" data-testid={`pending-order-${order.id}`}>
+            <div className="flex items-center justify-between gap-1.5">
+              <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
+                <span className="text-[8px] sm:text-[10px] text-white font-bold truncate">{order.userEmail || order.userId?.slice(0, 12)}</span>
+                <span className="text-[7px] sm:text-[8px] px-1 py-0.5 border text-yellow-400 border-yellow-500/30 bg-yellow-500/10 font-bold">PENDING</span>
+                <span className="text-[8px] sm:text-[10px] text-lime-400 font-bold">${parseFloat(order.unitPrice || "0").toFixed(2)}</span>
+                <span className="text-[7px] sm:text-[8px] text-zinc-500">{order.portalName || order.trackTitle}</span>
+              </div>
+              <Button
+                size="sm"
+                className="bg-yellow-600 hover:bg-yellow-500 text-black text-[7px] sm:text-[9px] font-bold h-6 sm:h-7 px-1.5 sm:px-2 flex-shrink-0"
+                onClick={() => confirmMutation.mutate(order.id)}
+                disabled={confirmMutation.isPending}
+                data-testid={`button-confirm-payment-${order.id}`}
+              >
+                CONFIRM PAID
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SettlementGovernorTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -4307,6 +4366,8 @@ function SettlementGovernorTab() {
           <p className="text-sm sm:text-lg text-lime-400 font-black">{dashboard.settledCount}</p>
         </div>
       </div>
+
+      <PendingPaymentsSection />
 
       <div className="bg-zinc-900 border border-zinc-800">
         <div className="px-2 sm:px-3 py-1.5 sm:py-2 border-b border-zinc-800 flex items-center justify-between">

@@ -857,12 +857,22 @@ export async function registerRoutes(
     try {
       const { orderId } = req.body;
       if (!orderId) return res.status(400).json({ message: "orderId required" });
+      const requestingUserId = req.user?.claims?.sub;
 
       const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
       if (!order) return res.status(404).json({ message: "Trade not found" });
 
+      const [requestingUser] = await db.select().from(users).where(eq(users.id, requestingUserId));
+      if (!requestingUser?.isAdmin && order.buyerEmail !== requestingUser?.email) {
+        return res.status(403).json({ message: "You can only exit your own positions" });
+      }
+
       if (order.status === "settled_early" || order.status === "settled") {
         return res.status(409).json({ message: "Trade already settled" });
+      }
+
+      if (order.status === "pending_cashapp") {
+        return res.status(400).json({ message: "Payment not confirmed yet — cannot exit unconfirmed position" });
       }
 
       const amount = parseFloat(order.unitPrice || "2.00");
@@ -2287,18 +2297,6 @@ export async function registerRoutes(
         status: "pending_cashapp",
       }).returning();
 
-      await db.update(tracks)
-        .set({ salesCount: sql`${tracks.salesCount} + 1` })
-        .where(eq(tracks.id, trackId));
-
-      let settlementTriggered = false;
-      if (!isGlobal) {
-        await enqueueTrader(order.id, userId, trackId, parsedAmount);
-        settlementTriggered = await checkAndTriggerSettlement();
-      }
-
-      const newGross = parseFloat(((currentSales + 1) * price).toFixed(2));
-      const capacityPct = Math.min(100, parseFloat(((newGross / GLOBAL_CEILING) * 100).toFixed(1)));
       const fundBalance = await getSettlementFundBalance();
 
       res.json({
@@ -2315,17 +2313,17 @@ export async function registerRoutes(
         trustTithe: trustTithe10,
         bounce: bounce,
         priority: isPriority ? "HIGH" : "CYCLE_HOLD",
-        indicator: "STIMULATION_ACTIVE",
-        status: newGross >= GLOBAL_CEILING ? "CLOSED" : "STIMULATION_PENDING",
-        message: "PAYMENT TO $AITITRADEBROKERAGE LOCKS YOUR POSITION",
-        grossSales: newGross,
-        totalMints: currentSales + 1,
+        indicator: "AWAITING_PAYMENT",
+        status: "PENDING_PAYMENT",
+        message: "PAYMENT TO $AITITRADEBROKERAGE LOCKS YOUR POSITION — POSITION HELD UNTIL CONFIRMED",
+        grossSales: parseFloat(((currentSales) * price).toFixed(2)),
+        totalMints: currentSales,
         mintCap: GLOBAL_CEILING,
-        capacityPct,
+        capacityPct: Math.min(100, parseFloat(((currentSales * price / GLOBAL_CEILING) * 100).toFixed(1))),
         aiModel: track.aiModel || "AITIFY-GEN-1",
         releaseType: isGlobal ? "global" : "native",
         settlementFund: fundBalance,
-        settlementTriggered,
+        settlementTriggered: false,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
@@ -4158,6 +4156,72 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/admin/pending-payments", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const pending = await db.select().from(orders).where(eq(orders.status, "pending_cashapp")).orderBy(orders.createdAt);
+      
+      const enriched = pending.map((order: any) => ({
+        ...order,
+        userEmail: order.buyerEmail || order.buyerName || "Unknown",
+      }));
+      
+      res.json(enriched);
+    } catch (error) {
+      console.error("[ADMIN] Pending payments error:", error);
+      res.status(500).json({ message: "Failed to fetch pending payments" });
+    }
+  });
+
+  app.post("/api/admin/confirm-payment", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { orderId } = req.body;
+      if (!orderId) return res.status(400).json({ message: "orderId required" });
+
+      const [order] = await db.select().from(orders).where(eq(orders.id, orderId));
+      if (!order) return res.status(404).json({ message: "Order not found" });
+      if (order.status !== "pending_cashapp") {
+        return res.status(400).json({ message: `Order already ${order.status}` });
+      }
+
+      const [updated] = await db.update(orders)
+        .set({ status: "confirmed" })
+        .where(and(eq(orders.id, orderId), eq(orders.status, "pending_cashapp")))
+        .returning();
+      
+      if (!updated) {
+        return res.status(409).json({ message: "Order already confirmed (race condition)" });
+      }
+
+      const parsedAmount = parseFloat(order.unitPrice || "0");
+      await db.update(tracks)
+        .set({ salesCount: sql`${tracks.salesCount} + 1` })
+        .where(eq(tracks.id, order.trackId!));
+
+      await enqueueTrader(order.id, order.buyerEmail || "", order.trackId!, parsedAmount);
+      const settlementTriggered = await checkAndTriggerSettlement();
+
+      console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — enqueued + sales counted`);
+
+      res.json({
+        message: "Payment confirmed — position locked and enqueued",
+        orderId,
+        amount: parsedAmount,
+        settlementTriggered,
+      });
+    } catch (error: any) {
+      console.error("[CONFIRM] Error:", error);
+      res.status(500).json({ message: "Failed to confirm payment" });
+    }
+  });
+
   // ═══════════════════════════════════════════════════════════════
   // TRADER PORTAL — Individual trader profile + positions
   // ═══════════════════════════════════════════════════════════════
@@ -5813,19 +5877,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         status: "pending_cashapp",
       }).returning();
 
-      await db.update(tracks)
-        .set({ salesCount: sql`${tracks.salesCount} + 1` })
-        .where(eq(tracks.id, trackId));
-
-      liveEngine.enterMarket(userId, parsedAmount);
-      liveEngine.updatePrice();
-
-      await enqueueTrader(order.id, userId, trackId, parsedAmount);
-      const settlementTriggered = await checkAndTriggerSettlement();
       const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}?note=AITITRADE%20${encodeURIComponent(trackingNum)}`;
 
       res.json({
-        status: "POSITION_LOCKED",
+        status: "PENDING_PAYMENT",
         type: type || "IMPULSE",
         trackingNumber: trackingNum,
         entry: parsedAmount,
@@ -5839,9 +5894,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         cashtag: "$AITITRADEBROKERAGE",
         instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
         note: `AITITRADE ${trackingNum}`,
+        message: "PAYMENT TO $AITITRADEBROKERAGE LOCKS YOUR POSITION — POSITION HELD UNTIL CONFIRMED",
         floorRetained: floorTake,
         ceoGross: ceoTake,
-        settlementTriggered,
+        settlementTriggered: false,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {

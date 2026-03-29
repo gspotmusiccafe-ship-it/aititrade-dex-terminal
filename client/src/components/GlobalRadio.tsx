@@ -380,6 +380,30 @@ export default function GlobalRadio() {
     return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
   }, [tunedIn, sendHeartbeat]);
 
+  useEffect(() => {
+    if (!tunedIn) return;
+    const tokenRefreshInterval = setInterval(() => {
+      fetchToken().catch(() => {});
+    }, 25 * 60 * 1000);
+    return () => clearInterval(tokenRefreshInterval);
+  }, [tunedIn, fetchToken]);
+
+  useEffect(() => {
+    if (!tunedIn || !playerRef.current) return;
+    const recoveryCheck = setInterval(async () => {
+      try {
+        const state = await playerRef.current?.getCurrentState();
+        if (!state && deviceId) {
+          console.log("[GlobalRadio] Player lost state — attempting recovery");
+          const asset = currentAssetRef.current;
+          const dev = deviceIdRef.current;
+          if (dev) startPlayback(asset, dev);
+        }
+      } catch {}
+    }, 60000);
+    return () => clearInterval(recoveryCheck);
+  }, [tunedIn, deviceId, startPlayback]);
+
   useEffect(() => { return () => { if (playerRef.current) playerRef.current.disconnect(); }; }, []);
 
   const handleTuneIn = async () => {

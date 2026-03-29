@@ -20,7 +20,7 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Backend**: Express.js with TypeScript for API services.
 -   **Database**: PostgreSQL, managed with Drizzle ORM.
 -   **Authentication**: Primary authentication via email/password, with optional Spotify OAuth 2.0 integration for enhanced features.
--   **Payments**: Cash App ($AITITRADEBROKERAGE) handles ALL transactions — asset trading via `/api/exchange/trade` and account activation ($25 down + $19.79/mo). PayPal used only for artist tipping.
+-   **Payments**: Cash App ($AITITRADEBROKERAGE) handles ALL transactions — asset trading via `/api/exchange/trade` and account activation ($25 down + $19.79/mo). PayPal used only for artist tipping. Cash App flow is P2P: trade creates `pending_cashapp` order with Cash App link, no money credited until admin confirms via `POST /api/admin/confirm-payment`. Admin pending payments panel in Settlement Governor tab shows all awaiting orders. Confirm triggers salesCount +1, enqueue, and settlement check atomically (conditional WHERE prevents race conditions).
 -   **Access Control**: Two-tier model — (1) AuthGate: any logged-in user accesses trading floor (Home), trader portal, leaderboard. Sidebar shows only Trading Floor section + Upgrade link. (2) PremiumGate: Sovereign Trust members access Global Trades (radio), Trust Vault, CEO Class, Trust Certificate, Search, Library, Liked Songs. Sidebar shows full Sovereign Trust section. Admin sees everything. After signup/login, users redirect to `/trader` page.
 
 **Key Features & Technical Implementations:**
