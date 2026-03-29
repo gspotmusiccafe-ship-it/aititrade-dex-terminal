@@ -1978,82 +1978,118 @@ function GlobalRotationTab() {
               Current Rotation ({count})
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1">
+          <CardContent className="space-y-2">
             {items?.map((item: any, index: number) => {
               const isFirst = index === 0;
               const isLast = index === (items?.length || 0) - 1;
+              const spotifyEmbedUrl = (() => {
+                if (item.spotifyUri) {
+                  const parts = item.spotifyUri.replace("spotify:", "").split(":");
+                  if (parts.length === 2) return `https://open.spotify.com/embed/${parts[0]}/${parts[1]}?utm_source=generator&theme=0`;
+                }
+                if (item.spotifyUrl) {
+                  const m = item.spotifyUrl.match(/open\.spotify\.com\/(playlist|album|track)\/([a-zA-Z0-9]+)/);
+                  if (m) return `https://open.spotify.com/embed/${m[1]}/${m[2]}?utm_source=generator&theme=0`;
+                }
+                return null;
+              })();
               return (
                 <div
                   key={item.id}
-                  className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-md bg-lime-500/5 hover:bg-lime-500/10 border border-lime-500/10 transition-colors"
+                  className="rounded-md bg-lime-500/5 hover:bg-lime-500/10 border border-lime-500/10 transition-colors overflow-hidden"
                   data-testid={`rotation-item-${item.id}`}
                 >
-                  <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
-                    <button
-                      className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isFirst ? "text-zinc-700 cursor-default" : "text-lime-400/60 hover:text-lime-400 hover:bg-lime-500/20"}`}
-                      onClick={() => !isFirst && moveItem(index, "up")}
-                      disabled={isFirst || reorderMutation.isPending}
-                      data-testid={`button-rotation-up-${item.id}`}
-                    >
-                      <ChevronUp className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="text-xs text-lime-400/60 font-mono font-bold leading-none w-5 text-center">{index + 1}</span>
-                    <button
-                      className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isLast ? "text-zinc-700 cursor-default" : "text-lime-400/60 hover:text-lime-400 hover:bg-lime-500/20"}`}
-                      onClick={() => !isLast && moveItem(index, "down")}
-                      disabled={isLast || reorderMutation.isPending}
-                      data-testid={`button-rotation-down-${item.id}`}
-                    >
-                      <ChevronDown className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-black border border-lime-500/20">
-                    {item.coverImage ? (
-                      <img src={item.coverImage} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Disc3 className="h-4 w-4 text-lime-400/40" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{item.title}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-lime-400 font-mono font-bold">{item.ticker}</span>
-                      {item.artistName && <span className="text-[10px] text-muted-foreground">— {item.artistName}</span>}
+                  <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3">
+                    <div className="flex flex-col items-center gap-0.5 flex-shrink-0">
+                      <button
+                        className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isFirst ? "text-zinc-700 cursor-default" : "text-lime-400/60 hover:text-lime-400 hover:bg-lime-500/20"}`}
+                        onClick={() => !isFirst && moveItem(index, "up")}
+                        disabled={isFirst || reorderMutation.isPending}
+                        data-testid={`button-rotation-up-${item.id}`}
+                      >
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="text-xs text-lime-400/60 font-mono font-bold leading-none w-5 text-center">{index + 1}</span>
+                      <button
+                        className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isLast ? "text-zinc-700 cursor-default" : "text-lime-400/60 hover:text-lime-400 hover:bg-lime-500/20"}`}
+                        onClick={() => !isLast && moveItem(index, "down")}
+                        disabled={isLast || reorderMutation.isPending}
+                        data-testid={`button-rotation-down-${item.id}`}
+                      >
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
                     </div>
+                    <div className="w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-black border border-lime-500/20">
+                      {item.coverImage ? (
+                        <img src={item.coverImage} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Disc3 className="h-4 w-4 text-lime-400/40" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{item.title}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-lime-400 font-mono font-bold">{item.ticker}</span>
+                        {item.artistName && <span className="text-[10px] text-muted-foreground">— {item.artistName}</span>}
+                      </div>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+                      {(item.spotifyUri || item.spotifyUrl) && (
+                        <Badge variant="secondary" className="text-[9px] bg-green-500/10 text-green-400">
+                          <SiSpotify className="h-2.5 w-2.5 mr-0.5" /> SPOTIFY
+                        </Badge>
+                      )}
+                      {item.audioUrl && (
+                        <Badge variant="secondary" className="text-[9px] bg-blue-500/10 text-blue-400">
+                          AUDIO
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-[9px]">{item.assetClass?.toUpperCase()}</Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      onClick={() => startEdit(item)}
+                      data-testid={`button-edit-rotation-${item.id}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                      onClick={() => deleteMutation.mutate(item.id)}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-delete-rotation-${item.id}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {item.spotifyUri && (
-                      <Badge variant="secondary" className="text-[9px] bg-green-500/10 text-green-400">
-                        <SiSpotify className="h-2.5 w-2.5 mr-0.5" /> SPOTIFY
-                      </Badge>
-                    )}
-                    {item.audioUrl && (
-                      <Badge variant="secondary" className="text-[9px] bg-blue-500/10 text-blue-400">
-                        AUDIO
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="text-[9px]">{item.assetClass?.toUpperCase()}</Badge>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => startEdit(item)}
-                    data-testid={`button-edit-rotation-${item.id}`}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => deleteMutation.mutate(item.id)}
-                    disabled={deleteMutation.isPending}
-                    data-testid={`button-delete-rotation-${item.id}`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  {spotifyEmbedUrl && (
+                    <div className="px-2 pb-2 sm:px-3 sm:pb-3">
+                      <iframe
+                        src={spotifyEmbedUrl}
+                        width="100%"
+                        height="80"
+                        frameBorder="0"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                        className="rounded-md"
+                        style={{ borderRadius: "8px" }}
+                        data-testid={`spotify-player-${item.id}`}
+                      />
+                    </div>
+                  )}
+                  {!spotifyEmbedUrl && item.audioUrl && (
+                    <div className="px-2 pb-2 sm:px-3 sm:pb-3">
+                      <audio controls className="w-full h-8" src={item.audioUrl} data-testid={`audio-player-${item.id}`}>
+                        Your browser does not support the audio element.
+                      </audio>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -2397,22 +2433,22 @@ function JamControlTab() {
         </CardHeader>
         <CardContent className="space-y-6">
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-black/40 rounded-lg p-3 border border-zinc-800 text-center">
-              <p className="text-2xl font-black text-white">{occupiedSeats}/6</p>
-              <p className="text-xs text-zinc-500 font-mono">SEATS FILLED</p>
+              <p className="text-xl sm:text-2xl font-black text-white">{occupiedSeats}/6</p>
+              <p className="text-[10px] sm:text-xs text-zinc-500 font-mono">SEATS FILLED</p>
             </div>
             <div className="bg-black/40 rounded-lg p-3 border border-zinc-800 text-center">
-              <p className="text-2xl font-black text-[#1DB954]">{totalSessions}</p>
-              <p className="text-xs text-zinc-500 font-mono">TOTAL SESSIONS</p>
+              <p className="text-xl sm:text-2xl font-black text-[#1DB954]">{totalSessions}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-500 font-mono">TOTAL SESSIONS</p>
             </div>
             <div className="bg-black/40 rounded-lg p-3 border border-zinc-800 text-center">
-              <p className="text-2xl font-black text-white">{totalStreams.toLocaleString()}</p>
-              <p className="text-xs text-zinc-500 font-mono">TOTAL STREAMS</p>
+              <p className="text-xl sm:text-2xl font-black text-white">{totalStreams.toLocaleString()}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-500 font-mono">TOTAL STREAMS</p>
             </div>
             <div className="bg-black/40 rounded-lg p-3 border border-[#1DB954]/30 text-center">
-              <p className="text-2xl font-black text-[#1DB954]">${estimatedSettlement.toFixed(4)}</p>
-              <p className="text-xs text-zinc-500 font-mono">EST. SETTLEMENT</p>
+              <p className="text-xl sm:text-2xl font-black text-[#1DB954]">${estimatedSettlement.toFixed(4)}</p>
+              <p className="text-[10px] sm:text-xs text-zinc-500 font-mono">EST. SETTLEMENT</p>
             </div>
           </div>
 
@@ -4022,31 +4058,33 @@ function GlobalLedger() {
   });
 
   return (
-    <div className="mt-6 border border-zinc-800 bg-black p-4 font-mono text-[11px]" data-testid="global-ledger">
+    <div className="mt-6 border border-zinc-800 bg-black p-3 sm:p-4 font-mono text-[11px] overflow-x-auto" data-testid="global-ledger">
       <h3 className="text-zinc-400 text-xs font-bold uppercase mb-3 tracking-wider">Discount Exit Ledger</h3>
-      <div className="grid grid-cols-5 text-zinc-500 uppercase border-b border-zinc-800 pb-2 mb-2">
-        <span>Asset ID</span>
-        <span>Buy-In (TBI)</span>
-        <span>User Payout</span>
-        <span className="text-lime-500">House Take</span>
-        <span>Portal</span>
-      </div>
-      <div className="space-y-1 max-h-64 overflow-y-auto">
-        {isLoading ? (
-          <div className="text-zinc-600 py-4 text-center">Loading ledger...</div>
-        ) : !exits?.length ? (
-          <div className="text-zinc-600 py-4 text-center">No early exits recorded</div>
-        ) : (
-          exits.map((log) => (
-            <div key={log.id} className="grid grid-cols-5 border-b border-zinc-900 py-1 hover:bg-zinc-950" data-testid={`ledger-row-${log.id}`}>
-              <span className="text-zinc-400 truncate">{log.trackingNumber}</span>
-              <span className="text-white">${log.unitPrice}</span>
-              <span className="text-yellow-600">${log.finalPayout || "—"}</span>
-              <span className="text-lime-400 font-bold">${log.houseTake || "—"}</span>
-              <span className="text-zinc-500">{log.portalName || "—"}</span>
-            </div>
-          ))
-        )}
+      <div className="min-w-[400px]">
+        <div className="grid grid-cols-5 text-zinc-500 uppercase border-b border-zinc-800 pb-2 mb-2">
+          <span>Asset ID</span>
+          <span>Buy-In (TBI)</span>
+          <span>User Payout</span>
+          <span className="text-lime-500">House Take</span>
+          <span>Portal</span>
+        </div>
+        <div className="space-y-1 max-h-64 overflow-y-auto">
+          {isLoading ? (
+            <div className="text-zinc-600 py-4 text-center">Loading ledger...</div>
+          ) : !exits?.length ? (
+            <div className="text-zinc-600 py-4 text-center">No early exits recorded</div>
+          ) : (
+            exits.map((log) => (
+              <div key={log.id} className="grid grid-cols-5 border-b border-zinc-900 py-1 hover:bg-zinc-950" data-testid={`ledger-row-${log.id}`}>
+                <span className="text-zinc-400 truncate">{log.trackingNumber}</span>
+                <span className="text-white">${log.unitPrice}</span>
+                <span className="text-yellow-600">${log.finalPayout || "—"}</span>
+                <span className="text-lime-400 font-bold">${log.houseTake || "—"}</span>
+                <span className="text-zinc-500">{log.portalName || "—"}</span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

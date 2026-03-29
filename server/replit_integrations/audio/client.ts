@@ -213,7 +213,30 @@ export async function performVocal(
   voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "nova",
   format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "mp3"
 ): Promise<Buffer> {
-  const systemPrompt = `You are a professional singer and vocal performer. You MUST SING the lyrics given to you — do NOT just read or speak them. Deliver a full vocal performance with melody, rhythm, emotion, and musical phrasing. Use the style direction provided. Add natural vocal runs, ad-libs, and breathing. Perform it like a real recording session — this is music, not narration. Style: ${style}`;
+  const formattedLyrics = lyrics
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      if (/^\[.*\]$/.test(line)) return line;
+      return `♪ ${line} ♪`;
+    })
+    .join("\n");
+
+  const systemPrompt = `You are a professional recording artist in a studio session. Your ONLY job is to SING — never speak, narrate, explain, or read lyrics aloud.
+
+CRITICAL RULES:
+- SING every single line with MELODY, PITCH CHANGES, and RHYTHM
+- Use a real singing voice with VIBRATO, SUSTAIN on held notes, and BREATH CONTROL
+- Follow the tempo and feel of the style direction
+- Add melodic runs, vocal slides between notes, and natural ad-libs ("ooh", "yeah", "baby")
+- Hold the last word of each line slightly longer for musicality
+- NEVER break character — you are SINGING a song, not reading a poem
+- If a line is marked with ♪ symbols, that means SING IT with full melody
+- Vary your dynamics — soft verses, powerful chorus, emotional bridge
+- This is a MUSIC RECORDING, not a spoken word performance
+
+Style direction: ${style}`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-audio",
@@ -221,7 +244,7 @@ export async function performVocal(
     audio: { voice, format },
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Sing these lyrics with full musical expression:\n\n${lyrics}` },
+      { role: "user", content: `SING this song. Do NOT speak or read it. SING with melody and rhythm:\n\n${formattedLyrics}` },
     ],
   });
   const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
