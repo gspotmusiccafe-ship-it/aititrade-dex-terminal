@@ -11,7 +11,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "
 import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/client";
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, users } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -111,6 +111,24 @@ export async function registerRoutes(
   initSheetsFromEnv();
   seed81Portals().then(() => loadPortalsFromDb()).catch(err => console.error("[PORTALS] Init load failed:", err));
   initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
+
+  (async () => {
+    try {
+      const realEmail = "tjacqueline429@gmail.com";
+      const fakeOrders = await db.delete(orders).where(
+        sql`${orders.buyerEmail} != ${realEmail} OR ${orders.buyerEmail} IS NULL`
+      ).returning({ id: orders.id });
+      const queueCleared = await db.delete(settlementQueue).returning({ id: settlementQueue.id });
+      const cyclesCleared = await db.delete(settlementCycles).returning({ id: settlementCycles.id });
+      if (fakeOrders.length > 0 || queueCleared.length > 0) {
+        console.log(`[STARTUP PURGE] Removed ${fakeOrders.length} inflated orders, ${queueCleared.length} queue entries, ${cyclesCleared.length} cycles`);
+      }
+      const [real] = await db.select({ cnt: sql<string>`COUNT(*)`, total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)` }).from(orders);
+      console.log(`[STARTUP PURGE] Clean state: ${real?.cnt || 0} real orders, $${real?.total || 0} gross`);
+    } catch (err) {
+      console.error("[STARTUP PURGE] Error:", err);
+    }
+  })();
 
   app.get("/uploads/:filename", async (req: any, res) => {
     try {
