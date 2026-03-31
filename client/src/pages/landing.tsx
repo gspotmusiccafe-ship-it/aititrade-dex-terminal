@@ -407,22 +407,49 @@ function OscillatorWave({ color, speed, amplitude, phase }: { color: string; spe
 }
 
 const SIMULATED_TRADERS = ["TRADER-001", "TRADER-002", "TRADER-003", "TRADER-004", "TRADER-005", "TRADER-006", "TRADER-007", "TRADER-008", "TRADER-009", "TRADER-010", "TRADER-011", "TRADER-012", "TRADER-013", "TRADER-014", "TRADER-015"];
-const SIMULATED_ASSETS = ["$THELOVE", "$CANDYMAN", "$DYNASTY", "$FLAMEHEAT", "$SOVRN", "$ASTRAL", "$VAULTX", "$HEATWAVE", "$DEEPSOUL", "$BLAZEUP"];
+const FALLBACK_ASSETS = [
+  "$CANDYMAN", "$DYNASTY", "$SUPANOVA", "$PRESSURE", "$SLIDETHRU",
+  "$DRIP", "$BIGBAG", "$NOLIMIT", "$RUNITUP", "$CASHFLOW",
+  "$HOTBOX", "$SOULFIRE", "$REALONES", "$GETIT", "$ONTHEFLOOR",
+  "$MIDNIGHT", "$STACKDUP", "$WAVEMODE", "$HEATCHECK", "$GOMODE"
+];
 const SIMULATED_PORTALS = ["NANO $1", "MICRO $2", "PENNY $3.50", "MINI $5", "ENTRY $7.50", "STD $10", "MID $15", "PRO $25", "SOV $50"];
+
+function toTicker(title: string): string {
+  const clean = title.replace(/[^a-zA-Z0-9\s]/g, "").trim().toUpperCase();
+  const words = clean.split(/\s+/);
+  if (words.length === 1) return "$" + words[0].slice(0, 10);
+  return "$" + words.map(w => w.slice(0, 5)).join("").slice(0, 12);
+}
 
 function LiveTradeFeed() {
   const [trades, setTrades] = useState<Array<{ id: number; trader: string; asset: string; portal: string; amount: string; time: string; type: string }>>([]);
+  const [assetList, setAssetList] = useState<string[]>(FALLBACK_ASSETS);
 
   useEffect(() => {
+    fetch("/api/tracks/featured")
+      .then(r => r.json())
+      .then((data: any[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const tickers = data.map((t: any) => toTicker(t.title || t.name || "TRACK"));
+          const unique = [...new Set(tickers)].filter(t => t.length > 1);
+          if (unique.length >= 5) setAssetList(unique);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
     const seed = () => {
       const initial = [];
       for (let i = 0; i < 6; i++) {
         const ago = Math.floor(Math.random() * 300) + 10;
         initial.push({
           id: i,
-          trader: SIMULATED_TRADERS[Math.floor(Math.random() * SIMULATED_TRADERS.length)],
-          asset: SIMULATED_ASSETS[Math.floor(Math.random() * SIMULATED_ASSETS.length)],
-          portal: SIMULATED_PORTALS[Math.floor(Math.random() * SIMULATED_PORTALS.length)],
+          trader: pick(SIMULATED_TRADERS),
+          asset: pick(assetList),
+          portal: pick(SIMULATED_PORTALS),
           amount: (Math.random() * 48 + 2).toFixed(2),
           time: `${Math.floor(ago / 60)}m ${ago % 60}s ago`,
           type: Math.random() > 0.3 ? "BUY" : "SETTLE",
@@ -436,9 +463,9 @@ function LiveTradeFeed() {
       setTrades(prev => {
         const newTrade = {
           id: Date.now(),
-          trader: SIMULATED_TRADERS[Math.floor(Math.random() * SIMULATED_TRADERS.length)],
-          asset: SIMULATED_ASSETS[Math.floor(Math.random() * SIMULATED_ASSETS.length)],
-          portal: SIMULATED_PORTALS[Math.floor(Math.random() * SIMULATED_PORTALS.length)],
+          trader: pick(SIMULATED_TRADERS),
+          asset: pick(assetList),
+          portal: pick(SIMULATED_PORTALS),
           amount: (Math.random() * 48 + 2).toFixed(2),
           time: "just now",
           type: Math.random() > 0.25 ? "BUY" : "SETTLE",
@@ -448,37 +475,37 @@ function LiveTradeFeed() {
     }, 4000 + Math.random() * 3000);
 
     return () => clearInterval(iv);
-  }, []);
+  }, [assetList]);
 
   return (
-    <div className="border border-emerald-500/20 bg-black font-mono">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-emerald-500/15 bg-emerald-500/5">
+    <div className="border border-emerald-500/30 bg-black font-mono shadow-lg shadow-emerald-500/5">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-emerald-500/20 bg-emerald-500/10">
         <div className="flex items-center gap-1.5">
-          <Activity className="h-3 w-3 text-emerald-400" />
+          <Activity className="h-3 w-3 text-emerald-400 animate-pulse" />
           <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest">LIVE TRADE FEED</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-          <span className="text-[7px] text-red-400 font-bold">LIVE</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-sm shadow-red-500" />
+          <span className="text-[7px] text-red-400 font-bold animate-pulse">LIVE</span>
         </div>
       </div>
       <div className="max-h-[220px] overflow-hidden">
         {trades.map((trade, i) => (
           <div
             key={trade.id}
-            className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-900 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/5" : ""}`}
+            className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/80 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/10" : "hover:bg-zinc-900/50"}`}
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className={`px-1 py-0.5 font-extrabold text-[7px] border ${
-                trade.type === "BUY" ? "text-lime-400 border-lime-500/30 bg-lime-500/10" : "text-amber-400 border-amber-500/30 bg-amber-500/10"
+                trade.type === "BUY" ? "text-lime-400 border-lime-500/40 bg-lime-500/15 shadow-sm shadow-lime-500/10" : "text-amber-400 border-amber-500/40 bg-amber-500/15 shadow-sm shadow-amber-500/10"
               }`}>{trade.type}</span>
-              <span className="text-zinc-500 font-bold truncate">{trade.trader}</span>
-              <span className="text-emerald-400 font-extrabold">{trade.asset}</span>
+              <span className="text-emerald-300/80 font-bold truncate">{trade.trader}</span>
+              <span className="text-lime-400 font-extrabold">{trade.asset}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-zinc-600 text-[8px]">{trade.portal}</span>
-              <span className="text-white font-bold">${trade.amount}</span>
-              <span className="text-zinc-700 text-[7px] w-16 text-right">{trade.time}</span>
+              <span className="text-emerald-500/60 text-[8px] font-bold">{trade.portal}</span>
+              <span className="text-lime-300 font-bold">${trade.amount}</span>
+              <span className="text-zinc-500 text-[7px] w-16 text-right">{trade.time}</span>
             </div>
           </div>
         ))}
@@ -524,10 +551,10 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
 
   return (
     <div className="font-mono">
-      <div className="border border-emerald-500/30 bg-black">
-        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 border-b border-emerald-500/20 bg-emerald-500/5">
+      <div className="border border-emerald-500/40 bg-black shadow-lg shadow-emerald-500/5">
+        <div className="flex items-center justify-between px-3 sm:px-4 py-1.5 border-b border-emerald-500/25 bg-emerald-500/10">
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse" />
+            <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse shadow-sm shadow-lime-400" />
             <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest">24HR STIMULATION BOARD</span>
           </div>
           <div className="flex items-center gap-2">
@@ -539,32 +566,32 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
         <div className="grid grid-cols-2 gap-px bg-zinc-800">
           <div className="bg-black p-2 sm:p-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[8px] text-zinc-500 font-bold tracking-wider">TBI OSCILLATOR</span>
+              <span className="text-[8px] text-emerald-500/70 font-bold tracking-wider">TBI OSCILLATOR</span>
               <span className={`text-[9px] sm:text-[10px] font-black ${tbiPct >= 0 ? "text-lime-400" : "text-red-400"}`}>
                 {tbiPct >= 0 ? "+" : ""}{tbiPct}%
               </span>
             </div>
-            <div className="h-14 sm:h-16 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
+            <div className="h-14 sm:h-16 border border-emerald-500/20 bg-zinc-950 mb-1.5 overflow-hidden">
               <OscillatorWave color="#4ade80" speed={1.2} amplitude={12} phase={0} />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[8px] text-zinc-600">BASE: $7.00</span>
+              <span className="text-[8px] text-emerald-500/50 font-bold">BASE: $7.00</span>
               <span className="text-xs sm:text-sm text-lime-400 font-black">${tbiLive.toFixed(2)}</span>
             </div>
           </div>
 
           <div className="bg-black p-2 sm:p-3">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[8px] text-zinc-500 font-bold tracking-wider">MBBP MOMENTUM</span>
+              <span className="text-[8px] text-emerald-500/70 font-bold tracking-wider">MBBP MOMENTUM</span>
               <span className={`text-[9px] sm:text-[10px] font-black ${mbbPct >= 0 ? "text-emerald-400" : "text-red-400"}`}>
                 {mbbPct >= 0 ? "+" : ""}{mbbPct}%
               </span>
             </div>
-            <div className="h-14 sm:h-16 border border-zinc-800 bg-zinc-950 mb-1.5 overflow-hidden">
+            <div className="h-14 sm:h-16 border border-emerald-500/20 bg-zinc-950 mb-1.5 overflow-hidden">
               <OscillatorWave color="#34d399" speed={0.8} amplitude={10} phase={2} />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[8px] text-zinc-600">BASE: $21.00</span>
+              <span className="text-[8px] text-emerald-500/50 font-bold">BASE: $21.00</span>
               <span className="text-xs sm:text-sm text-emerald-400 font-black">${mbbLive.toFixed(2)}</span>
             </div>
           </div>
@@ -572,26 +599,26 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
 
         <div className="grid grid-cols-4 gap-px bg-zinc-800 border-t border-zinc-800">
           <div className="bg-black p-1.5 sm:p-2 text-center">
-            <p className="text-[7px] text-zinc-600 font-bold">MBBP RATIO</p>
+            <p className="text-[7px] text-emerald-500/60 font-bold">MBBP RATIO</p>
             <p className="text-[10px] sm:text-xs text-amber-400 font-black">{mbbpRatio}%</p>
           </div>
           <div className="bg-black p-1.5 sm:p-2 text-center">
-            <p className="text-[7px] text-zinc-600 font-bold">SPLIT</p>
+            <p className="text-[7px] text-emerald-500/60 font-bold">SPLIT</p>
             <p className="text-[10px] sm:text-xs text-emerald-400 font-black">KINETIC</p>
           </div>
           <div className="bg-black p-1.5 sm:p-2 text-center">
-            <p className="text-[7px] text-zinc-600 font-bold">SETTLEMENT</p>
+            <p className="text-[7px] text-emerald-500/60 font-bold">SETTLEMENT</p>
             <p className="text-[10px] sm:text-xs text-lime-400 font-black">KINETIC/K</p>
           </div>
           <div className="bg-black p-1.5 sm:p-2 text-center">
-            <p className="text-[7px] text-zinc-600 font-bold">PORTALS</p>
+            <p className="text-[7px] text-emerald-500/60 font-bold">PORTALS</p>
             <p className="text-[10px] sm:text-xs text-white font-black">81</p>
           </div>
         </div>
 
-        <div className="border-t border-zinc-800 px-3 py-1.5 flex gap-1 overflow-x-auto scrollbar-hide">
+        <div className="border-t border-emerald-500/15 px-3 py-1.5 flex gap-1 overflow-x-auto scrollbar-hide bg-emerald-500/5">
           {tiers.map(t => (
-            <span key={t.name} className={`text-[7px] sm:text-[8px] font-bold border border-zinc-800 px-1 sm:px-1.5 py-0.5 bg-zinc-950 whitespace-nowrap flex-shrink-0 ${t.color}`}>
+            <span key={t.name} className={`text-[7px] sm:text-[8px] font-bold border border-emerald-500/20 px-1 sm:px-1.5 py-0.5 bg-black whitespace-nowrap flex-shrink-0 ${t.color}`}>
               {t.name} ${t.tbi}
             </span>
           ))}
@@ -657,7 +684,7 @@ export default function LandingPage() {
             <h1 className="text-3xl sm:text-5xl font-black tracking-tighter text-white mb-2" data-testid="text-radio-hero-title">
               AITITRADE <span className="text-emerald-400">DEX</span>
             </h1>
-            <p className="text-xs sm:text-sm text-zinc-500 max-w-lg mx-auto">
+            <p className="text-xs sm:text-sm text-emerald-500/60 max-w-lg mx-auto font-bold tracking-wider">
               DIGITAL ASSET EXCHANGE — AI-POWERED MUSIC ASSETS
             </p>
           </div>
