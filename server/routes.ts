@@ -2332,6 +2332,62 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/exchange/buy-song", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { trackId } = req.body;
+      if (!trackId) return res.status(400).json({ message: "trackId required" });
+
+      const [track] = await db.select().from(tracks).where(eq(tracks.id, trackId));
+      if (!track) return res.status(404).json({ message: "Track not found" });
+
+      const SONG_PRICE = 2.50;
+      const ticker = (track.title || "SONG").replace(/\s+/g, "").toUpperCase().slice(0, 8);
+      const seq = String((track.salesCount || 0) + 1).padStart(3, "0");
+      const trackingNum = `SONG-977-${ticker}-${seq}`;
+      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${SONG_PRICE.toFixed(2)}?note=BUY%20SONG%20${encodeURIComponent(trackingNum)}`;
+
+      const buyer = await storage.getUser(userId);
+      const buyerEmail = buyer?.email || "";
+      const buyerName = (buyer?.firstName ? `${buyer.firstName}${buyer.lastName ? ' ' + buyer.lastName : ''}` : buyer?.email?.split("@")[0] || "BUYER").toUpperCase();
+
+      const [artist] = await db.select().from(artists).where(eq(artists.id, track.artistId));
+
+      const [order] = await db.insert(orders).values({
+        trackId,
+        trackingNumber: trackingNum,
+        buyerEmail,
+        buyerName,
+        unitPrice: SONG_PRICE.toString(),
+        creatorCredit: "1.00",
+        creatorCreditAmount: SONG_PRICE.toString(),
+        positionHolderAmount: "0",
+        status: "pending_cashapp",
+        portalName: "SONG_PURCHASE",
+      }).returning();
+
+      console.log(`[BUY SONG] ${buyerName} | ${track.title} | $${SONG_PRICE} | ${trackingNum}`);
+
+      res.json({
+        instruction: `SEND $${SONG_PRICE.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
+        url: cashAppUrl,
+        cashtag: "$AITITRADEBROKERAGE",
+        note: `BUY SONG ${trackingNum}`,
+        trackingNumber: trackingNum,
+        ticker: `$${ticker}`,
+        asset: track.title,
+        artistName: artist?.name || "Unknown",
+        price: SONG_PRICE,
+        status: "PENDING_PAYMENT",
+        message: "SEND PAYMENT TO COMPLETE YOUR SONG PURCHASE",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Buy song error:", error);
+      res.status(500).json({ message: "Failed to process song purchase" });
+    }
+  });
+
   app.post("/api/exchange/trade-spotify", isAuthenticated, async (req: any, res) => {
     try {
       const { spotifyTrackId, amount } = req.body;
@@ -5504,16 +5560,39 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  const spotifyTrackLookupHandler = async (req: any, res: any) => {
+  async function getSpotifyClientCredentialsToken(): Promise<string | null> {
     try {
-      const { trackId } = req.params;
-      if (!trackId || typeof trackId !== "string") {
-        return res.status(400).json({ message: "Track ID is required" });
-      }
-      const rapidApiKey = process.env.RAPIDAPI_KEY;
-      if (!rapidApiKey) {
-        return res.status(500).json({ message: "RapidAPI key not configured" });
-      }
+      const clientId = process.env.SPOTIFY_CLIENT_ID;
+      const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+      if (!clientId || !clientSecret) return null;
+      const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+      const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
+        method: "POST",
+        headers: { "Authorization": `Basic ${authHeader}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=client_credentials",
+      });
+      if (!tokenRes.ok) return null;
+      const tokenData = await tokenRes.json();
+      return tokenData.access_token || null;
+    } catch { return null; }
+  }
+
+  async function fetchSpotifyTrackMetadata(trackId: string): Promise<any | null> {
+    const token = await getSpotifyClientCredentialsToken();
+    if (!token) return null;
+    try {
+      const res = await fetch(`https://api.spotify.com/v1/tracks/${encodeURIComponent(trackId)}`, {
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
+  }
+
+  async function fetchRapidApiStreamCount(trackId: string): Promise<number | null> {
+    const rapidApiKey = process.env.RAPIDAPI_KEY;
+    if (!rapidApiKey) return null;
+    try {
       const response = await fetch(
         `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${encodeURIComponent(trackId.trim())}`,
         {
@@ -5524,26 +5603,40 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         }
       );
       if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        console.error(`Spotify track API error (${response.status}):`, errorBody);
-        if (response.status === 429) {
-          return res.status(429).json({ message: "Daily API quota exceeded. Try again tomorrow or upgrade the RapidAPI plan." });
-        }
-        return res.status(response.status).json({ message: `Spotify API request failed (${response.status})` });
+        console.log(`[STREAM] RapidAPI returned ${response.status} for track ${trackId}`);
+        return null;
       }
       const data = await response.json();
-      const streamCount = data.playCount ?? data.playcount ?? data.streamCount ?? null;
+      return data.playCount ?? data.playcount ?? data.streamCount ?? null;
+    } catch { return null; }
+  }
+
+  const spotifyTrackLookupHandler = async (req: any, res: any) => {
+    try {
+      const { trackId } = req.params;
+      if (!trackId || typeof trackId !== "string") {
+        return res.status(400).json({ message: "Track ID is required" });
+      }
+      const spotifyData = await fetchSpotifyTrackMetadata(trackId.trim());
+      if (!spotifyData) {
+        return res.status(404).json({ message: "Track not found on Spotify" });
+      }
+      const streamCount = await fetchRapidApiStreamCount(trackId.trim());
       const result = {
-        id: data.id || trackId,
-        name: data.name || data.title || "Unknown",
-        artists: data.artists || [],
-        album: data.album || null,
-        duration: data.duration || data.duration_ms || 0,
-        contentRating: data.contentRating || data.explicit ? "explicit" : "clean",
+        id: spotifyData.id || trackId,
+        name: spotifyData.name || "Unknown",
+        artists: spotifyData.artists?.map((a: any) => ({ name: a.name, id: a.id })) || [],
+        album: spotifyData.album ? {
+          name: spotifyData.album.name,
+          releaseDate: spotifyData.album.release_date || null,
+          cover: spotifyData.album.images?.map((img: any) => ({ url: img.url, width: img.width, height: img.height })) || [],
+        } : null,
+        duration: spotifyData.duration_ms || 0,
+        contentRating: spotifyData.explicit ? "explicit" : "clean",
         streamCount: streamCount,
-        trackNumber: data.trackNumber || data.track_number || 1,
-        releaseDate: data.album?.releaseDate || data.releaseDate || null,
-        coverArt: data.album?.cover?.[0]?.url || data.coverArt?.sources?.[0]?.url || null,
+        trackNumber: spotifyData.track_number || 1,
+        releaseDate: spotifyData.album?.release_date || null,
+        coverArt: spotifyData.album?.images?.[0]?.url || null,
       };
       res.json(result);
     } catch (error) {
@@ -5675,27 +5768,18 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const spotifyTrackId = match[1];
       const existing = await db.select().from(spotifyRoyaltyTracks).where(eq(spotifyRoyaltyTracks.spotifyTrackId, spotifyTrackId));
       if (existing.length > 0) return res.status(409).json({ message: "Track already being tracked" });
-      const rapidApiKey = process.env.RAPIDAPI_KEY;
-      if (!rapidApiKey) return res.status(500).json({ message: "RapidAPI key not configured" });
-      const response = await fetch(
-        `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${spotifyTrackId}`,
-        { headers: { "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com", "x-rapidapi-key": rapidApiKey } }
-      );
-      if (!response.ok) {
-        if (response.status === 429) return res.status(429).json({ message: "API quota exceeded. Try again later." });
-        return res.status(response.status).json({ message: `Spotify API error (${response.status})` });
-      }
-      const data = await response.json();
-      const streams = data.playCount ?? data.playcount ?? data.streamCount ?? 0;
-      const artistNames = data.artists?.map((a: any) => a.name).join(", ") || "Unknown";
+      const spotifyData = await fetchSpotifyTrackMetadata(spotifyTrackId);
+      if (!spotifyData) return res.status(404).json({ message: "Track not found on Spotify" });
+      const streams = await fetchRapidApiStreamCount(spotifyTrackId) ?? 0;
+      const artistNames = spotifyData.artists?.map((a: any) => a.name).join(", ") || "Unknown";
       const [track] = await db.insert(spotifyRoyaltyTracks).values({
         spotifyTrackId,
         spotifyUrl,
-        title: data.name || data.title || "Unknown",
+        title: spotifyData.name || "Unknown",
         artistName: artistNames,
-        albumName: data.album?.name || null,
-        coverArt: data.album?.cover?.[0]?.url || data.coverArt?.sources?.[0]?.url || null,
-        releaseDate: data.album?.releaseDate || data.releaseDate || null,
+        albumName: spotifyData.album?.name || null,
+        coverArt: spotifyData.album?.images?.[0]?.url || null,
+        releaseDate: spotifyData.album?.release_date || null,
         streamCount: streams,
         isQualified: streams >= 1000,
       }).returning();
@@ -5710,26 +5794,19 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     try {
       const [existing] = await db.select().from(spotifyRoyaltyTracks).where(eq(spotifyRoyaltyTracks.id, req.params.id));
       if (!existing) return res.status(404).json({ message: "Track not found" });
-      const rapidApiKey = process.env.RAPIDAPI_KEY;
-      if (!rapidApiKey) return res.status(500).json({ message: "RapidAPI key not configured" });
-      const response = await fetch(
-        `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${existing.spotifyTrackId}`,
-        { headers: { "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com", "x-rapidapi-key": rapidApiKey } }
-      );
-      if (!response.ok) {
-        if (response.status === 429) return res.status(429).json({ message: "API quota exceeded. Try again later." });
-        return res.status(response.status).json({ message: `Spotify API error (${response.status})` });
-      }
-      const data = await response.json();
-      const streams = data.playCount ?? data.playcount ?? data.streamCount ?? 0;
-      const [updated] = await db.update(spotifyRoyaltyTracks).set({
+      const spotifyData = await fetchSpotifyTrackMetadata(existing.spotifyTrackId);
+      const streams = await fetchRapidApiStreamCount(existing.spotifyTrackId) ?? existing.streamCount ?? 0;
+      const updateData: any = {
         streamCount: streams,
         isQualified: streams >= 1000,
         lastFetchedAt: new Date(),
-        title: data.name || data.title || existing.title,
-        artistName: data.artists?.map((a: any) => a.name).join(", ") || existing.artistName,
-        coverArt: data.album?.cover?.[0]?.url || data.coverArt?.sources?.[0]?.url || existing.coverArt,
-      }).where(eq(spotifyRoyaltyTracks.id, req.params.id)).returning();
+      };
+      if (spotifyData) {
+        updateData.title = spotifyData.name || existing.title;
+        updateData.artistName = spotifyData.artists?.map((a: any) => a.name).join(", ") || existing.artistName;
+        updateData.coverArt = spotifyData.album?.images?.[0]?.url || existing.coverArt;
+      }
+      const [updated] = await db.update(spotifyRoyaltyTracks).set(updateData).where(eq(spotifyRoyaltyTracks.id, req.params.id)).returning();
       res.json(updated);
     } catch (error) {
       console.error("Error refreshing spotify royalty track:", error);
@@ -5739,36 +5816,28 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.post("/api/admin/spotify-royalty-tracks/refresh-all", isAdmin, async (req: any, res) => {
     try {
-      const rapidApiKey = process.env.RAPIDAPI_KEY;
-      if (!rapidApiKey) return res.status(500).json({ message: "RapidAPI key not configured" });
       const all = await db.select().from(spotifyRoyaltyTracks);
       let updated = 0;
       let errors = 0;
       for (const track of all) {
         try {
-          const response = await fetch(
-            `https://spotify-statistics-and-stream-count.p.rapidapi.com/track/${track.spotifyTrackId}`,
-            { headers: { "x-rapidapi-host": "spotify-statistics-and-stream-count.p.rapidapi.com", "x-rapidapi-key": rapidApiKey } }
-          );
-          if (response.status === 429) {
-            return res.json({ updated, errors, stopped: true, message: "API quota hit — some tracks not refreshed" });
+          const spotifyData = await fetchSpotifyTrackMetadata(track.spotifyTrackId);
+          const streams = await fetchRapidApiStreamCount(track.spotifyTrackId);
+          const updateData: any = {
+            lastFetchedAt: new Date(),
+          };
+          if (streams !== null) {
+            updateData.streamCount = streams;
+            updateData.isQualified = streams >= 1000;
           }
-          if (response.ok) {
-            const data = await response.json();
-            const streams = data.playCount ?? data.playcount ?? data.streamCount ?? 0;
-            await db.update(spotifyRoyaltyTracks).set({
-              streamCount: streams,
-              isQualified: streams >= 1000,
-              lastFetchedAt: new Date(),
-              title: data.name || data.title || track.title,
-              artistName: data.artists?.map((a: any) => a.name).join(", ") || track.artistName,
-              coverArt: data.album?.cover?.[0]?.url || data.coverArt?.sources?.[0]?.url || track.coverArt,
-            }).where(eq(spotifyRoyaltyTracks.id, track.id));
-            updated++;
-          } else {
-            errors++;
+          if (spotifyData) {
+            updateData.title = spotifyData.name || track.title;
+            updateData.artistName = spotifyData.artists?.map((a: any) => a.name).join(", ") || track.artistName;
+            updateData.coverArt = spotifyData.album?.images?.[0]?.url || track.coverArt;
           }
-          await new Promise(r => setTimeout(r, 300));
+          await db.update(spotifyRoyaltyTracks).set(updateData).where(eq(spotifyRoyaltyTracks.id, track.id));
+          updated++;
+          await new Promise(r => setTimeout(r, 200));
         } catch {
           errors++;
         }

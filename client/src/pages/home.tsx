@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight, BarChart3 } from "lucide-react";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight, BarChart3, ShoppingBasket, Check } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -511,6 +511,148 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
   );
 }
 
+function BuySongCashAppCheckout({ track, open, onClose }: { track: TrackWithArtist; open: boolean; onClose: () => void }) {
+  const [processing, setProcessing] = useState(false);
+  const [purchaseData, setPurchaseData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  const SONG_PRICE = 2.50;
+
+  const handleBuy = async () => {
+    try {
+      setProcessing(true);
+      setError(null);
+      const res = await fetch("/api/exchange/buy-song", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ trackId: track.id }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Purchase failed");
+      }
+      const data = await res.json();
+      setPurchaseData(data);
+      toast({ title: "SONG ORDER PLACED", description: `${data.trackingNumber} — Send $${SONG_PRICE.toFixed(2)} to ${data.cashtag}` });
+    } catch (e: any) {
+      setError(e.message || "Failed to process purchase");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) {
+      setPurchaseData(null);
+      setError(null);
+      setProcessing(false);
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-black border-2 border-violet-500/60 font-mono max-w-sm w-full shadow-2xl shadow-violet-500/20 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid={`buy-song-dialog-${track.id}`}>
+        <div className="border-b border-violet-500/30 px-4 py-2.5 flex items-center justify-between bg-violet-950/80 sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <ShoppingBasket className="h-4 w-4 text-violet-400" />
+            <span className="text-[11px] text-violet-400 font-bold tracking-wider">BUY SONG — CASH APP</span>
+          </div>
+          <button onClick={onClose} className="text-violet-500/40 hover:text-violet-400"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="border border-violet-400/20 bg-violet-950/30 p-3 text-center">
+            <p className="text-[9px] sm:text-[10px] text-violet-400 font-black tracking-wider truncate">97.7 THE FLAME — SONG PURCHASE</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+              <p className="text-[8px] text-violet-500/40 tracking-wider">SONG</p>
+              <p className="text-sm text-violet-400 font-bold mt-0.5 truncate">{track.title}</p>
+              <p className="text-[7px] text-zinc-500 mt-0.5 truncate">{track.artist?.name || "Unknown"}</p>
+            </div>
+            <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+              <p className="text-[8px] text-violet-500/40 tracking-wider">PRICE</p>
+              <p className="text-xl text-violet-400 font-black mt-0.5">${SONG_PRICE.toFixed(2)}</p>
+            </div>
+          </div>
+          <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
+            <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
+            <p className="text-lg sm:text-2xl text-green-400 font-black tracking-normal sm:tracking-wider truncate">$AITITRADEBROKERAGE</p>
+            <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
+          </div>
+          {purchaseData && (
+            <div className="border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-center">
+              <p className="text-[8px] text-emerald-500/50 tracking-wider">TRACKING NUMBER</p>
+              <p className="text-sm text-emerald-400 font-black">{purchaseData.trackingNumber}</p>
+              <p className="text-[8px] text-emerald-500/30 mt-1">INCLUDE IN CASH APP NOTE</p>
+            </div>
+          )}
+          {error && (
+            <div className="border border-red-500/30 bg-red-500/10 p-2 text-center">
+              <p className="text-[10px] text-red-400 font-bold">{error}</p>
+            </div>
+          )}
+          {processing ? (
+            <div className="border border-violet-500/30 bg-violet-950/30 p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-[11px] text-violet-400 font-bold animate-pulse">PROCESSING...</p>
+              </div>
+            </div>
+          ) : !purchaseData ? (
+            <button
+              onClick={handleBuy}
+              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-black py-3 text-sm tracking-wider transition-colors"
+              data-testid={`button-buy-song-confirm-${track.id}`}
+            >
+              <ShoppingBasket className="h-4 w-4 inline mr-1" />
+              BUY SONG — ${SONG_PRICE.toFixed(2)}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="border-2 border-violet-500/40 bg-violet-950/20 p-3 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Check className="h-5 w-5 text-violet-400" />
+                  <p className="text-sm text-violet-400 font-black">SONG PURCHASED</p>
+                </div>
+                <p className="text-xl text-violet-300 font-black">${SONG_PRICE.toFixed(2)}</p>
+                <p className="text-[9px] text-violet-400/60 mt-1 truncate">{track.title} — {track.artist?.name}</p>
+              </div>
+              <div className="border-2 border-green-500/50 bg-green-950/30 p-4 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-wider mb-2">SCAN TO PAY VIA CASH APP</p>
+                <div className="bg-white p-3 inline-block mx-auto">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(purchaseData.url || "https://cash.app/$AITITRADEBROKERAGE/" + SONG_PRICE.toFixed(2))}`}
+                    alt="Cash App QR Code"
+                    className="w-[180px] h-[180px]"
+                    data-testid="img-buy-song-qr"
+                  />
+                </div>
+                <p className="text-base sm:text-lg text-green-400 font-black mt-2 truncate">$AITITRADEBROKERAGE</p>
+                <p className="text-[10px] text-green-400/60 mt-1">AMOUNT: ${SONG_PRICE.toFixed(2)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[8px] text-zinc-500">Or tap below to open Cash App directly</p>
+                <a
+                  href={purchaseData.url || "https://cash.app/$AITITRADEBROKERAGE/" + SONG_PRICE.toFixed(2)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block mt-1 text-[10px] text-violet-400 underline hover:text-violet-300"
+                  data-testid="link-buy-song-cashapp"
+                >
+                  Open Cash App
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface SettlementStatus {
   grossIntake: number;
   ksReached: number;
@@ -538,6 +680,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   const [flashTimer, setFlashTimer] = useState<number | null>(null);
   const [isReconciling, setIsReconciling] = useState(false);
   const [showPayPal, setShowPayPal] = useState(false);
+  const [showBuySong, setShowBuySong] = useState(false);
   const [showP2P, setShowP2P] = useState(false);
   const flashTriggeredRef = useRef(false);
   const { toast } = useToast();
@@ -897,11 +1040,11 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> VAULT
           </Link>
           <button
-            disabled
-            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center opacity-50 cursor-not-allowed flex items-center justify-center gap-0.5"
-            data-testid={`button-mentor-link-${track.id}`}
+            onClick={() => setShowBuySong(true)}
+            className="flex-1 bg-violet-500/10 border border-violet-500/30 text-violet-400 text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center hover:bg-violet-500/20 transition-colors flex items-center justify-center gap-0.5"
+            data-testid={`button-buy-song-${track.id}`}
           >
-            <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> MENTOR
+            <ShoppingBasket className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> BUY SONG
           </button>
         </div>
         <div className="flex gap-0.5 sm:gap-1">
@@ -981,6 +1124,11 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             setMintReceipt(data.receipt);
           }
         }}
+      />
+      <BuySongCashAppCheckout
+        track={track}
+        open={showBuySong}
+        onClose={() => setShowBuySong(false)}
       />
     </div>
   );
