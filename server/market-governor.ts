@@ -724,23 +724,18 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
 
   const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
   const lockedPayout = getPayoutPerCycle();
-  const totalPayoutBudget = totalKsReached * lockedPayout;
+  const split = getLiveSplit();
 
   const alreadyPaid = await getTotalPaidOut();
-  let payoutBudget = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
-
-  if (payoutBudget <= 0 && forceAdmin) {
-    const split = getLiveSplit();
-    payoutBudget = parseFloat((grossIntake * split.floor - alreadyPaid).toFixed(2));
-    if (payoutBudget > 0) {
-      console.log(`[GOVERNOR] Admin force cycle — using proportional budget: $${payoutBudget.toFixed(2)} (${Math.round(split.floor*100)}% of $${grossIntake.toFixed(2)} gross)`);
-    }
-  }
+  const floorPoolTotal = parseFloat((grossIntake * split.floor).toFixed(2));
+  let payoutBudget = parseFloat((floorPoolTotal - alreadyPaid).toFixed(2));
 
   if (payoutBudget <= 0) {
-    console.log(`[GOVERNOR] Cycle #${cycleNumber} — No payout budget. Gross: $${grossIntake.toFixed(2)} | ${totalKsReached} K's reached | Already paid: $${alreadyPaid.toFixed(2)}`);
+    console.log(`[GOVERNOR] Cycle #${cycleNumber} — No payout budget. Gross: $${grossIntake.toFixed(2)} | Floor Pool: $${floorPoolTotal.toFixed(2)} | Already paid: $${alreadyPaid.toFixed(2)}`);
     return { cycleNumber, settled: [], holding: [], payoutBudget: 0, totalPaidOut: 0 };
   }
+
+  console.log(`[GOVERNOR] Admin cycle #${cycleNumber} — Floor Pool: $${floorPoolTotal.toFixed(2)} | Already Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
 
   const closingSplit = getLiveSplit();
   console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K | KINETIC SPLIT: ${Math.round(closingSplit.floor*100)}/${Math.round(closingSplit.ceo*100)} | Payout/K: $${lockedPayout} | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
@@ -935,6 +930,7 @@ export async function getSettlementDashboard(): Promise<{
   totalOwed54: number;
   totalPaidOut: number;
   fundAvailable: number;
+  floorPoolTotal: number;
   payoutPerK: number;
   totalTraders: number;
   queuedCount: number;
@@ -952,8 +948,9 @@ export async function getSettlementDashboard(): Promise<{
   const ksReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
   const currentPayoutPerK = getPayoutPerCycle();
   const totalOwed54 = parseFloat((ksReached * currentPayoutPerK).toFixed(2));
-  const fundAvailable = parseFloat((totalOwed54 - totalPaid).toFixed(2));
   const dashSplit = getLiveSplit();
+  const floorPoolTotal = parseFloat((grossIntake * dashSplit.floor).toFixed(2));
+  const fundAvailable = parseFloat(Math.max(0, floorPoolTotal - totalPaid).toFixed(2));
   const ceo46Total = parseFloat((grossIntake * dashSplit.ceo).toFixed(2));
   const nextKAt = (ksReached + 1) * SETTLEMENT_CYCLE_THRESHOLD;
 
@@ -1003,7 +1000,8 @@ export async function getSettlementDashboard(): Promise<{
     ksReached,
     totalOwed54: totalOwed54,
     totalPaidOut: totalPaid,
-    fundAvailable: Math.max(0, fundAvailable),
+    fundAvailable,
+    floorPoolTotal,
     payoutPerK: getPayoutPerCycle(),
     totalTraders: parseInt(counts?.total || "0"),
     queuedCount: parseInt(counts?.queued || "0"),

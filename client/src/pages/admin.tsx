@@ -4352,7 +4352,7 @@ function SettlementGovernorTab() {
         </div>
         <Button
           onClick={() => runCycleMutation.mutate()}
-          disabled={runCycleMutation.isPending || dashboard.fundAvailable <= 0}
+          disabled={runCycleMutation.isPending}
           className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-4"
           data-testid="button-run-settlement-cycle"
         >
@@ -4367,7 +4367,7 @@ function SettlementGovernorTab() {
         </div>
         <div className="bg-zinc-900 border border-emerald-500/20 p-1.5 sm:p-3">
           <p className="text-[7px] sm:text-[9px] text-zinc-500 tracking-wider">FLOOR POOL</p>
-          <p className="text-sm sm:text-lg text-lime-400 font-black">${dashboard.totalOwed54.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <p className="text-sm sm:text-lg text-lime-400 font-black">${(dashboard.floorPoolTotal ?? dashboard.totalOwed54).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="bg-zinc-900 border border-emerald-500/20 p-1.5 sm:p-3">
           <p className="text-[7px] sm:text-[9px] text-zinc-500 tracking-wider">CEO TAKE</p>
