@@ -4324,6 +4324,19 @@ function SettlementGovernorTab() {
     onError: () => toast({ title: "Cycle Failed", variant: "destructive" }),
   });
 
+  const purgeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/purge-inflated");
+      if (!res.ok) throw new Error("Purge failed");
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "PURGE COMPLETE", description: `Removed ${data.ordersRemoved} inflated orders, ${data.queueCleared} queue entries. Only real money remains.` });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+    },
+    onError: () => toast({ title: "Purge Failed", variant: "destructive" }),
+  });
+
   const acceptMutation = useMutation({
     mutationFn: async (queueId: string) => {
       const res = await apiRequest("POST", "/api/settlement/accept", { queueId });
@@ -4350,14 +4363,24 @@ function SettlementGovernorTab() {
           <h2 className="text-base sm:text-xl font-black text-emerald-400">SETTLEMENT GOVERNOR</h2>
           <p className="text-[8px] sm:text-[10px] text-zinc-500">KINETIC MANDATE — $1K = LIVE SPLIT PAYOUT</p>
         </div>
-        <Button
-          onClick={() => runCycleMutation.mutate()}
-          disabled={runCycleMutation.isPending}
-          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-4"
-          data-testid="button-run-settlement-cycle"
-        >
-          {runCycleMutation.isPending ? "RUNNING..." : "RUN CYCLE"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => purgeMutation.mutate()}
+            disabled={purgeMutation.isPending}
+            className="bg-red-700 hover:bg-red-600 text-white font-bold text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-4"
+            data-testid="button-purge-inflated"
+          >
+            {purgeMutation.isPending ? "PURGING..." : "PURGE FAKE"}
+          </Button>
+          <Button
+            onClick={() => runCycleMutation.mutate()}
+            disabled={runCycleMutation.isPending}
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-4"
+            data-testid="button-run-settlement-cycle"
+          >
+            {runCycleMutation.isPending ? "RUNNING..." : "RUN CYCLE"}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 sm:gap-2">

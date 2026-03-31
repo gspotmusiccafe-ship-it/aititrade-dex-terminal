@@ -4246,6 +4246,37 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/purge-inflated", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const realInvestorEmail = "tjacqueline429@gmail.com";
+
+      const deletedOrders = await db.delete(orders).where(
+        sql`${orders.buyerEmail} != ${realInvestorEmail} OR ${orders.buyerEmail} IS NULL`
+      ).returning({ id: orders.id });
+
+      const deletedQueue = await db.delete(settlementQueue).returning({ id: settlementQueue.id });
+
+      const deletedCycles = await db.delete(settlementCycles).returning({ id: settlementCycles.id });
+
+      console.log(`[ADMIN PURGE] Removed ${deletedOrders.length} inflated orders, ${deletedQueue.length} queue entries, ${deletedCycles.length} cycles. Only Jackie's real $5 remains.`);
+
+      res.json({
+        purged: true,
+        ordersRemoved: deletedOrders.length,
+        queueCleared: deletedQueue.length,
+        cyclesCleared: deletedCycles.length,
+        remaining: "tjacqueline429@gmail.com $5 confirmed"
+      });
+    } catch (error: any) {
+      console.error("[ADMIN PURGE] Error:", error);
+      res.status(500).json({ message: "Purge failed" });
+    }
+  });
+
   app.get("/api/admin/pending-payments", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
