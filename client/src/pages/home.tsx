@@ -1450,6 +1450,8 @@ export default function HomePage() {
                 engineState={engineState}
               />
             ))}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
             <GlobalTradePortal portalIndex={0} />
             <GlobalTradePortal portalIndex={1} />
           </div>
