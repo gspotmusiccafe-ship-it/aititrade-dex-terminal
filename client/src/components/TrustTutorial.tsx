@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { DollarSign, Target, TrendingUp, Crown } from "lucide-react";
 
 export function TrustTutorial() {
   const [open, setOpen] = useState(false);
@@ -16,35 +17,78 @@ export function TrustTutorial() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="bg-black border border-lime-500 text-white font-mono max-w-lg" data-testid="trust-tutorial-dialog">
-        <DialogHeader>
-          <DialogTitle className="text-lime-400 uppercase tracking-tighter underline">
-            Sovereign Portal Instructions
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="bg-black border-2 border-lime-500 text-white font-mono max-w-md p-0 overflow-hidden" data-testid="trust-tutorial-dialog">
+        <div className="border-b border-lime-500/40 bg-lime-950/60 px-5 py-4 text-center">
+          <h2 className="text-lime-400 font-black text-lg sm:text-xl tracking-tight uppercase">
+            WELCOME TO AITITRADE
+          </h2>
+          <p className="text-lime-500/70 text-[10px] sm:text-xs tracking-widest mt-1">
+            THE EXCHANGE WHERE THE
+          </p>
+          <p className="text-white font-black text-2xl sm:text-3xl mt-1 tracking-tight">
+            "PENNY IS KING"
+          </p>
+        </div>
 
-        <div className="space-y-4 text-xs">
-          <section>
-            <h4 className="text-white font-bold underline">1. MINIMUM ENTRY</h4>
-            <p className="text-zinc-400">Minimum Trade Buy-In (TBI) starts at $2.00. Powered by 97.7 THE FLAME.</p>
-          </section>
+        <div className="px-5 py-4 space-y-3">
+          <div className="text-center mb-3">
+            <p className="text-zinc-400 text-[10px] sm:text-xs tracking-wider uppercase font-bold">
+              At AITITRADE we are goal oriented
+            </p>
+          </div>
 
-          <section>
-            <h4 className="text-white font-bold underline">2. PORTAL SETTLEMENT</h4>
-            <p className="text-zinc-400">Trades move through pools ($700 - $5,000). Larger TBI trades settle in larger pools.</p>
-          </section>
+          <div className="border border-lime-500/20 bg-lime-950/20 p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded bg-lime-500/10 flex items-center justify-center flex-shrink-0">
+              <DollarSign className="h-4 w-4 text-lime-400" />
+            </div>
+            <div>
+              <p className="text-[9px] text-lime-500/50 font-bold tracking-wider">GOAL 1</p>
+              <p className="text-white font-black text-sm">Trade $1.00 into $10.00</p>
+            </div>
+          </div>
 
-          <section>
-            <h4 className="text-white font-bold underline">3. THE EARLY EXIT (PAID FIRST)</h4>
-            <p className="text-zinc-400">You may accept a "System Offer" (150%-285%) to get paid immediately. The house retains the remaining balance to fund global liquidity.</p>
-          </section>
+          <div className="border border-lime-500/20 bg-lime-950/20 p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded bg-lime-500/10 flex items-center justify-center flex-shrink-0">
+              <Target className="h-4 w-4 text-lime-400" />
+            </div>
+            <div>
+              <p className="text-[9px] text-lime-500/50 font-bold tracking-wider">GOAL 2</p>
+              <p className="text-white font-black text-sm">Trade $10.00 into $100.00</p>
+            </div>
+          </div>
+
+          <div className="border border-lime-500/20 bg-lime-950/20 p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded bg-lime-500/10 flex items-center justify-center flex-shrink-0">
+              <TrendingUp className="h-4 w-4 text-lime-400" />
+            </div>
+            <div>
+              <p className="text-[9px] text-lime-500/50 font-bold tracking-wider">GOAL 3</p>
+              <p className="text-white font-black text-sm">Trade $100.00 into $1,000</p>
+            </div>
+          </div>
+
+          <div className="border border-lime-500/20 bg-lime-950/20 p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded bg-lime-500/10 flex items-center justify-center flex-shrink-0">
+              <Crown className="h-4 w-4 text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-[9px] text-yellow-500/50 font-bold tracking-wider">GOAL 4</p>
+              <p className="text-white font-black text-sm">Trade $1,000 into $10,000</p>
+            </div>
+          </div>
+
+          <div className="text-center pt-2">
+            <p className="text-lime-400/60 text-[10px] font-bold tracking-widest uppercase">
+              The power of the penny is in effect
+            </p>
+          </div>
 
           <button
             onClick={closeTutorial}
-            className="w-full bg-lime-600 text-black font-bold py-2 hover:bg-lime-400 mt-4 uppercase"
+            className="w-full bg-lime-600 hover:bg-lime-400 text-black font-black py-3 text-sm tracking-wider uppercase transition-colors mt-2"
             data-testid="button-enter-trading-floor"
           >
-            Enter Trading Floor
+            ENTER TRADING FLOOR
           </button>
         </div>
       </DialogContent>
