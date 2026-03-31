@@ -30,12 +30,16 @@ function MiniRadio() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const indexRef = useRef(0);
 
   const { data: tracks } = useQuery<TrackData[]>({
     queryKey: ["/api/tracks/featured"],
   });
 
   const playlist = tracks?.filter((t) => t.audioUrl) || [];
+  const playlistRef = useRef(playlist);
+  playlistRef.current = playlist;
+  indexRef.current = currentIndex;
   const current = playlist[currentIndex];
 
   const play = useCallback(() => {
@@ -52,17 +56,19 @@ function MiniRadio() {
   const togglePlay = useCallback(() => { isPlaying ? pause() : play(); }, [isPlaying, play, pause]);
 
   const skipTo = useCallback((i: number) => {
-    if (!playlist.length) return;
-    const next = ((i % playlist.length) + playlist.length) % playlist.length;
+    const pl = playlistRef.current;
+    if (!pl.length) return;
+    const next = ((i % pl.length) + pl.length) % pl.length;
+    indexRef.current = next;
     setCurrentIndex(next);
     setCurrentTime(0);
     setDuration(0);
     const audio = audioRef.current;
-    if (audio && playlist[next]) {
-      audio.src = playlist[next].audioUrl;
+    if (audio && pl[next]) {
+      audio.src = pl[next].audioUrl;
       audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
     }
-  }, [playlist]);
+  }, []);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -76,19 +82,27 @@ function MiniRadio() {
     const onTime = () => setCurrentTime(audio.currentTime);
     const onMeta = () => setDuration(audio.duration);
     const onEnded = () => {
-      const next = (currentIndex + 1) % (playlist.length || 1);
+      const pl = playlistRef.current;
+      const idx = indexRef.current;
+      const next = (idx + 1) % (pl.length || 1);
+      indexRef.current = next;
       setCurrentIndex(next);
-      if (playlist[next]) {
-        audio.src = playlist[next].audioUrl;
+      if (pl[next]) {
+        audio.src = pl[next].audioUrl;
+        audio.load();
         audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
       }
     };
     const onError = () => {
-      if (playlist.length > 1) {
-        const next = (currentIndex + 1) % playlist.length;
+      const pl = playlistRef.current;
+      const idx = indexRef.current;
+      if (pl.length > 1) {
+        const next = (idx + 1) % pl.length;
+        indexRef.current = next;
         setCurrentIndex(next);
-        if (playlist[next]) {
-          audio.src = playlist[next].audioUrl;
+        if (pl[next]) {
+          audio.src = pl[next].audioUrl;
+          audio.load();
           audio.play().catch(() => {});
         }
       }
@@ -103,7 +117,7 @@ function MiniRadio() {
       audio.removeEventListener("ended", onEnded);
       audio.removeEventListener("error", onError);
     };
-  }, [currentIndex, playlist]);
+  }, []);
 
   const pct = duration > 0 ? (currentTime / duration) * 100 : 0;
   const coverSrc = current?.coverImage || current?.artist?.profileImage || null;

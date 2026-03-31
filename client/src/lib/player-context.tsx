@@ -801,12 +801,15 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     if (!state.broadcast || !audioRef.current) return;
     const audio = audioRef.current;
 
+    let adBridgeCooldown = false;
     const handlePause = () => {
-      if (!broadcastRef.current || userPausedRef.current) return;
+      if (!broadcastRef.current || userPausedRef.current || adBridgeCooldown) return;
+      if (audio.ended) return;
 
       if (adBridgeTimerRef.current) clearTimeout(adBridgeTimerRef.current);
+      adBridgeCooldown = true;
       adBridgeTimerRef.current = setTimeout(() => {
-        if (audio.paused && broadcastRef.current && audio.src && !userPausedRef.current) {
+        if (audio.paused && !audio.ended && broadcastRef.current && audio.src && !userPausedRef.current) {
           console.log("[BROADCAST] Ad-Bridge: Resuming playback after interruption");
           const p = audio.play();
           if (p !== undefined) {
@@ -817,16 +820,19 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
             });
           }
         }
-      }, 3000);
+        setTimeout(() => { adBridgeCooldown = false; }, 5000);
+      }, 8000);
     };
 
     audio.addEventListener("pause", handlePause);
 
+    let watchdogBusy = false;
     watchdogRef.current = setInterval(() => {
-      if (!broadcastRef.current || !audio.src || userPausedRef.current) return;
+      if (!broadcastRef.current || !audio.src || userPausedRef.current || watchdogBusy) return;
+      watchdogBusy = true;
 
       const currentProgress = audio.currentTime;
-      if (audio.paused && !userPausedRef.current) {
+      if (audio.paused && !audio.ended && !userPausedRef.current) {
         console.warn("[RADIO] Watchdog: Audio paused unexpectedly — forcing resume");
         audio.play().then(() => {
           setState(prev => ({ ...prev, isPlaying: true }));
@@ -834,7 +840,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
           console.warn("[RADIO] Watchdog: Resume failed — advancing queue");
           setState(prev => advanceQueueFn(prev));
         });
-      } else if (currentProgress === lastProgressRef.current && !audio.paused && audio.readyState >= 1) {
+      } else if (currentProgress === lastProgressRef.current && !audio.paused && !audio.ended && audio.readyState >= 1) {
         console.warn("[RADIO] Watchdog: Playback stuck at", Math.floor(currentProgress), "s — reloading");
         const src = audio.src;
         audio.src = "";
@@ -845,7 +851,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         });
       }
       lastProgressRef.current = currentProgress;
-    }, 15000);
+      setTimeout(() => { watchdogBusy = false; }, 5000);
+    }, 20000);
 
     return () => {
       audio.removeEventListener("pause", handlePause);

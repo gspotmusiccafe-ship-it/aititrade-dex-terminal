@@ -390,19 +390,23 @@ export default function GlobalRadio() {
 
   useEffect(() => {
     if (!tunedIn || !playerRef.current) return;
+    let recovering = false;
     const recoveryCheck = setInterval(async () => {
+      if (recovering || userPausedRef.current) return;
       try {
         const state = await playerRef.current?.getCurrentState();
-        if (!state && deviceId) {
+        if (!state && deviceIdRef.current) {
+          recovering = true;
           console.log("[GlobalRadio] Player lost state — attempting recovery");
           const asset = currentAssetRef.current;
           const dev = deviceIdRef.current;
-          if (dev) startPlayback(asset, dev);
+          if (dev) await startPlayback(asset, dev);
+          setTimeout(() => { recovering = false; }, 5000);
         }
-      } catch {}
-    }, 60000);
+      } catch { recovering = false; }
+    }, 120000);
     return () => clearInterval(recoveryCheck);
-  }, [tunedIn, deviceId, startPlayback]);
+  }, [tunedIn, startPlayback]);
 
   useEffect(() => { return () => { if (playerRef.current) playerRef.current.disconnect(); }; }, []);
 
@@ -499,11 +503,13 @@ export default function GlobalRadio() {
     if (!broadcast || !tunedIn || !playerRef.current) return;
     const player = playerRef.current;
 
+    let watchdogBusy = false;
     watchdogRef.current = setInterval(async () => {
-      if (!broadcastRef.current || userPausedRef.current) return;
+      if (!broadcastRef.current || userPausedRef.current || watchdogBusy) return;
+      watchdogBusy = true;
       try {
         const state = await player.getCurrentState();
-        if (!state) return;
+        if (!state) { watchdogBusy = false; return; }
 
         if (state.paused && !userPausedRef.current) {
           console.log("[97.7 THE FLAME GLOBAL] Watchdog: Paused unexpectedly — resuming");
@@ -512,7 +518,7 @@ export default function GlobalRadio() {
           });
         }
 
-        if (!state.paused && state.position > 0 && state.duration > 0 && state.position >= state.duration - 1500) {
+        if (!state.paused && state.position > 0 && state.duration > 0 && state.position >= state.duration - 2000) {
           if (autopilotRef.current) {
             console.log("[97.7 THE FLAME GLOBAL] Autopilot: Track ending — advancing");
             advanceToNextAsset();
@@ -521,13 +527,16 @@ export default function GlobalRadio() {
       } catch (e) {
         console.warn("[97.7 THE FLAME GLOBAL] Watchdog error:", e);
       }
-    }, 5000);
+      setTimeout(() => { watchdogBusy = false; }, 3000);
+    }, 15000);
 
+    let adBridgeBusy = false;
     const handleStateChange = (state: any) => {
       if (!state || !broadcastRef.current) return;
 
-      if (state.paused && !userPausedRef.current) {
+      if (state.paused && !userPausedRef.current && !adBridgeBusy) {
         if (adBridgeTimerRef.current) clearTimeout(adBridgeTimerRef.current);
+        adBridgeBusy = true;
         adBridgeTimerRef.current = setTimeout(() => {
           if (broadcastRef.current && !userPausedRef.current) {
             console.log("[97.7 THE FLAME GLOBAL] Ad-Bridge: Resuming after interruption");
@@ -535,7 +544,8 @@ export default function GlobalRadio() {
               if (autopilotRef.current) advanceToNextAsset();
             });
           }
-        }, 3000);
+          setTimeout(() => { adBridgeBusy = false; }, 5000);
+        }, 8000);
       }
 
       const nextTracks = state.track_window?.next_tracks || [];
