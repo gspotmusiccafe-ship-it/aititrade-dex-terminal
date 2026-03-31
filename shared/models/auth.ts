@@ -17,6 +17,7 @@ export const users = pgTable("users", {
   password: text("password"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  phone: varchar("phone"),
   profileImageUrl: varchar("profile_image_url"),
   isAdmin: boolean("is_admin").default(false),
   isSuspended: boolean("is_suspended").default(false),

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Music2, Play, Pause, Clock, Headphones, Users, ArrowRight, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3 } from "lucide-react";
+import { Music2, Play, Pause, Clock, Headphones, Users, ArrowRight, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, Phone } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
 import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
@@ -154,13 +154,14 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [phone, setPhone] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const signupMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName }),
+    mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName, phone }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
@@ -186,6 +187,7 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
     setError("");
     if (mode === "signup") {
       if (!displayName.trim()) { setError("Display name is required"); return; }
+      if (!phone.trim()) { setError("Cell phone number is required"); return; }
       signupMutation.mutate();
     } else {
       loginMutation.mutate();
@@ -232,6 +234,24 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-3 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
                   data-testid="input-display-name"
+                />
+              </div>
+            </div>
+          )}
+
+          {mode === "signup" && (
+            <div className="space-y-1">
+              <label htmlFor="phone" className="text-[9px] text-emerald-500/60 uppercase">Cell Phone</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-500/40" />
+                <input
+                  id="phone"
+                  type="tel"
+                  placeholder="(555) 123-4567"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-3 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
+                  data-testid="input-phone"
                 />
               </div>
             </div>

@@ -6,11 +6,11 @@ export function redirectToLogin(toast?: (options: { title: string; description: 
   if (toast) {
     toast({
       title: "Session Expired",
-      description: "Please log in again with Spotify.",
+      description: "Please log in again to continue.",
       variant: "destructive",
     });
   }
   setTimeout(() => {
-    window.location.href = "/api/login";
+    window.location.href = "/";
   }, 500);
 }

@@ -69,9 +69,12 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/auth/signup", async (req, res) => {
     try {
-      const { email: rawEmail, password, displayName } = req.body;
+      const { email: rawEmail, password, displayName, phone } = req.body;
       if (!rawEmail || !password || !displayName) {
         return res.status(400).json({ message: "Email, password, and display name are required" });
+      }
+      if (!phone || !phone.trim()) {
+        return res.status(400).json({ message: "Cell phone number is required to register" });
       }
       const email = rawEmail.trim().toLowerCase();
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -80,6 +83,10 @@ export async function setupAuth(app: Express) {
       }
       if (password.length < 6) {
         return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const cleanPhone = phone.trim().replace(/[^0-9+\-() ]/g, "");
+      if (cleanPhone.replace(/\D/g, "").length < 7) {
+        return res.status(400).json({ message: "Please enter a valid phone number" });
       }
 
       const existing = await authStorage.getUserByEmail(email);
@@ -93,6 +100,7 @@ export async function setupAuth(app: Express) {
         password: hashedPassword,
         firstName: displayName,
         lastName: null,
+        phone: cleanPhone,
         profileImageUrl: null,
       });
 
@@ -140,7 +148,7 @@ export async function setupAuth(app: Express) {
       }
 
       if (!user.password) {
-        return res.status(401).json({ message: "This account uses Spotify login. Please use 'Connect with Spotify' instead, or reset your password." });
+        return res.status(401).json({ message: "No password set for this account. Please contact support to reset your credentials." });
       }
 
       const valid = await bcrypt.compare(password, user.password);
@@ -225,7 +233,7 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/login", (req, res) => {
-    res.redirect("/api/login/spotify" + (req.query.redirect ? `?redirect=${req.query.redirect}` : ""));
+    res.redirect("/");
   });
 
   app.get("/api/spotify/callback", async (req, res) => {
