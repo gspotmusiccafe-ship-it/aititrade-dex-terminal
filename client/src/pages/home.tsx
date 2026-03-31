@@ -1436,25 +1436,27 @@ export default function HomePage() {
             ))}
           </div>
         ) : displayTracks.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-            {displayTracks.map((track) => (
-              <AssetCard
-                key={track.id}
-                track={track}
-                onPlay={(t) => playTrack(t, displayTracks)}
-                settlement={settlementData}
-                enginePrice={enginePrice}
-                engineMbbp={engineMbbp}
-                engineDiscount={engineDiscount}
-                engineMarketOpen={engineMarketOpen}
-                engineState={engineState}
-              />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-            <GlobalTradePortal portalIndex={0} />
-            <GlobalTradePortal portalIndex={1} />
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              {displayTracks.map((track) => (
+                <AssetCard
+                  key={track.id}
+                  track={track}
+                  onPlay={(t) => playTrack(t, displayTracks)}
+                  settlement={settlementData}
+                  enginePrice={enginePrice}
+                  engineMbbp={engineMbbp}
+                  engineDiscount={engineDiscount}
+                  engineMarketOpen={engineMarketOpen}
+                  engineState={engineState}
+                />
+              ))}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+              <GlobalTradePortal portalIndex={0} />
+              <GlobalTradePortal portalIndex={1} />
+            </div>
+          </>
         ) : (
           <div className="text-center py-20 border border-zinc-800">
             <Zap className="h-8 w-8 text-emerald-500/30 mx-auto mb-3" />
