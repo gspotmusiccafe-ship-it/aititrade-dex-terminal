@@ -2283,7 +2283,7 @@ export async function registerRoutes(
 
       const tradeUser = await storage.getUser(userId);
       const tradeBuyerEmail = tradeUser?.email || "";
-      const tradeBuyerName = (tradeUser?.displayName || tradeUser?.email?.split("@")[0] || "TRADER").toUpperCase();
+      const tradeBuyerName = (tradeUser?.firstName ? `${tradeUser.firstName}${tradeUser.lastName ? ' ' + tradeUser.lastName : ''}` : tradeUser?.email?.split("@")[0] || "TRADER").toUpperCase();
 
       const [order] = await db.insert(orders).values({
         trackId,
@@ -3303,6 +3303,40 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/admin/recent-traders", isAdmin, async (req: any, res) => {
+    try {
+      const recentOrders = await db.select({
+        id: orders.id,
+        buyerEmail: orders.buyerEmail,
+        buyerName: orders.buyerName,
+        unitPrice: orders.unitPrice,
+        portalName: orders.portalName,
+        status: orders.status,
+        trackId: orders.trackId,
+        createdAt: orders.createdAt,
+      }).from(orders)
+        .where(and(isNotNull(orders.buyerEmail), sql`${orders.buyerEmail} != ''`))
+        .orderBy(desc(orders.createdAt))
+        .limit(20);
+
+      const enriched = await Promise.all(recentOrders.map(async (o) => {
+        const [track] = await db.select({ title: tracks.title }).from(tracks).where(eq(tracks.id, o.trackId)).limit(1);
+        const [traderUser] = await db.select({ profileImageUrl: users.profileImageUrl, firstName: users.firstName })
+          .from(users).where(eq(users.email, o.buyerEmail || "")).limit(1);
+        return {
+          ...o,
+          trackTitle: track?.title || "UNKNOWN",
+          profileImage: traderUser?.profileImageUrl || null,
+        };
+      }));
+
+      res.json(enriched);
+    } catch (error) {
+      console.error("[ADMIN] Recent traders error:", error);
+      res.status(500).json({ message: "Failed to fetch recent traders" });
+    }
+  });
+
   // Admin create artist (bypass membership check)
   app.post("/api/admin/artists/create", isAdmin, async (req: any, res) => {
     try {
@@ -4148,7 +4182,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const userId = req.user.claims.sub;
       const [user] = await db.select().from(users).where(eq(users.id, userId));
       if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
-      const result = await runSettlementCycle();
+      const result = await runSettlementCycle(true);
       res.json(result);
     } catch (error: any) {
       console.error("[SETTLEMENT] Admin cycle error:", error);
@@ -4227,20 +4261,87 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   // ═══════════════════════════════════════════════════════════════
   app.get("/api/trader/:userId", isAuthenticated, async (req: any, res) => {
     try {
-      const targetUserId = req.params.userId;
+      const targetUserId = decodeURIComponent(req.params.userId);
       const requestingUserId = req.user?.claims?.sub;
 
       const requestingUser = await storage.getUser(requestingUserId);
-      if (targetUserId !== requestingUserId && !requestingUser?.isAdmin) {
-        return res.status(403).json({ message: "Access denied" });
+
+      let user = await storage.getUser(targetUserId);
+      
+      if (!user && targetUserId.includes("@")) {
+        const [foundUser] = await db.select().from(users).where(eq(users.email, targetUserId)).limit(1);
+        if (foundUser) user = foundUser;
       }
 
-      const user = await storage.getUser(targetUserId);
       if (!user) {
+        const hasOrders = await db.select({ cnt: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+          .from(orders)
+          .where(eq(orders.buyerEmail, targetUserId));
+        
+        if (hasOrders[0]?.cnt > 0) {
+          const traderOrders = await db.select({
+            id: orders.id,
+            trackId: orders.trackId,
+            trackingNumber: orders.trackingNumber,
+            unitPrice: orders.unitPrice,
+            portalName: orders.portalName,
+            status: orders.status,
+            createdAt: orders.createdAt,
+          }).from(orders)
+            .where(eq(orders.buyerEmail, targetUserId))
+            .orderBy(desc(orders.createdAt))
+            .limit(50);
+
+          const positions = await Promise.all(traderOrders.map(async (o) => {
+            const [track] = await db.select({ title: tracks.title, coverImage: tracks.coverImage, buyBackRate: tracks.buyBackRate }).from(tracks).where(eq(tracks.id, o.trackId)).limit(1);
+            const buyIn = parseFloat(o.unitPrice || "5.00");
+            const buyBack = parseFloat(track?.buyBackRate || (buyIn * 1.80).toFixed(2));
+            const queueEntry = await db.select().from(settlementQueue).where(eq(settlementQueue.orderId, o.id)).limit(1);
+            const qe = queueEntry[0];
+            return {
+              ...o,
+              trackTitle: track?.title || "UNKNOWN",
+              coverImage: track?.coverImage || null,
+              buyIn,
+              buyBack: qe ? parseFloat(qe.currentOffer || buyBack.toString()) : buyBack,
+              roi: qe ? parseFloat((((parseFloat(qe.currentOffer || "0") - buyIn) / buyIn) * 100).toFixed(1)) : parseFloat((((buyBack - buyIn) / buyIn) * 100).toFixed(1)),
+              queuePosition: qe?.queuePosition || null,
+              queueStatus: qe?.status || null,
+              currentMultiplier: qe ? parseFloat(qe.currentMultiplier || "1.25") : null,
+              currentOffer: qe ? parseFloat(qe.currentOffer || "0") : null,
+            };
+          }));
+
+          const totalInvested = positions.reduce((sum, p) => sum + p.buyIn, 0);
+          const totalBuyBack = positions.reduce((sum, p) => sum + p.buyBack, 0);
+
+          return res.json({
+            trader: {
+              id: targetUserId,
+              username: traderOrders[0]?.portalName ? targetUserId.split("@")[0].toUpperCase() : "TRADER",
+              profileImage: null,
+              isAdmin: false,
+            },
+            trust: null,
+            positions,
+            summary: {
+              totalPositions: positions.length,
+              totalInvested: parseFloat(totalInvested.toFixed(2)),
+              totalBuyBack: parseFloat(totalBuyBack.toFixed(2)),
+              projectedROI: totalInvested > 0 ? parseFloat((((totalBuyBack - totalInvested) / totalInvested) * 100).toFixed(1)) : 0,
+            },
+          });
+        }
+
         return res.status(404).json({ message: "Trader not found" });
       }
 
-      const trustMember = await db.select().from(trustMembers).where(eq(trustMembers.userId, targetUserId)).limit(1);
+      const actualUserId = user.id;
+      if (actualUserId !== requestingUserId && !requestingUser?.isAdmin) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const trustMember = await db.select().from(trustMembers).where(eq(trustMembers.userId, actualUserId)).limit(1);
       const isTrustMember = trustMember.length > 0;
       const tm = trustMember[0] || null;
 
@@ -4249,13 +4350,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         trackId: orders.trackId,
         trackingNumber: orders.trackingNumber,
         unitPrice: orders.unitPrice,
+        portalName: orders.portalName,
         status: orders.status,
         createdAt: orders.createdAt,
       }).from(orders)
         .where((() => {
           const conditions = [];
           if (user.email) conditions.push(eq(orders.buyerEmail, user.email));
-          if (user.username) conditions.push(eq(orders.buyerName, user.username));
+          const fullName = user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`.toUpperCase() : null;
+          if (fullName) conditions.push(eq(orders.buyerName, fullName));
           if (conditions.length === 0) return sql`false`;
           return conditions.length === 1 ? conditions[0] : or(...conditions);
         })())
@@ -4266,13 +4369,20 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         const [track] = await db.select({ title: tracks.title, coverImage: tracks.coverImage, buyBackRate: tracks.buyBackRate }).from(tracks).where(eq(tracks.id, o.trackId)).limit(1);
         const buyIn = parseFloat(o.unitPrice || "5.00");
         const buyBack = parseFloat(track?.buyBackRate || (buyIn * 1.80).toFixed(2));
+        const queueEntry = await db.select().from(settlementQueue).where(eq(settlementQueue.orderId, o.id)).limit(1);
+        const qe = queueEntry[0];
         return {
           ...o,
           trackTitle: track?.title || "UNKNOWN",
           coverImage: track?.coverImage || null,
           buyIn,
-          buyBack,
-          roi: parseFloat((((buyBack - buyIn) / buyIn) * 100).toFixed(1)),
+          buyBack: qe ? parseFloat(qe.currentOffer || buyBack.toString()) : buyBack,
+          roi: qe ? parseFloat((((parseFloat(qe.currentOffer || "0") - buyIn) / buyIn) * 100).toFixed(1)) : parseFloat((((buyBack - buyIn) / buyIn) * 100).toFixed(1)),
+          queuePosition: qe?.queuePosition || null,
+          queueStatus: qe?.status || null,
+          currentMultiplier: qe ? parseFloat(qe.currentMultiplier || "1.25") : null,
+          currentOffer: qe ? parseFloat(qe.currentOffer || "0") : null,
+          payoutAmount: qe?.payoutAmount ? parseFloat(qe.payoutAmount) : null,
         };
       }));
 
@@ -4282,7 +4392,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json({
         trader: {
           id: targetUserId,
-          username: user.username || "ANON",
+          username: user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : user.email?.split("@")[0] || "ANON",
           profileImage: user.profileImageUrl || null,
           isAdmin: user.isAdmin || false,
         },
@@ -5863,7 +5973,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       const user = await storage.getUser(userId);
       const buyerEmail = user?.email || "";
-      const buyerName = user?.displayName || user?.email?.split("@")[0] || "TRADER";
+      const buyerName = user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : user?.email?.split("@")[0] || "TRADER";
 
       const [order] = await db.insert(orders).values({
         trackId,

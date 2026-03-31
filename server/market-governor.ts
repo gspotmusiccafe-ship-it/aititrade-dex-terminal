@@ -682,7 +682,8 @@ export async function getGrossIntake(): Promise<number> {
   }).from(orders).where(
     and(
       isNotNull(orders.buyerEmail),
-      sql`${orders.buyerEmail} != ''`
+      sql`${orders.buyerEmail} != ''`,
+      inArray(orders.status, ["confirmed", "settled", "settled_early"])
     )
   );
   return parseFloat(result?.total || "0");
@@ -710,7 +711,7 @@ export async function getCompletedCycleCount(): Promise<number> {
   return parseInt(result?.cnt || "0");
 }
 
-export async function runSettlementCycle(): Promise<{
+export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
   cycleNumber: number;
   settled: { userId: string; payout: number; multiplier: number }[];
   holding: string[];
@@ -726,7 +727,15 @@ export async function runSettlementCycle(): Promise<{
   const totalPayoutBudget = totalKsReached * lockedPayout;
 
   const alreadyPaid = await getTotalPaidOut();
-  const payoutBudget = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
+  let payoutBudget = parseFloat((totalPayoutBudget - alreadyPaid).toFixed(2));
+
+  if (payoutBudget <= 0 && forceAdmin) {
+    const split = getLiveSplit();
+    payoutBudget = parseFloat((grossIntake * split.floor - alreadyPaid).toFixed(2));
+    if (payoutBudget > 0) {
+      console.log(`[GOVERNOR] Admin force cycle — using proportional budget: $${payoutBudget.toFixed(2)} (${Math.round(split.floor*100)}% of $${grossIntake.toFixed(2)} gross)`);
+    }
+  }
 
   if (payoutBudget <= 0) {
     console.log(`[GOVERNOR] Cycle #${cycleNumber} — No payout budget. Gross: $${grossIntake.toFixed(2)} | ${totalKsReached} K's reached | Already paid: $${alreadyPaid.toFixed(2)}`);

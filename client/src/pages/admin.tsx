@@ -184,7 +184,58 @@ function AnalyticsDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <RecentTradersPanel />
     </div>
+  );
+}
+
+function RecentTradersPanel() {
+  const { data: recentTraders, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/recent-traders"],
+    refetchInterval: 30000,
+  });
+
+  if (isLoading || !recentTraders || recentTraders.length === 0) return null;
+
+  return (
+    <Card className="bg-card/60 border-border/30 overflow-hidden">
+      <div className="h-1 bg-gradient-to-r from-emerald-500/50 to-lime-500/50" />
+      <CardHeader>
+        <CardTitle className="text-lg font-black flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500/15 to-lime-500/10 flex items-center justify-center">
+            <Users className="h-4 w-4 text-emerald-400" />
+          </div>
+          Recent Traders
+        </CardTitle>
+        <CardDescription>Latest positions acquired on the exchange</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {recentTraders.map((t: any, i: number) => (
+            <div key={t.id || i} className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors" data-testid={`recent-trader-${i}`}>
+              {t.profileImage ? (
+                <img src={t.profileImage} alt="" className="w-9 h-9 rounded-full border border-emerald-500/30 flex-shrink-0" />
+              ) : (
+                <div className="w-9 h-9 rounded-full border border-emerald-500/30 bg-gradient-to-br from-emerald-950 to-black flex items-center justify-center flex-shrink-0">
+                  <span className="text-emerald-400 font-black text-sm">{(t.buyerName || "?")[0]}</span>
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold truncate">{t.buyerName || "ANON"}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{t.buyerEmail} — {t.trackTitle || t.portalName}</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm font-bold text-emerald-400">${parseFloat(t.unitPrice || "0").toFixed(2)}</p>
+                <p className={`text-[9px] font-bold ${t.status === "confirmed" ? "text-lime-400" : t.status === "pending_cashapp" ? "text-yellow-400" : "text-zinc-500"}`}>
+                  {t.status === "confirmed" ? "LOCKED" : t.status === "pending_cashapp" ? "PENDING" : t.status?.toUpperCase()}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
