@@ -761,6 +761,18 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
     ).toFixed(2));
     const offerAmount = parseFloat((buyIn * currentMult).toFixed(2));
 
+    if (currentMult < 1.0) {
+      await db.update(settlementQueue).set({
+        status: "HOLDING",
+        currentMultiplier: EARLY_ACCEPT_MULTIPLIER.toFixed(2),
+        currentOffer: (buyIn * EARLY_ACCEPT_MULTIPLIER).toFixed(2),
+        cyclesHeld: cyclesHeld + 1,
+      }).where(eq(settlementQueue.id, entry.id));
+      holding.push(entry.userId);
+      console.log(`[GOVERNOR] HOLD (mult too low ${currentMult}x): ${entry.userId} | $${buyIn} — reset to ${EARLY_ACCEPT_MULTIPLIER}x`);
+      continue;
+    }
+
     if (remaining <= 0 || offerAmount > remaining) {
       await db.update(settlementQueue).set({
         status: "HOLDING",
@@ -769,7 +781,7 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
         cyclesHeld: cyclesHeld + 1,
       }).where(eq(settlementQueue.id, entry.id));
       holding.push(entry.userId);
-      console.log(`[GOVERNOR] HOLD: ${entry.userId} | Position #${entry.queuePosition} | $${buyIn} → $${offerAmount} (${currentMult}x) | Budget left: $${remaining.toFixed(2)} — waiting for next $1K`);
+      console.log(`[GOVERNOR] HOLD: ${entry.userId} | Position #${entry.queuePosition} | $${buyIn} → $${offerAmount} (${currentMult}x) | Budget left: $${remaining.toFixed(2)} — waiting for more volume`);
       continue;
     }
 

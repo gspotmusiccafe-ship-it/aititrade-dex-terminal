@@ -4272,26 +4272,47 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       const realInvestorEmail = "tjacqueline429@gmail.com";
 
-      const deletedOrders = await db.delete(orders).where(
+      const fakeOrders = await db.select({ id: orders.id }).from(orders).where(
         sql`${orders.buyerEmail} != ${realInvestorEmail} OR ${orders.buyerEmail} IS NULL`
-      ).returning({ id: orders.id });
+      );
 
-      const deletedQueue = await db.delete(settlementQueue).returning({ id: settlementQueue.id });
+      let deletedOrderCount = 0;
+      if (fakeOrders.length > 0) {
+        const deleted = await db.delete(orders).where(
+          sql`${orders.buyerEmail} != ${realInvestorEmail} OR ${orders.buyerEmail} IS NULL`
+        ).returning({ id: orders.id });
+        deletedOrderCount = deleted.length;
+      }
 
-      const deletedCycles = await db.delete(settlementCycles).returning({ id: settlementCycles.id });
+      const queueEntries = await db.select({ id: settlementQueue.id }).from(settlementQueue);
+      let queueClearedCount = 0;
+      if (queueEntries.length > 0) {
+        const deleted = await db.delete(settlementQueue).returning({ id: settlementQueue.id });
+        queueClearedCount = deleted.length;
+      }
 
-      console.log(`[ADMIN PURGE] Removed ${deletedOrders.length} inflated orders, ${deletedQueue.length} queue entries, ${deletedCycles.length} cycles. Only Jackie's real $5 remains.`);
+      const cycleEntries = await db.select({ id: settlementCycles.id }).from(settlementCycles);
+      let cyclesClearedCount = 0;
+      if (cycleEntries.length > 0) {
+        const deleted = await db.delete(settlementCycles).returning({ id: settlementCycles.id });
+        cyclesClearedCount = deleted.length;
+      }
+
+      const [remaining] = await db.select({ cnt: sql<string>`COUNT(*)`, total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)` }).from(orders);
+
+      console.log(`[ADMIN PURGE] Removed ${deletedOrderCount} orders, ${queueClearedCount} queue, ${cyclesClearedCount} cycles. Remaining: ${remaining?.cnt || 0} orders, $${remaining?.total || 0}`);
 
       res.json({
         purged: true,
-        ordersRemoved: deletedOrders.length,
-        queueCleared: deletedQueue.length,
-        cyclesCleared: deletedCycles.length,
-        remaining: "tjacqueline429@gmail.com $5 confirmed"
+        ordersRemoved: deletedOrderCount,
+        queueCleared: queueClearedCount,
+        cyclesCleared: cyclesClearedCount,
+        remainingOrders: parseInt(remaining?.cnt || "0"),
+        remainingGross: parseFloat(remaining?.total || "0"),
       });
     } catch (error: any) {
       console.error("[ADMIN PURGE] Error:", error);
-      res.status(500).json({ message: "Purge failed" });
+      res.status(500).json({ message: error.message || "Purge failed" });
     }
   });
 
