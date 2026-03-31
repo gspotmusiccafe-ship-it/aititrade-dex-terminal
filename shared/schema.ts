@@ -99,6 +99,7 @@ export const settlementQueue = pgTable("settlement_queue", {
   buyIn: decimal("buy_in", { precision: 10, scale: 2 }).notNull(),
   portalName: varchar("portal_name").notNull().default("STANDARD"),
   baseMbb: decimal("base_mbb", { precision: 5, scale: 2 }).notNull().default("3.00"),
+  lockedMbbp: decimal("locked_mbbp", { precision: 10, scale: 4 }),
   currentOffer: decimal("current_offer", { precision: 10, scale: 2 }),
   currentMultiplier: decimal("current_multiplier", { precision: 5, scale: 2 }),
   acceptedMultiplier: decimal("accepted_multiplier", { precision: 5, scale: 2 }),

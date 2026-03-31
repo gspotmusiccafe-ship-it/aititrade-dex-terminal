@@ -633,6 +633,7 @@ export interface SettlementOffer {
   buyIn: number;
   portalName: string;
   baseMbb: number;
+  lockedMbbp: number;
   currentMultiplier: number;
   currentOffer: number;
   maxPayout: number;
@@ -647,8 +648,12 @@ export async function enqueueTrader(
   userId: string,
   trackId: string,
   buyIn: number,
+  lockedMbbpPrice?: number,
 ): Promise<void> {
   const portal = getPortalForPrice(buyIn);
+  const liveMbbp = lockedMbbpPrice || liveEngine.mbbp;
+  const settlementOffer = parseFloat((buyIn * liveMbbp).toFixed(2));
+  const multiplier = parseFloat(liveMbbp.toFixed(4));
 
   const [maxPos] = await db.select({
     maxPos: sql<string>`COALESCE(MAX(queue_position), 0)`,
@@ -657,8 +662,6 @@ export async function enqueueTrader(
   );
   const nextPos = parseInt(maxPos?.maxPos || "0") + 1;
 
-  const earlyOffer = parseFloat((buyIn * EARLY_ACCEPT_MULTIPLIER).toFixed(2));
-
   await db.insert(settlementQueue).values({
     orderId,
     userId,
@@ -666,14 +669,15 @@ export async function enqueueTrader(
     buyIn: buyIn.toString(),
     portalName: portal.name,
     baseMbb: portal.mbb.toString(),
-    currentOffer: earlyOffer.toString(),
-    currentMultiplier: EARLY_ACCEPT_MULTIPLIER.toString(),
+    lockedMbbp: liveMbbp.toFixed(4),
+    currentOffer: settlementOffer.toString(),
+    currentMultiplier: multiplier.toString(),
     cyclesHeld: 0,
     status: "QUEUED",
     queuePosition: nextPos,
   });
 
-  console.log(`[GOVERNOR] Trader enqueued: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | Early Offer: $${earlyOffer}`);
+  console.log(`[GOVERNOR] Trader enqueued: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | LOCKED MBBP: $${liveMbbp.toFixed(4)} | Settle At: $${settlementOffer}`);
 }
 
 export async function getGrossIntake(): Promise<number> {
@@ -751,54 +755,35 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
 
   for (const entry of queued) {
     const buyIn = parseFloat(entry.buyIn || "0");
-    const baseMbb = parseFloat(entry.baseMbb || "3.00");
-    const cyclesHeld = entry.cyclesHeld || 0;
-
-    const holdBonus = cyclesHeld * HOLD_BONUS_PER_CYCLE;
-    const currentMult = parseFloat(Math.min(
-      EARLY_ACCEPT_MULTIPLIER + holdBonus,
-      baseMbb
-    ).toFixed(2));
-    const offerAmount = parseFloat((buyIn * currentMult).toFixed(2));
-
-    if (currentMult < 1.0) {
-      await db.update(settlementQueue).set({
-        status: "HOLDING",
-        currentMultiplier: EARLY_ACCEPT_MULTIPLIER.toFixed(2),
-        currentOffer: (buyIn * EARLY_ACCEPT_MULTIPLIER).toFixed(2),
-        cyclesHeld: cyclesHeld + 1,
-      }).where(eq(settlementQueue.id, entry.id));
-      holding.push(entry.userId);
-      console.log(`[GOVERNOR] HOLD (mult too low ${currentMult}x): ${entry.userId} | $${buyIn} — reset to ${EARLY_ACCEPT_MULTIPLIER}x`);
-      continue;
-    }
+    const locked = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.25");
+    const offerAmount = parseFloat((buyIn * locked).toFixed(2));
 
     if (remaining <= 0 || offerAmount > remaining) {
       await db.update(settlementQueue).set({
         status: "HOLDING",
-        currentMultiplier: currentMult.toFixed(2),
+        currentMultiplier: locked.toFixed(2),
         currentOffer: offerAmount.toFixed(2),
-        cyclesHeld: cyclesHeld + 1,
+        cyclesHeld: (entry.cyclesHeld || 0) + 1,
       }).where(eq(settlementQueue.id, entry.id));
       holding.push(entry.userId);
-      console.log(`[GOVERNOR] HOLD: ${entry.userId} | Position #${entry.queuePosition} | $${buyIn} → $${offerAmount} (${currentMult}x) | Budget left: $${remaining.toFixed(2)} — waiting for more volume`);
+      console.log(`[GOVERNOR] HOLD: ${entry.userId} | #${entry.queuePosition} | $${buyIn} × ${locked}x = $${offerAmount} | Budget: $${remaining.toFixed(2)} — waiting for volume`);
       continue;
     }
 
     await db.update(settlementQueue).set({
       status: "SETTLED",
-      acceptedMultiplier: currentMult.toFixed(2),
+      acceptedMultiplier: locked.toFixed(2),
       payoutAmount: offerAmount.toFixed(2),
       currentOffer: offerAmount.toFixed(2),
-      currentMultiplier: currentMult.toFixed(2),
-      cyclesHeld: cyclesHeld + 1,
+      currentMultiplier: locked.toFixed(2),
+      cyclesHeld: (entry.cyclesHeld || 0) + 1,
       settledAt: new Date(),
     }).where(eq(settlementQueue.id, entry.id));
 
     remaining = parseFloat((remaining - offerAmount).toFixed(2));
     totalPaidOut = parseFloat((totalPaidOut + offerAmount).toFixed(2));
-    settled.push({ userId: entry.userId, payout: offerAmount, multiplier: currentMult });
-    console.log(`[GOVERNOR] SETTLED: ${entry.userId} | Position #${entry.queuePosition} | $${buyIn} → $${offerAmount} (${currentMult}x) | Budget left: $${remaining.toFixed(2)}`);
+    settled.push({ userId: entry.userId, payout: offerAmount, multiplier: locked });
+    console.log(`[GOVERNOR] SETTLED: ${entry.userId} | #${entry.queuePosition} | $${buyIn} × LOCKED ${locked}x = $${offerAmount} | Budget: $${remaining.toFixed(2)}`);
   }
 
   await db.insert(settlementCycles).values({
@@ -829,15 +814,8 @@ export async function traderAcceptOffer(queueId: string, userId: string): Promis
   if (entry.status === "SETTLED") return { success: false, message: "Already settled" };
 
   const buyIn = parseFloat(entry.buyIn || "0");
-  const baseMbb = parseFloat(entry.baseMbb || "3.00");
-  const cyclesHeld = entry.cyclesHeld || 0;
-
-  const holdBonus = cyclesHeld * HOLD_BONUS_PER_CYCLE;
-  const currentMult = parseFloat(Math.min(
-    EARLY_ACCEPT_MULTIPLIER + holdBonus,
-    baseMbb
-  ).toFixed(2));
-  const offerAmount = parseFloat((buyIn * currentMult).toFixed(2));
+  const locked = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.25");
+  const offerAmount = parseFloat((buyIn * locked).toFixed(2));
 
   const grossIntake = await getGrossIntake();
   const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
@@ -848,20 +826,20 @@ export async function traderAcceptOffer(queueId: string, userId: string): Promis
   if (offerAmount > available) {
     return {
       success: false,
-      message: `Fund has $${available.toFixed(2)} available. Your offer is $${offerAmount.toFixed(2)}. Hold for next $1K cycle — next $${getPayoutPerCycle()} drops when gross hits $${((totalKsReached + 1) * SETTLEMENT_CYCLE_THRESHOLD).toLocaleString()}.`,
+      message: `Fund has $${available.toFixed(2)} available. Your locked offer is $${offerAmount.toFixed(2)}. Hold for next cycle — budget replenishes when gross hits $${((totalKsReached + 1) * SETTLEMENT_CYCLE_THRESHOLD).toLocaleString()}.`,
     };
   }
 
   await db.update(settlementQueue).set({
     status: "SETTLED",
-    acceptedMultiplier: currentMult.toFixed(2),
+    acceptedMultiplier: locked.toFixed(2),
     payoutAmount: offerAmount.toFixed(2),
     currentOffer: offerAmount.toFixed(2),
-    currentMultiplier: currentMult.toFixed(2),
+    currentMultiplier: locked.toFixed(2),
     settledAt: new Date(),
   }).where(eq(settlementQueue.id, queueId));
 
-  console.log(`[GOVERNOR] TRADER ACCEPTED: ${userId} | $${buyIn} → $${offerAmount} (${currentMult}x) | Fund remaining: $${(available - offerAmount).toFixed(2)}`);
+  console.log(`[GOVERNOR] TRADER ACCEPTED: ${userId} | $${buyIn} × LOCKED ${locked}x = $${offerAmount} | Fund remaining: $${(available - offerAmount).toFixed(2)}`);
 
   return {
     success: true,
@@ -884,27 +862,21 @@ export async function traderHoldPosition(queueId: string, userId: string): Promi
   if (entry.status === "SETTLED") return { success: false, message: "Already settled" };
 
   const buyIn = parseFloat(entry.buyIn || "0");
-  const baseMbb = parseFloat(entry.baseMbb || "3.00");
-  const cyclesHeld = (entry.cyclesHeld || 0);
-
-  const nextMult = parseFloat(Math.min(
-    EARLY_ACCEPT_MULTIPLIER + (cyclesHeld + 1) * HOLD_BONUS_PER_CYCLE,
-    baseMbb
-  ).toFixed(2));
-  const nextOffer = parseFloat((buyIn * nextMult).toFixed(2));
-  const maxPayout = parseFloat((buyIn * baseMbb).toFixed(2));
+  const locked = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.25");
+  const offerAmount = parseFloat((buyIn * locked).toFixed(2));
 
   await db.update(settlementQueue).set({
     status: "HOLDING",
+    cyclesHeld: (entry.cyclesHeld || 0) + 1,
   }).where(eq(settlementQueue.id, queueId));
 
-  console.log(`[GOVERNOR] TRADER HOLDING: ${userId} | Current: ${parseFloat(entry.currentMultiplier || "1.25").toFixed(2)}x → Next: ${nextMult}x ($${nextOffer}) | Max: $${maxPayout}`);
+  console.log(`[GOVERNOR] TRADER HOLDING: ${userId} | LOCKED MBBP: ${locked}x | Settle at: $${offerAmount}`);
 
   return {
     success: true,
-    nextMultiplier: nextMult,
-    nextOffer,
-    message: `HOLDING — Next cycle offer: $${nextOffer.toFixed(2)} (${nextMult}x). Max payout: $${maxPayout.toFixed(2)} (${baseMbb}x).`,
+    nextMultiplier: locked,
+    nextOffer: offerAmount,
+    message: `HOLDING — Your locked MBBP is ${locked}x. Settlement: $${offerAmount.toFixed(2)} when fund is available.`,
   };
 }
 
@@ -916,7 +888,7 @@ export async function getTraderPositions(userId: string): Promise<SettlementOffe
   return positions.map(p => {
     const buyIn = parseFloat(p.buyIn || "0");
     const baseMbb = parseFloat(p.baseMbb || "3.00");
-    const currentMult = parseFloat(p.currentMultiplier || EARLY_ACCEPT_MULTIPLIER.toString());
+    const locked = parseFloat(p.lockedMbbp || p.currentMultiplier || "1.25");
     return {
       queueId: p.id,
       orderId: p.orderId,
@@ -925,9 +897,10 @@ export async function getTraderPositions(userId: string): Promise<SettlementOffe
       buyIn,
       portalName: p.portalName || "NANO_SAFE",
       baseMbb,
-      currentMultiplier: currentMult,
-      currentOffer: parseFloat(p.currentOffer || (buyIn * currentMult).toFixed(2)),
-      maxPayout: parseFloat((buyIn * baseMbb).toFixed(2)),
+      lockedMbbp: locked,
+      currentMultiplier: locked,
+      currentOffer: parseFloat((buyIn * locked).toFixed(2)),
+      maxPayout: parseFloat((buyIn * locked).toFixed(2)),
       cyclesHeld: p.cyclesHeld || 0,
       queuePosition: p.queuePosition || 0,
       status: p.status || "QUEUED",
@@ -988,7 +961,7 @@ export async function getSettlementDashboard(): Promise<{
   const mapEntry = (p: any): SettlementOffer => {
     const buyIn = parseFloat(p.buyIn || "0");
     const baseMbb = parseFloat(p.baseMbb || "3.00");
-    const currentMult = parseFloat(p.currentMultiplier || EARLY_ACCEPT_MULTIPLIER.toString());
+    const locked = parseFloat(p.lockedMbbp || p.currentMultiplier || "1.25");
     return {
       queueId: p.id,
       orderId: p.orderId,
@@ -997,9 +970,10 @@ export async function getSettlementDashboard(): Promise<{
       buyIn,
       portalName: p.portalName || "NANO_SAFE",
       baseMbb,
-      currentMultiplier: currentMult,
-      currentOffer: parseFloat(p.currentOffer || (buyIn * currentMult).toFixed(2)),
-      maxPayout: parseFloat((buyIn * baseMbb).toFixed(2)),
+      lockedMbbp: locked,
+      currentMultiplier: locked,
+      currentOffer: parseFloat((buyIn * locked).toFixed(2)),
+      maxPayout: parseFloat((buyIn * locked).toFixed(2)),
       cyclesHeld: p.cyclesHeld || 0,
       queuePosition: p.queuePosition || 0,
       status: p.status || "QUEUED",
@@ -1153,8 +1127,8 @@ class MarketEngine {
     this.mbbp = parseFloat((1.00 + this.P_current).toFixed(4));
     if (this.mbbp < this.minMBBP) this.mbbp = this.minMBBP;
 
-    const discountSpread = 0.005 + fillRatio * 0.02 + Math.random() * 0.015;
-    this.discountOffer = parseFloat(Math.max(this.minMBBP, this.mbbp - discountSpread).toFixed(4));
+    const discountPct = 0.15 + fillRatio * 0.10 + Math.random() * 0.05;
+    this.discountOffer = parseFloat(Math.max(this.minMBBP, this.mbbp * (1 - discountPct)).toFixed(4));
 
     return this.P_current;
   }
@@ -1176,9 +1150,9 @@ class MarketEngine {
     return this.queue.length;
   }
 
-  acceptDiscount(userId: string): { ok: boolean; payout: number; error?: string } {
+  acceptDiscount(userId: string): { ok: boolean; payout: number; discountPrice: number; error?: string } {
     const idx = this.queue.findIndex(q => q.userId === userId && q.status === "holding");
-    if (idx === -1) return { ok: false, payout: 0, error: "NOT_IN_QUEUE" };
+    if (idx === -1) return { ok: false, payout: 0, discountPrice: 0, error: "NOT_IN_QUEUE" };
 
     const trader = this.queue[idx];
     trader.status = "discount_exit";
@@ -1190,8 +1164,8 @@ class MarketEngine {
     this.queue.splice(idx, 1);
     this.queue.unshift(trader);
 
-    logEvent("DISCOUNT_EXIT", { userId, discountPrice: this.discountOffer, payout, mbbp: this.mbbp });
-    return { ok: true, payout };
+    logEvent("DISCOUNT_EXIT_QUEUED", { userId, discountPrice: this.discountOffer, expectedPayout: payout, mbbp: this.mbbp });
+    return { ok: true, payout, discountPrice: this.discountOffer };
   }
 
   recordDeposit(amount: number): void {

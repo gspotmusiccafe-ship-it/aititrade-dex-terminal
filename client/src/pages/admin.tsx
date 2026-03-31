@@ -4478,9 +4478,9 @@ function SettlementGovernorTab() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
-                    <span className="text-[7px] sm:text-[9px] text-zinc-500">IN:<span className="text-white font-bold">${entry.buyIn.toFixed(0)}</span></span>
-                    <span className="text-[7px] sm:text-[9px] text-zinc-500">OFFER:<span className="text-emerald-400 font-bold">${entry.currentOffer.toFixed(0)} ({pctGain}%)</span></span>
-                    <span className="text-[7px] sm:text-[9px] text-zinc-500">{entry.cyclesHeld}x held</span>
+                    <span className="text-[7px] sm:text-[9px] text-zinc-500">IN:<span className="text-white font-bold">${entry.buyIn.toFixed(2)}</span></span>
+                    <span className="text-[7px] sm:text-[9px] text-zinc-500">LOCKED:<span className="text-amber-400 font-bold">${(entry.lockedMbbp || entry.currentMultiplier || 0).toFixed(4)}</span></span>
+                    <span className="text-[7px] sm:text-[9px] text-zinc-500">SETTLE:<span className="text-emerald-400 font-bold">${entry.currentOffer.toFixed(2)}</span></span>
                     <span className="text-[7px] sm:text-[8px] text-zinc-600 hidden sm:inline">{entry.portalName}</span>
                   </div>
                 </div>
@@ -4505,9 +4505,9 @@ function SettlementGovernorTab() {
               <div key={s.queueId} className="px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between gap-2">
                 <span className="text-[7px] sm:text-[9px] text-zinc-400 truncate">{s.userId.slice(0, 8)}..</span>
                 <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-                  <span className="text-[7px] sm:text-[9px] text-zinc-500">${s.buyIn.toFixed(0)}</span>
-                  <span className="text-[7px] sm:text-[9px] text-lime-400 font-bold">${s.currentOffer.toFixed(0)}</span>
-                  <span className="text-[7px] sm:text-[9px] text-emerald-400 font-bold">{s.currentMultiplier.toFixed(2)}x</span>
+                  <span className="text-[7px] sm:text-[9px] text-zinc-500">${s.buyIn.toFixed(2)}</span>
+                  <span className="text-[7px] sm:text-[9px] text-amber-400 font-bold">LOCKED ${(s.lockedMbbp || s.currentMultiplier || 0).toFixed(4)}</span>
+                  <span className="text-[7px] sm:text-[9px] text-lime-400 font-bold">${s.currentOffer.toFixed(2)}</span>
                 </div>
               </div>
             ))}

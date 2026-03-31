@@ -923,7 +923,7 @@ export async function registerRoutes(
       checkTreasuryMilestones().catch(() => {});
 
       res.json({
-        message: "Early exit successful. Paid first.",
+        message: "Discount accepted — queued first for settlement.",
         payout: earlyPayout,
         houseTake: houseProfit,
         portal: portal.name,
@@ -4365,10 +4365,11 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         .set({ salesCount: sql`${tracks.salesCount} + 1` })
         .where(eq(tracks.id, order.trackId!));
 
-      await enqueueTrader(order.id, order.buyerEmail || "", order.trackId!, parsedAmount);
+      const lockedMbbp = liveEngine.mbbp;
+      await enqueueTrader(order.id, order.buyerEmail || "", order.trackId!, parsedAmount, lockedMbbp);
       const settlementTriggered = await checkAndTriggerSettlement();
 
-      console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — enqueued + sales counted`);
+      console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — LOCKED MBBP: $${lockedMbbp.toFixed(4)} — enqueued`);
 
       res.json({
         message: "Payment confirmed — position locked and enqueued",
@@ -6029,11 +6030,26 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(400).json({ message: result.error || "Not in queue" });
       }
 
-      const { recordWalletPayout } = await import("./market-governor");
-      recordWalletPayout(userId, result.payout, `Discount exit @ $${liveEngine.discountOffer}`);
+      const userPositions = await db.select().from(settlementQueue)
+        .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
+        .orderBy(asc(settlementQueue.createdAt))
+        .limit(1);
 
-      console.log(`[ENGINE] Discount exit: ${userId} took $${result.payout} @ $${liveEngine.discountOffer}`);
-      res.json({ message: "Discount exit accepted", payout: result.payout, state: liveEngine.getState() });
+      if (userPositions.length > 0) {
+        const pos = userPositions[0];
+        const buyIn = parseFloat(pos.buyIn || "0");
+        const discountOffer = parseFloat((buyIn * result.discountPrice).toFixed(2));
+        await db.update(settlementQueue).set({
+          lockedMbbp: result.discountPrice.toFixed(4),
+          currentOffer: discountOffer.toString(),
+          currentMultiplier: result.discountPrice.toFixed(4),
+          queuePosition: 0,
+          status: "QUEUED",
+        }).where(eq(settlementQueue.id, pos.id));
+        console.log(`[ENGINE] Discount exit QUEUED FIRST: ${userId} | $${buyIn} × ${result.discountPrice.toFixed(4)} = $${discountOffer} | Moved to position #0`);
+      }
+
+      res.json({ message: "Discount accepted — you are FIRST in settlement queue", expectedPayout: result.payout, discountPrice: result.discountPrice, state: liveEngine.getState() });
     } catch (error) {
       console.error("Engine discount exit error:", error);
       res.status(500).json({ message: "Failed to process discount exit" });
@@ -6291,7 +6307,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     res.json({ ok: true, balance: parseFloat(wallet.balance.toFixed(2)) });
   });
 
-  app.get("/discount", (req, res) => {
+  app.get("/discount", async (req, res) => {
     const userId = req.query.user as string;
     if (!userId) return res.status(400).json({ error: "user required" });
 
@@ -6304,20 +6320,38 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       return res.status(400).json({ error: result.error });
     }
 
-    recordWalletPayout(userId, result.payout, `Discount exit @ $${liveEngine.discountOffer}`);
+    const userPositions = await db.select().from(settlementQueue)
+      .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
+      .orderBy(asc(settlementQueue.createdAt))
+      .limit(1);
+
+    if (userPositions.length > 0) {
+      const pos = userPositions[0];
+      const buyIn = parseFloat(pos.buyIn || "0");
+      const discountOffer = parseFloat((buyIn * result.discountPrice).toFixed(2));
+      await db.update(settlementQueue).set({
+        lockedMbbp: result.discountPrice.toFixed(4),
+        currentOffer: discountOffer.toString(),
+        currentMultiplier: result.discountPrice.toFixed(4),
+        queuePosition: 0,
+        status: "QUEUED",
+      }).where(eq(settlementQueue.id, pos.id));
+      console.log(`[ENGINE] Discount exit QUEUED FIRST: ${userId} | $${buyIn} × ${result.discountPrice.toFixed(4)} = $${discountOffer} | Position #0`);
+    }
 
     const eio = getEngineIO();
     if (eio) {
       eio.emit("discount_exit", {
         userId,
-        payout: result.payout,
-        discountPrice: liveEngine.discountOffer,
+        expectedPayout: result.payout,
+        discountPrice: result.discountPrice,
         mbbp: liveEngine.mbbp,
         time: Date.now(),
+        queued: true,
       });
     }
 
-    res.json({ status: "ok", payout: result.payout, discountPrice: liveEngine.discountOffer });
+    res.json({ status: "ok", queued: true, expectedPayout: result.payout, discountPrice: result.discountPrice });
   });
 
   app.get("/market-status", (_req, res) => {

@@ -103,7 +103,7 @@ function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSe
         <div>
           <p className={`text-xs sm:text-sm font-black ${mbbpColor}`}>MBBP ${(liveMbbp * tbi).toFixed(2)}</p>
           {discountOffer > 0 && (
-            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">SYSTEM OFFER: ${(discountOffer * tbi).toFixed(2)} — GET PAID NOW</p>
+            <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">DISCOUNT: ${(discountOffer * tbi).toFixed(2)} — LOCK &amp; QUEUE FIRST</p>
           )}
           {discountOffer === 0 && (
             <p className="text-[7px] sm:text-[8px] text-zinc-600">$0.01 — $1.00 RANGE</p>
@@ -708,7 +708,11 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
       }),
     onSuccess: async (res: any) => {
       const data = await res.json();
-      toast({ title: `${data.type} LOCKED`, description: `Position locked — MBBP settlement queue` });
+      const isDiscount = data.type === "DISCOUNT_EXIT" || data.queued;
+      toast({
+        title: isDiscount ? "DISCOUNT ACCEPTED" : `${data.type || "POSITION"} LOCKED`,
+        description: isDiscount ? "Queued FIRST — paid when settlement runs" : "Position locked — MBBP settlement queue",
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
     },
     onError: (err: Error) => toast({ title: "TRADE FAILED", description: err.message, variant: "destructive" }),
@@ -930,7 +934,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveMbbp > 1.00 ? "text-amber-400" : "text-lime-400"}`} data-testid="card-mbbp">{mbbpLabel}</p>
           </div>
           <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">SYSTEM OFFER</p>
+            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">DISCOUNT</p>
             <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveDiscount > 0 ? "text-yellow-400 animate-pulse" : "text-zinc-600"}`} data-testid="card-discount">{discountLabel}</p>
           </div>
           <div className={`bg-zinc-900/80 p-0.5 sm:p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
@@ -1028,7 +1032,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             }`}
             data-testid={`button-discount-exit-${track.id}`}
           >
-            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> SYSTEM OFFER
+            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> TAKE DISCOUNT — QUEUE FIRST
           </button>
         </div>
         <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
