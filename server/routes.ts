@@ -115,23 +115,44 @@ export async function registerRoutes(
   (async () => {
     try {
       const realEmail = "jmariemusic@yahoo.com";
-      const oldEmail = "tjacqueline429@gmail.com";
+      const realName = "JACQUELINE THOMAS";
 
-      await db.update(orders).set({
-        buyerEmail: realEmail,
-        buyerName: "JACQUELINE THOMAS",
-      }).where(eq(orders.buyerEmail, oldEmail));
+      await db.delete(settlementQueue);
+      await db.delete(settlementCycles);
+      await db.delete(orders);
 
-      const fakeOrders = await db.delete(orders).where(
-        sql`${orders.buyerEmail} != ${realEmail} OR ${orders.buyerEmail} IS NULL`
-      ).returning({ id: orders.id });
-      const queueCleared = await db.delete(settlementQueue).returning({ id: settlementQueue.id });
-      const cyclesCleared = await db.delete(settlementCycles).returning({ id: settlementCycles.id });
-      if (fakeOrders.length > 0 || queueCleared.length > 0) {
-        console.log(`[STARTUP PURGE] Removed ${fakeOrders.length} inflated orders, ${queueCleared.length} queue entries, ${cyclesCleared.length} cycles`);
+      const [candyMan] = await db.select().from(tracks).where(eq(tracks.title, "CANDY MAN"));
+      const [theLove] = await db.select().from(tracks).where(eq(tracks.title, "THE LOVE"));
+
+      if (candyMan) {
+        await db.insert(orders).values({
+          trackId: candyMan.id,
+          trackingNumber: "MNT-977-CANDYMAN-001",
+          buyerEmail: realEmail,
+          buyerName: realName,
+          unitPrice: "5",
+          creatorCredit: "0.50",
+          creatorCreditAmount: "2.50",
+          positionHolderAmount: "2.50",
+          status: "confirmed",
+        });
       }
-      const [real] = await db.select({ cnt: sql<string>`COUNT(*)`, total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)` }).from(orders);
-      console.log(`[STARTUP PURGE] Clean state: ${real?.cnt || 0} real orders, $${real?.total || 0} gross — all under ${realEmail}`);
+      if (theLove) {
+        await db.insert(orders).values({
+          trackId: theLove.id,
+          trackingNumber: "MNT-977-THELOVE-001",
+          buyerEmail: realEmail,
+          buyerName: realName,
+          unitPrice: "3",
+          creatorCredit: "0.50",
+          creatorCreditAmount: "1.50",
+          positionHolderAmount: "1.50",
+          status: "confirmed",
+        });
+      }
+
+      const [totals] = await db.select({ cnt: sql<string>`COUNT(*)`, total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)` }).from(orders);
+      console.log(`[STARTUP PURGE] Clean: ${totals?.cnt || 0} orders, $${totals?.total || 0} gross — ${realName} (${realEmail})`);
     } catch (err) {
       console.error("[STARTUP PURGE] Error:", err);
     }
