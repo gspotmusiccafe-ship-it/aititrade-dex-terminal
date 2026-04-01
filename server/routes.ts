@@ -114,68 +114,13 @@ export async function registerRoutes(
 
   (async () => {
     try {
-      const realEmail = "jmariemusic@yahoo.com";
-      const realName = "J. MARIE";
-      const artistId = "ac86c1b3-363b-4567-be22-2691d3adcb6e";
-
       await db.delete(settlementQueue);
       await db.delete(settlementCycles);
       await db.delete(orders);
 
-      const [oldLove] = await db.select().from(tracks).where(eq(tracks.title, "THE LOVE"));
-      if (oldLove) {
-        await db.update(tracks).set({ title: "I GOT WHAT YOU NEED", unitPrice: "2", genre: "R&B" })
-          .where(eq(tracks.id, oldLove.id));
-      }
+      await db.update(tracks).set({ salesCount: 0 });
 
-      let [playground] = await db.select().from(tracks).where(eq(tracks.title, "YOUR BODY IS MY PLAYGROUND"));
-      if (!playground) {
-        const [created] = await db.insert(tracks).values({
-          artistId,
-          title: "YOUR BODY IS MY PLAYGROUND",
-          duration: 180,
-          audioUrl: "/uploads/demo-audio.wav",
-          unitPrice: "1",
-          buyBackRate: "0.5",
-          assetClass: "standard",
-          releaseType: "native",
-          aiModel: "AITIFY-GEN-1",
-          genre: "R&B",
-          sortPosition: 2,
-        }).returning();
-        playground = created;
-      }
-
-      const [candyMan] = await db.select().from(tracks).where(eq(tracks.title, "CANDY MAN"));
-      const [igotWhat] = await db.select().from(tracks).where(eq(tracks.title, "I GOT WHAT YOU NEED"));
-
-      if (candyMan) {
-        await db.insert(orders).values({
-          trackId: candyMan.id, trackingNumber: "MNT-977-CANDYMAN-001",
-          buyerEmail: realEmail, buyerName: realName,
-          unitPrice: "5", creatorCredit: "0.50", creatorCreditAmount: "2.50",
-          positionHolderAmount: "2.50", status: "confirmed",
-        });
-      }
-      if (igotWhat) {
-        await db.insert(orders).values({
-          trackId: igotWhat.id, trackingNumber: "MNT-977-IGOTWHAT-001",
-          buyerEmail: realEmail, buyerName: realName,
-          unitPrice: "2", creatorCredit: "0.50", creatorCreditAmount: "1.00",
-          positionHolderAmount: "1.00", status: "confirmed",
-        });
-      }
-      if (playground) {
-        await db.insert(orders).values({
-          trackId: playground.id, trackingNumber: "MNT-977-YOURBODY-001",
-          buyerEmail: realEmail, buyerName: realName,
-          unitPrice: "1", creatorCredit: "0.50", creatorCreditAmount: "0.50",
-          positionHolderAmount: "0.50", status: "confirmed",
-        });
-      }
-
-      const [totals] = await db.select({ cnt: sql<string>`COUNT(*)`, total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)` }).from(orders);
-      console.log(`[STARTUP PURGE] Clean: ${totals?.cnt || 0} orders, $${totals?.total || 0} gross — ${realName} (${realEmail})`);
+      console.log(`[STARTUP PURGE] All orders, queue, and cycles cleared — fresh start for testing`);
     } catch (err) {
       console.error("[STARTUP PURGE] Error:", err);
     }

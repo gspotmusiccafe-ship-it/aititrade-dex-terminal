@@ -137,24 +137,6 @@ app.use((req, res, next) => {
       console.log(`[CLEANUP] Purged ${fakeOrders.length} fake orders (no buyer email)`);
     }
 
-    const [candyCheck] = (await db.execute(sql`SELECT id FROM tracks WHERE title = 'CANDY MAN'`)).rows as any[];
-    if (!candyCheck) {
-      const [artist] = (await db.execute(sql`SELECT id FROM artists WHERE user_id = '31bohcbsxlhgbxwskjpbai674pta' LIMIT 1`)).rows as any[];
-      if (artist) {
-        const trackId = 'candy-man-real-001';
-        await db.execute(sql`INSERT INTO tracks (id, title, artist_id, duration, audio_url, unit_price, sales_count, play_count, asset_class, release_type, ai_model, genre, sort_position) VALUES (${trackId}, 'CANDY MAN', ${artist.id}, 180, '/uploads/demo-audio.wav', '5', 1, 0, 'inspirational', 'native', 'AITIFY-GEN-1', 'R&B', 1) ON CONFLICT (id) DO NOTHING`);
-        await db.execute(sql`INSERT INTO orders (id, track_id, tracking_number, buyer_email, buyer_name, unit_price, status, portal_name, creator_credit, house_take_accumulated) VALUES ('real-order-jacqueline-5', ${trackId}, 'MNT-977-CANDYMAN-001', 'tjacqueline429@gmail.com', 'JACQUELINE', '5', 'confirmed', 'STANDARD', '0.16', 0) ON CONFLICT (id) DO NOTHING`);
-        await db.execute(sql`UPDATE tracks SET sales_count = 1 WHERE id = ${trackId}`);
-        console.log(`[CLEANUP] Created CANDY MAN track + $5 real order for JACQUELINE`);
-      }
-    } else {
-      await db.execute(sql`UPDATE tracks SET sales_count = 1, unit_price = '5' WHERE id = ${candyCheck.id}`);
-      const [orderCheck] = (await db.execute(sql`SELECT id FROM orders WHERE buyer_email = 'tjacqueline429@gmail.com'`)).rows as any[];
-      if (!orderCheck) {
-        await db.execute(sql`INSERT INTO orders (id, track_id, tracking_number, buyer_email, buyer_name, unit_price, status, portal_name, creator_credit, house_take_accumulated) VALUES ('real-order-jacqueline-5', ${candyCheck.id}, 'MNT-977-CANDYMAN-001', 'tjacqueline429@gmail.com', 'JACQUELINE', '5', 'confirmed', 'STANDARD', '0.16', 0) ON CONFLICT (id) DO NOTHING`);
-        console.log(`[CLEANUP] Added $5 real order for JACQUELINE on existing CANDY MAN`);
-      }
-    }
   } catch (e) {
     console.error("[CLEANUP] Non-critical cleanup error:", e);
   }
