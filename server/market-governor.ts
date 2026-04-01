@@ -1018,6 +1018,7 @@ export async function checkAndTriggerSettlement(): Promise<boolean> {
 const VALID_ENTRIES = [1, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20];
 
 let currentSystemBias: "NATURAL" | "FLOOR_HEAVY" = "NATURAL";
+let frozenSplit: { floor: number; house: number; pulse: string } | null = null;
 
 const KINETIC_SPLITS = [
   { floor: 0.90, house: 0.10, pulse: "HIGH" },
@@ -1034,10 +1035,29 @@ const KINETIC_SPLITS_HEAVY = [
 ];
 
 function getKineticState(adminBias: "NATURAL" | "FLOOR_HEAVY" = currentSystemBias) {
+  if (frozenSplit) {
+    return { floorROI: frozenSplit.floor, houseMBBP: frozenSplit.house, pulse: frozenSplit.pulse, bias: adminBias, frozen: true };
+  }
   const splits = adminBias === "FLOOR_HEAVY" ? KINETIC_SPLITS_HEAVY : KINETIC_SPLITS;
   const cycleIndex = Math.floor(Date.now() / 10000) % splits.length;
   const current = splits[cycleIndex];
-  return { floorROI: current.floor, houseMBBP: current.house, pulse: current.pulse, bias: adminBias };
+  return { floorROI: current.floor, houseMBBP: current.house, pulse: current.pulse, bias: adminBias, frozen: false };
+}
+
+function freezeKineticSplit() {
+  const state = getKineticState();
+  frozenSplit = { floor: state.floorROI, house: state.houseMBBP, pulse: state.pulse };
+  console.log(`[KINETIC] FROZEN at ${Math.round(frozenSplit.floor * 100)}/${Math.round(frozenSplit.house * 100)}`);
+  return frozenSplit;
+}
+
+function unfreezeKineticSplit() {
+  frozenSplit = null;
+  console.log(`[KINETIC] UNFROZEN — oscillator live`);
+}
+
+function isKineticFrozen() {
+  return frozenSplit !== null;
 }
 
 function setKineticBias(bias: "NATURAL" | "FLOOR_HEAVY") {
@@ -2061,7 +2081,7 @@ export {
   POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS,
   PORTALS, DEFAULT_PORTALS, SETTLEMENT_CYCLE_THRESHOLD,
   PRICE_TIERS, RISK_PROFILES, VALID_ENTRIES,
-  getKineticState, setKineticBias, getKineticBias, getKineticSplit, refreshSplitFromKinetic,
+  getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, getKineticSplit, refreshSplitFromKinetic,
   MarketEngine, liveEngine, setEngineIO, getEngineIO,
   logEvent, getEventLog,
   addPosition, getPortfolioValue, getPortfolio,

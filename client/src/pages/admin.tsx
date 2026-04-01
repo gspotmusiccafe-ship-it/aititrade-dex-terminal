@@ -2743,6 +2743,7 @@ function KineticGovernorTab() {
     houseMBBP: number;
     pulse: string;
     bias: string;
+    frozen: boolean;
     validEntries: number[];
     settlementFund: number;
     grossIntake: number;
@@ -2757,6 +2758,16 @@ function KineticGovernorTab() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
       toast({ title: "KINETIC BIAS UPDATED" });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const freezeMutation = useMutation({
+    mutationFn: () => apiRequest("POST", kineticState?.frozen ? "/api/kinetic/unfreeze" : "/api/kinetic/freeze"),
+    onSuccess: async (res: any) => {
+      const data = await res.json();
+      qc.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
+      toast({ title: data.frozen ? "SPLIT FROZEN" : "SPLIT UNFROZEN", description: data.message });
     },
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -2847,6 +2858,30 @@ function KineticGovernorTab() {
                 NATURAL
               </Button>
             </div>
+          </div>
+
+          <div className="border-t border-zinc-800 pt-4">
+            <p className="text-xs text-zinc-500 font-bold mb-3">SPLIT FREEZE CONTROL</p>
+            {kineticState?.frozen && (
+              <div className="bg-red-500/10 border border-red-500/30 p-3 mb-3">
+                <p className="text-[10px] text-red-400 font-extrabold animate-pulse">
+                  FROZEN AT {kineticState ? (kineticState.floorROI * 100).toFixed(0) : "—"}% / {kineticState ? (kineticState.houseMBBP * 100).toFixed(0) : "—"}%
+                </p>
+                <p className="text-[8px] text-zinc-500 mt-1">Split is locked — settlement will use this split until you unfreeze</p>
+              </div>
+            )}
+            <Button
+              onClick={() => freezeMutation.mutate()}
+              disabled={freezeMutation.isPending}
+              className={`w-full font-bold text-sm ${
+                kineticState?.frozen
+                  ? "bg-red-600 hover:bg-red-500 text-white"
+                  : "bg-cyan-600 hover:bg-cyan-500 text-white"
+              }`}
+              data-testid="button-freeze-split"
+            >
+              {kineticState?.frozen ? "UNFREEZE SPLIT — RESUME OSCILLATOR" : "FREEZE SPLIT — LOCK CURRENT"}
+            </Button>
           </div>
         </CardContent>
       </Card>
