@@ -115,7 +115,7 @@ export async function registerRoutes(
   (async () => {
     try {
       const realEmail = "jmariemusic@yahoo.com";
-      const realName = "JACQUELINE THOMAS";
+      const realName = "J. MARIE";
       const artistId = "ac86c1b3-363b-4567-be22-2691d3adcb6e";
 
       await db.delete(settlementQueue);
@@ -4416,8 +4416,16 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         .set({ salesCount: sql`${tracks.salesCount} + 1` })
         .where(eq(tracks.id, order.trackId!));
 
+      let buyerUserId = order.buyerEmail || "";
+      if (order.buyerEmail) {
+        const [buyerUser] = await db.select().from(users).where(eq(users.email, order.buyerEmail)).limit(1);
+        if (buyerUser) {
+          buyerUserId = buyerUser.id;
+        }
+      }
+
       const startMbbp = 1.01;
-      await enqueueTrader(order.id, order.buyerEmail || "", order.trackId!, parsedAmount, startMbbp);
+      await enqueueTrader(order.id, buyerUserId, order.trackId!, parsedAmount, startMbbp);
       const settlementTriggered = await checkAndTriggerSettlement();
 
       console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — START MBBP: $${startMbbp} — trader must ENTER POSITION to lock live price`);
@@ -6156,12 +6164,29 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       }
 
       if (type === "HOLD_LOCK") {
-        const positions = await db.select().from(settlementQueue)
+        const [currentUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        const userEmail = currentUser?.email || "";
+
+        let positions = await db.select().from(settlementQueue)
           .where(and(
             eq(settlementQueue.userId, userId),
             inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
           ))
           .orderBy(asc(settlementQueue.createdAt));
+
+        if (positions.length === 0 && userEmail) {
+          positions = await db.select().from(settlementQueue)
+            .where(and(
+              eq(settlementQueue.userId, userEmail),
+              inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+            ))
+            .orderBy(asc(settlementQueue.createdAt));
+          if (positions.length > 0) {
+            for (const pos of positions) {
+              await db.update(settlementQueue).set({ userId }).where(eq(settlementQueue.id, pos.id));
+            }
+          }
+        }
 
         if (positions.length === 0) {
           return res.status(400).json({ message: "No open position — BUY IN first via Cash App, then ENTER POSITION to lock price" });
@@ -6196,10 +6221,23 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           return res.status(400).json({ message: result.error || "Not in queue" });
         }
 
-        const userPositions = await db.select().from(settlementQueue)
+        const [discountUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        const discountEmail = discountUser?.email || "";
+
+        let userPositions = await db.select().from(settlementQueue)
           .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
           .orderBy(asc(settlementQueue.createdAt))
           .limit(1);
+
+        if (userPositions.length === 0 && discountEmail) {
+          userPositions = await db.select().from(settlementQueue)
+            .where(and(eq(settlementQueue.userId, discountEmail), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
+            .orderBy(asc(settlementQueue.createdAt))
+            .limit(1);
+          if (userPositions.length > 0) {
+            await db.update(settlementQueue).set({ userId }).where(eq(settlementQueue.id, userPositions[0].id));
+          }
+        }
 
         if (userPositions.length > 0) {
           const pos = userPositions[0];
