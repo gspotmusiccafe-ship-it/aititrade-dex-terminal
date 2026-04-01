@@ -114,7 +114,14 @@ export async function registerRoutes(
 
   (async () => {
     try {
-      const realEmail = "tjacqueline429@gmail.com";
+      const realEmail = "jmariemusic@yahoo.com";
+      const oldEmail = "tjacqueline429@gmail.com";
+
+      await db.update(orders).set({
+        buyerEmail: realEmail,
+        buyerName: "JACQUELINE THOMAS",
+      }).where(eq(orders.buyerEmail, oldEmail));
+
       const fakeOrders = await db.delete(orders).where(
         sql`${orders.buyerEmail} != ${realEmail} OR ${orders.buyerEmail} IS NULL`
       ).returning({ id: orders.id });
@@ -124,7 +131,7 @@ export async function registerRoutes(
         console.log(`[STARTUP PURGE] Removed ${fakeOrders.length} inflated orders, ${queueCleared.length} queue entries, ${cyclesCleared.length} cycles`);
       }
       const [real] = await db.select({ cnt: sql<string>`COUNT(*)`, total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)` }).from(orders);
-      console.log(`[STARTUP PURGE] Clean state: ${real?.cnt || 0} real orders, $${real?.total || 0} gross`);
+      console.log(`[STARTUP PURGE] Clean state: ${real?.cnt || 0} real orders, $${real?.total || 0} gross — all under ${realEmail}`);
     } catch (err) {
       console.error("[STARTUP PURGE] Error:", err);
     }
@@ -4270,7 +4277,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const [user] = await db.select().from(users).where(eq(users.id, userId));
       if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
 
-      const realInvestorEmail = "tjacqueline429@gmail.com";
+      const realInvestorEmail = "jmariemusic@yahoo.com";
 
       const fakeOrders = await db.select({ id: orders.id }).from(orders).where(
         sql`${orders.buyerEmail} != ${realInvestorEmail} OR ${orders.buyerEmail} IS NULL`
@@ -4365,11 +4372,11 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         .set({ salesCount: sql`${tracks.salesCount} + 1` })
         .where(eq(tracks.id, order.trackId!));
 
-      const lockedMbbp = liveEngine.mbbp;
-      await enqueueTrader(order.id, order.buyerEmail || "", order.trackId!, parsedAmount, lockedMbbp);
+      const startMbbp = 1.01;
+      await enqueueTrader(order.id, order.buyerEmail || "", order.trackId!, parsedAmount, startMbbp);
       const settlementTriggered = await checkAndTriggerSettlement();
 
-      console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — LOCKED MBBP: $${lockedMbbp.toFixed(4)} — enqueued`);
+      console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — START MBBP: $${startMbbp} — trader must ENTER POSITION to lock live price`);
 
       res.json({
         message: "Payment confirmed — position locked and enqueued",
@@ -6094,79 +6101,89 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.post("/api/trade/execute", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { trackId, amount, type, lockedROI } = req.body;
+      const { trackId, amount, type } = req.body;
 
-      if (!trackId || amount === undefined) {
-        return res.status(400).json({ message: "trackId and amount required" });
-      }
-
-      const parsedAmount = typeof amount === "number" ? amount : parseFloat(amount);
-      if (!VALID_ENTRIES.includes(parsedAmount)) {
-        return res.status(400).json({ message: `Invalid entry. Valid amounts: ${VALID_ENTRIES.join(", ")}` });
+      if (!trackId) {
+        return res.status(400).json({ message: "trackId required" });
       }
 
       if (!liveEngine.marketOpen) {
         return res.status(400).json({ message: "Market is closed — wait for next cycle" });
       }
 
-      const [track] = await db.select().from(tracks).where(eq(tracks.id, trackId));
-      if (!track) return res.status(404).json({ message: "Track not found" });
+      if (type === "HOLD_LOCK") {
+        const positions = await db.select().from(settlementQueue)
+          .where(and(
+            eq(settlementQueue.userId, userId),
+            inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+          ))
+          .orderBy(asc(settlementQueue.createdAt));
 
-      const pulse = getKineticState();
-      const finalROI = type === "HOLD_LOCK" && typeof lockedROI === "number" ? lockedROI : pulse.floorROI;
-      const payout = parseFloat((parsedAmount + (parsedAmount * finalROI)).toFixed(2));
+        if (positions.length === 0) {
+          return res.status(400).json({ message: "No open position — BUY IN first via Cash App, then ENTER POSITION to lock price" });
+        }
 
-      const ticker = (track.title || "ASSET").replace(/\s+/g, "").toUpperCase().slice(0, 8);
-      const currentSales = track.salesCount || 0;
-      const seq = String(currentSales + 1).padStart(3, "0");
-      const trackingNum = `KNT-977-${ticker}-${seq}`;
+        const currentMbbp = liveEngine.mbbp;
 
-      const floorTake = parseFloat((parsedAmount * pulse.floorROI).toFixed(4));
-      const ceoTake = parseFloat((parsedAmount * pulse.houseMBBP).toFixed(4));
+        for (const pos of positions) {
+          const buyIn = parseFloat(pos.buyIn || "0");
+          const newOffer = parseFloat((buyIn * currentMbbp).toFixed(2));
+          await db.update(settlementQueue).set({
+            lockedMbbp: currentMbbp.toFixed(4),
+            currentOffer: newOffer.toString(),
+            currentMultiplier: currentMbbp.toFixed(4),
+          }).where(eq(settlementQueue.id, pos.id));
+        }
 
-      console.log(`[KINETIC TRADE] ${type || "IMPULSE"} | Asset: ${ticker} | Entry: $${parsedAmount} | ROI: ${(finalROI * 100).toFixed(0)}% | Split: ${Math.round(pulse.floorROI*100)}/${Math.round(pulse.houseMBBP*100)} | Payout: $${payout} | Pulse: ${pulse.pulse} | Bias: ${pulse.bias}`);
+        console.log(`[ENTER POSITION] ${userId} | LOCKED MBBP: $${currentMbbp.toFixed(4)} | ${positions.length} position(s) updated`);
 
-      const user = await storage.getUser(userId);
-      const buyerEmail = user?.email || "";
-      const buyerName = user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : user?.email?.split("@")[0] || "TRADER";
+        return res.json({
+          status: "POSITION_LOCKED",
+          type: "HOLD_LOCK",
+          lockedMbbp: currentMbbp,
+          positions: positions.length,
+          message: `Price locked at MBBP $${currentMbbp.toFixed(4)} — queued for settlement`,
+        });
+      }
 
-      const [order] = await db.insert(orders).values({
-        trackId,
-        trackingNumber: trackingNum,
-        buyerEmail,
-        buyerName: buyerName.toUpperCase(),
-        unitPrice: parsedAmount.toString(),
-        creatorCredit: pulse.houseMBBP.toFixed(2),
-        creatorCreditAmount: ceoTake.toString(),
-        positionHolderAmount: floorTake.toString(),
-        status: "pending_cashapp",
-      }).returning();
+      if (type === "DISCOUNT_EXIT") {
+        const result = liveEngine.acceptDiscount(userId);
+        if (!result.ok) {
+          return res.status(400).json({ message: result.error || "Not in queue" });
+        }
 
-      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${parsedAmount.toFixed(2)}?note=AITITRADE%20${encodeURIComponent(trackingNum)}`;
+        const userPositions = await db.select().from(settlementQueue)
+          .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
+          .orderBy(asc(settlementQueue.createdAt))
+          .limit(1);
 
-      res.json({
-        status: "PENDING_PAYMENT",
-        type: type || "IMPULSE",
-        trackingNumber: trackingNum,
-        entry: parsedAmount,
-        roi: finalROI,
-        projectedPayout: payout,
-        pulse: pulse.pulse,
-        bias: pulse.bias,
-        floorROI: pulse.floorROI,
-        houseMBBP: pulse.houseMBBP,
-        url: cashAppUrl,
-        cashtag: "$AITITRADEBROKERAGE",
-        instruction: `SEND $${parsedAmount.toFixed(2)} TO $AITITRADEBROKERAGE VIA CASH APP`,
-        note: `AITITRADE ${trackingNum}`,
-        message: "PAYMENT TO $AITITRADEBROKERAGE LOCKS YOUR POSITION — POSITION HELD UNTIL CONFIRMED",
-        floorRetained: floorTake,
-        ceoGross: ceoTake,
-        settlementTriggered: false,
-        timestamp: new Date().toISOString(),
-      });
+        if (userPositions.length > 0) {
+          const pos = userPositions[0];
+          const buyIn = parseFloat(pos.buyIn || "0");
+          const discountOffer = parseFloat((buyIn * result.discountPrice).toFixed(2));
+          await db.update(settlementQueue).set({
+            lockedMbbp: result.discountPrice.toFixed(4),
+            currentOffer: discountOffer.toString(),
+            currentMultiplier: result.discountPrice.toFixed(4),
+            queuePosition: 0,
+            status: "QUEUED",
+          }).where(eq(settlementQueue.id, pos.id));
+          console.log(`[DISCOUNT EXIT] ${userId} | LOCKED DISCOUNT: $${result.discountPrice.toFixed(4)} | $${buyIn} → $${discountOffer} | QUEUED FIRST`);
+        }
+
+        return res.json({
+          status: "DISCOUNT_QUEUED",
+          type: "DISCOUNT_EXIT",
+          queued: true,
+          discountPrice: result.discountPrice,
+          expectedPayout: result.payout,
+          message: `Discount accepted at $${result.discountPrice.toFixed(4)} — queued FIRST for settlement`,
+        });
+      }
+
+      return res.status(400).json({ message: "Invalid trade type. Use HOLD_LOCK or DISCOUNT_EXIT" });
     } catch (error: any) {
-      console.error("Kinetic trade error:", error);
+      console.error("Trade execute error:", error);
       res.status(500).json({ message: "Failed to execute trade" });
     }
   });

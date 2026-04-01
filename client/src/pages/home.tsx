@@ -710,8 +710,10 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
       const data = await res.json();
       const isDiscount = data.type === "DISCOUNT_EXIT" || data.queued;
       toast({
-        title: isDiscount ? "DISCOUNT ACCEPTED" : `${data.type || "POSITION"} LOCKED`,
-        description: isDiscount ? "Queued FIRST — paid when settlement runs" : "Position locked — MBBP settlement queue",
+        title: isDiscount ? "DISCOUNT ACCEPTED" : "MBBP PRICE LOCKED",
+        description: isDiscount
+          ? "Queued FIRST — paid when settlement cycle runs"
+          : `MBBP locked at $${data.lockedMbbp?.toFixed(4) || "—"} — queued for settlement`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
     },
