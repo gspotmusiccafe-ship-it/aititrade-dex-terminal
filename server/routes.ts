@@ -4247,6 +4247,58 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/settlement/settle-now", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { queueId } = req.body;
+      if (!queueId) return res.status(400).json({ message: "queueId required" });
+
+      const [entry] = await db.select().from(settlementQueue).where(eq(settlementQueue.id, queueId));
+      if (!entry) return res.status(404).json({ message: "Queue entry not found" });
+      if (entry.status === "SETTLED") return res.status(400).json({ message: "Already settled" });
+
+      const buyIn = parseFloat(entry.buyIn || "0");
+      const locked = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.01");
+      const kinetic = getKineticState();
+      const floorPct = kinetic.floorROI;
+      const payout = parseFloat((buyIn * locked * floorPct).toFixed(2));
+
+      const grossIntake = await getGrossIntake();
+      const fundBalance = await getSettlementFundBalance();
+
+      if (payout > grossIntake) {
+        return res.status(400).json({ message: `Not enough liquidity. Payout $${payout.toFixed(2)} exceeds gross $${grossIntake.toFixed(2)}` });
+      }
+
+      await db.update(settlementQueue).set({
+        status: "SETTLED",
+        acceptedMultiplier: locked.toFixed(2),
+        payoutAmount: payout.toFixed(2),
+        currentOffer: payout.toFixed(2),
+        currentMultiplier: locked.toFixed(2),
+        settledAt: new Date(),
+      }).where(eq(settlementQueue.id, queueId));
+
+      const traderEmail = entry.userId || "unknown";
+      console.log(`[ADMIN SETTLE] Manual settle: ${traderEmail} | $${buyIn} × ${locked.toFixed(4)} MBBP × ${(floorPct * 100).toFixed(0)}% floor = $${payout.toFixed(2)} payout`);
+
+      res.json({
+        message: `SETTLED — $${payout.toFixed(2)} payout at ${locked.toFixed(4)}x MBBP, ${(floorPct * 100).toFixed(0)}% floor split`,
+        queueId,
+        buyIn,
+        lockedMbbp: locked,
+        floorPct: Math.round(floorPct * 100),
+        payout,
+      });
+    } catch (error: any) {
+      console.error("[ADMIN SETTLE] Error:", error);
+      res.status(500).json({ message: "Failed to settle trade" });
+    }
+  });
+
   app.post("/api/admin/settlement/run-cycle", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

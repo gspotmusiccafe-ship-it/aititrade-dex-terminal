@@ -4385,6 +4385,20 @@ function SettlementGovernorTab() {
     onError: (err: any) => toast({ title: "Accept Failed", description: err.message, variant: "destructive" }),
   });
 
+  const settleNowMutation = useMutation({
+    mutationFn: async (queueId: string) => {
+      const res = await apiRequest("POST", "/api/admin/settlement/settle-now", { queueId });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message); }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "TRADE SETTLED", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
+    },
+    onError: (err: any) => toast({ title: "Settle Failed", description: err.message, variant: "destructive" }),
+  });
+
   if (isLoading) return <div className="p-8 text-center text-zinc-500 font-mono">Loading Settlement Governor...</div>;
   if (!dashboard) return <div className="p-8 text-center text-zinc-500 font-mono">No settlement data</div>;
 
@@ -4501,15 +4515,17 @@ function SettlementGovernorTab() {
                       }`}>{entry.status}</span>
                     </div>
                     {entry.status !== "SETTLED" && (
-                      <Button
-                        size="sm"
-                        className="bg-emerald-600 hover:bg-emerald-500 text-white text-[7px] sm:text-[9px] font-bold h-6 sm:h-7 px-1.5 sm:px-2 flex-shrink-0"
-                        onClick={() => acceptMutation.mutate(entry.queueId)}
-                        disabled={acceptMutation.isPending}
-                        data-testid={`button-settle-${entry.queueId}`}
-                      >
-                        ${entry.currentOffer.toFixed(0)}
-                      </Button>
+                      <div className="flex gap-1 flex-shrink-0">
+                        <Button
+                          size="sm"
+                          className="bg-amber-600 hover:bg-amber-500 text-black text-[7px] sm:text-[9px] font-bold h-6 sm:h-7 px-1.5 sm:px-2"
+                          onClick={() => settleNowMutation.mutate(entry.queueId)}
+                          disabled={settleNowMutation.isPending}
+                          data-testid={`button-settle-now-${entry.queueId}`}
+                        >
+                          SETTLE NOW
+                        </Button>
+                      </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
