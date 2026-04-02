@@ -77,6 +77,18 @@ function MiniRadio() {
   }, [isMuted]);
 
   useEffect(() => {
+    if (playlist.length > 0 && !isPlaying && audioRef.current) {
+      const audio = audioRef.current;
+      const track = playlist[0];
+      if (track && (!audio.src || audio.src === window.location.href)) {
+        audio.src = track.audioUrl;
+        audio.load();
+      }
+      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
+  }, [playlist.length]);
+
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime = () => setCurrentTime(audio.currentTime);

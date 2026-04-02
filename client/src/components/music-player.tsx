@@ -99,6 +99,7 @@ export function MusicPlayer() {
   const [queueOpen, setQueueOpen] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
   const [orderMakerOpen, setOrderMakerOpen] = useState(false);
+  const [showBuyDialog, setShowBuyDialog] = useState(false);
 
   const upcomingTracks = queue.slice(queueIndex + 1);
   const hasYouTubeVideo = currentTrack ? isYouTubeUrl(currentTrack.audioUrl) : false;
@@ -480,7 +481,7 @@ export function MusicPlayer() {
               >
                 <Zap className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-emerald-400" title="Buy" onClick={() => window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer")} data-testid="button-buy-current">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-violet-400" title="Buy Song" onClick={() => setShowBuyDialog(true)} data-testid="button-buy-current">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -494,6 +495,52 @@ export function MusicPlayer() {
         </div>
       </div>
       </div>
+      {showBuyDialog && currentTrack && (
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowBuyDialog(false)}>
+          <div className="bg-black border-2 border-violet-500/60 font-mono max-w-sm w-full shadow-2xl shadow-violet-500/20 relative" onClick={e => e.stopPropagation()} data-testid="radio-buy-song-dialog">
+            <div className="border-b border-violet-500/30 px-4 py-2.5 flex items-center justify-between bg-violet-950/80">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="h-4 w-4 text-violet-400" />
+                <span className="text-[11px] text-violet-400 font-bold tracking-wider">BUY SONG — CASH APP</span>
+              </div>
+              <button onClick={() => setShowBuyDialog(false)} className="text-violet-500/40 hover:text-violet-400"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="border border-violet-400/20 bg-violet-950/30 p-3 text-center">
+                <p className="text-[9px] sm:text-[10px] text-violet-400 font-black tracking-wider truncate">97.7 THE FLAME — SONG PURCHASE</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+                  <p className="text-[8px] text-violet-500/40 tracking-wider">SONG</p>
+                  <p className="text-sm text-violet-400 font-bold mt-0.5 truncate">{currentTrack.title}</p>
+                  <p className="text-[7px] text-zinc-500 mt-0.5 truncate">{currentTrack.artist?.name || "G. SMOOTH"}</p>
+                </div>
+                <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+                  <p className="text-[8px] text-violet-500/40 tracking-wider">PRICE</p>
+                  <p className="text-xl text-violet-400 font-black mt-0.5">$2.50</p>
+                </div>
+              </div>
+              <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
+                <p className="text-lg sm:text-2xl text-green-400 font-black tracking-normal sm:tracking-wider truncate">$AITITRADEBROKERAGE</p>
+                <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
+              </div>
+              <div className="border border-zinc-700 bg-zinc-900/50 p-2.5 text-center">
+                <p className="text-[8px] text-zinc-500 tracking-wider">INCLUDE IN CASH APP NOTE</p>
+                <p className="text-[10px] text-white font-bold mt-1">SONG: {currentTrack.title}</p>
+              </div>
+              <button
+                onClick={() => setShowBuyDialog(false)}
+                className="w-full bg-violet-600 hover:bg-violet-700 text-white font-black py-3 text-sm tracking-wider transition-colors"
+                data-testid="button-radio-buy-close"
+              >
+                <DollarSign className="h-4 w-4 inline mr-1" />
+                SEND $2.50 VIA CASH APP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
