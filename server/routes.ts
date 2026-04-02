@@ -16,7 +16,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -715,7 +715,7 @@ export async function registerRoutes(
               aiModel: track.aiModel || "AITIFY-GEN-1",
               releaseType: "global",
               status: "VERIFIED",
-              storeUrl: "https://payhip.com/aitifymusicstore",
+              storeUrl: "cashapp",
               timestamp: new Date().toISOString(),
             },
           };
@@ -2208,7 +2208,7 @@ export async function registerRoutes(
               priority: isPriority ? "HIGH" : "CYCLE_HOLD",
               indicator: "STIMULATION_ACTIVE",
               status: "TRADE_EXECUTED",
-              storeUrl: "https://payhip.com/aitifymusicstore",
+              storeUrl: "cashapp",
               timestamp: new Date().toISOString(),
             },
           };
@@ -4267,10 +4267,11 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const payout = parseFloat((buyIn * locked * floorPct).toFixed(2));
 
       const grossIntake = await getGrossIntake();
-      const fundBalance = await getSettlementFundBalance();
+      const totalPaid = await getTotalPaidOut();
+      const fundAvailable = parseFloat((grossIntake - totalPaid).toFixed(2));
 
-      if (payout > grossIntake) {
-        return res.status(400).json({ message: `Not enough liquidity. Payout $${payout.toFixed(2)} exceeds gross $${grossIntake.toFixed(2)}` });
+      if (payout > fundAvailable) {
+        return res.status(400).json({ message: `Insufficient funds. Payout $${payout.toFixed(2)} exceeds available $${fundAvailable.toFixed(2)} (Gross $${grossIntake.toFixed(2)} - Paid $${totalPaid.toFixed(2)})` });
       }
 
       await db.update(settlementQueue).set({
@@ -6207,6 +6208,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         let positions = await db.select().from(settlementQueue)
           .where(and(
             eq(settlementQueue.userId, userId),
+            eq(settlementQueue.trackId, trackId),
             inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
           ))
           .orderBy(asc(settlementQueue.createdAt));
@@ -6215,6 +6217,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           positions = await db.select().from(settlementQueue)
             .where(and(
               eq(settlementQueue.userId, userEmail),
+              eq(settlementQueue.trackId, trackId),
               inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
             ))
             .orderBy(asc(settlementQueue.createdAt));
@@ -6226,7 +6229,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         }
 
         if (positions.length === 0) {
-          return res.status(400).json({ message: "No open position — BUY IN first via Cash App, then ENTER POSITION to lock price" });
+          return res.status(400).json({ message: "No open position for this song — BUY IN first via Cash App, then ENTER POSITION to lock price" });
         }
 
         const currentMbbp = liveEngine.mbbp;
@@ -6241,14 +6244,16 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           }).where(eq(settlementQueue.id, pos.id));
         }
 
-        console.log(`[ENTER POSITION] ${userId} | LOCKED MBBP: $${currentMbbp.toFixed(4)} | ${positions.length} position(s) updated`);
+        const [trackInfo] = await db.select().from(tracks).where(eq(tracks.id, trackId)).limit(1);
+        const songName = trackInfo?.title || trackId;
+        console.log(`[ENTER POSITION] ${userId} | Song: ${songName} | LOCKED MBBP: $${currentMbbp.toFixed(4)} | ${positions.length} position(s) updated`);
 
         return res.json({
           status: "POSITION_LOCKED",
           type: "HOLD_LOCK",
           lockedMbbp: currentMbbp,
           positions: positions.length,
-          message: `Price locked at MBBP $${currentMbbp.toFixed(4)} — queued for settlement`,
+          message: `${songName} locked at MBBP $${currentMbbp.toFixed(4)} — queued for settlement`,
         });
       }
 

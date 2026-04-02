@@ -703,9 +703,7 @@ export async function getTotalPaidOut(): Promise<number> {
 export async function getSettlementFundBalance(): Promise<number> {
   const grossIntake = await getGrossIntake();
   const totalPaid = await getTotalPaidOut();
-  const ksReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
-  const totalOwed = parseFloat((ksReached * getPayoutPerCycle()).toFixed(2));
-  return parseFloat(Math.max(0, totalOwed - totalPaid).toFixed(2));
+  return parseFloat(Math.max(0, grossIntake - totalPaid).toFixed(2));
 }
 
 export async function getCompletedCycleCount(): Promise<number> {
@@ -882,7 +880,10 @@ export async function traderHoldPosition(queueId: string, userId: string): Promi
 
 export async function getTraderPositions(userId: string): Promise<SettlementOffer[]> {
   const positions = await db.select().from(settlementQueue)
-    .where(eq(settlementQueue.userId, userId))
+    .where(and(
+      eq(settlementQueue.userId, userId),
+      inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+    ))
     .orderBy(asc(settlementQueue.queuePosition));
 
   return positions.map(p => {
@@ -935,7 +936,7 @@ export async function getSettlementDashboard(): Promise<{
   const totalOwed54 = parseFloat((ksReached * currentPayoutPerK).toFixed(2));
   const dashSplit = getLiveSplit();
   const floorPoolTotal = parseFloat((grossIntake * dashSplit.floor).toFixed(2));
-  const fundAvailable = parseFloat(Math.max(0, floorPoolTotal - totalPaid).toFixed(2));
+  const fundAvailable = parseFloat(Math.max(0, grossIntake - totalPaid).toFixed(2));
   const ceo46Total = parseFloat((grossIntake * dashSplit.ceo).toFixed(2));
   const nextKAt = (ksReached + 1) * SETTLEMENT_CYCLE_THRESHOLD;
 

@@ -109,7 +109,7 @@ export function TrackCard({ track, index, queue, showArtist = true, showCover = 
 
   const handleBuySong = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.open("https://payhip.com/aitifymusicstore", "_blank", "noopener,noreferrer");
+    window.open("https://cash.app/$AITITRADEBROKERAGE", "_blank", "noopener,noreferrer");
   };
 
   return (

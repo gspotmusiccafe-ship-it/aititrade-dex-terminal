@@ -120,7 +120,6 @@ const FLASH_THRESHOLD = 900.00;
 const FLASH_TIMER_SECONDS = 120;
 const SETTLEMENT_PAYOUT = 300.00;
 const HOLDER_COUNT = 15;
-const PAYHIP_STORE = "https://payhip.com/aitifymusicstore";
 
 interface MintReceipt {
   mintId: string;
@@ -402,7 +401,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
 
       const isGlobal = track.releaseType === "global";
       if (isGlobal) {
-        onSuccess({ type: "global", receipt: { trustId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, bounce: data.bounce, aiModel: data.aiModel, priority: data.priority, indicator: data.indicator, storeUrl: "https://payhip.com/aitifymusicstore", timestamp: data.timestamp } });
+        onSuccess({ type: "global", receipt: { trustId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, bounce: data.bounce, aiModel: data.aiModel, priority: data.priority, indicator: data.indicator, storeUrl: "cashapp", timestamp: data.timestamp } });
       } else {
         onSuccess({ type: "native", receipt: { mintId: data.trackingNumber, asset: data.asset, ticker: data.ticker, unitPrice: data.unitPrice, floorRetained: data.floorRetained, ceoGross: data.ceoGross, trustTithe: data.trustTithe, bounce: data.bounce, aiModel: data.aiModel, grossSales: data.grossSales, totalMints: data.totalMints, mintCap: data.mintCap, capacityPct: data.capacityPct, priority: data.priority, indicator: data.indicator, status: data.status === "CLOSED" ? "CLOSED" : "TRADE_EXECUTED", timestamp: data.timestamp } });
       }
