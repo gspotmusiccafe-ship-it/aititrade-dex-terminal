@@ -4644,6 +4644,136 @@ function TreasuryDashboard() {
   );
 }
 
+function StakingAdminTab() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const { data: allStakes, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/staking/all"],
+    refetchInterval: 15000,
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: (stakeId: string) => apiRequest("POST", "/api/admin/staking/confirm", { stakeId }),
+    onSuccess: () => {
+      toast({ title: "STAKE CONFIRMED", description: "Stake is now active" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/staking/all"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const settleMutation = useMutation({
+    mutationFn: (stakeId: string) => apiRequest("POST", "/api/admin/staking/settle", { stakeId }),
+    onSuccess: async (res: any) => {
+      const data = await res.json();
+      toast({ title: "STAKE SETTLED", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/staking/all"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const pending = allStakes?.filter(s => s.status === "PENDING") || [];
+  const active = allStakes?.filter(s => s.status === "ACTIVE") || [];
+  const settled = allStakes?.filter(s => s.status === "SETTLED") || [];
+
+  const totalStaked = active.reduce((s, st) => s + parseFloat(st.amount || "0"), 0);
+  const totalPending = pending.reduce((s, st) => s + parseFloat(st.amount || "0"), 0);
+  const totalSettledAmt = settled.reduce((s, st) => s + parseFloat(st.payoutAmount || "0"), 0);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <DollarSign className="h-5 w-5 text-amber-400" />
+          Liquidity Staking Management
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-amber-400/70">ACTIVE STAKED</p>
+            <p className="text-xl font-bold text-amber-400">${totalStaked.toFixed(2)}</p>
+            <p className="text-[10px] text-zinc-500">{active.length} stakes</p>
+          </div>
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-yellow-400/70">PENDING</p>
+            <p className="text-xl font-bold text-yellow-400">${totalPending.toFixed(2)}</p>
+            <p className="text-[10px] text-zinc-500">{pending.length} awaiting</p>
+          </div>
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
+            <p className="text-xs text-emerald-400/70">TOTAL PAID OUT</p>
+            <p className="text-xl font-bold text-emerald-400">${totalSettledAmt.toFixed(2)}</p>
+            <p className="text-[10px] text-zinc-500">{settled.length} settled</p>
+          </div>
+        </div>
+
+        {pending.length > 0 && (
+          <div>
+            <h3 className="text-sm font-bold text-yellow-400 mb-2">PENDING — CONFIRM PAYMENT</h3>
+            <div className="space-y-2">
+              {pending.map((stake: any) => (
+                <div key={stake.id} className="flex items-center justify-between bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3" data-testid={`stake-pending-${stake.id}`}>
+                  <div>
+                    <span className="font-bold text-yellow-300">{stake.displayName || stake.userEmail}</span>
+                    <span className="text-xs text-zinc-500 ml-2">${stake.amount} • {stake.termDays}d • {stake.returnPct}%</span>
+                  </div>
+                  <Button size="sm" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20" onClick={() => confirmMutation.mutate(stake.id)} disabled={confirmMutation.isPending} data-testid={`button-confirm-stake-${stake.id}`}>
+                    CONFIRM PAID
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {active.length > 0 && (
+          <div>
+            <h3 className="text-sm font-bold text-amber-400 mb-2">ACTIVE STAKES</h3>
+            <div className="space-y-2">
+              {active.map((stake: any) => {
+                const principal = parseFloat(stake.amount || "0");
+                const pct = parseFloat(stake.returnPct || "0");
+                const payout = principal + (principal * pct / 100);
+                const daysLeft = Math.max(0, Math.ceil((new Date(stake.maturesAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+                const matured = daysLeft === 0;
+                return (
+                  <div key={stake.id} className={`flex items-center justify-between border rounded-lg p-3 ${matured ? "bg-emerald-500/5 border-emerald-500/20" : "bg-zinc-900/50 border-zinc-700"}`} data-testid={`stake-active-${stake.id}`}>
+                    <div>
+                      <span className="font-bold text-amber-300">{stake.displayName || stake.userEmail}</span>
+                      <span className="text-xs text-zinc-500 ml-2">${principal} • {stake.termDays}d • {pct}% → ${payout.toFixed(2)}</span>
+                      <span className={`text-xs ml-2 ${matured ? "text-emerald-400 font-bold" : "text-zinc-500"}`}>
+                        {matured ? "MATURED" : `${daysLeft}d left`}
+                      </span>
+                    </div>
+                    <Button size="sm" variant="outline" className={matured ? "border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20" : "border-amber-500/40 text-amber-400 hover:bg-amber-500/20"} onClick={() => settleMutation.mutate(stake.id)} disabled={settleMutation.isPending} data-testid={`button-settle-stake-${stake.id}`}>
+                      SETTLE ${payout.toFixed(2)}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {settled.length > 0 && (
+          <div>
+            <h3 className="text-sm font-bold text-emerald-400 mb-2">SETTLED HISTORY</h3>
+            <div className="space-y-1">
+              {settled.slice(0, 10).map((stake: any) => (
+                <div key={stake.id} className="flex items-center justify-between bg-zinc-900/30 border border-zinc-800 rounded p-2 text-xs" data-testid={`stake-settled-${stake.id}`}>
+                  <span className="text-zinc-400">{stake.displayName || stake.userEmail}</span>
+                  <span className="text-zinc-500">${stake.amount} → ${stake.payoutAmount}</span>
+                  <span className="text-emerald-500/60">{new Date(stake.settledAt).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminPage() {
   const { data: adminCheck, isLoading: checkingAdmin } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/check"],
@@ -5053,6 +5183,10 @@ export default function AdminPage() {
                 <Clock className="h-4 w-4 mr-1.5 text-blue-400" />
                 Playback Timer
               </TabsTrigger>
+              <TabsTrigger value="staking" data-testid="tab-staking" className="whitespace-nowrap data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-400">
+                <DollarSign className="h-4 w-4 mr-1.5 text-amber-400" />
+                Staking
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -5146,6 +5280,10 @@ export default function AdminPage() {
 
           <TabsContent value="playback-scheduler">
             <PlaybackSchedulerTab />
+          </TabsContent>
+
+          <TabsContent value="staking">
+            <StakingAdminTab />
           </TabsContent>
         </Tabs>
         </div>

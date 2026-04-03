@@ -552,6 +552,25 @@ export const insertGlobalStreamLogSchema = createInsertSchema(globalStreamLogs).
 export type InsertGlobalStreamLog = z.infer<typeof insertGlobalStreamLogSchema>;
 export type GlobalStreamLog = typeof globalStreamLogs.$inferSelect;
 
+export const stakingPortals = pgTable("staking_portals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  userEmail: varchar("user_email"),
+  displayName: varchar("display_name"),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  termDays: integer("term_days").notNull(),
+  returnPct: decimal("return_pct", { precision: 5, scale: 2 }).notNull(),
+  status: varchar("status").default("ACTIVE"),
+  stakedAt: timestamp("staked_at").defaultNow(),
+  maturesAt: timestamp("matures_at").notNull(),
+  settledAt: timestamp("settled_at"),
+  payoutAmount: decimal("payout_amount", { precision: 10, scale: 2 }),
+});
+
+export const insertStakingPortalSchema = createInsertSchema(stakingPortals).omit({ id: true, stakedAt: true, settledAt: true, payoutAmount: true });
+export type InsertStakingPortal = z.infer<typeof insertStakingPortalSchema>;
+export type StakingPortal = typeof stakingPortals.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

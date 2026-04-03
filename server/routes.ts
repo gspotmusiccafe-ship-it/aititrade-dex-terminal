@@ -11,7 +11,7 @@ import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "
 import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/client";
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, users } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -4297,6 +4297,135 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error: any) {
       console.error("[ADMIN SETTLE] Error:", error);
       res.status(500).json({ message: "Failed to settle trade" });
+    }
+  });
+
+  const STAKING_TIERS: Array<{ amount: number; terms: Array<{ days: number; returnPct: number }> }> = [
+    { amount: 10,  terms: [{ days: 45, returnPct: 10 }, { days: 90, returnPct: 12 }, { days: 180, returnPct: 14 }] },
+    { amount: 25,  terms: [{ days: 45, returnPct: 12 }, { days: 90, returnPct: 14 }, { days: 180, returnPct: 16 }] },
+    { amount: 50,  terms: [{ days: 45, returnPct: 14 }, { days: 90, returnPct: 16 }, { days: 180, returnPct: 18 }] },
+    { amount: 75,  terms: [{ days: 45, returnPct: 18 }, { days: 90, returnPct: 20 }, { days: 180, returnPct: 23 }] },
+    { amount: 100, terms: [{ days: 45, returnPct: 20 }, { days: 90, returnPct: 22 }, { days: 180, returnPct: 25 }] },
+  ];
+
+  app.get("/api/staking/tiers", (_req, res) => {
+    res.json(STAKING_TIERS);
+  });
+
+  app.get("/api/staking/my-stakes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const stakes = await db.select().from(stakingPortals)
+        .where(eq(stakingPortals.userId, userId))
+        .orderBy(desc(stakingPortals.stakedAt));
+      res.json(stakes);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch stakes" });
+    }
+  });
+
+  app.post("/api/staking/stake", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { amount, termDays } = req.body;
+
+      const parsedAmount = parseFloat(amount);
+      const validAmounts = [10, 25, 50, 75, 100];
+      const validTerms = [45, 90, 180];
+      if (!validAmounts.includes(parsedAmount)) return res.status(400).json({ message: `Invalid amount. Valid: ${validAmounts.join(", ")}` });
+      if (!validTerms.includes(termDays)) return res.status(400).json({ message: `Invalid term. Valid: ${validTerms.join(", ")} days` });
+
+      const tier = STAKING_TIERS.find(t => t.amount === parsedAmount);
+      const termInfo = tier?.terms.find(t => t.days === termDays);
+      if (!tier || !termInfo) return res.status(400).json({ message: "Invalid staking configuration" });
+
+      const [currentUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const maturesAt = new Date(Date.now() + termDays * 24 * 60 * 60 * 1000);
+
+      const [stake] = await db.insert(stakingPortals).values({
+        userId,
+        userEmail: currentUser?.email || "",
+        displayName: currentUser?.firstName || currentUser?.email || "TRADER",
+        amount: parsedAmount.toFixed(2),
+        termDays,
+        returnPct: termInfo.returnPct.toFixed(2),
+        status: "PENDING",
+        maturesAt,
+      }).returning();
+
+      console.log(`[STAKING] New stake: ${currentUser?.email || userId} | $${parsedAmount} | ${termDays} days | ${termInfo.returnPct}% return | Matures: ${maturesAt.toISOString()}`);
+
+      res.json({
+        message: `Stake $${parsedAmount} for ${termDays} days at ${termInfo.returnPct}% — Send via Cash App to $AITITRADEBROKERAGE`,
+        stake,
+        cashtag: "$AITITRADEBROKERAGE",
+      });
+    } catch (error: any) {
+      console.error("[STAKING] Error:", error);
+      res.status(500).json({ message: "Failed to create stake" });
+    }
+  });
+
+  app.post("/api/admin/staking/confirm", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { stakeId } = req.body;
+      if (!stakeId) return res.status(400).json({ message: "stakeId required" });
+
+      const [stake] = await db.select().from(stakingPortals).where(eq(stakingPortals.id, stakeId));
+      if (!stake) return res.status(404).json({ message: "Stake not found" });
+
+      await db.update(stakingPortals).set({ status: "ACTIVE" }).where(eq(stakingPortals.id, stakeId));
+      console.log(`[STAKING] CONFIRMED: ${stake.userEmail} | $${stake.amount} | ${stake.termDays} days | ${stake.returnPct}%`);
+      res.json({ message: "Stake confirmed and active", stakeId });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to confirm stake" });
+    }
+  });
+
+  app.post("/api/admin/staking/settle", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { stakeId } = req.body;
+      if (!stakeId) return res.status(400).json({ message: "stakeId required" });
+
+      const [stake] = await db.select().from(stakingPortals).where(eq(stakingPortals.id, stakeId));
+      if (!stake) return res.status(404).json({ message: "Stake not found" });
+      if (stake.status === "SETTLED") return res.status(400).json({ message: "Already settled" });
+
+      const principal = parseFloat(stake.amount || "0");
+      const returnPct = parseFloat(stake.returnPct || "0");
+      const payout = parseFloat((principal + (principal * returnPct / 100)).toFixed(2));
+
+      await db.update(stakingPortals).set({
+        status: "SETTLED",
+        settledAt: new Date(),
+        payoutAmount: payout.toFixed(2),
+      }).where(eq(stakingPortals.id, stakeId));
+
+      console.log(`[STAKING] SETTLED: ${stake.userEmail} | $${principal} + ${returnPct}% = $${payout} payout`);
+      res.json({ message: `Settled — $${payout} payout`, stakeId, payout });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to settle stake" });
+    }
+  });
+
+  app.get("/api/admin/staking/all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const allStakes = await db.select().from(stakingPortals).orderBy(desc(stakingPortals.stakedAt));
+      res.json(allStakes);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to fetch all stakes" });
     }
   });
 

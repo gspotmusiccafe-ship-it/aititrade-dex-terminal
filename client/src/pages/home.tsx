@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight, BarChart3, ShoppingBasket, Check } from "lucide-react";
+import { Play, Pause, Music, Activity, Zap, Lock, AlertTriangle, FileCheck, X, Globe, Shield, ExternalLink, Cpu, Binary, Radio, GripVertical, Plus, Trash2, ChevronDown, ChevronUp, DollarSign, Users, TrendingUp, TrendingDown, ArrowDownRight, BarChart3, ShoppingBasket, Check, Clock, Coins } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1164,6 +1164,185 @@ interface MarketSession {
   }>;
 }
 
+function StakingSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [selectedTerm, setSelectedTerm] = useState<number | null>(null);
+  const [showCashAppDialog, setShowCashAppDialog] = useState(false);
+
+  const { data: tiers } = useQuery<Array<{ amount: number; terms: Array<{ days: number; returnPct: number }> }>>({
+    queryKey: ["/api/staking/tiers"],
+  });
+
+  const { data: myStakes } = useQuery<any[]>({
+    queryKey: ["/api/staking/my-stakes"],
+    enabled: !!user,
+    refetchInterval: 30000,
+  });
+
+  const stakeMutation = useMutation({
+    mutationFn: (params: { amount: number; termDays: number }) =>
+      apiRequest("POST", "/api/staking/stake", params),
+    onSuccess: async (res: any) => {
+      const data = await res.json();
+      toast({ title: "STAKE SUBMITTED", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/staking/my-stakes"] });
+      setShowCashAppDialog(true);
+    },
+    onError: (err: Error) => toast({ title: "STAKE FAILED", description: err.message, variant: "destructive" }),
+  });
+
+  const selectedTier = tiers?.find(t => t.amount === selectedAmount);
+  const selectedTermInfo = selectedTier?.terms.find(t => t.days === selectedTerm);
+
+  const activeStakes = myStakes?.filter(s => s.status === "ACTIVE" || s.status === "PENDING") || [];
+
+  return (
+    <div className="px-4 py-3 border-t border-amber-500/20">
+      <div className="flex items-center gap-2 mb-3">
+        <Coins className="h-4 w-4 text-amber-400" />
+        <span className="text-[11px] sm:text-xs text-amber-400 font-black tracking-wider">LIQUIDITY STAKING PORTALS</span>
+        <span className="text-[8px] text-zinc-500 ml-auto">MARKET LIQUIDITY • 10%-25% RETURNS</span>
+      </div>
+
+      <div className="grid grid-cols-5 gap-1.5 mb-3" data-testid="staking-amounts">
+        {tiers?.map(tier => (
+          <button
+            key={tier.amount}
+            onClick={() => { setSelectedAmount(tier.amount); setSelectedTerm(null); }}
+            className={`border text-center py-2 px-1 transition-all ${
+              selectedAmount === tier.amount
+                ? "border-amber-400 bg-amber-500/20 text-amber-300"
+                : "border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:border-amber-500/40"
+            }`}
+            data-testid={`staking-amount-${tier.amount}`}
+          >
+            <p className="text-xs sm:text-sm font-black">${tier.amount}</p>
+            <p className="text-[7px] text-zinc-500">{tier.terms[0].returnPct}%-{tier.terms[tier.terms.length - 1].returnPct}%</p>
+          </button>
+        ))}
+      </div>
+
+      {selectedAmount && selectedTier && (
+        <div className="mb-3">
+          <p className="text-[9px] text-zinc-500 tracking-wider mb-1.5">SELECT TERM — LONGER = MORE EARNED</p>
+          <div className="grid grid-cols-3 gap-1.5" data-testid="staking-terms">
+            {selectedTier.terms.map(term => (
+              <button
+                key={term.days}
+                onClick={() => setSelectedTerm(term.days)}
+                className={`border py-2.5 px-2 text-center transition-all ${
+                  selectedTerm === term.days
+                    ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
+                    : "border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:border-emerald-500/40"
+                }`}
+                data-testid={`staking-term-${term.days}`}
+              >
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <Clock className="h-3 w-3" />
+                  <span className="text-xs font-black">{term.days} DAYS</span>
+                </div>
+                <p className="text-lg font-black text-emerald-400">{term.returnPct}%</p>
+                <p className="text-[7px] text-zinc-500 mt-0.5">
+                  EARN ${(selectedAmount * term.returnPct / 100).toFixed(2)}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {selectedAmount && selectedTerm && selectedTermInfo && (
+        <div className="border border-amber-500/30 bg-amber-950/20 p-3 mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[9px] text-amber-400 tracking-wider font-bold">STAKE SUMMARY</span>
+            <span className="text-[9px] text-zinc-500">{selectedTerm} DAY LOCK</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-[7px] text-zinc-500">PRINCIPAL</p>
+              <p className="text-sm font-black text-amber-300">${selectedAmount}</p>
+            </div>
+            <div>
+              <p className="text-[7px] text-zinc-500">RETURN</p>
+              <p className="text-sm font-black text-emerald-400">{selectedTermInfo.returnPct}%</p>
+            </div>
+            <div>
+              <p className="text-[7px] text-zinc-500">PAYOUT</p>
+              <p className="text-sm font-black text-emerald-300">${(selectedAmount + selectedAmount * selectedTermInfo.returnPct / 100).toFixed(2)}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => stakeMutation.mutate({ amount: selectedAmount, termDays: selectedTerm })}
+            disabled={stakeMutation.isPending}
+            className="w-full mt-2 bg-amber-600 hover:bg-amber-700 text-black font-black py-2 text-xs tracking-wider transition-colors disabled:opacity-50"
+            data-testid="button-stake-submit"
+          >
+            <Coins className="h-3.5 w-3.5 inline mr-1" />
+            STAKE ${selectedAmount} — {selectedTerm} DAYS
+          </button>
+        </div>
+      )}
+
+      {activeStakes.length > 0 && (
+        <div className="border border-zinc-800 bg-zinc-900/30">
+          <div className="px-3 py-1.5 border-b border-zinc-800 flex items-center gap-1">
+            <Lock className="h-3 w-3 text-amber-400" />
+            <span className="text-[9px] text-amber-400 font-bold tracking-wider">MY ACTIVE STAKES</span>
+          </div>
+          {activeStakes.map((stake: any) => {
+            const principal = parseFloat(stake.amount || "0");
+            const pct = parseFloat(stake.returnPct || "0");
+            const payout = principal + (principal * pct / 100);
+            const daysLeft = Math.max(0, Math.ceil((new Date(stake.maturesAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+            return (
+              <div key={stake.id} className="px-3 py-2 border-b border-zinc-800/50 flex items-center justify-between" data-testid={`stake-row-${stake.id}`}>
+                <div>
+                  <span className="text-xs font-bold text-amber-300">${principal}</span>
+                  <span className="text-[8px] text-zinc-500 ml-2">{stake.termDays}d @ {pct}%</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-bold text-emerald-400">${payout.toFixed(2)}</span>
+                  <span className={`text-[8px] ml-2 ${stake.status === "PENDING" ? "text-yellow-500" : daysLeft > 0 ? "text-zinc-500" : "text-emerald-400"}`}>
+                    {stake.status === "PENDING" ? "AWAITING PAYMENT" : daysLeft > 0 ? `${daysLeft}d LEFT` : "MATURED"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showCashAppDialog && (
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowCashAppDialog(false)}>
+          <div className="bg-black border-2 border-amber-500/60 font-mono max-w-sm w-full shadow-2xl shadow-amber-500/20 relative" onClick={e => e.stopPropagation()} data-testid="staking-cashapp-dialog">
+            <div className="border-b border-amber-500/30 px-4 py-2.5 flex items-center justify-between bg-amber-950/80">
+              <span className="text-[11px] text-amber-400 font-bold tracking-wider">STAKING — CASH APP PAYMENT</span>
+              <button onClick={() => setShowCashAppDialog(false)} className="text-amber-500/40 hover:text-amber-400"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
+                <p className="text-2xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
+                <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
+              </div>
+              <div className="border border-zinc-700 bg-zinc-900/50 p-2.5 text-center">
+                <p className="text-[8px] text-zinc-500 tracking-wider">INCLUDE IN CASH APP NOTE</p>
+                <p className="text-[10px] text-white font-bold mt-1">STAKE: ${selectedAmount} / {selectedTerm} DAYS</p>
+              </div>
+              <p className="text-[8px] text-zinc-500 text-center">Admin will confirm payment and activate your stake</p>
+              <button onClick={() => setShowCashAppDialog(false)} className="w-full bg-amber-600 hover:bg-amber-700 text-black font-black py-3 text-sm tracking-wider" data-testid="button-staking-close">
+                GOT IT — SENDING NOW
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function HomePage() {
   const { user } = useAuth();
   const { playTrack, currentTrack, setAutopilotPool } = usePlayer();
@@ -1471,6 +1650,7 @@ export default function HomePage() {
         )}
       </div>
 
+      <StakingSection />
 
       <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">

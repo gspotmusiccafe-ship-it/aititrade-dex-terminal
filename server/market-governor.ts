@@ -1120,27 +1120,57 @@ class MarketEngine {
 
   private bounceDir: number = 1;
   private bounceTicks: number = 0;
+  private spikeActive: boolean = false;
+  private spikePeak: number = 0;
+  private spikeDecay: number = 0;
+  private basePrice: number = 0.01;
+  private idleTicks: number = 0;
 
   updatePrice(): number {
     if (!this.marketOpen) return this.P_current;
 
     const fillRatio = this.totalVolume / this.targetVolume;
 
-    const volatility = 0.005 + Math.random() * 0.02;
+    if (this.spikeActive) {
+      this.spikeDecay++;
+      if (this.spikeDecay >= 2 + Math.floor(Math.random() * 4)) {
+        const dropSpeed = 0.15 + Math.random() * 0.35;
+        this.P_current -= (this.P_current - this.basePrice) * dropSpeed;
+        if (this.P_current <= this.basePrice + 0.02) {
+          this.P_current = this.basePrice + Math.random() * 0.02;
+          this.spikeActive = false;
+          this.idleTicks = 0;
+        }
+      } else {
+        const wobble = (Math.random() - 0.5) * 0.04;
+        this.P_current = this.spikePeak + wobble;
+      }
+    } else {
+      this.idleTicks++;
+      const microJitter = (Math.random() - 0.5) * 0.008;
+      this.P_current = this.basePrice + Math.abs(microJitter);
 
-    this.bounceTicks++;
-    const bounceLen = 15 + Math.floor(Math.random() * 25);
-    if (this.bounceTicks >= bounceLen) {
-      this.bounceDir *= -1;
-      this.bounceTicks = 0;
+      const spikeChance = Math.random();
+      const spikeThreshold = this.idleTicks < 5 ? 0.92 : this.idleTicks < 15 ? 0.82 : 0.70;
+
+      if (spikeChance > spikeThreshold) {
+        const spikeType = Math.random();
+        let spikeHeight: number;
+        if (spikeType < 0.40) {
+          spikeHeight = 0.03 + Math.random() * 0.08;
+        } else if (spikeType < 0.70) {
+          spikeHeight = 0.10 + Math.random() * 0.20;
+        } else if (spikeType < 0.90) {
+          spikeHeight = 0.25 + Math.random() * 0.35;
+        } else {
+          spikeHeight = 0.50 + Math.random() * 0.50;
+        }
+        this.P_current = this.basePrice + spikeHeight;
+        this.spikePeak = this.P_current;
+        this.spikeActive = true;
+        this.spikeDecay = 0;
+      }
     }
-
-    if (this.P_current <= 0.02) this.bounceDir = 1;
-    if (this.P_current >= 0.95) this.bounceDir = -1;
-
-    const jitter = (Math.random() - 0.5) * volatility * 0.3;
-    const push = this.bounceDir * volatility * (0.5 + Math.random() * 0.5);
-    this.P_current += push + jitter;
 
     if (this.P_current < 0.01) this.P_current = 0.01;
     if (this.P_current > 1.00) this.P_current = 1.00;
@@ -1936,7 +1966,7 @@ function buildMonitor(): MonitorSnapshot {
     logError("QUEUE_LOCK", `${liveEngine.queue.length} entries stuck, market closed`);
   }
 
-  if (state.price < 0.05) {
+  if (state.price < 0.005) {
     alerts.push({
       level: "CRITICAL",
       market: "FLOOR",
@@ -1944,7 +1974,7 @@ function buildMonitor(): MonitorSnapshot {
       value: state.price,
       time: now,
     });
-  } else if (state.price < 0.20) {
+  } else if (state.price < 0.005) {
     alerts.push({
       level: "WARNING",
       market: "FLOOR",
