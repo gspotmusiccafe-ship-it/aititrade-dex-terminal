@@ -12,7 +12,7 @@ import type { TrackWithArtist } from "@shared/schema";
 import { Link } from "wouter";
 import { getPortal, PortalBadge, LivingTicker, usePortalConfigs } from "@/components/TradePortal";
 import { TrustTutorial } from "@/components/TrustTutorial";
-import GlobalTradePortal from "@/components/GlobalTradePortal";
+
 import { useEngineSocket } from "@/hooks/use-engine-socket";
 
 function generateSparklineData(seed: number, basePrice: number, points: number = 24): number[] {
@@ -1139,6 +1139,152 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   );
 }
 
+function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; terms: { days: number; returnPct: number }[]; selectedTerm: number | null }) {
+  const W = 200;
+  const H = 60;
+  const PAD_L = 24;
+  const PAD_B = 12;
+  const PAD_T = 4;
+  const PAD_R = 4;
+  const gW = W - PAD_L - PAD_R;
+  const gH = H - PAD_T - PAD_B;
+
+  const maxDays = 180;
+  const maxEarn = amount * (terms[terms.length - 1]?.returnPct || 25) / 100;
+
+  const colors = ["#34d399", "#fbbf24", "#a3e635"];
+  const labels = terms.map(t => `${t.days}d`);
+
+  const buildPath = (term: { days: number; returnPct: number }) => {
+    const totalEarn = amount * term.returnPct / 100;
+    const dailyEarn = totalEarn / term.days;
+    const points: string[] = [];
+    const step = Math.max(1, Math.floor(term.days / 30));
+    for (let d = 0; d <= term.days; d += step) {
+      const earned = dailyEarn * d;
+      const x = PAD_L + (d / maxDays) * gW;
+      const y = PAD_T + gH - (earned / maxEarn) * gH;
+      points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+    const finalX = PAD_L + (term.days / maxDays) * gW;
+    const finalY = PAD_T + gH - (totalEarn / maxEarn) * gH;
+    points.push(`${finalX.toFixed(1)},${finalY.toFixed(1)}`);
+    return points.join(" ");
+  };
+
+  const buildAreaPath = (term: { days: number; returnPct: number }, color: string) => {
+    const totalEarn = amount * term.returnPct / 100;
+    const dailyEarn = totalEarn / term.days;
+    const pts: [number, number][] = [];
+    const step = Math.max(1, Math.floor(term.days / 30));
+    for (let d = 0; d <= term.days; d += step) {
+      const earned = dailyEarn * d;
+      const x = PAD_L + (d / maxDays) * gW;
+      const y = PAD_T + gH - (earned / maxEarn) * gH;
+      pts.push([x, y]);
+    }
+    const finalX = PAD_L + (term.days / maxDays) * gW;
+    const finalY = PAD_T + gH - (totalEarn / maxEarn) * gH;
+    pts.push([finalX, finalY]);
+
+    const baseline = PAD_T + gH;
+    let d = `M ${PAD_L},${baseline}`;
+    pts.forEach(([x, y]) => { d += ` L ${x},${y}`; });
+    d += ` L ${finalX},${baseline} Z`;
+    return d;
+  };
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
+
+  return (
+    <div className="mb-1.5 border border-zinc-800 bg-zinc-950/60 p-1.5" data-testid={`stake-graph-${amount}`}>
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">DAILY EARNINGS CURVE</span>
+        <div className="flex items-center gap-2">
+          {terms.map((t, idx) => (
+            <span key={t.days} className="flex items-center gap-0.5">
+              <span className="inline-block w-1.5 h-1.5" style={{ backgroundColor: colors[idx] }} />
+              <span className={`text-[6px] sm:text-[7px] font-bold ${selectedTerm === t.days ? "text-white" : "text-zinc-500"}`}>{labels[idx]}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+        <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + gH} stroke="#333" strokeWidth="0.5" />
+        <line x1={PAD_L} y1={PAD_T + gH} x2={PAD_L + gW} y2={PAD_T + gH} stroke="#333" strokeWidth="0.5" />
+
+        {yTicks.map((pct) => {
+          const y = PAD_T + gH - pct * gH;
+          const val = (maxEarn * pct).toFixed(0);
+          return (
+            <g key={pct}>
+              <line x1={PAD_L} y1={y} x2={PAD_L + gW} y2={y} stroke="#222" strokeWidth="0.3" strokeDasharray="2,2" />
+              <text x={PAD_L - 2} y={y + 1.5} textAnchor="end" fill="#555" fontSize="4" fontFamily="monospace">${val}</text>
+            </g>
+          );
+        })}
+
+        {[0, 45, 90, 135, 180].map((d) => {
+          const x = PAD_L + (d / maxDays) * gW;
+          return (
+            <g key={d}>
+              <line x1={x} y1={PAD_T} x2={x} y2={PAD_T + gH} stroke="#222" strokeWidth="0.3" strokeDasharray="1,2" />
+              <text x={x} y={H - 2} textAnchor="middle" fill="#555" fontSize="3.5" fontFamily="monospace">{d}d</text>
+            </g>
+          );
+        })}
+
+        {terms.map((term, idx) => {
+          const isActive = selectedTerm === term.days || selectedTerm === null;
+          const opacity = isActive ? 0.15 : 0.04;
+          return (
+            <path
+              key={`area-${term.days}`}
+              d={buildAreaPath(term, colors[idx])}
+              fill={colors[idx]}
+              opacity={opacity}
+            />
+          );
+        })}
+
+        {terms.map((term, idx) => {
+          const isActive = selectedTerm === term.days || selectedTerm === null;
+          return (
+            <polyline
+              key={`line-${term.days}`}
+              points={buildPath(term)}
+              fill="none"
+              stroke={colors[idx]}
+              strokeWidth={isActive ? "1.2" : "0.5"}
+              opacity={isActive ? 1 : 0.3}
+            />
+          );
+        })}
+
+        {terms.map((term, idx) => {
+          const totalEarn = amount * term.returnPct / 100;
+          const x = PAD_L + (term.days / maxDays) * gW;
+          const y = PAD_T + gH - (totalEarn / maxEarn) * gH;
+          const isActive = selectedTerm === term.days || selectedTerm === null;
+          return (
+            <g key={`dot-${term.days}`} opacity={isActive ? 1 : 0.3}>
+              <circle cx={x} cy={y} r="2" fill={colors[idx]} />
+              <text x={x} y={y - 3} textAnchor="middle" fill={colors[idx]} fontSize="3.5" fontWeight="bold" fontFamily="monospace">
+                ${totalEarn.toFixed(0)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="flex items-center justify-between mt-0.5">
+        <span className="text-[6px] text-zinc-600">DAY 0</span>
+        <span className="text-[6px] text-zinc-600">PER-DAY SCALE — LINEAR ACCRUAL</span>
+        <span className="text-[6px] text-zinc-600">DAY 180</span>
+      </div>
+    </div>
+  );
+}
+
 interface MarketSession {
   sessionId: string;
   date: string;
@@ -1199,129 +1345,137 @@ function StakingSection() {
   const activeStakes = myStakes?.filter(s => s.status === "ACTIVE" || s.status === "PENDING") || [];
 
   return (
-    <div className="px-4 py-4 border-t-2 border-amber-500/40 bg-gradient-to-b from-amber-950/10 to-black">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="relative">
-          <Coins className="h-5 w-5 text-amber-400" />
-          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
-        </div>
-        <div>
-          <span className="text-xs sm:text-sm text-amber-400 font-black tracking-widest">LIQUIDITY STAKING PORTALS</span>
-          <p className="text-[7px] sm:text-[8px] text-amber-500/50 tracking-wider">LOCK CAPITAL • EARN GUARANTEED RETURNS • 10%-25% APY</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-5 gap-2 mb-4" data-testid="staking-amounts">
+    <div className="px-4 py-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2" data-testid="staking-amounts">
         {tiers?.map((tier, i) => {
-          const tierColors = [
-            { border: "border-zinc-600", bg: "bg-zinc-900/80", text: "text-zinc-300", glow: "" },
-            { border: "border-blue-500/50", bg: "bg-blue-950/30", text: "text-blue-300", glow: "" },
-            { border: "border-purple-500/50", bg: "bg-purple-950/30", text: "text-purple-300", glow: "" },
-            { border: "border-amber-500/50", bg: "bg-amber-950/30", text: "text-amber-300", glow: "shadow-amber-500/10 shadow-lg" },
-            { border: "border-emerald-500/50", bg: "bg-emerald-950/30", text: "text-emerald-300", glow: "shadow-emerald-500/10 shadow-lg" },
-          ];
-          const c = tierColors[i] || tierColors[0];
+          const ticker = `$STAKE${tier.amount}`;
+          const assetId = `STK-${String(tier.amount).padStart(3, "0")}`;
+          const minReturn = tier.terms[0].returnPct;
+          const maxReturn = tier.terms[tier.terms.length - 1].returnPct;
+          const isPremium = tier.amount >= 75;
           const isSelected = selectedAmount === tier.amount;
+          const borderColor = isPremium ? "border-amber-500/40 hover:border-amber-400/70" : "border-emerald-500/20 hover:border-emerald-500/60";
+          const headerBg = isPremium ? "border-amber-500/20 bg-amber-500/5" : "border-emerald-500/10 bg-emerald-500/5";
           return (
-            <button
+            <div
               key={tier.amount}
+              className={`bg-black border font-mono group transition-all overflow-hidden cursor-pointer ${isSelected ? "border-amber-400 ring-1 ring-amber-400/30" : borderColor}`}
               onClick={() => { setSelectedAmount(tier.amount); setSelectedTerm(null); }}
-              className={`relative border-2 text-center py-3 px-1 transition-all duration-200 ${c.glow} ${
-                isSelected
-                  ? "border-amber-400 bg-amber-500/20 text-amber-300 scale-105 shadow-amber-500/20 shadow-xl"
-                  : `${c.border} ${c.bg} ${c.text} hover:scale-102 hover:border-amber-500/40`
-              }`}
               data-testid={`staking-amount-${tier.amount}`}
             >
-              {i >= 3 && <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-amber-500 text-black text-[5px] font-black tracking-wider">PREMIUM</div>}
-              <p className="text-sm sm:text-lg font-black">${tier.amount}</p>
-              <div className="h-px bg-current opacity-20 my-1" />
-              <p className="text-[8px] sm:text-[9px] font-bold text-emerald-400">{tier.terms[0].returnPct}%-{tier.terms[tier.terms.length - 1].returnPct}%</p>
-              <p className="text-[6px] text-zinc-500 mt-0.5">RETURN</p>
-            </button>
+              <div className={`border-b px-2 sm:px-3 py-1 sm:py-1.5 ${headerBg}`}>
+                <div className="flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
+                    <span className={`font-bold text-xs sm:text-sm flex-shrink-0 ${isPremium ? "text-amber-400" : "text-lime-400"}`}>{ticker}</span>
+                    <span className="text-zinc-400 text-[8px] sm:text-[10px] font-semibold">{assetId}</span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className={`text-[10px] sm:text-[11px] font-extrabold ${isPremium ? "text-amber-400" : "text-lime-400"}`}>${tier.amount}</span>
+                    <span className={`text-[7px] sm:text-[9px] px-1 py-0.5 ${isPremium ? "bg-amber-500/10 text-amber-400" : "bg-emerald-500/10 text-emerald-500"}`}>
+                      {isPremium ? "PREMIUM" : "OPEN"}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-0.5">
+                  <span className="text-[7px] sm:text-[8px] px-1 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    <Coins className="h-2 w-2 inline mr-0.5" />STAKING PORTAL
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2 sm:p-3">
+                <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 border border-amber-500/10 flex items-center justify-center flex-shrink-0">
+                    <Coins className={`h-4 w-4 sm:h-5 sm:w-5 ${isPremium ? "text-amber-400" : "text-emerald-400"}`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-xs sm:text-sm font-extrabold text-lime-400">${tier.amount} LIQUIDITY STAKE</h3>
+                    <p className="text-[10px] sm:text-[11px] text-zinc-400 font-semibold">GUARANTEED {minReturn}%-{maxReturn}% RETURN</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-0.5 sm:mb-1 text-center">
+                  <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">DEPOSIT</p>
+                    <p className={`text-[10px] sm:text-xs font-extrabold ${isPremium ? "text-amber-400" : "text-lime-400"}`}>${tier.amount}</p>
+                  </div>
+                  <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">MIN EARN</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-400 font-extrabold">${(tier.amount * minReturn / 100).toFixed(2)}</p>
+                  </div>
+                  <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
+                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">MAX EARN</p>
+                    <p className="text-[10px] sm:text-xs text-emerald-300 font-extrabold">${(tier.amount * maxReturn / 100).toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
+                  <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
+                    <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">45 DAYS</p>
+                    <p className="text-[9px] sm:text-[11px] font-extrabold text-emerald-400">{tier.terms[0].returnPct}%</p>
+                  </div>
+                  <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
+                    <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">90 DAYS</p>
+                    <p className="text-[9px] sm:text-[11px] font-extrabold text-amber-400">{tier.terms[1]?.returnPct || "—"}%</p>
+                  </div>
+                  <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
+                    <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">180 DAYS</p>
+                    <p className="text-[9px] sm:text-[11px] font-extrabold text-lime-400">{tier.terms[2]?.returnPct || "—"}%</p>
+                  </div>
+                </div>
+
+                <StakeEarningsGraph amount={tier.amount} terms={tier.terms} selectedTerm={isSelected ? selectedTerm : null} />
+
+                {isSelected ? (
+                  <div className="space-y-1.5">
+                    <p className="text-[8px] text-amber-400 font-bold tracking-wider text-center">SELECT LOCK TERM</p>
+                    <div className="grid grid-cols-3 gap-1" data-testid="staking-terms">
+                      {tier.terms.map((term) => (
+                        <button
+                          key={term.days}
+                          onClick={(e) => { e.stopPropagation(); setSelectedTerm(term.days); }}
+                          className={`border py-2 text-center transition-all ${
+                            selectedTerm === term.days
+                              ? "border-emerald-400 bg-emerald-500/15 text-emerald-300"
+                              : "border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:border-emerald-500/40"
+                          }`}
+                          data-testid={`staking-term-${term.days}`}
+                        >
+                          <span className="text-[9px] sm:text-[10px] font-black">{term.days}d</span>
+                          <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold ml-1">{term.returnPct}%</span>
+                        </button>
+                      ))}
+                    </div>
+                    {selectedTerm && selectedTermInfo && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); stakeMutation.mutate({ amount: tier.amount, termDays: selectedTerm }); }}
+                        disabled={stakeMutation.isPending}
+                        className="w-full bg-amber-600 hover:bg-amber-500 text-black font-black py-2 text-[10px] sm:text-xs tracking-wider disabled:opacity-50"
+                        data-testid="button-stake-submit"
+                      >
+                        <DollarSign className="h-3 w-3 inline mr-1" />
+                        STAKE ${tier.amount} — {selectedTerm}d — EARN ${(tier.amount * selectedTermInfo.returnPct / 100).toFixed(2)}
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    className={`w-full py-1.5 sm:py-2 font-black text-[9px] sm:text-[10px] tracking-wider transition-colors border ${isPremium ? "border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"}`}
+                  >
+                    <Coins className="h-3 w-3 inline mr-1" /> SELECT STAKE
+                  </button>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
 
-      {selectedAmount && selectedTier && (
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="h-3.5 w-3.5 text-emerald-400" />
-            <p className="text-[9px] sm:text-[10px] text-emerald-400 tracking-widest font-bold">SELECT LOCK PERIOD — LONGER TERM = BIGGER RETURNS</p>
-          </div>
-          <div className="grid grid-cols-3 gap-2" data-testid="staking-terms">
-            {selectedTier.terms.map((term, i) => {
-              const termIcons = ["", "", ""];
-              const earnAmount = (selectedAmount * term.returnPct / 100).toFixed(2);
-              return (
-                <button
-                  key={term.days}
-                  onClick={() => setSelectedTerm(term.days)}
-                  className={`relative border-2 py-3 px-2 text-center transition-all duration-200 overflow-hidden ${
-                    selectedTerm === term.days
-                      ? "border-emerald-400 bg-emerald-500/15 text-emerald-300 scale-105 shadow-emerald-500/20 shadow-xl"
-                      : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-emerald-500/40 hover:bg-emerald-950/20"
-                  }`}
-                  data-testid={`staking-term-${term.days}`}
-                >
-                  {i === 2 && <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-emerald-500 text-black text-[5px] font-black">BEST</div>}
-                  <div className="flex items-center justify-center gap-1.5 mb-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span className="text-xs sm:text-sm font-black">{term.days} DAYS</span>
-                  </div>
-                  <p className="text-xl sm:text-2xl font-black text-emerald-400 leading-none">{term.returnPct}%</p>
-                  <div className="mt-1.5 border-t border-current/10 pt-1.5">
-                    <p className="text-[8px] sm:text-[9px] text-zinc-500">YOU EARN</p>
-                    <p className="text-xs sm:text-sm font-black text-emerald-300">${earnAmount}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {selectedAmount && selectedTerm && selectedTermInfo && (
-        <div className="border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/30 to-black p-4 mb-4 shadow-xl shadow-amber-500/5">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-amber-400" />
-              <span className="text-[10px] sm:text-xs text-amber-400 tracking-widest font-black">STAKE SUMMARY</span>
-            </div>
-            <span className="text-[9px] px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">{selectedTerm} DAY LOCK</span>
-          </div>
-          <div className="grid grid-cols-3 gap-3 text-center mb-3">
-            <div className="border border-zinc-700/50 bg-black/50 py-2.5 px-2">
-              <p className="text-[7px] text-zinc-500 tracking-wider mb-1">DEPOSIT</p>
-              <p className="text-lg font-black text-amber-300">${selectedAmount}</p>
-            </div>
-            <div className="border border-emerald-500/20 bg-emerald-950/20 py-2.5 px-2">
-              <p className="text-[7px] text-emerald-400/60 tracking-wider mb-1">RETURN RATE</p>
-              <p className="text-lg font-black text-emerald-400">{selectedTermInfo.returnPct}%</p>
-            </div>
-            <div className="border border-emerald-400/30 bg-emerald-950/30 py-2.5 px-2">
-              <p className="text-[7px] text-emerald-400/60 tracking-wider mb-1">TOTAL PAYOUT</p>
-              <p className="text-lg font-black text-emerald-300">${(selectedAmount + selectedAmount * selectedTermInfo.returnPct / 100).toFixed(2)}</p>
-            </div>
-          </div>
-          <button
-            onClick={() => stakeMutation.mutate({ amount: selectedAmount, termDays: selectedTerm })}
-            disabled={stakeMutation.isPending}
-            className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black py-3 text-sm tracking-widest transition-all disabled:opacity-50 shadow-lg shadow-amber-500/20"
-            data-testid="button-stake-submit"
-          >
-            <Coins className="h-4 w-4 inline mr-2" />
-            STAKE ${selectedAmount} — EARN ${(selectedAmount * selectedTermInfo.returnPct / 100).toFixed(2)}
-          </button>
-        </div>
-      )}
-
       {activeStakes.length > 0 && (
-        <div className="border-2 border-amber-500/20 bg-black/60">
-          <div className="px-3 py-2 border-b border-amber-500/20 bg-amber-950/20 flex items-center gap-2">
-            <Lock className="h-3.5 w-3.5 text-amber-400" />
-            <span className="text-[10px] text-amber-400 font-black tracking-widest">MY ACTIVE STAKES</span>
-            <span className="text-[8px] text-zinc-500 ml-auto">{activeStakes.length} POSITION{activeStakes.length > 1 ? "S" : ""}</span>
+        <div className="border border-amber-500/20 bg-black mt-2">
+          <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-b border-amber-500/20 bg-amber-500/5 flex items-center gap-1">
+            <Lock className="h-3 w-3 text-amber-400" />
+            <span className="text-[9px] sm:text-[10px] text-amber-400 font-black tracking-wider">MY STAKING POSITIONS</span>
+            <span className="text-[7px] sm:text-[8px] text-zinc-500 ml-auto">{activeStakes.length} ACTIVE</span>
           </div>
           {activeStakes.map((stake: any) => {
             const principal = parseFloat(stake.amount || "0");
@@ -1332,22 +1486,22 @@ function StakingSection() {
             const elapsed = Math.max(0, totalDays - daysLeft);
             const progressPct = Math.min(100, (elapsed / totalDays) * 100);
             return (
-              <div key={stake.id} className="px-3 py-2.5 border-b border-zinc-800/50" data-testid={`stake-row-${stake.id}`}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-amber-300">${principal}</span>
-                    <span className="text-[8px] text-zinc-500">{stake.termDays}d @ {pct}%</span>
+              <div key={stake.id} className="px-2 sm:px-3 py-2 border-b border-zinc-800/50" data-testid={`stake-row-${stake.id}`}>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] sm:text-xs font-black text-amber-300">${principal}</span>
+                    <span className="text-[7px] sm:text-[8px] text-zinc-500">{stake.termDays}d @ {pct}%</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-black text-emerald-400">${payout.toFixed(2)}</span>
-                    <span className={`text-[8px] px-1.5 py-0.5 border font-bold ${stake.status === "PENDING" ? "text-yellow-500 border-yellow-500/30 bg-yellow-500/10" : daysLeft > 0 ? "text-blue-400 border-blue-500/30 bg-blue-500/10" : "text-emerald-400 border-emerald-500/30 bg-emerald-500/10 animate-pulse"}`}>
-                      {stake.status === "PENDING" ? "AWAITING CONFIRM" : daysLeft > 0 ? `${daysLeft}d LEFT` : "MATURED"}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] sm:text-xs font-black text-emerald-400">${payout.toFixed(2)}</span>
+                    <span className={`text-[7px] sm:text-[8px] px-1 py-0.5 border font-bold ${stake.status === "PENDING" ? "text-yellow-500 border-yellow-500/30 bg-yellow-500/10" : daysLeft > 0 ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-lime-400 border-lime-500/30 bg-lime-500/10 animate-pulse"}`}>
+                      {stake.status === "PENDING" ? "PENDING" : daysLeft > 0 ? `${daysLeft}d LEFT` : "MATURED"}
                     </span>
                   </div>
                 </div>
                 {stake.status !== "PENDING" && (
                   <div className="w-full bg-zinc-800 h-1 overflow-hidden">
-                    <div className={`h-full transition-all duration-500 ${daysLeft === 0 ? "bg-emerald-400" : "bg-amber-500"}`} style={{ width: `${progressPct}%` }} />
+                    <div className={`h-full transition-all duration-500 ${daysLeft === 0 ? "bg-lime-400" : "bg-amber-500"}`} style={{ width: `${progressPct}%` }} />
                   </div>
                 )}
               </div>
@@ -1364,9 +1518,9 @@ function StakingSection() {
               <button onClick={() => setShowCashAppDialog(false)} className="text-amber-500/40 hover:text-amber-400"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-5 space-y-4">
-              <div className="border-2 border-green-500/40 bg-green-950/30 p-4 text-center">
-                <p className="text-[9px] text-green-400/70 tracking-widest mb-1">SEND PAYMENT TO</p>
-                <p className="text-3xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
+              <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
+                <p className="text-2xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
                 <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
               </div>
               <div className="border border-amber-500/30 bg-amber-950/20 p-3 text-center">
@@ -1377,8 +1531,8 @@ function StakingSection() {
                 <p className="text-[8px] text-zinc-500 tracking-wider">INCLUDE IN CASH APP NOTE</p>
                 <p className="text-[10px] text-white font-bold mt-1">STAKE: ${selectedAmount} / {selectedTerm} DAYS</p>
               </div>
-              <p className="text-[8px] text-zinc-500 text-center">Admin will confirm your payment and activate your stake</p>
-              <button onClick={() => setShowCashAppDialog(false)} className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black py-3 text-sm tracking-widest shadow-lg shadow-amber-500/20" data-testid="button-staking-close">
+              <p className="text-[8px] text-zinc-500 text-center">Admin will confirm payment and activate your stake</p>
+              <button onClick={() => setShowCashAppDialog(false)} className="w-full bg-amber-600 hover:bg-amber-700 text-black font-black py-3 text-sm tracking-wider" data-testid="button-staking-close">
                 GOT IT — SENDING NOW
               </button>
             </div>
@@ -1681,10 +1835,6 @@ export default function HomePage() {
                   engineState={engineState}
                 />
               ))}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-              <GlobalTradePortal portalIndex={0} />
-              <GlobalTradePortal portalIndex={1} />
             </div>
           </>
         ) : (
