@@ -4420,6 +4420,26 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/staking/delete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+
+      const { stakeId } = req.body;
+      if (!stakeId) return res.status(400).json({ message: "stakeId required" });
+
+      const [stake] = await db.select().from(stakingPortals).where(eq(stakingPortals.id, stakeId));
+      if (!stake) return res.status(404).json({ message: "Stake not found" });
+
+      await db.delete(stakingPortals).where(eq(stakingPortals.id, stakeId));
+      console.log(`[STAKING] DELETED: ${stake.userEmail} | $${stake.amount} | ${stake.termDays} days | Status was: ${stake.status}`);
+      res.json({ message: "Stake deleted", stakeId });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to delete stake" });
+    }
+  });
+
   app.get("/api/admin/staking/all", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

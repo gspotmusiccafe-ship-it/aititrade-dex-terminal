@@ -1199,115 +1199,157 @@ function StakingSection() {
   const activeStakes = myStakes?.filter(s => s.status === "ACTIVE" || s.status === "PENDING") || [];
 
   return (
-    <div className="px-4 py-3 border-t border-amber-500/20">
-      <div className="flex items-center gap-2 mb-3">
-        <Coins className="h-4 w-4 text-amber-400" />
-        <span className="text-[11px] sm:text-xs text-amber-400 font-black tracking-wider">LIQUIDITY STAKING PORTALS</span>
-        <span className="text-[8px] text-zinc-500 ml-auto">MARKET LIQUIDITY • 10%-25% RETURNS</span>
+    <div className="px-4 py-4 border-t-2 border-amber-500/40 bg-gradient-to-b from-amber-950/10 to-black">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative">
+          <Coins className="h-5 w-5 text-amber-400" />
+          <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-400 rounded-full animate-ping" />
+        </div>
+        <div>
+          <span className="text-xs sm:text-sm text-amber-400 font-black tracking-widest">LIQUIDITY STAKING PORTALS</span>
+          <p className="text-[7px] sm:text-[8px] text-amber-500/50 tracking-wider">LOCK CAPITAL • EARN GUARANTEED RETURNS • 10%-25% APY</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5 mb-3" data-testid="staking-amounts">
-        {tiers?.map(tier => (
-          <button
-            key={tier.amount}
-            onClick={() => { setSelectedAmount(tier.amount); setSelectedTerm(null); }}
-            className={`border text-center py-2 px-1 transition-all ${
-              selectedAmount === tier.amount
-                ? "border-amber-400 bg-amber-500/20 text-amber-300"
-                : "border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:border-amber-500/40"
-            }`}
-            data-testid={`staking-amount-${tier.amount}`}
-          >
-            <p className="text-xs sm:text-sm font-black">${tier.amount}</p>
-            <p className="text-[7px] text-zinc-500">{tier.terms[0].returnPct}%-{tier.terms[tier.terms.length - 1].returnPct}%</p>
-          </button>
-        ))}
+      <div className="grid grid-cols-5 gap-2 mb-4" data-testid="staking-amounts">
+        {tiers?.map((tier, i) => {
+          const tierColors = [
+            { border: "border-zinc-600", bg: "bg-zinc-900/80", text: "text-zinc-300", glow: "" },
+            { border: "border-blue-500/50", bg: "bg-blue-950/30", text: "text-blue-300", glow: "" },
+            { border: "border-purple-500/50", bg: "bg-purple-950/30", text: "text-purple-300", glow: "" },
+            { border: "border-amber-500/50", bg: "bg-amber-950/30", text: "text-amber-300", glow: "shadow-amber-500/10 shadow-lg" },
+            { border: "border-emerald-500/50", bg: "bg-emerald-950/30", text: "text-emerald-300", glow: "shadow-emerald-500/10 shadow-lg" },
+          ];
+          const c = tierColors[i] || tierColors[0];
+          const isSelected = selectedAmount === tier.amount;
+          return (
+            <button
+              key={tier.amount}
+              onClick={() => { setSelectedAmount(tier.amount); setSelectedTerm(null); }}
+              className={`relative border-2 text-center py-3 px-1 transition-all duration-200 ${c.glow} ${
+                isSelected
+                  ? "border-amber-400 bg-amber-500/20 text-amber-300 scale-105 shadow-amber-500/20 shadow-xl"
+                  : `${c.border} ${c.bg} ${c.text} hover:scale-102 hover:border-amber-500/40`
+              }`}
+              data-testid={`staking-amount-${tier.amount}`}
+            >
+              {i >= 3 && <div className="absolute -top-1 left-1/2 -translate-x-1/2 px-1.5 py-0.5 bg-amber-500 text-black text-[5px] font-black tracking-wider">PREMIUM</div>}
+              <p className="text-sm sm:text-lg font-black">${tier.amount}</p>
+              <div className="h-px bg-current opacity-20 my-1" />
+              <p className="text-[8px] sm:text-[9px] font-bold text-emerald-400">{tier.terms[0].returnPct}%-{tier.terms[tier.terms.length - 1].returnPct}%</p>
+              <p className="text-[6px] text-zinc-500 mt-0.5">RETURN</p>
+            </button>
+          );
+        })}
       </div>
 
       {selectedAmount && selectedTier && (
-        <div className="mb-3">
-          <p className="text-[9px] text-zinc-500 tracking-wider mb-1.5">SELECT TERM — LONGER = MORE EARNED</p>
-          <div className="grid grid-cols-3 gap-1.5" data-testid="staking-terms">
-            {selectedTier.terms.map(term => (
-              <button
-                key={term.days}
-                onClick={() => setSelectedTerm(term.days)}
-                className={`border py-2.5 px-2 text-center transition-all ${
-                  selectedTerm === term.days
-                    ? "border-emerald-400 bg-emerald-500/20 text-emerald-300"
-                    : "border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:border-emerald-500/40"
-                }`}
-                data-testid={`staking-term-${term.days}`}
-              >
-                <div className="flex items-center justify-center gap-1 mb-1">
-                  <Clock className="h-3 w-3" />
-                  <span className="text-xs font-black">{term.days} DAYS</span>
-                </div>
-                <p className="text-lg font-black text-emerald-400">{term.returnPct}%</p>
-                <p className="text-[7px] text-zinc-500 mt-0.5">
-                  EARN ${(selectedAmount * term.returnPct / 100).toFixed(2)}
-                </p>
-              </button>
-            ))}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock className="h-3.5 w-3.5 text-emerald-400" />
+            <p className="text-[9px] sm:text-[10px] text-emerald-400 tracking-widest font-bold">SELECT LOCK PERIOD — LONGER TERM = BIGGER RETURNS</p>
+          </div>
+          <div className="grid grid-cols-3 gap-2" data-testid="staking-terms">
+            {selectedTier.terms.map((term, i) => {
+              const termIcons = ["", "", ""];
+              const earnAmount = (selectedAmount * term.returnPct / 100).toFixed(2);
+              return (
+                <button
+                  key={term.days}
+                  onClick={() => setSelectedTerm(term.days)}
+                  className={`relative border-2 py-3 px-2 text-center transition-all duration-200 overflow-hidden ${
+                    selectedTerm === term.days
+                      ? "border-emerald-400 bg-emerald-500/15 text-emerald-300 scale-105 shadow-emerald-500/20 shadow-xl"
+                      : "border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:border-emerald-500/40 hover:bg-emerald-950/20"
+                  }`}
+                  data-testid={`staking-term-${term.days}`}
+                >
+                  {i === 2 && <div className="absolute top-0 right-0 px-1.5 py-0.5 bg-emerald-500 text-black text-[5px] font-black">BEST</div>}
+                  <div className="flex items-center justify-center gap-1.5 mb-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span className="text-xs sm:text-sm font-black">{term.days} DAYS</span>
+                  </div>
+                  <p className="text-xl sm:text-2xl font-black text-emerald-400 leading-none">{term.returnPct}%</p>
+                  <div className="mt-1.5 border-t border-current/10 pt-1.5">
+                    <p className="text-[8px] sm:text-[9px] text-zinc-500">YOU EARN</p>
+                    <p className="text-xs sm:text-sm font-black text-emerald-300">${earnAmount}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
 
       {selectedAmount && selectedTerm && selectedTermInfo && (
-        <div className="border border-amber-500/30 bg-amber-950/20 p-3 mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] text-amber-400 tracking-wider font-bold">STAKE SUMMARY</span>
-            <span className="text-[9px] text-zinc-500">{selectedTerm} DAY LOCK</span>
+        <div className="border-2 border-amber-500/40 bg-gradient-to-b from-amber-950/30 to-black p-4 mb-4 shadow-xl shadow-amber-500/5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-amber-400" />
+              <span className="text-[10px] sm:text-xs text-amber-400 tracking-widest font-black">STAKE SUMMARY</span>
+            </div>
+            <span className="text-[9px] px-2 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">{selectedTerm} DAY LOCK</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div>
-              <p className="text-[7px] text-zinc-500">PRINCIPAL</p>
-              <p className="text-sm font-black text-amber-300">${selectedAmount}</p>
+          <div className="grid grid-cols-3 gap-3 text-center mb-3">
+            <div className="border border-zinc-700/50 bg-black/50 py-2.5 px-2">
+              <p className="text-[7px] text-zinc-500 tracking-wider mb-1">DEPOSIT</p>
+              <p className="text-lg font-black text-amber-300">${selectedAmount}</p>
             </div>
-            <div>
-              <p className="text-[7px] text-zinc-500">RETURN</p>
-              <p className="text-sm font-black text-emerald-400">{selectedTermInfo.returnPct}%</p>
+            <div className="border border-emerald-500/20 bg-emerald-950/20 py-2.5 px-2">
+              <p className="text-[7px] text-emerald-400/60 tracking-wider mb-1">RETURN RATE</p>
+              <p className="text-lg font-black text-emerald-400">{selectedTermInfo.returnPct}%</p>
             </div>
-            <div>
-              <p className="text-[7px] text-zinc-500">PAYOUT</p>
-              <p className="text-sm font-black text-emerald-300">${(selectedAmount + selectedAmount * selectedTermInfo.returnPct / 100).toFixed(2)}</p>
+            <div className="border border-emerald-400/30 bg-emerald-950/30 py-2.5 px-2">
+              <p className="text-[7px] text-emerald-400/60 tracking-wider mb-1">TOTAL PAYOUT</p>
+              <p className="text-lg font-black text-emerald-300">${(selectedAmount + selectedAmount * selectedTermInfo.returnPct / 100).toFixed(2)}</p>
             </div>
           </div>
           <button
             onClick={() => stakeMutation.mutate({ amount: selectedAmount, termDays: selectedTerm })}
             disabled={stakeMutation.isPending}
-            className="w-full mt-2 bg-amber-600 hover:bg-amber-700 text-black font-black py-2 text-xs tracking-wider transition-colors disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black py-3 text-sm tracking-widest transition-all disabled:opacity-50 shadow-lg shadow-amber-500/20"
             data-testid="button-stake-submit"
           >
-            <Coins className="h-3.5 w-3.5 inline mr-1" />
-            STAKE ${selectedAmount} — {selectedTerm} DAYS
+            <Coins className="h-4 w-4 inline mr-2" />
+            STAKE ${selectedAmount} — EARN ${(selectedAmount * selectedTermInfo.returnPct / 100).toFixed(2)}
           </button>
         </div>
       )}
 
       {activeStakes.length > 0 && (
-        <div className="border border-zinc-800 bg-zinc-900/30">
-          <div className="px-3 py-1.5 border-b border-zinc-800 flex items-center gap-1">
-            <Lock className="h-3 w-3 text-amber-400" />
-            <span className="text-[9px] text-amber-400 font-bold tracking-wider">MY ACTIVE STAKES</span>
+        <div className="border-2 border-amber-500/20 bg-black/60">
+          <div className="px-3 py-2 border-b border-amber-500/20 bg-amber-950/20 flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-amber-400" />
+            <span className="text-[10px] text-amber-400 font-black tracking-widest">MY ACTIVE STAKES</span>
+            <span className="text-[8px] text-zinc-500 ml-auto">{activeStakes.length} POSITION{activeStakes.length > 1 ? "S" : ""}</span>
           </div>
           {activeStakes.map((stake: any) => {
             const principal = parseFloat(stake.amount || "0");
             const pct = parseFloat(stake.returnPct || "0");
             const payout = principal + (principal * pct / 100);
             const daysLeft = Math.max(0, Math.ceil((new Date(stake.maturesAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+            const totalDays = stake.termDays || 1;
+            const elapsed = Math.max(0, totalDays - daysLeft);
+            const progressPct = Math.min(100, (elapsed / totalDays) * 100);
             return (
-              <div key={stake.id} className="px-3 py-2 border-b border-zinc-800/50 flex items-center justify-between" data-testid={`stake-row-${stake.id}`}>
-                <div>
-                  <span className="text-xs font-bold text-amber-300">${principal}</span>
-                  <span className="text-[8px] text-zinc-500 ml-2">{stake.termDays}d @ {pct}%</span>
+              <div key={stake.id} className="px-3 py-2.5 border-b border-zinc-800/50" data-testid={`stake-row-${stake.id}`}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-amber-300">${principal}</span>
+                    <span className="text-[8px] text-zinc-500">{stake.termDays}d @ {pct}%</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-black text-emerald-400">${payout.toFixed(2)}</span>
+                    <span className={`text-[8px] px-1.5 py-0.5 border font-bold ${stake.status === "PENDING" ? "text-yellow-500 border-yellow-500/30 bg-yellow-500/10" : daysLeft > 0 ? "text-blue-400 border-blue-500/30 bg-blue-500/10" : "text-emerald-400 border-emerald-500/30 bg-emerald-500/10 animate-pulse"}`}>
+                      {stake.status === "PENDING" ? "AWAITING CONFIRM" : daysLeft > 0 ? `${daysLeft}d LEFT` : "MATURED"}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-xs font-bold text-emerald-400">${payout.toFixed(2)}</span>
-                  <span className={`text-[8px] ml-2 ${stake.status === "PENDING" ? "text-yellow-500" : daysLeft > 0 ? "text-zinc-500" : "text-emerald-400"}`}>
-                    {stake.status === "PENDING" ? "AWAITING PAYMENT" : daysLeft > 0 ? `${daysLeft}d LEFT` : "MATURED"}
-                  </span>
-                </div>
+                {stake.status !== "PENDING" && (
+                  <div className="w-full bg-zinc-800 h-1 overflow-hidden">
+                    <div className={`h-full transition-all duration-500 ${daysLeft === 0 ? "bg-emerald-400" : "bg-amber-500"}`} style={{ width: `${progressPct}%` }} />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1322,17 +1364,21 @@ function StakingSection() {
               <button onClick={() => setShowCashAppDialog(false)} className="text-amber-500/40 hover:text-amber-400"><X className="h-4 w-4" /></button>
             </div>
             <div className="p-5 space-y-4">
-              <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
-                <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
-                <p className="text-2xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
+              <div className="border-2 border-green-500/40 bg-green-950/30 p-4 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-widest mb-1">SEND PAYMENT TO</p>
+                <p className="text-3xl text-green-400 font-black tracking-wider">$AITITRADEBROKERAGE</p>
                 <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
+              </div>
+              <div className="border border-amber-500/30 bg-amber-950/20 p-3 text-center">
+                <p className="text-[8px] text-amber-400/60 tracking-widest">AMOUNT TO SEND</p>
+                <p className="text-2xl text-amber-300 font-black mt-1">${selectedAmount}.00</p>
               </div>
               <div className="border border-zinc-700 bg-zinc-900/50 p-2.5 text-center">
                 <p className="text-[8px] text-zinc-500 tracking-wider">INCLUDE IN CASH APP NOTE</p>
                 <p className="text-[10px] text-white font-bold mt-1">STAKE: ${selectedAmount} / {selectedTerm} DAYS</p>
               </div>
-              <p className="text-[8px] text-zinc-500 text-center">Admin will confirm payment and activate your stake</p>
-              <button onClick={() => setShowCashAppDialog(false)} className="w-full bg-amber-600 hover:bg-amber-700 text-black font-black py-3 text-sm tracking-wider" data-testid="button-staking-close">
+              <p className="text-[8px] text-zinc-500 text-center">Admin will confirm your payment and activate your stake</p>
+              <button onClick={() => setShowCashAppDialog(false)} className="w-full bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-black py-3 text-sm tracking-widest shadow-lg shadow-amber-500/20" data-testid="button-staking-close">
                 GOT IT — SENDING NOW
               </button>
             </div>

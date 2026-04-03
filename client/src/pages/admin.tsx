@@ -4676,6 +4676,15 @@ function StakingAdminTab() {
     onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (stakeId: string) => apiRequest("POST", "/api/admin/staking/delete", { stakeId }),
+    onSuccess: () => {
+      toast({ title: "STAKE DELETED", description: "Stake removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/staking/all"] });
+    },
+    onError: (err: Error) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
   const pending = allStakes?.filter(s => s.status === "PENDING") || [];
   const active = allStakes?.filter(s => s.status === "ACTIVE") || [];
   const settled = allStakes?.filter(s => s.status === "SETTLED") || [];
@@ -4721,9 +4730,14 @@ function StakingAdminTab() {
                     <span className="font-bold text-yellow-300">{stake.displayName || stake.userEmail}</span>
                     <span className="text-xs text-zinc-500 ml-2">${stake.amount} • {stake.termDays}d • {stake.returnPct}%</span>
                   </div>
-                  <Button size="sm" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20" onClick={() => confirmMutation.mutate(stake.id)} disabled={confirmMutation.isPending} data-testid={`button-confirm-stake-${stake.id}`}>
-                    CONFIRM PAID
-                  </Button>
+                  <div className="flex gap-1.5">
+                    <Button size="sm" variant="outline" className="border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20" onClick={() => confirmMutation.mutate(stake.id)} disabled={confirmMutation.isPending} data-testid={`button-confirm-stake-${stake.id}`}>
+                      CONFIRM PAID
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-red-500/40 text-red-400 hover:bg-red-500/20" onClick={() => deleteMutation.mutate(stake.id)} disabled={deleteMutation.isPending} data-testid={`button-delete-stake-${stake.id}`}>
+                      DELETE
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
