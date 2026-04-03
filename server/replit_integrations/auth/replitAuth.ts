@@ -69,7 +69,7 @@ export async function setupAuth(app: Express) {
 
   app.post("/api/auth/signup", async (req, res) => {
     try {
-      const { email: rawEmail, password, displayName, phone } = req.body;
+      const { email: rawEmail, password, displayName, phone, cashTag } = req.body;
       if (!rawEmail || !password || !displayName) {
         return res.status(400).json({ message: "Email, password, and display name are required" });
       }
@@ -94,6 +94,8 @@ export async function setupAuth(app: Express) {
         return res.status(400).json({ message: "An account with this email already exists" });
       }
 
+      const cleanCashTag = cashTag ? (cashTag.startsWith("$") ? cashTag : `$${cashTag}`).trim() : null;
+
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await authStorage.upsertUser({
         email,
@@ -101,6 +103,7 @@ export async function setupAuth(app: Express) {
         firstName: displayName,
         lastName: null,
         phone: cleanPhone,
+        cashTag: cleanCashTag,
         profileImageUrl: null,
       });
 

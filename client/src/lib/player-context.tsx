@@ -183,40 +183,69 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         const source = ctx.createMediaElementSource(audio);
         sourceNodeRef.current = source;
 
-        const bass = ctx.createBiquadFilter();
-        bass.type = "lowshelf";
-        bass.frequency.value = 200;
-        bass.gain.value = 6;
-
         const subBass = ctx.createBiquadFilter();
         subBass.type = "peaking";
-        subBass.frequency.value = 80;
-        subBass.Q.value = 1.0;
-        subBass.gain.value = 4;
+        subBass.frequency.value = 60;
+        subBass.Q.value = 0.8;
+        subBass.gain.value = 10;
+
+        const bass = ctx.createBiquadFilter();
+        bass.type = "lowshelf";
+        bass.frequency.value = 250;
+        bass.gain.value = 9;
+
+        const warmth = ctx.createBiquadFilter();
+        warmth.type = "peaking";
+        warmth.frequency.value = 150;
+        warmth.Q.value = 0.7;
+        warmth.gain.value = 7;
 
         const lowMid = ctx.createBiquadFilter();
         lowMid.type = "peaking";
-        lowMid.frequency.value = 400;
-        lowMid.Q.value = 0.7;
-        lowMid.gain.value = 1;
+        lowMid.frequency.value = 500;
+        lowMid.Q.value = 0.6;
+        lowMid.gain.value = 2;
+
+        const mid = ctx.createBiquadFilter();
+        mid.type = "peaking";
+        mid.frequency.value = 1000;
+        mid.Q.value = 0.5;
+        mid.gain.value = 1;
 
         const highMid = ctx.createBiquadFilter();
         highMid.type = "peaking";
         highMid.frequency.value = 3000;
-        highMid.Q.value = 0.7;
-        highMid.gain.value = -1;
+        highMid.Q.value = 0.8;
+        highMid.gain.value = -3;
 
         const presence = ctx.createBiquadFilter();
-        presence.type = "highshelf";
-        presence.frequency.value = 8000;
-        presence.gain.value = 1;
+        presence.type = "peaking";
+        presence.frequency.value = 5000;
+        presence.Q.value = 0.7;
+        presence.gain.value = 2;
 
-        source.connect(bass);
-        bass.connect(subBass);
-        subBass.connect(lowMid);
-        lowMid.connect(highMid);
+        const airBand = ctx.createBiquadFilter();
+        airBand.type = "highshelf";
+        airBand.frequency.value = 10000;
+        airBand.gain.value = -2;
+
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.value = -18;
+        compressor.knee.value = 12;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.003;
+        compressor.release.value = 0.15;
+
+        source.connect(subBass);
+        subBass.connect(bass);
+        bass.connect(warmth);
+        warmth.connect(lowMid);
+        lowMid.connect(mid);
+        mid.connect(highMid);
         highMid.connect(presence);
-        presence.connect(ctx.destination);
+        presence.connect(airBand);
+        airBand.connect(compressor);
+        compressor.connect(ctx.destination);
       } catch (e) {
         console.warn("Web Audio EQ not available, using direct playback");
       }

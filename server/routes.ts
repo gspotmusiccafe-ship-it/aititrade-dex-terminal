@@ -2298,12 +2298,14 @@ export async function registerRoutes(
       const tradeUser = await storage.getUser(userId);
       const tradeBuyerEmail = tradeUser?.email || "";
       const tradeBuyerName = (tradeUser?.firstName ? `${tradeUser.firstName}${tradeUser.lastName ? ' ' + tradeUser.lastName : ''}` : tradeUser?.email?.split("@")[0] || "TRADER").toUpperCase();
+      const tradeBuyerCashTag = tradeUser?.cashTag || "";
 
       const [order] = await db.insert(orders).values({
         trackId,
         trackingNumber: trackingNum,
         buyerEmail: tradeBuyerEmail,
         buyerName: tradeBuyerName,
+        buyerCashTag: tradeBuyerCashTag,
         unitPrice: parsedAmount.toString(),
         creatorCredit: ceoPct.toFixed(2),
         creatorCreditAmount: ceoTake.toString(),
@@ -2364,6 +2366,7 @@ export async function registerRoutes(
       const buyer = await storage.getUser(userId);
       const buyerEmail = buyer?.email || "";
       const buyerName = (buyer?.firstName ? `${buyer.firstName}${buyer.lastName ? ' ' + buyer.lastName : ''}` : buyer?.email?.split("@")[0] || "BUYER").toUpperCase();
+      const buyerCashTag = buyer?.cashTag || "";
 
       const [artist] = await db.select().from(artists).where(eq(artists.id, track.artistId));
 
@@ -2372,6 +2375,7 @@ export async function registerRoutes(
         trackingNumber: trackingNum,
         buyerEmail,
         buyerName,
+        buyerCashTag,
         unitPrice: SONG_PRICE.toString(),
         creatorCredit: "1.00",
         creatorCreditAmount: SONG_PRICE.toString(),
@@ -4544,15 +4548,17 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         .where(eq(tracks.id, order.trackId!));
 
       let buyerUserId = order.buyerEmail || "";
+      let buyerCashTag = order.buyerCashTag || "";
       if (order.buyerEmail) {
         const [buyerUser] = await db.select().from(users).where(eq(users.email, order.buyerEmail)).limit(1);
         if (buyerUser) {
           buyerUserId = buyerUser.id;
+          buyerCashTag = buyerUser.cashTag || buyerCashTag;
         }
       }
 
       const startMbbp = 1.01;
-      await enqueueTrader(order.id, buyerUserId, order.trackId!, parsedAmount, startMbbp);
+      await enqueueTrader(order.id, buyerUserId, order.trackId!, parsedAmount, startMbbp, buyerCashTag);
       const settlementTriggered = await checkAndTriggerSettlement();
 
       console.log(`[CONFIRM] Admin confirmed payment for order ${orderId} — $${parsedAmount} — START MBBP: $${startMbbp} — trader must ENTER POSITION to lock live price`);

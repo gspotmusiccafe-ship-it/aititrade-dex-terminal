@@ -629,6 +629,7 @@ export interface SettlementOffer {
   queueId: string;
   orderId: string;
   userId: string;
+  cashTag: string | null;
   trackId: string;
   buyIn: number;
   portalName: string;
@@ -649,6 +650,7 @@ export async function enqueueTrader(
   trackId: string,
   buyIn: number,
   lockedMbbpPrice?: number,
+  cashTag?: string,
 ): Promise<void> {
   const portal = getPortalForPrice(buyIn);
   const liveMbbp = lockedMbbpPrice || liveEngine.mbbp;
@@ -665,6 +667,7 @@ export async function enqueueTrader(
   await db.insert(settlementQueue).values({
     orderId,
     userId,
+    cashTag: cashTag || null,
     trackId,
     buyIn: buyIn.toString(),
     portalName: portal.name,
@@ -677,7 +680,7 @@ export async function enqueueTrader(
     queuePosition: nextPos,
   });
 
-  console.log(`[GOVERNOR] Trader enqueued: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | LOCKED MBBP: $${liveMbbp.toFixed(4)} | Settle At: $${settlementOffer}`);
+  console.log(`[GOVERNOR] Trader enqueued: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | LOCKED MBBP: $${liveMbbp.toFixed(4)} | Settle At: $${settlementOffer} | CashTag: ${cashTag || "NONE"}`);
 }
 
 export async function getGrossIntake(): Promise<number> {
@@ -894,6 +897,7 @@ export async function getTraderPositions(userId: string): Promise<SettlementOffe
       queueId: p.id,
       orderId: p.orderId,
       userId: p.userId,
+      cashTag: p.cashTag || null,
       trackId: p.trackId,
       buyIn,
       portalName: p.portalName || "NANO_SAFE",
@@ -967,6 +971,7 @@ export async function getSettlementDashboard(): Promise<{
       queueId: p.id,
       orderId: p.orderId,
       userId: p.userId,
+      cashTag: p.cashTag || null,
       trackId: p.trackId,
       buyIn,
       portalName: p.portalName || "NANO_SAFE",

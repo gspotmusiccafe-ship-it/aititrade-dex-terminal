@@ -22,4 +22,23 @@ export function registerAuthRoutes(app: Express): void {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
+
+  app.post("/api/auth/update-cashtag", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { cashTag } = req.body;
+      if (!cashTag || !cashTag.trim()) {
+        return res.status(400).json({ message: "Cash App tag is required" });
+      }
+      const cleanTag = cashTag.trim().startsWith("$") ? cashTag.trim() : `$${cashTag.trim()}`;
+      const { db } = await import("../../db");
+      const { users } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await db.update(users).set({ cashTag: cleanTag }).where(eq(users.id, userId));
+      res.json({ success: true, cashTag: cleanTag });
+    } catch (error) {
+      console.error("Error updating cash tag:", error);
+      res.status(500).json({ message: "Failed to update Cash App tag" });
+    }
+  });
 }

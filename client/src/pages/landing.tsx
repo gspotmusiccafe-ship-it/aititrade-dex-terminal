@@ -181,13 +181,14 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [phone, setPhone] = useState("");
+  const [cashTag, setCashTag] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const signupMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName, phone }),
+    mutationFn: () => apiRequest("POST", "/api/auth/signup", { email, password, displayName, phone, cashTag: cashTag.startsWith("$") ? cashTag : cashTag ? `$${cashTag}` : "" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       queryClient.invalidateQueries({ queryKey: ["/api/user/membership"] });
@@ -278,6 +279,24 @@ function AuthForm({ mode: initialMode = "login", onSuccess }: { mode?: "login" |
                   onChange={(e) => setPhone(e.target.value)}
                   className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-3 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
                   data-testid="input-phone"
+                />
+              </div>
+            </div>
+          )}
+
+          {mode === "signup" && (
+            <div className="space-y-1">
+              <label htmlFor="cashTag" className="text-[9px] text-emerald-500/60 uppercase">Cash App Tag</label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-500/40" />
+                <input
+                  id="cashTag"
+                  type="text"
+                  placeholder="$YourCashTag"
+                  value={cashTag}
+                  onChange={(e) => setCashTag(e.target.value)}
+                  className="w-full bg-black border border-emerald-500/20 text-emerald-400 text-xs pl-9 pr-3 py-2 placeholder:text-emerald-500/20 focus:border-emerald-500/50 focus:outline-none font-mono"
+                  data-testid="input-cashtag"
                 />
               </div>
             </div>

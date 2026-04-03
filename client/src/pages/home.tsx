@@ -1604,7 +1604,7 @@ export default function HomePage() {
               ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 0 })} TO SETTLE
             </span>
           )}
-          <span className="ml-auto text-zinc-600 text-[8px] sm:text-[10px]">{user?.firstName || user?.email || "PUBLIC"}</span>
+          <span className="ml-auto text-zinc-600 text-[8px] sm:text-[10px]">{user?.firstName || user?.email || "PUBLIC"}{user?.cashTag && <span className="text-green-400 ml-1">{user.cashTag}</span>}</span>
         </div>
       </div>
 

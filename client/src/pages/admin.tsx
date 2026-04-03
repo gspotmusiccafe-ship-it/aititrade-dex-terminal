@@ -4299,6 +4299,9 @@ function PendingPaymentsSection() {
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
                 <span className="text-[8px] sm:text-[10px] text-white font-bold truncate">{order.userEmail || order.userId?.slice(0, 12)}</span>
+                {order.buyerCashTag && (
+                  <span className="text-[8px] sm:text-[10px] text-green-400 font-bold">{order.buyerCashTag}</span>
+                )}
                 <span className="text-[7px] sm:text-[8px] px-1 py-0.5 border text-yellow-400 border-yellow-500/30 bg-yellow-500/10 font-bold">PENDING</span>
                 <span className="text-[8px] sm:text-[10px] text-lime-400 font-bold">${parseFloat(order.unitPrice || "0").toFixed(2)}</span>
                 <span className="text-[7px] sm:text-[8px] text-zinc-500">{order.portalName || order.trackTitle}</span>
@@ -4507,6 +4510,7 @@ function SettlementGovernorTab() {
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       <span className={`text-xs sm:text-sm font-black flex-shrink-0 ${idx === 0 ? "text-emerald-400" : idx < 3 ? "text-lime-400" : "text-zinc-400"}`}>#{entry.queuePosition}</span>
                       <span className="text-[8px] sm:text-[10px] text-white font-bold truncate">{entry.userId.slice(0, 8)}..</span>
+                      {entry.cashTag && <span className="text-[8px] sm:text-[10px] text-green-400 font-bold">{entry.cashTag}</span>}
                       <span className={`text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 border font-bold flex-shrink-0 ${
                         entry.status === "OFFERED" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" :
                         entry.status === "HOLDING" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
