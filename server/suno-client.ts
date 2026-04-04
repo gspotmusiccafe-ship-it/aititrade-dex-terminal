@@ -2,9 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 
-const KIE_SUBMIT_URL = "https://api.kie.ai/v1/suno/submit";
-const KIE_FETCH_URL = "https://api.kie.ai/v1/suno/fetch/";
-
+const KIE_API_BASE = "https://api.kie.ai/api/v1";
 const LEGACY_SUNO_API_BASE = "https://api.sunoapi.org/api/v1";
 
 function getKieApiKey(): string | null {
@@ -56,19 +54,23 @@ export interface SunoTaskResult {
 
 async function kieSubmit(options: SunoGenerateOptions): Promise<string> {
   const body: any = {
+    customMode: true,
+    model: options.model || "V4",
     prompt: options.prompt.slice(0, 5000),
-    tags: options.style.slice(0, 1000),
-    mv: options.model || "chirp-v3-5",
-    make_instrumental: options.instrumental || false,
+    style: options.style.slice(0, 1000),
+    title: options.title.slice(0, 80),
+    instrumental: options.instrumental || false,
   };
 
-  if (options.title) {
-    body.title = options.title.slice(0, 80);
+  if (options.vocalGender) {
+    body.vocalGender = options.vocalGender;
   }
 
-  console.log(`[SUNO/KIE] Submitting: "${options.title}" tags="${options.style}" instrumental=${options.instrumental}`);
+  body.callBackUrl = "https://localhost/callback";
 
-  const res = await fetch(KIE_SUBMIT_URL, {
+  console.log(`[SUNO/KIE] Submitting: "${options.title}" style="${options.style}" instrumental=${options.instrumental}`);
+
+  const res = await fetch(`${KIE_API_BASE}/generate`, {
     method: "POST",
     headers: kieHeaders(),
     body: JSON.stringify(body),
@@ -81,9 +83,9 @@ async function kieSubmit(options: SunoGenerateOptions): Promise<string> {
   }
 
   const data: any = await res.json();
-  const taskId = data?.data?.task_id;
+  const taskId = data?.data?.taskId;
   if (!taskId) {
-    console.error(`[SUNO/KIE] No task_id in response:`, JSON.stringify(data));
+    console.error(`[SUNO/KIE] No taskId in response:`, JSON.stringify(data));
     throw new Error("Kie AI API did not return a task ID");
   }
 
@@ -92,7 +94,7 @@ async function kieSubmit(options: SunoGenerateOptions): Promise<string> {
 }
 
 async function kieCheckStatus(taskId: string): Promise<SunoTaskResult> {
-  const res = await fetch(`${KIE_FETCH_URL}${taskId}`, {
+  const res = await fetch(`${KIE_API_BASE}/generate/record-info?taskId=${taskId}`, {
     method: "GET",
     headers: kieHeaders(),
   });
@@ -103,45 +105,25 @@ async function kieCheckStatus(taskId: string): Promise<SunoTaskResult> {
   }
 
   const data: any = await res.json();
-  const taskData = data?.data;
-  const status = taskData?.status || "PENDING";
+  const status = data?.data?.status || "PENDING";
+  const sunoData = data?.data?.response?.sunoData;
 
   const songs: SunoSongResult[] = [];
-
-  if (status === "SUCCESS") {
-    if (taskData?.audio_url) {
+  if (Array.isArray(sunoData)) {
+    for (const s of sunoData) {
       songs.push({
-        id: taskId,
-        audioUrl: taskData.audio_url,
-        streamAudioUrl: taskData.stream_audio_url || taskData.audio_url,
-        imageUrl: taskData.image_url || "",
-        title: taskData.title || "",
-        tags: taskData.tags || "",
-        duration: taskData.duration || 0,
+        id: s.id || "",
+        audioUrl: s.audioUrl || "",
+        streamAudioUrl: s.streamAudioUrl || "",
+        imageUrl: s.imageUrl || "",
+        title: s.title || "",
+        tags: s.tags || "",
+        duration: s.duration || 0,
       });
-    }
-
-    if (Array.isArray(taskData?.clips)) {
-      for (const clip of taskData.clips) {
-        songs.push({
-          id: clip.id || taskId,
-          audioUrl: clip.audio_url || "",
-          streamAudioUrl: clip.stream_audio_url || clip.audio_url || "",
-          imageUrl: clip.image_url || "",
-          title: clip.title || "",
-          tags: clip.tags || "",
-          duration: clip.duration || 0,
-        });
-      }
     }
   }
 
-  const mappedStatus = status === "SUCCESS" ? "SUCCESS"
-    : status === "FAILED" ? "FAILED"
-    : status === "PROCESSING" || status === "IN_PROGRESS" ? "IN_PROGRESS"
-    : "PENDING";
-
-  return { taskId, status: mappedStatus as any, songs };
+  return { taskId, status, songs };
 }
 
 async function legacySubmit(options: SunoGenerateOptions): Promise<string> {
