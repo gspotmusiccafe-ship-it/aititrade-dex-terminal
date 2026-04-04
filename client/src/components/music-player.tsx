@@ -106,11 +106,11 @@ export function MusicPlayer() {
 
   if (!currentTrack) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 flex items-center justify-center gap-4 py-3 font-mono z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
-        <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover opacity-80" />
+      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-emerald-500/30 flex items-center justify-center gap-4 py-3 font-mono z-50" style={{ boxShadow: "0 -4px 30px rgba(34,197,94,0.08), 0 -1px 0 rgba(52,211,153,0.2)" }}>
+        <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover" style={{ filter: "drop-shadow(0 0 8px rgba(34,197,94,0.4))" }} />
         <div className="text-center">
-          <p className="text-xs font-black text-green-400 tracking-wider" data-testid="text-radio-station-name">97.7 THE FLAME | AITITRADE EXCHANGE</p>
-          <p className="text-[10px] text-zinc-600 font-bold">AWAITING SIGNAL...</p>
+          <p className="text-xs font-black text-lime-400 tracking-wider drop-shadow-[0_0_8px_rgba(132,204,22,0.4)]" data-testid="text-radio-station-name">97.7 THE FLAME | AITITRADE EXCHANGE</p>
+          <p className="text-[10px] text-amber-400 font-bold animate-pulse">AWAITING SIGNAL...</p>
         </div>
       </div>
     );
@@ -118,17 +118,18 @@ export function MusicPlayer() {
 
   if (autoplayBlocked) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-zinc-800 z-50 flex items-center justify-center gap-4 px-4 py-3 font-mono shadow-[0_-10px_40px_rgba(0,0,0,0.9)]"
+      <div className="fixed bottom-0 left-0 right-0 bg-zinc-950 border-t border-emerald-500/30 z-50 flex items-center justify-center gap-4 px-4 py-3 font-mono cursor-pointer"
+        style={{ boxShadow: "0 -4px 30px rgba(34,197,94,0.08), 0 -1px 0 rgba(52,211,153,0.2)" }}
         onClick={resumeAutoplay}
         role="button"
         data-testid="button-tune-in"
       >
-        <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover opacity-80" />
+        <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover" style={{ filter: "drop-shadow(0 0 8px rgba(34,197,94,0.4))" }} />
         <div className="text-center">
-          <p className="text-xs font-black text-green-400 tracking-wider" data-testid="text-radio-blocked-name">97.7 THE FLAME</p>
-          <p className="text-[10px] text-zinc-500 font-bold">{currentTrack.title.toUpperCase()} — {currentTrack.artist?.name}</p>
+          <p className="text-xs font-black text-lime-400 tracking-wider drop-shadow-[0_0_8px_rgba(132,204,22,0.4)]" data-testid="text-radio-blocked-name">97.7 THE FLAME</p>
+          <p className="text-[10px] text-amber-400 font-bold">{currentTrack.title.toUpperCase()} — <span className="text-cyan-400">{currentTrack.artist?.name}</span></p>
         </div>
-        <Play className="h-4 w-4 text-green-400 animate-pulse" />
+        <Play className="h-4 w-4 text-lime-400 animate-pulse drop-shadow-[0_0_8px_rgba(132,204,22,0.6)]" />
       </div>
     );
   }
@@ -310,48 +311,53 @@ export function MusicPlayer() {
         </div>
       )}
       <div className="fixed bottom-0 left-0 right-0 z-50 font-mono" data-testid="music-player">
-        <div className="w-full bg-black border-y border-zinc-800 py-1 overflow-hidden whitespace-nowrap select-none" data-testid="singing-ticker">
+        <div className="w-full bg-black border-y border-emerald-500/30 py-1 overflow-hidden whitespace-nowrap select-none" data-testid="singing-ticker">
           <div className="animate-marquee inline-flex items-center text-xs md:text-sm">
-            <span className="text-green-500 font-black px-4 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
-            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: LIVE [STABLE]</span>
-            <span className="text-green-400 font-black px-4 border-l border-zinc-800 uppercase">CASH APP ONLY: $AITITRADEBROKERAGE</span>
-            <span className="text-red-600 font-bold px-4 border-l border-zinc-800 animate-pulse">SIGNAL: 97.7 THE FLAME LIVE</span>
-            <span className="text-zinc-600 px-4 border-l border-zinc-800">KINETIC SPLIT — G. SMOOTH MANDATE</span>
-            <span className="text-green-500 font-black px-4 border-l border-zinc-800 uppercase italic">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
-            <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
-            <span className="text-green-500 font-black px-8 uppercase italic">AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
-            <span className="text-white font-mono px-4 border-l border-zinc-800">SPOTIFY_ASSET_LOAD: LIVE [STABLE]</span>
-            <span className="text-green-400 font-black px-4 border-l border-zinc-800 uppercase">CASH APP ONLY: $AITITRADEBROKERAGE</span>
-            <span className="text-red-600 font-bold px-4 border-l border-zinc-800 animate-pulse">SIGNAL: 97.7 THE FLAME LIVE</span>
-            <span className="text-zinc-600 px-4 border-l border-zinc-800">KINETIC SPLIT — G. SMOOTH MANDATE</span>
-            <span className="text-green-500 font-black px-4 border-l border-zinc-800 uppercase italic">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
-            <span className="text-white font-mono px-4 border-l border-zinc-800">NO PAYPAL :: DIRECT SETTLEMENT</span>
+            <span className="text-lime-400 font-black px-4 uppercase italic drop-shadow-[0_0_8px_rgba(132,204,22,0.5)]">⚡ AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
+            <span className="text-cyan-400 font-mono font-bold px-4 border-l border-emerald-500/20">ASSET_LOAD: LIVE [STABLE]</span>
+            <span className="text-green-400 font-black px-4 border-l border-emerald-500/20 uppercase drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]">💰 CASH APP ONLY: $AITITRADEBROKERAGE</span>
+            <span className="text-red-500 font-bold px-4 border-l border-emerald-500/20 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">● SIGNAL: 97.7 THE FLAME LIVE</span>
+            <span className="text-amber-400 font-bold px-4 border-l border-emerald-500/20">KINETIC SPLIT — G. SMOOTH MANDATE</span>
+            <span className="text-emerald-400 font-black px-4 border-l border-emerald-500/20 uppercase italic drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
+            <span className="text-violet-400 font-bold px-4 border-l border-emerald-500/20">NO PAYPAL :: DIRECT SETTLEMENT</span>
+            <span className="text-lime-400 font-black px-8 uppercase italic drop-shadow-[0_0_8px_rgba(132,204,22,0.5)]">⚡ AITITRADE GLOBAL FLOOR: $1,000.00 ▲</span>
+            <span className="text-cyan-400 font-mono font-bold px-4 border-l border-emerald-500/20">ASSET_LOAD: LIVE [STABLE]</span>
+            <span className="text-green-400 font-black px-4 border-l border-emerald-500/20 uppercase drop-shadow-[0_0_6px_rgba(34,197,94,0.4)]">💰 CASH APP ONLY: $AITITRADEBROKERAGE</span>
+            <span className="text-red-500 font-bold px-4 border-l border-emerald-500/20 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]">● SIGNAL: 97.7 THE FLAME LIVE</span>
+            <span className="text-amber-400 font-bold px-4 border-l border-emerald-500/20">KINETIC SPLIT — G. SMOOTH MANDATE</span>
+            <span className="text-emerald-400 font-black px-4 border-l border-emerald-500/20 uppercase italic drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]">STIMULATION ACTIVE :: BLESSING POOL: ONLINE</span>
+            <span className="text-violet-400 font-bold px-4 border-l border-emerald-500/20">NO PAYPAL :: DIRECT SETTLEMENT</span>
           </div>
         </div>
-      <div className="bg-zinc-950 border-t border-zinc-800 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]">
+      <div className="bg-zinc-950 border-t border-emerald-500/30 shadow-[0_-10px_40px_rgba(0,0,0,0.9)]" style={{ boxShadow: "0 -4px 30px rgba(34,197,94,0.08), 0 -1px 0 rgba(52,211,153,0.2)" }}>
         <div className="px-2 sm:px-4 py-3 flex items-center gap-2 sm:gap-4 max-w-screen-2xl mx-auto overflow-hidden">
 
-          <div className="relative group w-20 h-20 md:w-24 md:h-24 border-2 border-zinc-800 rounded-sm overflow-hidden flex-shrink-0" data-testid="deck-a-art">
+          <div className="relative group w-20 h-20 md:w-24 md:h-24 border-2 border-emerald-500/40 rounded-sm overflow-hidden flex-shrink-0" style={{ boxShadow: isPlaying ? "0 0 20px rgba(34,197,94,0.25), 0 0 40px rgba(34,197,94,0.08)" : "0 0 8px rgba(34,197,94,0.1)" }} data-testid="deck-a-art">
             {currentTrack.coverImage ? (
               <img src={currentTrack.coverImage} alt={currentTrack.title} className={`w-full h-full object-cover ${isPlaying ? "animate-[spin_8s_linear_infinite]" : ""}`} />
             ) : (
-              <div className={`w-full h-full bg-emerald-500/10 flex items-center justify-center ${isPlaying ? "animate-[spin_8s_linear_infinite]" : ""}`}>
-                <span className="text-emerald-400 text-2xl font-black">{currentTrack.title[0]}</span>
+              <div className={`w-full h-full bg-gradient-to-br from-emerald-900/40 via-black to-lime-900/30 flex items-center justify-center ${isPlaying ? "animate-[spin_8s_linear_infinite]" : ""}`}>
+                <span className="text-emerald-400 text-2xl font-black drop-shadow-[0_0_12px_rgba(52,211,153,0.6)]">{currentTrack.title[0]}</span>
               </div>
             )}
             <div className="absolute inset-0 bg-green-500/10 mix-blend-color pointer-events-none" />
+            {isPlaying && <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-lime-400 to-emerald-500 animate-pulse" />}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start mb-1.5">
               <div className="min-w-0 flex-1">
                 <h2 className="text-white font-black italic text-base md:text-xl tracking-tighter uppercase truncate" data-testid="text-current-track-title">
-                  {currentTrack.title.toUpperCase()} <span className="text-green-500 not-italic text-xs md:text-sm">// ASSET_ACTIVE</span>
+                  {currentTrack.title.toUpperCase()} <span className="text-lime-400 not-italic text-xs md:text-sm drop-shadow-[0_0_6px_rgba(132,204,22,0.5)]">// ASSET_ACTIVE</span>
                 </h2>
-                <p className="text-zinc-500 font-mono text-[9px] md:text-[10px] uppercase tracking-widest truncate max-w-full overflow-hidden" data-testid="text-current-track-artist">
-                  {currentTrack.artist?.name} | TICKER: {ticker} | MARKET: AITITRADE_SOVEREIGN
+                <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-widest truncate max-w-full overflow-hidden" data-testid="text-current-track-artist">
+                  <span className="text-amber-400 font-bold">{currentTrack.artist?.name}</span>
+                  <span className="text-emerald-500/40"> | </span>
+                  <span className="text-cyan-400">TICKER: <span className="text-lime-400 font-bold">{ticker}</span></span>
+                  <span className="text-emerald-500/40"> | </span>
+                  <span className="text-emerald-400">MARKET: <span className="text-emerald-300 font-bold">AITITRADE_SOVEREIGN</span></span>
                   {broadcast && broadcastUptime > 0 && (
-                    <span className="text-zinc-600 ml-2">
+                    <span className="text-amber-400/70 ml-2">
                       UPTIME: {Math.floor(broadcastUptime / 3600)}:{String(Math.floor((broadcastUptime % 3600) / 60)).padStart(2, "0")}:{String(broadcastUptime % 60).padStart(2, "0")}
                     </span>
                   )}
@@ -359,27 +365,32 @@ export function MusicPlayer() {
               </div>
               <div className="text-right flex-shrink-0 ml-3 hidden md:block">
                 <div className="flex items-center gap-1.5 justify-end">
-                  <p className="text-[10px] text-green-400 font-extrabold" data-testid="text-radio-station-label">97.7 THE FLAME</p>
+                  <Radio className="h-3 w-3 text-red-500 animate-pulse" />
+                  <p className="text-[10px] text-lime-400 font-extrabold drop-shadow-[0_0_6px_rgba(132,204,22,0.5)]" data-testid="text-radio-station-label">97.7 THE FLAME</p>
                   {broadcast && (
-                    <span className="text-[8px] font-extrabold text-red-400 bg-red-500/10 border border-red-500/30 px-1 animate-pulse" data-testid="badge-broadcast-live">● LIVE</span>
+                    <span className="text-[8px] font-extrabold text-red-400 bg-red-500/15 border border-red-500/40 px-1.5 py-0.5 animate-pulse drop-shadow-[0_0_8px_rgba(239,68,68,0.4)]" data-testid="badge-broadcast-live">● LIVE</span>
                   )}
                   {broadcast && (
-                    <span className="text-[8px] font-bold text-amber-400/70" data-testid="text-show-name">{getShowLabel(currentShow)}</span>
+                    <span className="text-[8px] font-bold text-amber-400" data-testid="text-show-name">{getShowLabel(currentShow)}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 justify-end mt-0.5">
-                  <span className={`w-2 h-2 rounded-full ${
-                    signalStrength === "GREEN" ? "bg-lime-400 shadow-[0_0_6px_rgba(132,204,22,0.6)]" :
-                    signalStrength === "RED" ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] animate-pulse" :
-                    "bg-zinc-600"
+                  <span className={`w-2.5 h-2.5 rounded-full ${
+                    signalStrength === "GREEN" ? "bg-lime-400 shadow-[0_0_10px_rgba(132,204,22,0.8)]" :
+                    signalStrength === "RED" ? "bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-pulse" :
+                    "bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.5)]"
                   }`} data-testid="signal-dot" />
-                  <p className="text-lg font-black text-green-400 animate-pulse" data-testid="signal-strength-display">SIGNAL: {signalStrength === "GREEN" ? "100%" : signalStrength === "RED" ? "WEAK" : "—"}</p>
+                  <p className={`text-lg font-black animate-pulse ${
+                    signalStrength === "GREEN" ? "text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.6)]" :
+                    signalStrength === "RED" ? "text-red-400 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]" :
+                    "text-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]"
+                  }`} data-testid="signal-strength-display">SIGNAL: {signalStrength === "GREEN" ? "100%" : signalStrength === "RED" ? "WEAK" : "TUNING..."}</p>
                 </div>
               </div>
             </div>
 
             <div className="w-full flex items-center gap-2 mb-2">
-              <span className="text-[10px] text-zinc-500 font-bold w-8 text-right">{formatTime(progress)}</span>
+              <span className="text-[10px] text-emerald-500 font-bold w-8 text-right">{formatTime(progress)}</span>
               <Slider
                 value={[progress]}
                 max={duration || 100}
@@ -388,7 +399,7 @@ export function MusicPlayer() {
                 className="flex-1"
                 data-testid="slider-progress"
               />
-              <span className="text-[10px] text-zinc-500 font-bold w-8">{formatTime(duration)}</span>
+              <span className="text-[10px] text-emerald-500 font-bold w-8">{formatTime(duration)}</span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 h-9 md:h-10">
@@ -399,7 +410,7 @@ export function MusicPlayer() {
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-emerald-400" onClick={prevTrack} data-testid="button-prev-track">
                   <SkipBack className="h-3.5 w-3.5" />
                 </Button>
-                <button onClick={togglePlay} className="h-8 w-8 rounded-full bg-lime-500 hover:bg-lime-400 text-black flex items-center justify-center transition-colors shadow-lg shadow-lime-500/30" data-testid="button-play-pause">
+                <button onClick={togglePlay} className="h-8 w-8 rounded-full bg-lime-500 hover:bg-lime-400 text-black flex items-center justify-center transition-colors" style={{ boxShadow: isPlaying ? "0 0 16px rgba(132,204,22,0.6), 0 0 30px rgba(132,204,22,0.2)" : "0 0 8px rgba(132,204,22,0.3)" }} data-testid="button-play-pause">
                   {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
                 </button>
                 <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-emerald-400" onClick={nextTrack} data-testid="button-next-track">
@@ -412,10 +423,11 @@ export function MusicPlayer() {
 
               <button
                 onClick={() => window.open("https://cash.app/app/JNXGD73", "_blank", "noopener,noreferrer")}
-                className="bg-zinc-900 border border-zinc-700 text-green-500 font-bold text-[9px] sm:text-[10px] hover:bg-green-900 hover:text-white transition-all uppercase flex items-center justify-center gap-1 min-w-0 px-1"
+                className="bg-emerald-900/30 border border-emerald-500/40 text-lime-400 font-bold text-[9px] sm:text-[10px] hover:bg-emerald-800/40 hover:text-white transition-all uppercase flex items-center justify-center gap-1 min-w-0 px-1"
+                style={{ boxShadow: "0 0 10px rgba(34,197,94,0.15)" }}
                 data-testid="button-quick-acquire"
               >
-                <DollarSign className="h-3 w-3 flex-shrink-0" /> <span className="truncate">Open Brokerage</span>
+                <DollarSign className="h-3 w-3 flex-shrink-0 text-green-400" /> <span className="truncate">Open Brokerage</span>
               </button>
 
               <div className="hidden md:flex items-center gap-1">
@@ -439,9 +451,9 @@ export function MusicPlayer() {
                 </button>
               </div>
 
-              <div className="hidden md:flex bg-black border border-green-900 items-center justify-center overflow-hidden relative">
-                <span className="text-green-500 font-mono text-[9px] whitespace-nowrap animate-[marquee_12s_linear_infinite] absolute" data-testid="text-floor-data">
-                  FLOOR_CEILING: $1,000.00 | KINETIC SPLIT PROTECTED | $AITITRADEBROKERAGE
+              <div className="hidden md:flex bg-black/80 border border-emerald-500/30 items-center justify-center overflow-hidden relative" style={{ boxShadow: "inset 0 0 15px rgba(34,197,94,0.05)" }}>
+                <span className="text-emerald-400 font-mono text-[9px] font-bold whitespace-nowrap animate-[marquee_12s_linear_infinite] absolute drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]" data-testid="text-floor-data">
+                  ⚡ FLOOR_CEILING: $1,000.00 | KINETIC SPLIT PROTECTED | $AITITRADEBROKERAGE ⚡
                 </span>
               </div>
             </div>
@@ -449,14 +461,14 @@ export function MusicPlayer() {
 
           <div className="hidden md:flex flex-col items-center gap-1 flex-shrink-0">
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" title="Queue" className={`h-7 w-7 ${queueOpen ? "text-emerald-400" : "text-zinc-600"} hover:text-emerald-400 relative`} onClick={() => setQueueOpen(!queueOpen)} data-testid="button-toggle-queue">
+              <Button variant="ghost" size="icon" title="Queue" className={`h-7 w-7 ${queueOpen ? "text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]" : "text-emerald-500/50"} hover:text-emerald-400 relative`} onClick={() => setQueueOpen(!queueOpen)} data-testid="button-toggle-queue">
                 <ListMusic className="h-3.5 w-3.5" />
                 {upcomingTracks.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 text-[8px] text-black flex items-center justify-center font-bold">{upcomingTracks.length > 9 ? "9+" : upcomingTracks.length}</span>
+                  <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 text-[8px] text-black flex items-center justify-center font-bold shadow-[0_0_6px_rgba(52,211,153,0.6)]">{upcomingTracks.length > 9 ? "9+" : upcomingTracks.length}</span>
                 )}
               </Button>
               {hasYouTubeVideo && (
-                <Button variant="ghost" size="icon" className={`h-7 w-7 ${videoOpen ? "text-lime-400" : "text-zinc-600"} hover:text-lime-400`} onClick={() => setVideoOpen(!videoOpen)} title="YouTube Video" data-testid="button-toggle-video">
+                <Button variant="ghost" size="icon" className={`h-7 w-7 ${videoOpen ? "text-lime-400 drop-shadow-[0_0_6px_rgba(132,204,22,0.5)]" : "text-cyan-500/50"} hover:text-lime-400`} onClick={() => setVideoOpen(!videoOpen)} title="YouTube Video" data-testid="button-toggle-video">
                   {videoOpen ? <VideoOff className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
                 </Button>
               )}
@@ -465,7 +477,7 @@ export function MusicPlayer() {
                   artistId={currentTrack.artist.id}
                   artistName={currentTrack.artist.name}
                   trigger={
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-yellow-400" title="Tip Asset Architect" data-testid="button-tip-player">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-amber-500/50 hover:text-yellow-400 hover:drop-shadow-[0_0_6px_rgba(250,204,21,0.5)]" title="Tip Asset Architect" data-testid="button-tip-player">
                       <DollarSign className="h-3.5 w-3.5" />
                     </Button>
                   }
@@ -474,20 +486,20 @@ export function MusicPlayer() {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`h-7 w-7 ${orderMakerOpen ? "text-green-400" : "text-zinc-600"} hover:text-green-400`}
+                className={`h-7 w-7 ${orderMakerOpen ? "text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.6)]" : "text-lime-500/50"} hover:text-lime-400`}
                 onClick={() => setOrderMakerOpen(!orderMakerOpen)}
                 title="Direct Order Maker"
                 data-testid="button-toggle-order-maker"
               >
                 <Zap className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-violet-400" title="Buy Song" onClick={() => setShowBuyDialog(true)} data-testid="button-buy-current">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-violet-500/50 hover:text-violet-400 hover:drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]" title="Buy Song" onClick={() => setShowBuyDialog(true)} data-testid="button-buy-current">
                 <ShoppingCart className="h-3.5 w-3.5" />
               </Button>
             </div>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-emerald-400" onClick={() => setVolume(volume === 0 ? 0.7 : 0)} data-testid="button-volume-toggle">
-                {volume === 0 ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-500/50 hover:text-emerald-400" onClick={() => setVolume(volume === 0 ? 0.7 : 0)} data-testid="button-volume-toggle">
+                {volume === 0 ? <VolumeX className="h-3.5 w-3.5 text-red-400" /> : <Volume2 className="h-3.5 w-3.5" />}
               </Button>
               <Slider value={[volume * 100]} max={100} step={1} onValueChange={([value]) => setVolume(value / 100)} className="w-16" data-testid="slider-volume" />
             </div>
