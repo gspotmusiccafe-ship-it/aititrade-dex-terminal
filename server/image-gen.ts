@@ -135,28 +135,179 @@ async function tryPlaceholderArt(options: ArtGenerateOptions): Promise<ArtResult
 }
 
 function generateArtSVG(prompt: string): string {
-  const words = prompt.split(" ").slice(0, 4).join(" ").toUpperCase();
   const seed = prompt.split("").reduce((a, c) => a + c.charCodeAt(0), 0);
-  const hue1 = seed % 360;
-  const hue2 = (seed * 7) % 360;
+  let s = seed;
+  const rng = () => { s = (s * 16807 + 0) % 2147483647; return s / 2147483647; };
+
+  const titleMatch = prompt.match(/"([^"]+)"/);
+  const title = titleMatch ? titleMatch[1].toUpperCase() : prompt.split(" ").slice(0, 3).join(" ").toUpperCase();
+
+  const palettes = [
+    { bg1: [10, 85, 6], bg2: [280, 70, 8], accent: [142, 80, 50], glow: [142, 100, 45] },
+    { bg1: [220, 80, 6], bg2: [260, 70, 10], accent: [200, 90, 55], glow: [210, 100, 50] },
+    { bg1: [340, 70, 8], bg2: [20, 60, 10], accent: [45, 95, 55], glow: [30, 100, 50] },
+    { bg1: [270, 75, 6], bg2: [310, 60, 10], accent: [280, 80, 60], glow: [290, 90, 55] },
+    { bg1: [0, 0, 4], bg2: [160, 50, 8], accent: [142, 70, 50], glow: [160, 80, 40] },
+    { bg1: [200, 80, 5], bg2: [240, 60, 12], accent: [50, 90, 55], glow: [40, 100, 50] },
+  ];
+  const pal = palettes[seed % palettes.length];
+
+  const layouts = ["waveform", "geometric", "particles", "rings", "terrain"];
+  const layout = layouts[Math.floor(rng() * layouts.length)];
+
+  let elements = "";
+
+  const hsl = (h: number, s: number, l: number) => `hsl(${h},${s}%,${l}%)`;
+
+  if (layout === "waveform") {
+    for (let w = 0; w < 5; w++) {
+      const baseY = 350 + w * 70;
+      const amp = 30 + rng() * 80;
+      const freq = 2 + rng() * 6;
+      const opacity = 0.15 + rng() * 0.25;
+      let pts = "";
+      for (let x = 0; x <= 1024; x += 4) {
+        const y = baseY + Math.sin((x / 1024) * Math.PI * freq + w * 1.5) * amp + Math.sin((x / 1024) * Math.PI * (freq * 2.3) + w) * (amp * 0.3);
+        pts += `${x},${y.toFixed(1)} `;
+      }
+      const waveHue = pal.accent[0] + w * 15;
+      elements += `<polyline points="${pts}" fill="none" stroke="${hsl(waveHue, 70, 45 + w * 5)}" stroke-width="${1.5 + rng() * 2}" opacity="${opacity}" />`;
+    }
+    for (let i = 0; i < 60; i++) {
+      const x = rng() * 1024;
+      const y = 250 + rng() * 500;
+      const r = 1 + rng() * 3;
+      elements += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="${hsl(pal.accent[0], 60, 50 + rng() * 30)}" opacity="${0.2 + rng() * 0.5}" />`;
+    }
+  } else if (layout === "geometric") {
+    for (let ring = 0; ring < 6; ring++) {
+      const sides = 3 + Math.floor(rng() * 6);
+      const radius = 80 + ring * 55;
+      const rot = rng() * 360;
+      let pts = "";
+      for (let i = 0; i <= sides; i++) {
+        const angle = (i / sides) * Math.PI * 2 + (rot * Math.PI / 180);
+        const px = 512 + Math.cos(angle) * radius;
+        const py = 480 + Math.sin(angle) * radius;
+        pts += `${px.toFixed(0)},${py.toFixed(0)} `;
+      }
+      elements += `<polygon points="${pts}" fill="none" stroke="${hsl(pal.accent[0] + ring * 20, 60, 30 + ring * 5)}" stroke-width="${1 + rng()}" opacity="${0.3 + rng() * 0.3}" />`;
+    }
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const len = 200 + rng() * 200;
+      const x2 = 512 + Math.cos(angle) * len;
+      const y2 = 480 + Math.sin(angle) * len;
+      elements += `<line x1="512" y1="480" x2="${x2.toFixed(0)}" y2="${y2.toFixed(0)}" stroke="${hsl(pal.accent[0], 40, 25)}" stroke-width="0.5" opacity="0.3" />`;
+    }
+    for (let i = 0; i < 40; i++) {
+      const angle = rng() * Math.PI * 2;
+      const dist = 50 + rng() * 380;
+      const x = 512 + Math.cos(angle) * dist;
+      const y = 480 + Math.sin(angle) * dist;
+      const r = 1 + rng() * 4;
+      elements += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="${hsl(pal.glow[0], 80, 50 + rng() * 20)}" opacity="${0.3 + rng() * 0.5}" />`;
+    }
+  } else if (layout === "particles") {
+    for (let i = 0; i < 200; i++) {
+      const x = rng() * 1024;
+      const y = rng() * 1024;
+      const r = 0.5 + rng() * 5;
+      const bright = 30 + rng() * 40;
+      const hueShift = rng() * 60 - 30;
+      elements += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="${hsl(pal.accent[0] + hueShift, 60 + rng() * 30, bright)}" opacity="${0.2 + rng() * 0.6}" />`;
+    }
+    for (let i = 0; i < 15; i++) {
+      const x = rng() * 1024;
+      const y = rng() * 1024;
+      const r = 20 + rng() * 80;
+      elements += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(0)}" fill="${hsl(pal.glow[0], 80, 40)}" opacity="${0.03 + rng() * 0.06}" />`;
+    }
+    for (let i = 0; i < 8; i++) {
+      const x1 = rng() * 1024; const y1 = rng() * 1024;
+      const x2 = x1 + (rng() - 0.5) * 400; const y2 = y1 + (rng() - 0.5) * 400;
+      elements += `<line x1="${x1.toFixed(0)}" y1="${y1.toFixed(0)}" x2="${x2.toFixed(0)}" y2="${y2.toFixed(0)}" stroke="${hsl(pal.accent[0], 50, 30)}" stroke-width="0.5" opacity="0.2" />`;
+    }
+  } else if (layout === "rings") {
+    for (let i = 0; i < 12; i++) {
+      const r = 40 + i * 35;
+      const sw = 0.5 + rng() * 2;
+      const dash = Math.floor(4 + rng() * 20);
+      const gap = Math.floor(2 + rng() * 10);
+      elements += `<circle cx="512" cy="480" r="${r}" fill="none" stroke="${hsl(pal.accent[0] + i * 8, 50 + rng() * 30, 25 + i * 3)}" stroke-width="${sw.toFixed(1)}" stroke-dasharray="${dash},${gap}" opacity="${0.2 + rng() * 0.4}" />`;
+    }
+    for (let i = 0; i < 50; i++) {
+      const angle = rng() * Math.PI * 2;
+      const dist = 30 + rng() * 420;
+      const x = 512 + Math.cos(angle) * dist;
+      const y = 480 + Math.sin(angle) * dist;
+      elements += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(0.5 + rng() * 2.5).toFixed(1)}" fill="${hsl(pal.glow[0], 70, 50 + rng() * 20)}" opacity="${0.3 + rng() * 0.5}" />`;
+    }
+  } else {
+    for (let layer = 0; layer < 6; layer++) {
+      let pts = `0,1024 `;
+      const baseY = 900 - layer * 100;
+      for (let x = 0; x <= 1024; x += 16) {
+        const y = baseY - Math.sin((x / 1024) * Math.PI * (2 + rng() * 3)) * (30 + rng() * 60) - rng() * 20;
+        pts += `${x},${y.toFixed(0)} `;
+      }
+      pts += `1024,1024`;
+      const layerLight = 8 + layer * 4;
+      elements += `<polygon points="${pts}" fill="${hsl(pal.accent[0] + layer * 10, 40 + layer * 5, layerLight)}" opacity="${0.4 + layer * 0.08}" />`;
+    }
+    for (let i = 0; i < 30; i++) {
+      const x = rng() * 1024;
+      const y = 50 + rng() * 400;
+      const r = 0.5 + rng() * 2;
+      elements += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="${hsl(pal.glow[0], 60, 60)}" opacity="${0.3 + rng() * 0.5}" />`;
+    }
+  }
+
+  const titleSize = title.length > 20 ? 36 : title.length > 12 ? 48 : 60;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:hsl(${hue1},70%,8%)"/>
-      <stop offset="100%" style="stop-color:hsl(${hue2},60%,12%)"/>
+      <stop offset="0%" style="stop-color:${hsl(pal.bg1[0], pal.bg1[1], pal.bg1[2])}"/>
+      <stop offset="50%" style="stop-color:${hsl((pal.bg1[0] + pal.bg2[0]) / 2, 60, 5)}"/>
+      <stop offset="100%" style="stop-color:${hsl(pal.bg2[0], pal.bg2[1], pal.bg2[2])}"/>
     </linearGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" style="stop-color:hsl(${hue1},100%,50%);stop-opacity:0.15"/>
+    <radialGradient id="glow1" cx="30%" cy="30%" r="60%">
+      <stop offset="0%" style="stop-color:${hsl(pal.glow[0], pal.glow[1], pal.glow[2])};stop-opacity:0.12"/>
       <stop offset="100%" style="stop-color:transparent;stop-opacity:0"/>
     </radialGradient>
+    <radialGradient id="glow2" cx="70%" cy="70%" r="50%">
+      <stop offset="0%" style="stop-color:${hsl(pal.accent[0], pal.accent[1], pal.accent[2])};stop-opacity:0.08"/>
+      <stop offset="100%" style="stop-color:transparent;stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:${hsl(pal.accent[0], 80, 60)}"/>
+      <stop offset="100%" style="stop-color:${hsl(pal.glow[0], 90, 70)}"/>
+    </linearGradient>
+    <filter id="textGlow">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="vignette" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:black;stop-opacity:0.4"/>
+      <stop offset="30%" style="stop-color:black;stop-opacity:0"/>
+      <stop offset="70%" style="stop-color:black;stop-opacity:0"/>
+      <stop offset="100%" style="stop-color:black;stop-opacity:0.5"/>
+    </linearGradient>
   </defs>
   <rect width="1024" height="1024" fill="url(#bg)"/>
-  <circle cx="512" cy="512" r="400" fill="url(#glow)"/>
-  <text x="512" y="480" text-anchor="middle" fill="hsl(${hue1},80%,60%)" font-family="monospace" font-size="42" font-weight="bold" opacity="0.9">${words}</text>
-  <text x="512" y="540" text-anchor="middle" fill="hsl(142,70%,50%)" font-family="monospace" font-size="28" font-weight="bold" opacity="0.6">AITIFY DEX</text>
-  <line x1="200" y1="600" x2="824" y2="600" stroke="hsl(${hue1},60%,40%)" stroke-width="1" opacity="0.3"/>
-  <text x="512" y="640" text-anchor="middle" fill="#555" font-family="monospace" font-size="14">AI GENERATED ASSET</text>
+  <rect width="1024" height="1024" fill="url(#glow1)"/>
+  <rect width="1024" height="1024" fill="url(#glow2)"/>
+  ${elements}
+  <rect width="1024" height="1024" fill="url(#vignette)"/>
+  <line x1="80" y1="140" x2="944" y2="140" stroke="${hsl(pal.accent[0], 40, 25)}" stroke-width="0.5" opacity="0.4"/>
+  <text x="512" y="110" text-anchor="middle" fill="${hsl(pal.accent[0], 50, 40)}" font-family="monospace" font-size="14" letter-spacing="8" opacity="0.6">AITIFY DIGITAL ASSET EXCHANGE</text>
+  <text x="512" y="512" text-anchor="middle" fill="url(#titleGrad)" font-family="monospace" font-size="${titleSize}" font-weight="bold" letter-spacing="3" filter="url(#textGlow)">${title}</text>
+  <line x1="200" y1="550" x2="824" y2="550" stroke="${hsl(pal.accent[0], 50, 30)}" stroke-width="0.5" opacity="0.3"/>
+  <text x="512" y="580" text-anchor="middle" fill="${hsl(pal.accent[0], 40, 40)}" font-family="monospace" font-size="16" letter-spacing="4" opacity="0.5">97.7 THE FLAME</text>
+  <rect x="80" y="920" width="864" height="1" fill="${hsl(pal.accent[0], 30, 20)}" opacity="0.3"/>
+  <text x="100" y="950" fill="${hsl(pal.accent[0], 30, 30)}" font-family="monospace" font-size="11" opacity="0.4">AI GENERATED ASSET</text>
+  <text x="924" y="950" text-anchor="end" fill="${hsl(pal.accent[0], 30, 30)}" font-family="monospace" font-size="11" opacity="0.4">AITIFY-GEN-1</text>
 </svg>`;
 }
 
