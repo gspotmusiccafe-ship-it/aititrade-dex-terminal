@@ -10,6 +10,7 @@ import { db } from "./db";
 import { setupAuth, registerAuthRoutes, isAuthenticated, requireSpotify } from "./replit_integrations/auth";
 import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/client";
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
+import { generateArtwork } from "./image-gen";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
 import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -3691,26 +3692,21 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       console.log(`[ART_GEN] Generating art for: ${trackTitle || "custom"}`);
       console.log(`[ART_GEN] Prompt: ${prompt.slice(0, 80)}...`);
 
-      const dalleRes = await openai.images.generate({
-        model: "dall-e-3",
+      const artResult = await generateArtwork({
         prompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "hd",
+        negativePrompt: "blur, low quality, watermark, text overlay",
+        style: "AUTO",
       });
 
-      const imageUrl = dalleRes.data?.[0]?.url || null;
-      const wholesaleCost = 0.03;
-
-      console.log(`[ART_GEN] Generated: ${imageUrl ? "OK" : "NO_URL"} | Cost: $${wholesaleCost}`);
+      console.log(`[ART_GEN] Generated via ${artResult.engine}: ${artResult.localPath}`);
 
       res.json({
         status: "ART_READY",
-        imageUrl,
+        imageUrl: artResult.localPath,
         asset_class: "AI_GENERATED_ARTWORK",
-        wholesale_cost: wholesaleCost,
+        wholesale_cost: 0.03,
         prompt,
-        model: "dall-e-3",
+        model: artResult.engine,
         aspect_ratio: aspectRatio || "1:1",
         trackTitle: trackTitle || null,
         timestamp: new Date().toISOString(),
@@ -3769,15 +3765,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       }
 
       try {
-        const dalleRes = await openai.images.generate({
-          model: "dall-e-3",
+        const artResult = await generateArtwork({
           prompt: artPrompt,
-          n: 1,
-          size: "1024x1024",
-          quality: "hd",
+          negativePrompt: "blur, low quality, watermark, text overlay",
+          style: "AUTO",
         });
-        visualAsset = { imageUrl: dalleRes.data?.[0]?.url || null, status: "ART_READY" };
-        console.log(`[DIRECT_PUSH] Artwork generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
+        visualAsset = { imageUrl: artResult.localPath, status: "ART_READY" };
+        console.log(`[DIRECT_PUSH] Artwork generated via ${artResult.engine}: ${artResult.localPath}`);
       } catch (e: any) {
         console.error(`[DIRECT_PUSH] Art failed: ${e.message}`);
       }
@@ -4005,20 +3999,17 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const { prompt } = req.body;
       const artPrompt = prompt || "Cinematic album artwork, neon green and obsidian, high-tech digital asset trading floor style";
 
-      console.log(`[ART-GEN] Generating artwork via DALL-E`);
+      console.log(`[ART-GEN] Generating artwork...`);
 
-      const dalleRes = await openai.images.generate({
-        model: "dall-e-3",
+      const artResult = await generateArtwork({
         prompt: artPrompt,
-        n: 1,
-        size: "1024x1024",
-        quality: "hd",
+        negativePrompt: "blur, low quality, watermark, text overlay",
+        style: "AUTO",
       });
 
-      const imageUrl = dalleRes.data?.[0]?.url || null;
-      console.log(`[ART-GEN] DALL-E result: ${imageUrl ? "OK" : "NO_URL"}`);
+      console.log(`[ART-GEN] Result via ${artResult.engine}: ${artResult.localPath}`);
 
-      res.json({ imageUrl, status: imageUrl ? "READY" : "NO_URL" });
+      res.json({ imageUrl: artResult.localPath, status: "READY", engine: artResult.engine });
     } catch (error: any) {
       console.error("[ART-GEN] Error:", error.message);
       res.status(500).json({ message: error.message || "Art generation failed" });
@@ -4118,15 +4109,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       } else {
         try {
           const artPrompt = visualPrompt || `Cinematic trading floor style album art for "${title}", neon green and obsidian, high-tech digital asset style`;
-          const dalleRes = await openai.images.generate({
-            model: "dall-e-3",
+          const artResult = await generateArtwork({
             prompt: artPrompt,
-            n: 1,
-            size: "1024x1024",
-            quality: "hd",
+            negativePrompt: "blur, low quality, watermark, text overlay",
+            style: "AUTO",
           });
-          visualAsset = { imageUrl: dalleRes.data?.[0]?.url || null, status: "ART_READY" };
-          console.log(`[PUSHER] DALL-E generated: ${visualAsset.imageUrl ? "OK" : "NO_URL"}`);
+          visualAsset = { imageUrl: artResult.localPath, status: "ART_READY" };
+          console.log(`[PUSHER] Art generated via ${artResult.engine}: ${artResult.localPath}`);
         } catch (e: any) {
           console.error(`[PUSHER] Art gen error:`, e.message);
           visualAsset.status = "GEN_ERROR";
