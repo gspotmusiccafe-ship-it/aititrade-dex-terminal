@@ -113,19 +113,7 @@ export async function registerRoutes(
   seed81Portals().then(() => loadPortalsFromDb()).catch(err => console.error("[PORTALS] Init load failed:", err));
   initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
 
-  (async () => {
-    try {
-      await db.delete(settlementQueue);
-      await db.delete(settlementCycles);
-      await db.delete(orders);
-
-      await db.update(tracks).set({ salesCount: 0 });
-
-      console.log(`[STARTUP PURGE] All orders, queue, and cycles cleared — fresh start for testing`);
-    } catch (err) {
-      console.error("[STARTUP PURGE] Error:", err);
-    }
-  })();
+  console.log(`[STARTUP] Data persistence ON — orders, stakes, and sales preserved across restarts`);
 
   app.get("/uploads/:filename", async (req: any, res) => {
     try {
@@ -148,6 +136,7 @@ export async function registerRoutes(
         ".png": "image/png",
         ".webp": "image/webp",
         ".gif": "image/gif",
+        ".svg": "image/svg+xml",
       };
       res.set("Content-Type", mimeTypes[ext] || "application/octet-stream");
       res.set("Content-Disposition", "inline");

@@ -1155,55 +1155,96 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
   const colors = ["#34d399", "#fbbf24", "#a3e635"];
   const labels = terms.map(t => `${t.days}d`);
 
-  const buildPath = (term: { days: number; returnPct: number }) => {
+  const [breathPhase, setBreathPhase] = useState(0);
+  const frameRef = useRef<number>(0);
+  const lastFrameRef = useRef<number>(0);
+
+  useEffect(() => {
+    let running = true;
+    const tick = (now: number) => {
+      if (!running) return;
+      if (now - lastFrameRef.current > 80) {
+        lastFrameRef.current = now;
+        setBreathPhase(now);
+      }
+      frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+    return () => { running = false; cancelAnimationFrame(frameRef.current); };
+  }, []);
+
+  const breathVal = Math.sin((breathPhase / 2000) * Math.PI * 2) * 0.5 + 0.5;
+  const breathScale = 0.92 + breathVal * 0.08;
+
+  const buildPath = (term: { days: number; returnPct: number }, termIdx: number) => {
     const totalEarn = amount * term.returnPct / 100;
     const dailyEarn = totalEarn / term.days;
     const points: string[] = [];
-    const step = Math.max(1, Math.floor(term.days / 30));
-    for (let d = 0; d <= term.days; d += step) {
-      const earned = dailyEarn * d;
+    const numPts = 40;
+    const phaseOffset = termIdx * 0.7;
+    for (let i = 0; i <= numPts; i++) {
+      const d = (i / numPts) * term.days;
+      const baseEarned = dailyEarn * d;
+      const progress = d / term.days;
+      const oscillation = Math.sin((breathPhase / (1800 + termIdx * 400)) * Math.PI * 2 + progress * Math.PI * 3 + phaseOffset) * (totalEarn * 0.04 * progress);
+      const earned = baseEarned + oscillation;
       const x = PAD_L + (d / maxDays) * gW;
-      const y = PAD_T + gH - (earned / maxEarn) * gH;
+      const y = PAD_T + gH - (Math.max(0, earned) / maxEarn) * gH;
       points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
     }
-    const finalX = PAD_L + (term.days / maxDays) * gW;
-    const finalY = PAD_T + gH - (totalEarn / maxEarn) * gH;
-    points.push(`${finalX.toFixed(1)},${finalY.toFixed(1)}`);
     return points.join(" ");
   };
 
-  const buildAreaPath = (term: { days: number; returnPct: number }, color: string) => {
+  const buildAreaPath = (term: { days: number; returnPct: number }, termIdx: number) => {
     const totalEarn = amount * term.returnPct / 100;
     const dailyEarn = totalEarn / term.days;
     const pts: [number, number][] = [];
-    const step = Math.max(1, Math.floor(term.days / 30));
-    for (let d = 0; d <= term.days; d += step) {
-      const earned = dailyEarn * d;
+    const numPts = 40;
+    const phaseOffset = termIdx * 0.7;
+    for (let i = 0; i <= numPts; i++) {
+      const d = (i / numPts) * term.days;
+      const baseEarned = dailyEarn * d;
+      const progress = d / term.days;
+      const oscillation = Math.sin((breathPhase / (1800 + termIdx * 400)) * Math.PI * 2 + progress * Math.PI * 3 + phaseOffset) * (totalEarn * 0.04 * progress);
+      const earned = baseEarned + oscillation;
       const x = PAD_L + (d / maxDays) * gW;
-      const y = PAD_T + gH - (earned / maxEarn) * gH;
+      const y = PAD_T + gH - (Math.max(0, earned) / maxEarn) * gH;
       pts.push([x, y]);
     }
-    const finalX = PAD_L + (term.days / maxDays) * gW;
-    const finalY = PAD_T + gH - (totalEarn / maxEarn) * gH;
-    pts.push([finalX, finalY]);
 
+    const lastX = pts[pts.length - 1][0];
     const baseline = PAD_T + gH;
-    let d = `M ${PAD_L},${baseline}`;
-    pts.forEach(([x, y]) => { d += ` L ${x},${y}`; });
-    d += ` L ${finalX},${baseline} Z`;
-    return d;
+    let pathD = `M ${PAD_L},${baseline}`;
+    pts.forEach(([x, y]) => { pathD += ` L ${x},${y}`; });
+    pathD += ` L ${lastX},${baseline} Z`;
+    return pathD;
   };
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
 
+  const dailyGrowthLabel = selectedTerm
+    ? (() => {
+        const t = terms.find(t => t.days === selectedTerm);
+        if (!t) return "";
+        const daily = (amount * t.returnPct / 100) / t.days;
+        return `$${daily.toFixed(3)}/DAY`;
+      })()
+    : "";
+
   return (
     <div className="mb-1.5 border border-zinc-800 bg-zinc-950/60 p-1.5" data-testid={`stake-graph-${amount}`}>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">DAILY EARNINGS CURVE</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">GROWTH OSCILLATOR</span>
+          <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[0], opacity: breathScale, boxShadow: `0 0 ${3 + breathVal * 4}px ${colors[0]}` }} />
+        </div>
         <div className="flex items-center gap-2">
+          {dailyGrowthLabel && (
+            <span className="text-[6px] sm:text-[7px] text-emerald-400 font-black">{dailyGrowthLabel}</span>
+          )}
           {terms.map((t, idx) => (
             <span key={t.days} className="flex items-center gap-0.5">
-              <span className="inline-block w-1.5 h-1.5" style={{ backgroundColor: colors[idx] }} />
+              <span className="inline-block w-1.5 h-1.5" style={{ backgroundColor: colors[idx], opacity: 0.7 + breathVal * 0.3 }} />
               <span className={`text-[6px] sm:text-[7px] font-bold ${selectedTerm === t.days ? "text-white" : "text-zinc-500"}`}>{labels[idx]}</span>
             </span>
           ))}
@@ -1236,11 +1277,12 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
 
         {terms.map((term, idx) => {
           const isActive = selectedTerm === term.days || selectedTerm === null;
-          const opacity = isActive ? 0.15 : 0.04;
+          const baseOpacity = isActive ? 0.15 : 0.04;
+          const opacity = baseOpacity * breathScale;
           return (
             <path
               key={`area-${term.days}`}
-              d={buildAreaPath(term, colors[idx])}
+              d={buildAreaPath(term, idx)}
               fill={colors[idx]}
               opacity={opacity}
             />
@@ -1252,7 +1294,7 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
           return (
             <polyline
               key={`line-${term.days}`}
-              points={buildPath(term)}
+              points={buildPath(term, idx)}
               fill="none"
               stroke={colors[idx]}
               strokeWidth={isActive ? "1.2" : "0.5"}
@@ -1264,12 +1306,16 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
         {terms.map((term, idx) => {
           const totalEarn = amount * term.returnPct / 100;
           const x = PAD_L + (term.days / maxDays) * gW;
-          const y = PAD_T + gH - (totalEarn / maxEarn) * gH;
+          const baseY = PAD_T + gH - (totalEarn / maxEarn) * gH;
+          const dotBounce = Math.sin((breathPhase / (1500 + idx * 300)) * Math.PI * 2) * 1.5;
+          const y = baseY + dotBounce;
           const isActive = selectedTerm === term.days || selectedTerm === null;
+          const dotR = isActive ? (2 + breathVal * 1) : 1.5;
           return (
             <g key={`dot-${term.days}`} opacity={isActive ? 1 : 0.3}>
-              <circle cx={x} cy={y} r="2" fill={colors[idx]} />
-              <text x={x} y={y - 3} textAnchor="middle" fill={colors[idx]} fontSize="3.5" fontWeight="bold" fontFamily="monospace">
+              <circle cx={x} cy={y} r={dotR + 2} fill={colors[idx]} opacity={0.15 + breathVal * 0.1} />
+              <circle cx={x} cy={y} r={dotR} fill={colors[idx]} />
+              <text x={x} y={y - 4} textAnchor="middle" fill={colors[idx]} fontSize="3.5" fontWeight="bold" fontFamily="monospace">
                 ${totalEarn.toFixed(0)}
               </text>
             </g>
@@ -1278,7 +1324,7 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
       </svg>
       <div className="flex items-center justify-between mt-0.5">
         <span className="text-[6px] text-zinc-600">DAY 0</span>
-        <span className="text-[6px] text-zinc-600">PER-DAY SCALE — LINEAR ACCRUAL</span>
+        <span className="text-[6px] text-emerald-600" style={{ opacity: 0.6 + breathVal * 0.4 }}>ACTIVE GROWTH SIMULATION</span>
         <span className="text-[6px] text-zinc-600">DAY 180</span>
       </div>
     </div>
