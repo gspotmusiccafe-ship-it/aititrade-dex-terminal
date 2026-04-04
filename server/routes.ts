@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { generateArtwork } from "./image-gen";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -114,6 +114,14 @@ export async function registerRoutes(
   initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
 
   console.log(`[STARTUP] Data persistence ON — orders, stakes, and sales preserved across restarts`);
+
+  db.update(masteringRequests)
+    .set({ status: "pending", adminNotes: "Auto-reset: server restarted while processing" })
+    .where(eq(masteringRequests.status, "in_progress"))
+    .then((result) => {
+      console.log("[STARTUP] Reset stuck mastering requests (in_progress → pending)");
+    })
+    .catch((err) => console.error("[STARTUP] Mastering reset error:", err));
 
   app.get("/uploads/:filename", async (req: any, res) => {
     try {
@@ -3225,17 +3233,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const ffmpegArgs = [
         "-i", inputPath,
         "-af", [
-          "highpass=f=30",
-          "lowpass=f=18000",
-          "acompressor=threshold=-18dB:ratio=3:attack=5:release=50:makeup=2dB",
-          "acompressor=threshold=-12dB:ratio=4:attack=2:release=30:makeup=1dB",
-          "equalizer=f=60:t=q:w=1.5:g=2",
-          "equalizer=f=200:t=q:w=2:g=-1",
-          "equalizer=f=3000:t=q:w=1.5:g=1.5",
-          "equalizer=f=8000:t=q:w=2:g=2",
-          "equalizer=f=12000:t=q:w=1.5:g=1",
-          "alimiter=limit=0.95:level=false",
-          "loudnorm=I=-14:TP=-1:LRA=11:print_format=json",
+          "highpass=f=35",
+          "lowpass=f=17500",
+          "equalizer=f=200:t=q:w=2:g=-1.5",
+          "equalizer=f=400:t=q:w=1.5:g=-0.5",
+          "equalizer=f=3000:t=q:w=2:g=1",
+          "equalizer=f=10000:t=q:w=1.5:g=0.5",
+          "acompressor=threshold=-14dB:ratio=2.5:attack=10:release=80:makeup=1dB",
+          "alimiter=limit=0.92:level=false",
+          "loudnorm=I=-14:TP=-1.5:LRA=9:print_format=json",
         ].join(","),
         "-ar", "44100",
         "-sample_fmt", "s16",
@@ -4025,7 +4031,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       }
 
       const member = await db.select().from(trustMembers).where(eq(trustMembers.userId, userId)).limit(1);
-      if (member.length === 0) {
+      let tm = member.length > 0 ? member[0] : null;
+      let outstanding = tm ? parseFloat(tm.outstandingBalance || "475.00") : 500.00;
+
+      if (!tm && !adminUser[0].isAdmin) {
         return res.status(403).json({
           error: "PROMISSORY NOTE ACTIVATION REQUIRED",
           message: "You must be a trust member to push assets. Activate your $25 down payment.",
@@ -4033,17 +4042,14 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         });
       }
 
-      const tm = member[0];
-      const outstanding = parseFloat(tm.outstandingBalance || "475.00");
-
-      if (outstanding <= 0) {
+      if (tm && outstanding <= 0 && !adminUser[0].isAdmin) {
         return res.status(403).json({
           error: "NOTE FULLY AMORTIZED",
           message: "Your promissory note is fully paid. Contact admin to renew.",
         });
       }
 
-      console.log(`[PUSHER] ${userId} pushing asset: "${title}" | Trust: ${tm.trustId} | Balance: $${outstanding}`);
+      console.log(`[PUSHER] ${userId} pushing asset: "${title}" | Trust: ${tm?.trustId || "ADMIN_DIRECT"} | Balance: $${outstanding}`);
 
       let audioAsset = { suno_id: null as string | null, audioUrl: null as string | null, status: "SKIPPED" };
       let visualAsset = { imageUrl: null as string | null, status: "SKIPPED" };
@@ -4134,10 +4140,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         genre: style || "Global Trade Beat",
       }).returning();
 
-      const newBalance = parseFloat((outstanding - totalWholesale).toFixed(2));
-      await db.update(trustMembers)
-        .set({ outstandingBalance: newBalance.toString() })
-        .where(eq(trustMembers.id, tm.id));
+      let newBalance = outstanding;
+      if (tm) {
+        newBalance = parseFloat((outstanding - totalWholesale).toFixed(2));
+        await db.update(trustMembers)
+          .set({ outstandingBalance: newBalance.toString() })
+          .where(eq(trustMembers.id, tm.id));
+      }
 
       console.log(`[PUSHER] Asset ${ticker} LIVE | Track ID: ${newTrack.id} | Wholesale: $${totalWholesale} | New Balance: $${newBalance}`);
 
@@ -4159,11 +4168,11 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           previousBalance: outstanding,
           debit: totalWholesale,
           newBalance,
-          monthlyCommitment: tm.monthlyCommitment,
-          monthsRemaining: tm.monthsRemaining,
-          trustId: tm.trustId,
+          monthlyCommitment: tm?.monthlyCommitment || "0",
+          monthsRemaining: tm?.monthsRemaining || 0,
+          trustId: tm?.trustId || "ADMIN_DIRECT",
         },
-        amortization: `$${tm.monthlyCommitment}/MO × ${tm.monthsRemaining} MONTHS REMAINING`,
+        amortization: tm ? `$${tm.monthlyCommitment}/MO × ${tm.monthsRemaining} MONTHS REMAINING` : "ADMIN DIRECT — NO AMORTIZATION",
         settlement: "https://cash.app/$AITITRADEBROKERAGE",
         timestamp: new Date().toISOString(),
       });
@@ -5764,17 +5773,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const ffmpegArgs = [
         "-i", inputPath,
         "-af", [
-          "highpass=f=30",
-          "lowpass=f=18000",
-          "acompressor=threshold=-18dB:ratio=3:attack=5:release=50:makeup=2dB",
-          "acompressor=threshold=-12dB:ratio=4:attack=2:release=30:makeup=1dB",
-          "equalizer=f=60:t=q:w=1.5:g=2",
-          "equalizer=f=200:t=q:w=2:g=-1",
-          "equalizer=f=3000:t=q:w=1.5:g=1.5",
-          "equalizer=f=8000:t=q:w=2:g=2",
-          "equalizer=f=12000:t=q:w=1.5:g=1",
-          "alimiter=limit=0.95:level=false",
-          "loudnorm=I=-14:TP=-1:LRA=11:print_format=json",
+          "highpass=f=35",
+          "lowpass=f=17500",
+          "equalizer=f=200:t=q:w=2:g=-1.5",
+          "equalizer=f=400:t=q:w=1.5:g=-0.5",
+          "equalizer=f=3000:t=q:w=2:g=1",
+          "equalizer=f=10000:t=q:w=1.5:g=0.5",
+          "acompressor=threshold=-14dB:ratio=2.5:attack=10:release=80:makeup=1dB",
+          "alimiter=limit=0.92:level=false",
+          "loudnorm=I=-14:TP=-1.5:LRA=9:print_format=json",
         ].join(","),
         "-ar", "44100",
         "-sample_fmt", "s16",

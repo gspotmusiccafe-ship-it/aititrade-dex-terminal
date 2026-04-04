@@ -41,6 +41,7 @@ import {
   type Tip,
   type InsertTip,
   autopilotPlaylists,
+  orders,
   type AutopilotPlaylist,
 } from "@shared/schema";
 import { db } from "./db";
@@ -561,6 +562,9 @@ export class DatabaseStorage implements IStorage {
     await db.delete(likedTracks).where(eq(likedTracks.trackId, trackId));
     await db.delete(playlistTracks).where(eq(playlistTracks.trackId, trackId));
     await db.delete(recentlyPlayed).where(eq(recentlyPlayed.trackId, trackId));
+    await db.delete(autopilotPlaylists).where(eq(autopilotPlaylists.trackId, trackId));
+    await db.delete(masteringRequests).where(eq(masteringRequests.trackId, trackId));
+    await db.delete(orders).where(eq(orders.trackId, trackId));
     await db.delete(tracks).where(eq(tracks.id, trackId));
   }
 

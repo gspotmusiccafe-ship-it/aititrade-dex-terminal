@@ -509,33 +509,38 @@ function LiveTradeFeed() {
   }, [assetList]);
 
   return (
-    <div className="border border-emerald-500/30 bg-black font-mono shadow-lg shadow-emerald-500/5">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-emerald-500/20 bg-emerald-500/10">
+    <div className="border border-emerald-500/40 bg-black font-mono" style={{ boxShadow: "0 0 20px rgba(34,197,94,0.08), inset 0 0 30px rgba(34,197,94,0.03)" }}>
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-emerald-500/30 bg-emerald-500/10">
         <div className="flex items-center gap-1.5">
-          <Activity className="h-3 w-3 text-emerald-400 animate-pulse" />
-          <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest">LIVE TRADE FEED</span>
+          <Activity className="h-3 w-3 text-emerald-400 animate-pulse" style={{ filter: "drop-shadow(0 0 4px rgba(52,211,153,0.6))" }} />
+          <span className="text-[8px] sm:text-[9px] text-emerald-400 font-bold tracking-widest" style={{ textShadow: "0 0 8px rgba(52,211,153,0.4)" }}>LIVE TRADE FEED</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shadow-sm shadow-red-500" />
-          <span className="text-[7px] text-red-400 font-bold animate-pulse">LIVE</span>
+          <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" style={{ boxShadow: "0 0 6px rgba(239,68,68,0.8), 0 0 12px rgba(239,68,68,0.4)" }} />
+          <span className="text-[7px] text-red-400 font-bold animate-pulse" style={{ textShadow: "0 0 6px rgba(239,68,68,0.5)" }}>LIVE</span>
         </div>
       </div>
       <div className="max-h-[220px] overflow-hidden">
         {trades.map((trade, i) => (
           <div
             key={trade.id}
-            className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/80 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/10" : "hover:bg-zinc-900/50"}`}
+            className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/80 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/10 border-l-2 border-l-emerald-400" : "hover:bg-zinc-900/50"}`}
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <span className={`px-1 py-0.5 font-extrabold text-[7px] border ${
-                trade.type === "BUY" ? "text-lime-400 border-lime-500/40 bg-lime-500/15 shadow-sm shadow-lime-500/10" : "text-amber-400 border-amber-500/40 bg-amber-500/15 shadow-sm shadow-amber-500/10"
-              }`}>{trade.type}</span>
-              <span className="text-emerald-300/80 font-bold truncate">{trade.trader}</span>
-              <span className="text-lime-400 font-extrabold">{trade.asset}</span>
+              <span className={`px-1.5 py-0.5 font-extrabold text-[7px] border ${
+                trade.type === "BUY"
+                  ? "text-lime-400 border-lime-500/50 bg-lime-500/15"
+                  : "text-amber-400 border-amber-500/50 bg-amber-500/15"
+              }`} style={{
+                boxShadow: trade.type === "BUY" ? "0 0 6px rgba(132,204,22,0.3)" : "0 0 6px rgba(245,158,11,0.3)",
+                textShadow: trade.type === "BUY" ? "0 0 4px rgba(132,204,22,0.5)" : "0 0 4px rgba(245,158,11,0.5)"
+              }}>{trade.type}</span>
+              <span className="text-emerald-300/90 font-bold truncate">{trade.trader}</span>
+              <span className="text-lime-400 font-extrabold" style={{ textShadow: "0 0 6px rgba(132,204,22,0.4)" }}>{trade.asset}</span>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-emerald-500/60 text-[8px] font-bold">{trade.portal}</span>
-              <span className="text-lime-300 font-bold">${trade.amount}</span>
+              <span className="text-cyan-500/70 text-[8px] font-bold">{trade.portal}</span>
+              <span className="text-lime-300 font-bold" style={{ textShadow: "0 0 4px rgba(190,242,100,0.3)" }}>${trade.amount}</span>
               <span className="text-zinc-500 text-[7px] w-16 text-right">{trade.time}</span>
             </div>
           </div>

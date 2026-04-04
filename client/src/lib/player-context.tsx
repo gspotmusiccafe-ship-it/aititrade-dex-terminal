@@ -183,69 +183,70 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         const source = ctx.createMediaElementSource(audio);
         sourceNodeRef.current = source;
 
+        const preGain = ctx.createGain();
+        preGain.gain.value = 0.85;
+
         const subBass = ctx.createBiquadFilter();
         subBass.type = "peaking";
         subBass.frequency.value = 60;
-        subBass.Q.value = 0.8;
-        subBass.gain.value = 10;
+        subBass.Q.value = 1.0;
+        subBass.gain.value = 3;
 
         const bass = ctx.createBiquadFilter();
         bass.type = "lowshelf";
-        bass.frequency.value = 250;
-        bass.gain.value = 9;
+        bass.frequency.value = 200;
+        bass.gain.value = 2;
 
         const warmth = ctx.createBiquadFilter();
         warmth.type = "peaking";
-        warmth.frequency.value = 150;
-        warmth.Q.value = 0.7;
-        warmth.gain.value = 7;
+        warmth.frequency.value = 250;
+        warmth.Q.value = 0.8;
+        warmth.gain.value = 1.5;
 
         const lowMid = ctx.createBiquadFilter();
         lowMid.type = "peaking";
         lowMid.frequency.value = 500;
-        lowMid.Q.value = 0.6;
-        lowMid.gain.value = 2;
+        lowMid.Q.value = 0.7;
+        lowMid.gain.value = 0.5;
 
         const mid = ctx.createBiquadFilter();
         mid.type = "peaking";
         mid.frequency.value = 1000;
         mid.Q.value = 0.5;
-        mid.gain.value = 1;
-
-        const highMid = ctx.createBiquadFilter();
-        highMid.type = "peaking";
-        highMid.frequency.value = 3000;
-        highMid.Q.value = 0.8;
-        highMid.gain.value = -3;
+        mid.gain.value = 0.5;
 
         const presence = ctx.createBiquadFilter();
         presence.type = "peaking";
-        presence.frequency.value = 5000;
-        presence.Q.value = 0.7;
-        presence.gain.value = 2;
+        presence.frequency.value = 4000;
+        presence.Q.value = 0.8;
+        presence.gain.value = 1.5;
 
         const airBand = ctx.createBiquadFilter();
         airBand.type = "highshelf";
         airBand.frequency.value = 10000;
-        airBand.gain.value = -2;
+        airBand.gain.value = 1;
 
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -18;
-        compressor.knee.value = 12;
-        compressor.ratio.value = 4;
-        compressor.attack.value = 0.003;
-        compressor.release.value = 0.15;
+        compressor.threshold.value = -12;
+        compressor.knee.value = 10;
+        compressor.ratio.value = 2.5;
+        compressor.attack.value = 0.010;
+        compressor.release.value = 0.200;
 
-        source.connect(subBass);
+        const postGain = ctx.createGain();
+        postGain.gain.value = 0.95;
+
+        source.connect(preGain);
+        preGain.connect(subBass);
         subBass.connect(bass);
         bass.connect(warmth);
         warmth.connect(lowMid);
         lowMid.connect(mid);
-        mid.connect(highMid);
-        highMid.connect(presence);
+        mid.connect(presence);
         presence.connect(airBand);
         airBand.connect(compressor);
-        compressor.connect(ctx.destination);
+        compressor.connect(postGain);
+        postGain.connect(ctx.destination);
       } catch (e) {
         console.warn("Web Audio EQ not available, using direct playback");
       }
@@ -406,34 +407,30 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     };
 
     const handleStalled = () => {
-      console.warn("[RADIO] Audio stalled — attempting recovery");
+      console.warn("[RADIO] Audio stalled — waiting for recovery");
       if (audioRef.current && audioRef.current.src) {
-        const currentSrc = audioRef.current.src;
         const currentTime = audioRef.current.currentTime;
         setTimeout(() => {
           if (audioRef.current && audioRef.current.paused && !userPausedRef.current) {
-            console.log("[RADIO] Stall recovery — reloading from", Math.floor(currentTime), "s");
-            audioRef.current.src = currentSrc;
+            console.log("[RADIO] Stall recovery — resuming from", Math.floor(currentTime), "s");
+            audioRef.current.load();
             audioRef.current.currentTime = currentTime;
             audioRef.current.play().catch(() => {
               setState(prev => advanceQueue(prev));
             });
           }
-        }, 3000);
+        }, 5000);
       }
     };
 
     const handleWaiting = () => {
       setTimeout(() => {
         if (audioRef.current && audioRef.current.readyState < 3 && !audioRef.current.paused) {
-          console.warn("[RADIO] Extended buffering — forcing reload");
-          const src = audioRef.current.src;
-          const time = audioRef.current.currentTime;
-          audioRef.current.src = src;
-          audioRef.current.currentTime = time;
+          console.warn("[RADIO] Extended buffering — resuming");
+          audioRef.current.load();
           audioRef.current.play().catch(() => {});
         }
-      }, 10000);
+      }, 15000);
     };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);

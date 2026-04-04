@@ -1141,10 +1141,10 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
 
 function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; terms: { days: number; returnPct: number }[]; selectedTerm: number | null }) {
   const W = 200;
-  const H = 60;
+  const H = 70;
   const PAD_L = 24;
   const PAD_B = 12;
-  const PAD_T = 4;
+  const PAD_T = 6;
   const PAD_R = 4;
   const gW = W - PAD_L - PAD_R;
   const gH = H - PAD_T - PAD_B;
@@ -1155,70 +1155,47 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
   const colors = ["#34d399", "#fbbf24", "#a3e635"];
   const labels = terms.map(t => `${t.days}d`);
 
-  const [breathPhase, setBreathPhase] = useState(0);
-  const frameRef = useRef<number>(0);
-  const lastFrameRef = useRef<number>(0);
-
+  const [tick, setTick] = useState(0);
   useEffect(() => {
-    let running = true;
-    const tick = (now: number) => {
-      if (!running) return;
-      if (now - lastFrameRef.current > 80) {
-        lastFrameRef.current = now;
-        setBreathPhase(now);
-      }
-      frameRef.current = requestAnimationFrame(tick);
-    };
-    frameRef.current = requestAnimationFrame(tick);
-    return () => { running = false; cancelAnimationFrame(frameRef.current); };
+    const iv = setInterval(() => setTick(t => t + 1), 1500);
+    return () => clearInterval(iv);
   }, []);
 
-  const breathVal = Math.sin((breathPhase / 2000) * Math.PI * 2) * 0.5 + 0.5;
-  const breathScale = 0.92 + breathVal * 0.08;
-
-  const buildPath = (term: { days: number; returnPct: number }, termIdx: number) => {
-    const totalEarn = amount * term.returnPct / 100;
-    const dailyEarn = totalEarn / term.days;
-    const points: string[] = [];
-    const numPts = 40;
-    const phaseOffset = termIdx * 0.7;
-    for (let i = 0; i <= numPts; i++) {
-      const d = (i / numPts) * term.days;
-      const baseEarned = dailyEarn * d;
-      const progress = d / term.days;
-      const oscillation = Math.sin((breathPhase / (1800 + termIdx * 400)) * Math.PI * 2 + progress * Math.PI * 3 + phaseOffset) * (totalEarn * 0.04 * progress);
-      const earned = baseEarned + oscillation;
-      const x = PAD_L + (d / maxDays) * gW;
-      const y = PAD_T + gH - (Math.max(0, earned) / maxEarn) * gH;
-      points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-    }
-    return points.join(" ");
+  const seed = (s: number) => {
+    let x = Math.sin(s * 9301 + 49297) * 49297;
+    return x - Math.floor(x);
   };
 
-  const buildAreaPath = (term: { days: number; returnPct: number }, termIdx: number) => {
+  const buildCandles = (term: { days: number; returnPct: number }, termIdx: number) => {
     const totalEarn = amount * term.returnPct / 100;
     const dailyEarn = totalEarn / term.days;
-    const pts: [number, number][] = [];
-    const numPts = 40;
-    const phaseOffset = termIdx * 0.7;
-    for (let i = 0; i <= numPts; i++) {
-      const d = (i / numPts) * term.days;
-      const baseEarned = dailyEarn * d;
-      const progress = d / term.days;
-      const oscillation = Math.sin((breathPhase / (1800 + termIdx * 400)) * Math.PI * 2 + progress * Math.PI * 3 + phaseOffset) * (totalEarn * 0.04 * progress);
-      const earned = baseEarned + oscillation;
-      const x = PAD_L + (d / maxDays) * gW;
-      const y = PAD_T + gH - (Math.max(0, earned) / maxEarn) * gH;
-      pts.push([x, y]);
-    }
+    const numCandles = Math.min(term.days <= 45 ? 9 : term.days <= 90 ? 12 : 15, 15);
+    const daysPerCandle = term.days / numCandles;
+    const candleW = (gW * (term.days / maxDays)) / numCandles * 0.6;
 
-    const lastX = pts[pts.length - 1][0];
-    const baseline = PAD_T + gH;
-    let pathD = `M ${PAD_L},${baseline}`;
-    pts.forEach(([x, y]) => { pathD += ` L ${x},${y}`; });
-    pathD += ` L ${lastX},${baseline} Z`;
-    return pathD;
+    const candles: { x: number; open: number; close: number; high: number; low: number; bullish: boolean }[] = [];
+    let prevClose = 0;
+
+    for (let i = 0; i < numCandles; i++) {
+      const dayStart = i * daysPerCandle;
+      const dayEnd = (i + 1) * daysPerCandle;
+      const earnStart = dailyEarn * dayStart;
+      const earnEnd = dailyEarn * dayEnd;
+
+      const jitter = seed(termIdx * 100 + i + tick * 0.01) * 0.3 - 0.15;
+      const open = i === 0 ? 0 : prevClose;
+      const close = earnEnd * (1 + jitter * 0.1);
+      const high = Math.max(open, close) + seed(termIdx * 200 + i) * dailyEarn * daysPerCandle * 0.3;
+      const low = Math.max(0, Math.min(open, close) - seed(termIdx * 300 + i) * dailyEarn * daysPerCandle * 0.2);
+
+      const x = PAD_L + ((dayStart + dayEnd) / 2 / maxDays) * gW;
+      candles.push({ x, open, close, high, low, bullish: close >= open });
+      prevClose = close;
+    }
+    return { candles, candleW };
   };
+
+  const toY = (val: number) => PAD_T + gH - (Math.min(val, maxEarn) / maxEarn) * gH;
 
   const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
 
@@ -1235,8 +1212,8 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
     <div className="mb-1.5 border border-zinc-800 bg-zinc-950/60 p-1.5" data-testid={`stake-graph-${amount}`}>
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1">
-          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">GROWTH OSCILLATOR</span>
-          <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colors[0], opacity: breathScale, boxShadow: `0 0 ${3 + breathVal * 4}px ${colors[0]}` }} />
+          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">YIELD CHART</span>
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 4px #34d399" }} />
         </div>
         <div className="flex items-center gap-2">
           {dailyGrowthLabel && (
@@ -1244,7 +1221,7 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
           )}
           {terms.map((t, idx) => (
             <span key={t.days} className="flex items-center gap-0.5">
-              <span className="inline-block w-1.5 h-1.5" style={{ backgroundColor: colors[idx], opacity: 0.7 + breathVal * 0.3 }} />
+              <span className="inline-block w-1.5 h-1.5" style={{ backgroundColor: colors[idx] }} />
               <span className={`text-[6px] sm:text-[7px] font-bold ${selectedTerm === t.days ? "text-white" : "text-zinc-500"}`}>{labels[idx]}</span>
             </span>
           ))}
@@ -1277,45 +1254,41 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
 
         {terms.map((term, idx) => {
           const isActive = selectedTerm === term.days || selectedTerm === null;
-          const baseOpacity = isActive ? 0.15 : 0.04;
-          const opacity = baseOpacity * breathScale;
+          if (!isActive) return null;
+          const { candles, candleW } = buildCandles(term, idx);
+          const bullColor = colors[idx];
+          const bearColor = idx === 0 ? "#065f46" : idx === 1 ? "#78350f" : "#365314";
           return (
-            <path
-              key={`area-${term.days}`}
-              d={buildAreaPath(term, idx)}
-              fill={colors[idx]}
-              opacity={opacity}
-            />
-          );
-        })}
-
-        {terms.map((term, idx) => {
-          const isActive = selectedTerm === term.days || selectedTerm === null;
-          return (
-            <polyline
-              key={`line-${term.days}`}
-              points={buildPath(term, idx)}
-              fill="none"
-              stroke={colors[idx]}
-              strokeWidth={isActive ? "1.2" : "0.5"}
-              opacity={isActive ? 1 : 0.3}
-            />
+            <g key={`candles-${term.days}`} opacity={isActive ? 1 : 0.3}>
+              {candles.map((c, ci) => {
+                const wickX = c.x;
+                const bodyTop = toY(Math.max(c.open, c.close));
+                const bodyBot = toY(Math.min(c.open, c.close));
+                const bodyH = Math.max(bodyBot - bodyTop, 0.5);
+                const fill = c.bullish ? bullColor : bearColor;
+                const wickColor = c.bullish ? bullColor : bearColor;
+                return (
+                  <g key={ci}>
+                    <line x1={wickX} y1={toY(c.high)} x2={wickX} y2={toY(c.low)} stroke={wickColor} strokeWidth="0.4" />
+                    <rect x={c.x - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={fill} stroke={bullColor} strokeWidth="0.2" rx="0.3" />
+                  </g>
+                );
+              })}
+            </g>
           );
         })}
 
         {terms.map((term, idx) => {
           const totalEarn = amount * term.returnPct / 100;
           const x = PAD_L + (term.days / maxDays) * gW;
-          const baseY = PAD_T + gH - (totalEarn / maxEarn) * gH;
-          const dotBounce = Math.sin((breathPhase / (1500 + idx * 300)) * Math.PI * 2) * 1.5;
-          const y = baseY + dotBounce;
+          const y = toY(totalEarn);
           const isActive = selectedTerm === term.days || selectedTerm === null;
-          const dotR = isActive ? (2 + breathVal * 1) : 1.5;
           return (
-            <g key={`dot-${term.days}`} opacity={isActive ? 1 : 0.3}>
-              <circle cx={x} cy={y} r={dotR + 2} fill={colors[idx]} opacity={0.15 + breathVal * 0.1} />
-              <circle cx={x} cy={y} r={dotR} fill={colors[idx]} />
-              <text x={x} y={y - 4} textAnchor="middle" fill={colors[idx]} fontSize="3.5" fontWeight="bold" fontFamily="monospace">
+            <g key={`target-${term.days}`} opacity={isActive ? 1 : 0.25}>
+              <line x1={PAD_L} y1={y} x2={x} y2={y} stroke={colors[idx]} strokeWidth="0.4" strokeDasharray="1.5,1" opacity="0.5" />
+              <circle cx={x} cy={y} r="2.5" fill="none" stroke={colors[idx]} strokeWidth="0.6" />
+              <circle cx={x} cy={y} r="1" fill={colors[idx]} />
+              <text x={x + 3} y={y + 1.5} fill={colors[idx]} fontSize="3.5" fontWeight="bold" fontFamily="monospace">
                 ${totalEarn.toFixed(0)}
               </text>
             </g>
