@@ -2,17 +2,29 @@ import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 
-const SUNO_API_BASE = "https://api.sunoapi.org/api/v1";
+const KIE_SUBMIT_URL = "https://api.kie.ai/v1/suno/submit";
+const KIE_FETCH_URL = "https://api.kie.ai/v1/suno/fetch/";
 
-function getApiKey(): string {
-  const key = process.env.SUNO_API_KEY;
-  if (!key) throw new Error("SUNO_API_KEY not configured");
-  return key;
+const LEGACY_SUNO_API_BASE = "https://api.sunoapi.org/api/v1";
+
+function getKieApiKey(): string | null {
+  return process.env.KIE_AI_API_KEY || null;
 }
 
-function headers() {
+function getLegacyApiKey(): string | null {
+  return process.env.SUNO_API_KEY || null;
+}
+
+function kieHeaders() {
   return {
-    "Authorization": `Bearer ${getApiKey()}`,
+    "Authorization": `Bearer ${getKieApiKey()}`,
+    "Content-Type": "application/json",
+  };
+}
+
+function legacyHeaders() {
+  return {
+    "Authorization": `Bearer ${getLegacyApiKey()}`,
     "Content-Type": "application/json",
   };
 }
@@ -23,7 +35,7 @@ export interface SunoGenerateOptions {
   title: string;
   instrumental?: boolean;
   vocalGender?: "m" | "f";
-  model?: "V5" | "V4_5PLUS" | "V4_5ALL" | "V4_5" | "V4";
+  model?: "V5" | "V4_5PLUS" | "V4_5ALL" | "V4_5" | "V4" | "chirp-v3-5";
 }
 
 export interface SunoSongResult {
@@ -42,7 +54,97 @@ export interface SunoTaskResult {
   songs?: SunoSongResult[];
 }
 
-export async function sunoGenerate(options: SunoGenerateOptions): Promise<string> {
+async function kieSubmit(options: SunoGenerateOptions): Promise<string> {
+  const body: any = {
+    prompt: options.prompt.slice(0, 5000),
+    tags: options.style.slice(0, 1000),
+    mv: options.model || "chirp-v3-5",
+    make_instrumental: options.instrumental || false,
+  };
+
+  if (options.title) {
+    body.title = options.title.slice(0, 80);
+  }
+
+  console.log(`[SUNO/KIE] Submitting: "${options.title}" tags="${options.style}" instrumental=${options.instrumental}`);
+
+  const res = await fetch(KIE_SUBMIT_URL, {
+    method: "POST",
+    headers: kieHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`[SUNO/KIE] API error ${res.status}: ${errorText}`);
+    throw new Error(`Kie AI API error: ${res.status} - ${errorText}`);
+  }
+
+  const data: any = await res.json();
+  const taskId = data?.data?.task_id;
+  if (!taskId) {
+    console.error(`[SUNO/KIE] No task_id in response:`, JSON.stringify(data));
+    throw new Error("Kie AI API did not return a task ID");
+  }
+
+  console.log(`[SUNO/KIE] Task submitted: ${taskId}`);
+  return taskId;
+}
+
+async function kieCheckStatus(taskId: string): Promise<SunoTaskResult> {
+  const res = await fetch(`${KIE_FETCH_URL}${taskId}`, {
+    method: "GET",
+    headers: kieHeaders(),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Kie AI status check failed: ${res.status} - ${errorText}`);
+  }
+
+  const data: any = await res.json();
+  const taskData = data?.data;
+  const status = taskData?.status || "PENDING";
+
+  const songs: SunoSongResult[] = [];
+
+  if (status === "SUCCESS") {
+    if (taskData?.audio_url) {
+      songs.push({
+        id: taskId,
+        audioUrl: taskData.audio_url,
+        streamAudioUrl: taskData.stream_audio_url || taskData.audio_url,
+        imageUrl: taskData.image_url || "",
+        title: taskData.title || "",
+        tags: taskData.tags || "",
+        duration: taskData.duration || 0,
+      });
+    }
+
+    if (Array.isArray(taskData?.clips)) {
+      for (const clip of taskData.clips) {
+        songs.push({
+          id: clip.id || taskId,
+          audioUrl: clip.audio_url || "",
+          streamAudioUrl: clip.stream_audio_url || clip.audio_url || "",
+          imageUrl: clip.image_url || "",
+          title: clip.title || "",
+          tags: clip.tags || "",
+          duration: clip.duration || 0,
+        });
+      }
+    }
+  }
+
+  const mappedStatus = status === "SUCCESS" ? "SUCCESS"
+    : status === "FAILED" ? "FAILED"
+    : status === "PROCESSING" || status === "IN_PROGRESS" ? "IN_PROGRESS"
+    : "PENDING";
+
+  return { taskId, status: mappedStatus as any, songs };
+}
+
+async function legacySubmit(options: SunoGenerateOptions): Promise<string> {
   const body: any = {
     customMode: true,
     model: options.model || "V4_5",
@@ -56,40 +158,36 @@ export async function sunoGenerate(options: SunoGenerateOptions): Promise<string
     body.vocalGender = options.vocalGender;
   }
 
-  console.log(`[SUNO] Submitting generation: "${options.title}" style="${options.style}" instrumental=${options.instrumental}`);
+  console.log(`[SUNO/LEGACY] Submitting: "${options.title}" style="${options.style}"`);
 
-  const res = await fetch(`${SUNO_API_BASE}/generate`, {
+  const res = await fetch(`${LEGACY_SUNO_API_BASE}/generate`, {
     method: "POST",
-    headers: headers(),
+    headers: legacyHeaders(),
     body: JSON.stringify(body),
   });
 
   if (!res.ok) {
     const errorText = await res.text();
-    console.error(`[SUNO] API error ${res.status}: ${errorText}`);
-    throw new Error(`Suno API error: ${res.status} - ${errorText}`);
+    throw new Error(`Legacy Suno API error: ${res.status} - ${errorText}`);
   }
 
   const data: any = await res.json();
   const taskId = data?.data?.taskId;
-  if (!taskId) {
-    console.error(`[SUNO] No taskId in response:`, JSON.stringify(data));
-    throw new Error("Suno API did not return a task ID");
-  }
+  if (!taskId) throw new Error("Legacy Suno API did not return a task ID");
 
-  console.log(`[SUNO] Task submitted: ${taskId}`);
+  console.log(`[SUNO/LEGACY] Task submitted: ${taskId}`);
   return taskId;
 }
 
-export async function sunoCheckStatus(taskId: string): Promise<SunoTaskResult> {
-  const res = await fetch(`${SUNO_API_BASE}/generate/record-info?taskId=${taskId}`, {
+async function legacyCheckStatus(taskId: string): Promise<SunoTaskResult> {
+  const res = await fetch(`${LEGACY_SUNO_API_BASE}/generate/record-info?taskId=${taskId}`, {
     method: "GET",
-    headers: headers(),
+    headers: legacyHeaders(),
   });
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Suno status check failed: ${res.status} - ${errorText}`);
+    throw new Error(`Legacy Suno status check failed: ${res.status} - ${errorText}`);
   }
 
   const data: any = await res.json();
@@ -114,19 +212,40 @@ export async function sunoCheckStatus(taskId: string): Promise<SunoTaskResult> {
   return { taskId, status, songs };
 }
 
+function useKie(): boolean {
+  return !!getKieApiKey();
+}
+
+export async function sunoGenerate(options: SunoGenerateOptions): Promise<string> {
+  if (useKie()) {
+    return kieSubmit(options);
+  }
+  if (getLegacyApiKey()) {
+    return legacySubmit(options);
+  }
+  throw new Error("No Suno API key configured (KIE_AI_API_KEY or SUNO_API_KEY)");
+}
+
+export async function sunoCheckStatus(taskId: string): Promise<SunoTaskResult> {
+  if (useKie()) {
+    return kieCheckStatus(taskId);
+  }
+  return legacyCheckStatus(taskId);
+}
+
 export async function sunoGenerateAndWait(
   options: SunoGenerateOptions,
   maxWaitMs: number = 180000
 ): Promise<SunoSongResult[]> {
   const taskId = await sunoGenerate(options);
   const startTime = Date.now();
-  const pollInterval = 3000;
+  const pollInterval = 10000;
 
   while (Date.now() - startTime < maxWaitMs) {
     await new Promise(r => setTimeout(r, pollInterval));
 
     const result = await sunoCheckStatus(taskId);
-    console.log(`[SUNO] Poll taskId=${taskId} status=${result.status}`);
+    console.log(`[SUNO] Poll taskId=${taskId} status=${result.status} songs=${result.songs?.length || 0}`);
 
     if (result.status === "SUCCESS" && result.songs && result.songs.length > 0) {
       console.log(`[SUNO] Generation complete: ${result.songs.length} songs ready`);
@@ -157,5 +276,11 @@ export async function downloadSunoAudio(audioUrl: string, localId: string): Prom
 }
 
 export function isSunoConfigured(): boolean {
-  return !!process.env.SUNO_API_KEY;
+  return !!getKieApiKey() || !!getLegacyApiKey();
+}
+
+export function getSunoEngine(): string {
+  if (getKieApiKey()) return "kie-ai";
+  if (getLegacyApiKey()) return "suno-legacy";
+  return "none";
 }
