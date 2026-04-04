@@ -764,8 +764,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   const isSettlementClose = globalRemaining <= 200 && globalRemaining > 50;
   const isSettlementImminent = globalRemaining <= 50 && globalRemaining > 0;
   const isFlashZone = isSettlementImminent;
-  const poolForTrack = settlement?.pools?.find((p: any) => p.trackId === track.id);
-  const isClosed = poolForTrack?.status === "CLOSED";
+  const isClosed = false;
   const isPaperCapHit = false;
   const isHighCapacity = isSettlementClose;
   const remaining = globalRemaining;
@@ -1297,7 +1296,7 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
       </svg>
       <div className="flex items-center justify-between mt-0.5">
         <span className="text-[6px] text-zinc-600">DAY 0</span>
-        <span className="text-[6px] text-emerald-600" style={{ opacity: 0.6 + breathVal * 0.4 }}>ACTIVE GROWTH SIMULATION</span>
+        <span className="text-[6px] text-emerald-600" style={{ opacity: 0.8 }}>ACTIVE GROWTH SIMULATION</span>
         <span className="text-[6px] text-zinc-600">DAY 180</span>
       </div>
     </div>

@@ -845,8 +845,8 @@ export async function traderAcceptOffer(queueId: string, userId: string): Promis
   return {
     success: true,
     payout: offerAmount,
-    multiplier: currentMult,
-    message: `SETTLED — $${offerAmount.toFixed(2)} at ${currentMult}x. Payout via $AITITRADEBROKERAGE.`,
+    multiplier: locked,
+    message: `SETTLED — $${offerAmount.toFixed(2)} at ${locked}x. Payout via $AITITRADEBROKERAGE.`,
   };
 }
 
