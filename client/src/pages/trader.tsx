@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight, CheckCircle, Pause, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const CASH_APP_REFERRAL = "https://cash.app/app/JNXGD73";
 
