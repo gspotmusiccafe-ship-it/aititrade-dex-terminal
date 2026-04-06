@@ -184,57 +184,57 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         sourceNodeRef.current = source;
 
         const preGain = ctx.createGain();
-        preGain.gain.value = 0.85;
+        preGain.gain.value = 0.82;
 
         const subBass = ctx.createBiquadFilter();
         subBass.type = "peaking";
-        subBass.frequency.value = 60;
-        subBass.Q.value = 1.0;
-        subBass.gain.value = 3;
+        subBass.frequency.value = 55;
+        subBass.Q.value = 0.9;
+        subBass.gain.value = 5.5;
 
         const bass = ctx.createBiquadFilter();
         bass.type = "lowshelf";
-        bass.frequency.value = 200;
-        bass.gain.value = 2;
+        bass.frequency.value = 150;
+        bass.gain.value = 4;
 
         const warmth = ctx.createBiquadFilter();
         warmth.type = "peaking";
         warmth.frequency.value = 250;
-        warmth.Q.value = 0.8;
-        warmth.gain.value = 1.5;
+        warmth.Q.value = 0.7;
+        warmth.gain.value = 2;
 
         const lowMid = ctx.createBiquadFilter();
         lowMid.type = "peaking";
         lowMid.frequency.value = 500;
-        lowMid.Q.value = 0.7;
-        lowMid.gain.value = 0.5;
+        lowMid.Q.value = 0.8;
+        lowMid.gain.value = 1;
 
         const mid = ctx.createBiquadFilter();
         mid.type = "peaking";
-        mid.frequency.value = 1000;
-        mid.Q.value = 0.5;
+        mid.frequency.value = 1200;
+        mid.Q.value = 0.6;
         mid.gain.value = 0.5;
 
         const presence = ctx.createBiquadFilter();
         presence.type = "peaking";
-        presence.frequency.value = 4000;
-        presence.Q.value = 0.8;
-        presence.gain.value = 1.5;
+        presence.frequency.value = 3500;
+        presence.Q.value = 0.7;
+        presence.gain.value = 0.5;
 
         const airBand = ctx.createBiquadFilter();
         airBand.type = "highshelf";
         airBand.frequency.value = 10000;
-        airBand.gain.value = 1;
+        airBand.gain.value = -0.5;
 
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -12;
-        compressor.knee.value = 10;
-        compressor.ratio.value = 2.5;
-        compressor.attack.value = 0.010;
-        compressor.release.value = 0.200;
+        compressor.threshold.value = -14;
+        compressor.knee.value = 12;
+        compressor.ratio.value = 3;
+        compressor.attack.value = 0.008;
+        compressor.release.value = 0.150;
 
         const postGain = ctx.createGain();
-        postGain.gain.value = 0.95;
+        postGain.gain.value = 0.92;
 
         source.connect(preGain);
         preGain.connect(subBass);

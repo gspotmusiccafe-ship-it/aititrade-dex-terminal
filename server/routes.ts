@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { generateArtwork } from "./image-gen";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -4626,6 +4626,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
             const qe = queueEntry[0];
             return {
               ...o,
+              queueId: qe?.id || null,
               trackTitle: track?.title || "UNKNOWN",
               coverImage: track?.coverImage || null,
               buyIn,
@@ -4699,6 +4700,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         const qe = queueEntry[0];
         return {
           ...o,
+          queueId: qe?.id || null,
           trackTitle: track?.title || "UNKNOWN",
           coverImage: track?.coverImage || null,
           buyIn,
@@ -6751,6 +6753,139 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
 
     res.json({ status: "replaying", count: replayEvents.length });
+  });
+
+  // ═══════════════════ GLOBAL INVESTOR PORTALS ═══════════════════
+
+  const INVESTOR_PORTALS_SEED = [
+    { portalName: "PORTAL #1", songTitle: "I GOT WHAT YOU NEED", spotifyUrl: "https://open.spotify.com/track/4vCWf0lXZYkHMXUXoa4i3V?si=60bd414653584173", spotifyUri: "spotify:track:4vCWf0lXZYkHMXUXoa4i3V" },
+    { portalName: "PORTAL #2", songTitle: "YOUR BODY IS MY PLAYGROUND", spotifyUrl: "https://open.spotify.com/track/7jNfn0Y5hgkhTtNMaFtF9v?si=ccc2d4ff58024c89", spotifyUri: "spotify:track:7jNfn0Y5hgkhTtNMaFtF9v" },
+    { portalName: "PORTAL #3", songTitle: "SCENE BY SCENE", spotifyUrl: "https://open.spotify.com/track/3q3S1IcGkvpKUTjKAYzVIW?si=ab142c793a5e4982", spotifyUri: "spotify:track:3q3S1IcGkvpKUTjKAYzVIW" },
+    { portalName: "PORTAL #4", songTitle: "CAN'T FOLLOW THROUGH", spotifyUrl: "https://open.spotify.com/track/3mC8dtkXh1V3TG3gnnVegx?si=42fa33de5630481e", spotifyUri: "spotify:track:3mC8dtkXh1V3TG3gnnVegx" },
+    { portalName: "PORTAL #5", songTitle: "QUEEN BEE", spotifyUrl: "https://open.spotify.com/track/6Qv8vrx2LttmBWLLuWBwrN?si=822278c18e0843c7", spotifyUri: "spotify:track:6Qv8vrx2LttmBWLLuWBwrN" },
+    { portalName: "PORTAL #6", songTitle: "ZODIAC SIGN", spotifyUrl: "https://open.spotify.com/track/4iSUSYeTXgTP7Bk8NdXEH8?si=fbf07851e3fd4dc9", spotifyUri: "spotify:track:4iSUSYeTXgTP7Bk8NdXEH8" },
+    { portalName: "PORTAL #7", songTitle: "UNFAILING LOVE", spotifyUrl: "https://open.spotify.com/track/6sv9XZYAWpnCFCWCFTXNR8?si=25459f4095c54cb6", spotifyUri: "spotify:track:6sv9XZYAWpnCFCWCFTXNR8" },
+  ];
+
+  (async () => {
+    try {
+      const existing = await db.select({ cnt: sql<number>`CAST(COUNT(*) AS INTEGER)` }).from(globalInvestorPortals);
+      if ((existing[0]?.cnt || 0) === 0) {
+        for (const p of INVESTOR_PORTALS_SEED) {
+          await db.insert(globalInvestorPortals).values({
+            portalName: p.portalName,
+            songTitle: p.songTitle,
+            spotifyUrl: p.spotifyUrl,
+            spotifyUri: p.spotifyUri,
+          });
+        }
+        console.log("[INVESTOR PORTALS] Seeded 7 portals");
+      } else {
+        console.log(`[INVESTOR PORTALS] Already have ${existing[0]?.cnt} portals`);
+      }
+    } catch (e: any) {
+      console.error("[INVESTOR PORTALS] Seed error:", e.message);
+    }
+  })();
+
+  app.get("/api/investor-portals", async (_req, res) => {
+    try {
+      const portals = await db.select().from(globalInvestorPortals).orderBy(asc(globalInvestorPortals.createdAt));
+      const entries = await db.select().from(globalInvestorEntries);
+      const result = portals.map(p => ({
+        ...p,
+        investors: entries.filter(e => e.portalId === p.id).map(e => ({
+          id: e.id,
+          portalId: e.portalId,
+          displayName: e.displayName,
+          status: e.status,
+          joinedAt: e.joinedAt,
+        })),
+        spotsRemaining: (p.maxInvestors || 10) - (p.currentInvestors || 0),
+        totalRaised: entries.filter(e => e.portalId === p.id && e.downPaymentPaid).reduce((sum, e) => sum + parseFloat(e.totalPaid || "0"), 0),
+        royaltyEarned: p.totalStreams ? parseFloat((((p.totalStreams || 0) * 0.00333) * 0.25).toFixed(2)) : 0,
+        royaltyProgress: p.totalStreams ? parseFloat((((p.totalStreams || 0) / 1000000) * 100).toFixed(4)) : 0,
+      }));
+      res.json(result);
+    } catch (error: any) {
+      console.error("[INVESTOR PORTALS] List error:", error);
+      res.status(500).json({ message: "Failed to load portals" });
+    }
+  });
+
+  app.post("/api/investor-portals/:id/join", isAuthenticated, async (req: any, res) => {
+    try {
+      const portalId = req.params.id;
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      const { cashTag } = req.body;
+
+      const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, portalId));
+      if (!portal) return res.status(404).json({ message: "Portal not found" });
+      if (portal.status !== "OPEN") return res.status(400).json({ message: "Portal is closed" });
+      if ((portal.currentInvestors || 0) >= (portal.maxInvestors || 10)) return res.status(400).json({ message: "Portal is full" });
+
+      const existing = await db.select().from(globalInvestorEntries)
+        .where(and(eq(globalInvestorEntries.portalId, portalId), eq(globalInvestorEntries.userId, userId)));
+      if (existing.length > 0) return res.status(400).json({ message: "Already joined this portal" });
+
+      const displayName = user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : user?.email?.split("@")[0] || "INVESTOR";
+
+      await db.insert(globalInvestorEntries).values({
+        portalId,
+        userId,
+        userEmail: user?.email || "",
+        displayName: displayName.toUpperCase(),
+        cashTag: cashTag || "",
+        status: "PENDING",
+      });
+
+      await db.update(globalInvestorPortals)
+        .set({ currentInvestors: sql`COALESCE(current_investors, 0) + 1` })
+        .where(eq(globalInvestorPortals.id, portalId));
+
+      const updatedCount = (portal.currentInvestors || 0) + 1;
+      if (updatedCount >= (portal.maxInvestors || 10)) {
+        await db.update(globalInvestorPortals).set({ status: "FILLED" }).where(eq(globalInvestorPortals.id, portalId));
+      }
+
+      res.json({ success: true, message: `Joined ${portal.songTitle} — $25 down payment required via Cash App` });
+    } catch (error: any) {
+      console.error("[INVESTOR PORTALS] Join error:", error);
+      res.status(500).json({ message: "Failed to join portal" });
+    }
+  });
+
+  app.post("/api/admin/investor-portals/:id/update-streams", isAdmin, async (req: any, res) => {
+    try {
+      const { streams } = req.body;
+      if (typeof streams !== "number") return res.status(400).json({ message: "streams (number) required" });
+      await db.update(globalInvestorPortals)
+        .set({ totalStreams: streams })
+        .where(eq(globalInvestorPortals.id, req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to update streams" });
+    }
+  });
+
+  app.post("/api/admin/investor-entries/:id/confirm-payment", isAdmin, async (req: any, res) => {
+    try {
+      const amount = parseFloat(req.body.amount) || 25;
+      const [entry] = await db.select().from(globalInvestorEntries).where(eq(globalInvestorEntries.id, req.params.id));
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const newTotal = parseFloat(entry.totalPaid || "0") + amount;
+      const isDown = !entry.downPaymentPaid && amount >= 25;
+      await db.update(globalInvestorEntries).set({
+        totalPaid: newTotal.toFixed(2),
+        downPaymentPaid: isDown ? true : entry.downPaymentPaid,
+        monthsPaid: (entry.monthsPaid || 0) + 1,
+        status: "ACTIVE",
+      }).where(eq(globalInvestorEntries.id, req.params.id));
+      res.json({ success: true, newTotal });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to confirm payment" });
+    }
   });
 
   return httpServer;

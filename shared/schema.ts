@@ -573,6 +573,48 @@ export const insertStakingPortalSchema = createInsertSchema(stakingPortals).omit
 export type InsertStakingPortal = z.infer<typeof insertStakingPortalSchema>;
 export type StakingPortal = typeof stakingPortals.$inferSelect;
 
+export const globalInvestorPortals = pgTable("global_investor_portals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  portalName: varchar("portal_name").notNull(),
+  songTitle: varchar("song_title").notNull(),
+  spotifyUrl: varchar("spotify_url"),
+  spotifyUri: varchar("spotify_uri"),
+  targetRaise: decimal("target_raise", { precision: 10, scale: 2 }).default("5000"),
+  entryPrice: decimal("entry_price", { precision: 10, scale: 2 }).default("500"),
+  downPayment: decimal("down_payment", { precision: 10, scale: 2 }).default("25"),
+  monthlyPayment: decimal("monthly_payment", { precision: 10, scale: 2 }).default("19.79"),
+  termMonths: integer("term_months").default(24),
+  maxInvestors: integer("max_investors").default(10),
+  currentInvestors: integer("current_investors").default(0),
+  baseReturnPct: decimal("base_return_pct", { precision: 5, scale: 2 }).default("25"),
+  maxReturnPct: decimal("max_return_pct", { precision: 5, scale: 2 }).default("100"),
+  totalStreams: integer("total_streams").default(0),
+  status: varchar("status").default("OPEN"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const globalInvestorEntries = pgTable("global_investor_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  portalId: varchar("portal_id").notNull(),
+  userId: varchar("user_id"),
+  userEmail: varchar("user_email"),
+  displayName: varchar("display_name"),
+  cashTag: varchar("cash_tag"),
+  downPaymentPaid: boolean("down_payment_paid").default(false),
+  totalPaid: decimal("total_paid", { precision: 10, scale: 2 }).default("0"),
+  monthsPaid: integer("months_paid").default(0),
+  status: varchar("status").default("PENDING"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const insertGlobalInvestorPortalSchema = createInsertSchema(globalInvestorPortals).omit({ id: true, createdAt: true, currentInvestors: true, totalStreams: true });
+export type InsertGlobalInvestorPortal = z.infer<typeof insertGlobalInvestorPortalSchema>;
+export type GlobalInvestorPortal = typeof globalInvestorPortals.$inferSelect;
+
+export const insertGlobalInvestorEntrySchema = createInsertSchema(globalInvestorEntries).omit({ id: true, joinedAt: true });
+export type InsertGlobalInvestorEntry = z.infer<typeof insertGlobalInvestorEntrySchema>;
+export type GlobalInvestorEntry = typeof globalInvestorEntries.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

@@ -1,7 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight } from "lucide-react";
+import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight, CheckCircle, Pause, RefreshCw } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 const CASH_APP_REFERRAL = "https://cash.app/app/JNXGD73";
 
@@ -67,6 +70,12 @@ interface TraderData {
     roi: number;
     status: string;
     createdAt: string;
+    queueId: string | null;
+    queuePosition: number | null;
+    queueStatus: string | null;
+    currentMultiplier: number | null;
+    currentOffer: number | null;
+    payoutAmount: number | null;
   }>;
   summary: {
     totalPositions: number;
@@ -139,6 +148,219 @@ function LiveIndicator({ label, value, trend, color }: { label: string; value: s
         }`}>
           {trend === "up" ? <ArrowUpRight className="h-2.5 w-2.5" /> : trend === "down" ? <ArrowDownRight className="h-2.5 w-2.5" /> : <Activity className="h-2.5 w-2.5" />}
           <span className="text-[8px] font-bold">{trend === "up" ? "BULLISH" : trend === "down" ? "BEARISH" : "STABLE"}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TraderDesk({ positions, userId }: { positions: TraderData["positions"]; userId: string }) {
+  const { toast } = useToast();
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+
+  const { data: engineState } = useQuery<{ price: number; mbbp: number; marketOpen: boolean }>({
+    queryKey: ["/api/engine/state"],
+    refetchInterval: 3000,
+  });
+
+  const acceptMut = useMutation({
+    mutationFn: async (queueId: string) => {
+      const res = await apiRequest("POST", "/api/settlement/accept", { queueId });
+      const data = await res.json();
+      if (data.success === false) throw new Error(data.message || "Position not found");
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "SETTLED", description: data.message || `Payout: $${data.payout?.toFixed(2)}` });
+      queryClient.invalidateQueries({ queryKey: ["/api/trader", userId] });
+      setPendingAction(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "FAILED", description: err.message || "Could not accept", variant: "destructive" });
+      setPendingAction(null);
+    },
+  });
+
+  const holdMut = useMutation({
+    mutationFn: async (queueId: string) => {
+      const res = await apiRequest("POST", "/api/settlement/hold", { queueId });
+      const data = await res.json();
+      if (data.success === false) throw new Error(data.message || "Position not found");
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "HOLDING", description: data.message || `Next offer at ${data.nextMultiplier}x` });
+      queryClient.invalidateQueries({ queryKey: ["/api/trader", userId] });
+      setPendingAction(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "FAILED", description: err.message || "Could not hold", variant: "destructive" });
+      setPendingAction(null);
+    },
+  });
+
+  const activePositions = positions.filter(p => p.queueStatus !== "SETTLED");
+  const settledPositions = positions.filter(p => p.queueStatus === "SETTLED");
+  const livePrice = engineState?.price || 0;
+  const liveMbbp = engineState?.mbbp || 0;
+
+  if (positions.length === 0) {
+    return (
+      <div className="border border-emerald-500/20 bg-black/80 p-8 text-center">
+        <div className="w-16 h-16 mx-auto mb-4 border border-emerald-500/30 flex items-center justify-center bg-emerald-950/30">
+          <BarChart3 className="h-8 w-8 text-emerald-500/30" />
+        </div>
+        <p className="text-white font-black text-lg mb-2" data-testid="text-no-positions">NO POSITIONS YET</p>
+        <p className="text-zinc-500 text-xs mb-4">Head to the trading floor to acquire your first position</p>
+        <Link
+          href="/"
+          className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 font-black text-sm transition-colors"
+          data-testid="link-go-trade"
+        >
+          <Zap className="h-3.5 w-3.5 inline mr-1.5" />
+          GO TO TRADE FLOOR
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="border border-emerald-500/20 bg-black/90 overflow-hidden" style={{ boxShadow: "0 0 20px rgba(16,185,129,0.05)" }}>
+        <div className="bg-gradient-to-r from-emerald-950/40 to-black px-4 py-3 border-b border-emerald-500/20 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-emerald-400" />
+            <span className="text-emerald-400 text-[11px] font-black tracking-wider">TRADER DESK — LIVE POSITIONS</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 6px #34d399" }} />
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[9px] text-zinc-500 font-mono">PRICE: <span className="text-emerald-400">${livePrice.toFixed(4)}</span></span>
+            <span className="text-[9px] text-zinc-500 font-mono">MBBP: <span className="text-lime-400">${liveMbbp.toFixed(4)}</span></span>
+            <span className="text-zinc-600 text-[9px] font-mono">{activePositions.length} ACTIVE</span>
+          </div>
+        </div>
+
+        <div className="divide-y divide-zinc-900/80">
+          {activePositions.map((pos, i) => {
+            const roiPositive = pos.roi > 0;
+            const isQueued = pos.queueStatus === "QUEUED" || pos.queueStatus === "OFFERED";
+            const isHolding = pos.queueStatus === "HOLDING";
+            const canTrade = isQueued || isHolding;
+            const isPending = pendingAction === pos.id;
+            const offer = pos.currentOffer || pos.buyBack;
+            const mult = pos.currentMultiplier || 1.0;
+            const profitLoss = offer - pos.buyIn;
+
+            return (
+              <div key={pos.id} className="px-4 py-3 hover:bg-emerald-950/10 transition-colors" data-testid={`desk-position-${pos.id}`}>
+                <div className="flex items-center gap-3">
+                  <div className="flex-shrink-0 relative">
+                    <span className="text-zinc-700 text-[10px] font-mono absolute -top-1 -left-1 bg-black px-0.5">#{i + 1}</span>
+                    {pos.coverImage ? (
+                      <img src={pos.coverImage} alt="" className="w-12 h-12 border border-zinc-700" />
+                    ) : (
+                      <div className="w-12 h-12 bg-zinc-900 border border-zinc-700 flex items-center justify-center">
+                        <Flame className="h-4 w-4 text-zinc-600" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-white text-sm font-black truncate">{pos.trackTitle}</p>
+                      <span className={`text-[7px] px-1 py-0.5 font-bold border ${
+                        isHolding ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                        pos.queueStatus === "SETTLED" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" :
+                        "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
+                      }`}>{pos.queueStatus || "QUEUED"}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-zinc-600 text-[9px] font-mono">{pos.trackingNumber}</span>
+                      {pos.queuePosition && (
+                        <span className="text-zinc-600 text-[8px]">QUEUE #{pos.queuePosition}</span>
+                      )}
+                      <span className="text-zinc-600 text-[8px]">{mult.toFixed(2)}x MULT</span>
+                    </div>
+                  </div>
+
+                  <div className="flex-shrink-0 text-right mr-3">
+                    <div className="flex items-center gap-2 justify-end">
+                      <span className="text-zinc-500 text-xs font-mono">${pos.buyIn.toFixed(2)}</span>
+                      <span className="text-zinc-700">→</span>
+                      <span className="text-emerald-400 text-sm font-black font-mono">${offer.toFixed(2)}</span>
+                    </div>
+                    <div className={`flex items-center justify-end gap-1 ${roiPositive ? "text-emerald-400" : "text-red-400"}`}>
+                      {roiPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                      <span className="text-[10px] font-black">{profitLoss >= 0 ? "+" : ""}${profitLoss.toFixed(2)} ({pos.roi}%)</span>
+                    </div>
+                  </div>
+
+                  {canTrade && (
+                    <div className="flex-shrink-0 flex gap-1.5">
+                      <button
+                        onClick={() => { if (pos.queueId) { setPendingAction(pos.id); acceptMut.mutate(pos.queueId); } }}
+                        disabled={isPending || !pos.queueId}
+                        className="flex items-center gap-1 px-3 py-2 text-[10px] font-black bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 transition-all disabled:opacity-50"
+                        style={{ boxShadow: "0 0 8px rgba(16,185,129,0.3)" }}
+                        data-testid={`btn-accept-${pos.id}`}
+                      >
+                        {isPending && acceptMut.isPending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+                        ACCEPT
+                      </button>
+                      <button
+                        onClick={() => { if (pos.queueId) { setPendingAction(pos.id); holdMut.mutate(pos.queueId); } }}
+                        disabled={isPending || !pos.queueId}
+                        className="flex items-center gap-1 px-3 py-2 text-[10px] font-black bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-500/40 transition-all disabled:opacity-50"
+                        data-testid={`btn-hold-${pos.id}`}
+                      >
+                        {isPending && holdMut.isPending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Pause className="h-3 w-3" />}
+                        HOLD
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between">
+          <Link href="/" className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 border border-emerald-500/30 px-2.5 py-1.5 hover:bg-emerald-500/10 transition-colors" data-testid="link-buy-more">
+            <Zap className="h-3 w-3" /> BUY MORE ON FLOOR <ChevronRight className="h-2.5 w-2.5" />
+          </Link>
+          <span className="text-[8px] text-zinc-600 font-mono">ACCEPT = LOCK PROFIT | HOLD = WAIT FOR HIGHER OFFER</span>
+        </div>
+      </div>
+
+      {settledPositions.length > 0 && (
+        <div className="border border-zinc-800 bg-black/60">
+          <div className="bg-zinc-900/30 px-4 py-2 border-b border-zinc-800 flex items-center gap-2">
+            <CheckCircle className="h-3 w-3 text-zinc-500" />
+            <span className="text-zinc-500 text-[10px] font-black tracking-wider">SETTLED POSITIONS</span>
+            <span className="text-zinc-700 text-[9px]">{settledPositions.length}</span>
+          </div>
+          <div className="divide-y divide-zinc-900/50">
+            {settledPositions.map((pos) => (
+              <div key={pos.id} className="flex items-center gap-3 px-4 py-2.5 opacity-60" data-testid={`settled-position-${pos.id}`}>
+                {pos.coverImage ? (
+                  <img src={pos.coverImage} alt="" className="w-8 h-8 border border-zinc-800 flex-shrink-0 grayscale" />
+                ) : (
+                  <div className="w-8 h-8 bg-zinc-900 border border-zinc-800 flex-shrink-0 flex items-center justify-center">
+                    <Flame className="h-3 w-3 text-zinc-700" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-zinc-400 text-xs font-bold truncate">{pos.trackTitle}</p>
+                  <span className="text-zinc-700 text-[9px]">{pos.trackingNumber}</span>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <span className="text-emerald-500/60 text-xs font-bold font-mono">
+                    ${(pos.payoutAmount || pos.buyBack).toFixed(2)} PAID
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -353,65 +575,7 @@ export default function TraderPage() {
             </div>
           )}
 
-          {trader.positions.length > 0 ? (
-            <div className="border border-zinc-800 bg-black/80">
-              <div className="bg-zinc-900/50 px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-emerald-400 text-[10px] font-black tracking-wider">ACTIVE POSITIONS (FIFO)</span>
-                </div>
-                <span className="text-zinc-600 text-[9px]">{trader.positions.length} TOTAL</span>
-              </div>
-              <div className="divide-y divide-zinc-900">
-                {trader.positions.map((pos, i) => {
-                  const roiPositive = pos.roi > 0;
-                  return (
-                    <div key={pos.id} className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-900/30 transition-colors group" data-testid={`position-row-${pos.id}`}>
-                      <span className="text-zinc-600 text-[10px] w-6 flex-shrink-0">#{i + 1}</span>
-                      {pos.coverImage ? (
-                        <img src={pos.coverImage} alt="" className="w-9 h-9 border border-zinc-700 flex-shrink-0" />
-                      ) : (
-                        <div className="w-9 h-9 bg-zinc-800 border border-zinc-700 flex-shrink-0 flex items-center justify-center">
-                          <Flame className="h-3 w-3 text-zinc-600" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-xs font-bold truncate">{pos.trackTitle}</p>
-                        <p className="text-zinc-600 text-[9px]">{pos.trackingNumber}</p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs font-extrabold">
-                          <span className="text-zinc-400">${pos.buyIn.toFixed(2)}</span>
-                          <span className="text-zinc-600 mx-1">→</span>
-                          <span className="text-emerald-400">${pos.buyBack.toFixed(2)}</span>
-                        </p>
-                        <div className={`flex items-center justify-end gap-0.5 ${roiPositive ? "text-emerald-400" : "text-zinc-500"}`}>
-                          {roiPositive ? <ArrowUpRight className="h-2.5 w-2.5" /> : <Activity className="h-2.5 w-2.5" />}
-                          <span className="text-[9px] font-bold">{pos.roi}% ROI</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : (
-            <div className="border border-emerald-500/20 bg-black/80 p-8 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 border border-emerald-500/30 flex items-center justify-center bg-emerald-950/30">
-                <BarChart3 className="h-8 w-8 text-emerald-500/30" />
-              </div>
-              <p className="text-white font-black text-lg mb-2">NO POSITIONS YET</p>
-              <p className="text-zinc-500 text-xs mb-4">Head to the trading floor to acquire your first position</p>
-              <Link
-                href="/"
-                className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 font-black text-sm transition-colors"
-                data-testid="link-go-trade"
-              >
-                <Zap className="h-3.5 w-3.5 inline mr-1.5" />
-                GO TO TRADE FLOOR
-              </Link>
-            </div>
-          )}
+          <TraderDesk positions={trader.positions} userId={userId} />
 
           {!hasTrust && (
             <div className="border border-amber-500/30 bg-amber-500/5 p-6 text-center">

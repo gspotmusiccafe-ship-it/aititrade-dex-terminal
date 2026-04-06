@@ -1139,24 +1139,27 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
 }
 
 function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; terms: { days: number; returnPct: number }[]; selectedTerm: number | null }) {
-  const W = 200;
-  const H = 70;
-  const PAD_L = 24;
-  const PAD_B = 12;
-  const PAD_T = 6;
-  const PAD_R = 4;
+  const W = 280;
+  const H = 110;
+  const PAD_L = 30;
+  const PAD_B = 16;
+  const PAD_T = 10;
+  const PAD_R = 8;
   const gW = W - PAD_L - PAD_R;
   const gH = H - PAD_T - PAD_B;
 
-  const maxDays = 180;
-  const maxEarn = amount * (terms[terms.length - 1]?.returnPct || 25) / 100;
+  const activeTerm = selectedTerm ? terms.find(t => t.days === selectedTerm) : terms[terms.length - 1];
+  const activeIdx = activeTerm ? terms.indexOf(activeTerm) : terms.length - 1;
+  const totalEarn = amount * (activeTerm?.returnPct || 25) / 100;
+  const termDays = activeTerm?.days || 180;
+  const maxEarn = totalEarn * 1.25;
 
-  const colors = ["#34d399", "#fbbf24", "#a3e635"];
-  const labels = terms.map(t => `${t.days}d`);
+  const colors = ["#22d3ee", "#a78bfa", "#34d399"];
+  const termColor = colors[activeIdx] || "#34d399";
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 1500);
+    const iv = setInterval(() => setTick(t => t + 1), 2000);
     return () => clearInterval(iv);
   }, []);
 
@@ -1165,139 +1168,158 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
     return x - Math.floor(x);
   };
 
-  const buildCandles = (term: { days: number; returnPct: number }, termIdx: number) => {
-    const totalEarn = amount * term.returnPct / 100;
-    const dailyEarn = totalEarn / term.days;
-    const numCandles = Math.min(term.days <= 45 ? 9 : term.days <= 90 ? 12 : 15, 15);
-    const daysPerCandle = term.days / numCandles;
-    const candleW = (gW * (term.days / maxDays)) / numCandles * 0.6;
+  const numCandles = 20;
+  const daysPerCandle = termDays / numCandles;
+  const dailyEarn = totalEarn / termDays;
+  const slotW = gW / numCandles;
+  const candleW = slotW * 0.55;
 
-    const candles: { x: number; open: number; close: number; high: number; low: number; bullish: boolean }[] = [];
-    let prevClose = 0;
-
-    for (let i = 0; i < numCandles; i++) {
-      const dayStart = i * daysPerCandle;
-      const dayEnd = (i + 1) * daysPerCandle;
-      const earnStart = dailyEarn * dayStart;
-      const earnEnd = dailyEarn * dayEnd;
-
-      const jitter = seed(termIdx * 100 + i + tick * 0.01) * 0.3 - 0.15;
-      const open = i === 0 ? 0 : prevClose;
-      const close = earnEnd * (1 + jitter * 0.1);
-      const high = Math.max(open, close) + seed(termIdx * 200 + i) * dailyEarn * daysPerCandle * 0.3;
-      const low = Math.max(0, Math.min(open, close) - seed(termIdx * 300 + i) * dailyEarn * daysPerCandle * 0.2);
-
-      const x = PAD_L + ((dayStart + dayEnd) / 2 / maxDays) * gW;
-      candles.push({ x, open, close, high, low, bullish: close >= open });
-      prevClose = close;
-    }
-    return { candles, candleW };
-  };
+  const candles: { slot: number; open: number; close: number; high: number; low: number; bullish: boolean }[] = [];
+  let prevClose = 0;
+  for (let i = 0; i < numCandles; i++) {
+    const earnEnd = dailyEarn * (i + 1) * daysPerCandle;
+    const jitter = seed(activeIdx * 100 + i + tick * 0.005) * 0.4 - 0.2;
+    const open = i === 0 ? 0 : prevClose;
+    const close = earnEnd * (1 + jitter * 0.08);
+    const spread = dailyEarn * daysPerCandle;
+    const high = Math.max(open, close) + seed(activeIdx * 200 + i) * spread * 0.35;
+    const low = Math.max(0, Math.min(open, close) - seed(activeIdx * 300 + i) * spread * 0.25);
+    candles.push({ slot: i, open, close, high, low, bullish: close >= open });
+    prevClose = close;
+  }
 
   const toY = (val: number) => PAD_T + gH - (Math.min(val, maxEarn) / maxEarn) * gH;
+  const toX = (slot: number) => PAD_L + slot * slotW + slotW / 2;
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1.0];
-
-  const dailyGrowthLabel = selectedTerm
-    ? (() => {
-        const t = terms.find(t => t.days === selectedTerm);
-        if (!t) return "";
-        const daily = (amount * t.returnPct / 100) / t.days;
-        return `$${daily.toFixed(3)}/DAY`;
-      })()
+  const yTicks = 5;
+  const dailyGrowthLabel = activeTerm
+    ? `$${(totalEarn / activeTerm.days).toFixed(3)}/DAY`
     : "";
 
   return (
-    <div className="mb-1.5 border border-zinc-800 bg-zinc-950/60 p-1.5" data-testid={`stake-graph-${amount}`}>
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1">
-          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">YIELD CHART</span>
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" style={{ boxShadow: "0 0 4px #34d399" }} />
+    <div className="mb-2 rounded-lg border border-zinc-700/50 p-2" data-testid={`stake-graph-${amount}`}
+      style={{ background: "linear-gradient(180deg, #0a0f1a 0%, #0d1117 50%, #0a0a0f 100%)" }}>
+      <div className="flex items-center justify-between mb-1.5 px-0.5">
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: termColor, boxShadow: `0 0 6px ${termColor}` }} />
+            <span className="text-[8px] sm:text-[9px] font-bold tracking-widest" style={{ color: termColor }}>YIELD TERMINAL</span>
+          </div>
+          <span className="text-[7px] text-zinc-600 font-mono">|</span>
+          <span className="text-[7px] text-zinc-500 font-mono">${amount} STAKE</span>
         </div>
         <div className="flex items-center gap-2">
           {dailyGrowthLabel && (
-            <span className="text-[6px] sm:text-[7px] text-emerald-400 font-black">{dailyGrowthLabel}</span>
+            <span className="text-[7px] sm:text-[8px] font-black font-mono px-1 py-0.5 rounded" 
+              style={{ color: termColor, backgroundColor: `${termColor}15`, border: `1px solid ${termColor}30` }}>
+              {dailyGrowthLabel}
+            </span>
           )}
           {terms.map((t, idx) => (
-            <span key={t.days} className="flex items-center gap-0.5">
-              <span className="inline-block w-1.5 h-1.5" style={{ backgroundColor: colors[idx] }} />
-              <span className={`text-[6px] sm:text-[7px] font-bold ${selectedTerm === t.days ? "text-white" : "text-zinc-500"}`}>{labels[idx]}</span>
+            <span key={t.days} className="flex items-center gap-0.5 cursor-pointer">
+              <span className="inline-block w-2 h-2 rounded-sm" style={{ 
+                backgroundColor: selectedTerm === t.days || (selectedTerm === null && idx === terms.length - 1) ? colors[idx] : `${colors[idx]}40`,
+                boxShadow: selectedTerm === t.days ? `0 0 4px ${colors[idx]}` : "none"
+              }} />
+              <span className={`text-[7px] sm:text-[8px] font-bold font-mono ${
+                selectedTerm === t.days || (selectedTerm === null && idx === terms.length - 1) ? "text-white" : "text-zinc-600"
+              }`}>{t.days}D</span>
             </span>
           ))}
         </div>
       </div>
+
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
-        <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + gH} stroke="#333" strokeWidth="0.5" />
-        <line x1={PAD_L} y1={PAD_T + gH} x2={PAD_L + gW} y2={PAD_T + gH} stroke="#333" strokeWidth="0.5" />
+        <defs>
+          <linearGradient id={`grid-fade-${amount}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={termColor} stopOpacity="0.03" />
+            <stop offset="100%" stopColor={termColor} stopOpacity="0" />
+          </linearGradient>
+          <filter id={`glow-${amount}`}>
+            <feGaussianBlur stdDeviation="1" result="coloredBlur" />
+            <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
 
-        {yTicks.map((pct) => {
+        <rect x={PAD_L} y={PAD_T} width={gW} height={gH} fill={`url(#grid-fade-${amount})`} />
+
+        {Array.from({ length: yTicks + 1 }).map((_, i) => {
+          const pct = i / yTicks;
           const y = PAD_T + gH - pct * gH;
-          const val = (maxEarn * pct).toFixed(0);
+          const val = (maxEarn * pct);
           return (
-            <g key={pct}>
-              <line x1={PAD_L} y1={y} x2={PAD_L + gW} y2={y} stroke="#222" strokeWidth="0.3" strokeDasharray="2,2" />
-              <text x={PAD_L - 2} y={y + 1.5} textAnchor="end" fill="#555" fontSize="4" fontFamily="monospace">${val}</text>
+            <g key={i}>
+              <line x1={PAD_L} y1={y} x2={PAD_L + gW} y2={y} stroke="#1a1f2e" strokeWidth="0.4" />
+              <text x={PAD_L - 3} y={y + 1.5} textAnchor="end" fill="#4a5568" fontSize="4" fontFamily="'Courier New', monospace">${val.toFixed(0)}</text>
             </g>
           );
         })}
 
-        {[0, 45, 90, 135, 180].map((d) => {
-          const x = PAD_L + (d / maxDays) * gW;
+        {Array.from({ length: 5 }).map((_, i) => {
+          const d = Math.round((termDays / 4) * i);
+          const x = PAD_L + (d / termDays) * gW;
           return (
-            <g key={d}>
-              <line x1={x} y1={PAD_T} x2={x} y2={PAD_T + gH} stroke="#222" strokeWidth="0.3" strokeDasharray="1,2" />
-              <text x={x} y={H - 2} textAnchor="middle" fill="#555" fontSize="3.5" fontFamily="monospace">{d}d</text>
+            <g key={i}>
+              <line x1={x} y1={PAD_T} x2={x} y2={PAD_T + gH} stroke="#1a1f2e" strokeWidth="0.4" />
+              <text x={x} y={H - 3} textAnchor="middle" fill="#4a5568" fontSize="4" fontFamily="'Courier New', monospace">{d}d</text>
             </g>
           );
         })}
 
-        {terms.map((term, idx) => {
-          const isActive = selectedTerm === term.days || selectedTerm === null;
-          if (!isActive) return null;
-          const { candles, candleW } = buildCandles(term, idx);
-          const bullColor = colors[idx];
-          const bearColor = idx === 0 ? "#065f46" : idx === 1 ? "#78350f" : "#365314";
+        <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + gH} stroke="#2d3748" strokeWidth="0.6" />
+        <line x1={PAD_L} y1={PAD_T + gH} x2={PAD_L + gW} y2={PAD_T + gH} stroke="#2d3748" strokeWidth="0.6" />
+
+        {candles.map((c, ci) => {
+          const cx = toX(c.slot);
+          const bodyTop = toY(Math.max(c.open, c.close));
+          const bodyBot = toY(Math.min(c.open, c.close));
+          const bodyH = Math.max(bodyBot - bodyTop, 0.8);
+          const bullColor = termColor;
+          const bearColor = activeIdx === 0 ? "#164e63" : activeIdx === 1 ? "#3b0764" : "#064e3b";
+          const fill = c.bullish ? bullColor : bearColor;
+          const wickCol = c.bullish ? bullColor : "#4a5568";
           return (
-            <g key={`candles-${term.days}`} opacity={isActive ? 1 : 0.3}>
-              {candles.map((c, ci) => {
-                const wickX = c.x;
-                const bodyTop = toY(Math.max(c.open, c.close));
-                const bodyBot = toY(Math.min(c.open, c.close));
-                const bodyH = Math.max(bodyBot - bodyTop, 0.5);
-                const fill = c.bullish ? bullColor : bearColor;
-                const wickColor = c.bullish ? bullColor : bearColor;
-                return (
-                  <g key={ci}>
-                    <line x1={wickX} y1={toY(c.high)} x2={wickX} y2={toY(c.low)} stroke={wickColor} strokeWidth="0.4" />
-                    <rect x={c.x - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={fill} stroke={bullColor} strokeWidth="0.2" rx="0.3" />
-                  </g>
-                );
-              })}
+            <g key={ci}>
+              <line x1={cx} y1={toY(c.high)} x2={cx} y2={toY(c.low)} stroke={wickCol} strokeWidth="0.5" />
+              <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={fill}
+                stroke={c.bullish ? bullColor : "#374151"} strokeWidth="0.3" rx="0.4" />
+              {c.bullish && (
+                <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={bullColor} opacity="0.15" rx="0.4"
+                  filter={`url(#glow-${amount})`} />
+              )}
             </g>
           );
         })}
 
-        {terms.map((term, idx) => {
-          const totalEarn = amount * term.returnPct / 100;
-          const x = PAD_L + (term.days / maxDays) * gW;
-          const y = toY(totalEarn);
-          const isActive = selectedTerm === term.days || selectedTerm === null;
-          return (
-            <g key={`target-${term.days}`} opacity={isActive ? 1 : 0.25}>
-              <line x1={PAD_L} y1={y} x2={x} y2={y} stroke={colors[idx]} strokeWidth="0.4" strokeDasharray="1.5,1" opacity="0.5" />
-              <circle cx={x} cy={y} r="2.5" fill="none" stroke={colors[idx]} strokeWidth="0.6" />
-              <circle cx={x} cy={y} r="1" fill={colors[idx]} />
-              <text x={x + 3} y={y + 1.5} fill={colors[idx]} fontSize="3.5" fontWeight="bold" fontFamily="monospace">
-                ${totalEarn.toFixed(0)}
-              </text>
-            </g>
-          );
-        })}
+        <line x1={PAD_L} y1={toY(totalEarn)} x2={PAD_L + gW} y2={toY(totalEarn)} 
+          stroke={termColor} strokeWidth="0.5" strokeDasharray="3,2" opacity="0.6" />
+        <rect x={PAD_L + gW - 28} y={toY(totalEarn) - 4.5} width="28" height="9" rx="1.5" 
+          fill={termColor} opacity="0.15" stroke={termColor} strokeWidth="0.4" />
+        <text x={PAD_L + gW - 14} y={toY(totalEarn) + 1.5} textAnchor="middle" fill={termColor} 
+          fontSize="5" fontWeight="bold" fontFamily="'Courier New', monospace" filter={`url(#glow-${amount})`}>
+          +${totalEarn.toFixed(0)}
+        </text>
+
+        <circle cx={toX(numCandles - 1)} cy={toY(candles[numCandles - 1]?.close || 0)} r="2" 
+          fill={termColor} opacity="0.8" filter={`url(#glow-${amount})`}>
+          <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite" />
+          <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite" />
+        </circle>
       </svg>
-      <div className="flex items-center justify-between mt-0.5">
-        <span className="text-[6px] text-zinc-600">DAY 0</span>
-        <span className="text-[6px] text-emerald-600" style={{ opacity: 0.8 }}>ACTIVE GROWTH SIMULATION</span>
-        <span className="text-[6px] text-zinc-600">DAY 180</span>
+
+      <div className="flex items-center justify-between mt-1 px-0.5">
+        <div className="flex items-center gap-1">
+          <span className="text-[6px] text-zinc-600 font-mono">TERM</span>
+          <span className="text-[7px] font-bold font-mono" style={{ color: termColor }}>{termDays} DAYS</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[6px] text-zinc-500 font-mono tracking-wider">GROWTH SIMULATION</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[6px] text-zinc-600 font-mono">ROI</span>
+          <span className="text-[7px] font-bold font-mono" style={{ color: termColor }}>{activeTerm?.returnPct || 25}%</span>
+        </div>
       </div>
     </div>
   );
