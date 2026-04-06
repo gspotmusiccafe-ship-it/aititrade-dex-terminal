@@ -105,7 +105,7 @@ export function MarketTicker() {
               {asset.isPrerelease && (
                 <span className="text-amber-400 font-extrabold text-[9px] border border-amber-500/40 px-1 py-0">PRE</span>
               )}
-              <span className="text-zinc-700 ml-2">│</span>
+              <span className="text-emerald-500/25 ml-2">│</span>
             </div>
           );
         })}

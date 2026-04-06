@@ -52,12 +52,12 @@ export default function TrustVaultPage() {
               <Lock className="h-8 w-8 text-amber-400" />
             </div>
             <h2 className="text-2xl font-extrabold text-amber-400 font-mono mb-2">TRUST VAULT — LOCKED</h2>
-            <p className="text-zinc-400 font-mono text-sm mb-6">
+            <p className="text-emerald-400/70 font-mono text-sm mb-6">
               Global Yield Assets and Royalty-Bearing positions are exclusive to Asset Trustees.
               Acquire your Trust Certificate to unlock the vault.
             </p>
             <div className="space-y-3">
-              <div className="text-xs text-zinc-500 font-mono border border-zinc-800 p-3 bg-zinc-900/50">
+              <div className="text-xs text-emerald-500/60 font-mono border border-emerald-500/15 p-3 bg-emerald-950/50">
                 <p className="text-amber-400 font-extrabold mb-1">TRUST INVESTOR — ASSET TRUSTEE</p>
                 <p>$500 TOTAL / $25 DOWN / 0% INTEREST / $19.79 MO × 24</p>
               </div>
@@ -91,7 +91,7 @@ export default function TrustVaultPage() {
             </div>
           </div>
           <div className="flex items-center gap-4 text-[10px] font-mono">
-            <span className="text-zinc-500">ASSETS: <span className="text-amber-400 font-extrabold">{tracks.length}</span></span>
+            <span className="text-emerald-500/60">ASSETS: <span className="text-amber-400 font-extrabold">{tracks.length}</span></span>
           </div>
         </div>
       </div>
@@ -100,27 +100,27 @@ export default function TrustVaultPage() {
         <div className="px-4 py-3 border-b border-amber-500/10 bg-black">
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">GLOBAL ASSETS</p>
+              <p className="text-[9px] text-emerald-500/60 font-mono">GLOBAL ASSETS</p>
               <p className="text-lg font-extrabold text-amber-400 font-mono">{royaltyPool.totalGlobalAssets}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">GROSS SALES</p>
+              <p className="text-[9px] text-emerald-500/60 font-mono">GROSS SALES</p>
               <p className="text-lg font-extrabold text-amber-400 font-mono">${royaltyPool.totalGlobalSales.toLocaleString()}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">VAULT RATE</p>
+              <p className="text-[9px] text-emerald-500/60 font-mono">VAULT RATE</p>
               <p className="text-lg font-extrabold text-amber-400 font-mono">{royaltyPool.trustVaultRate}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">TRUST VAULT</p>
+              <p className="text-[9px] text-emerald-500/60 font-mono">TRUST VAULT</p>
               <p className="text-lg font-extrabold text-lime-400 font-mono">${royaltyPool.trustVaultAmount.toLocaleString()}</p>
             </div>
             <div className="text-center p-2 border border-amber-500/10 bg-amber-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">TRUST UNITS</p>
+              <p className="text-[9px] text-emerald-500/60 font-mono">TRUST UNITS</p>
               <p className="text-lg font-extrabold text-amber-400 font-mono">{royaltyPool.totalTrustUnits}</p>
             </div>
             <div className="text-center p-2 border border-lime-500/20 bg-lime-500/5">
-              <p className="text-[9px] text-zinc-500 font-mono">YOUR SHARE</p>
+              <p className="text-[9px] text-emerald-500/60 font-mono">YOUR SHARE</p>
               <p className="text-lg font-extrabold text-lime-400 font-mono">${royaltyPool.userShare.toFixed(2)}</p>
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function TrustVaultPage() {
           <div className="text-center py-20 border border-amber-500/10 bg-amber-500/5">
             <Globe className="h-12 w-12 text-amber-400/30 mx-auto mb-3" />
             <p className="text-amber-400 font-mono font-extrabold text-lg mb-1">NO GLOBAL ASSETS MINTED</p>
-            <p className="text-zinc-500 font-mono text-xs">Global yield assets will appear here once minted by Asset Architects</p>
+            <p className="text-emerald-500/60 font-mono text-xs">Global yield assets will appear here once minted by Asset Architects</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -162,19 +162,19 @@ export default function TrustVaultPage() {
 
                   <div className="p-3">
                     <h3 className="text-white font-bold text-sm mb-1 truncate">{track.title}</h3>
-                    <p className="text-zinc-500 text-[10px] mb-3">{track.artist?.name || "AITIFY-GEN-1"}</p>
+                    <p className="text-emerald-500/60 text-[10px] mb-3">{track.artist?.name || "AITIFY-GEN-1"}</p>
 
                     <div className="grid grid-cols-3 gap-2 mb-3 text-center">
                       <div>
-                        <p className="text-[8px] text-zinc-600">GROSS</p>
+                        <p className="text-[8px] text-emerald-500/40">GROSS</p>
                         <p className="text-xs font-extrabold text-amber-400">${grossSales.toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-[8px] text-zinc-600">UNITS</p>
+                        <p className="text-[8px] text-emerald-500/40">UNITS</p>
                         <p className="text-xs font-extrabold text-white">{sales}</p>
                       </div>
                       <div>
-                        <p className="text-[8px] text-zinc-600">YIELD</p>
+                        <p className="text-[8px] text-emerald-500/40">YIELD</p>
                         <p className="text-xs font-extrabold text-lime-400">16%</p>
                       </div>
                     </div>

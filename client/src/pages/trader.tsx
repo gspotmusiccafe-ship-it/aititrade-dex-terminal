@@ -26,15 +26,15 @@ function KineticPulseBar() {
     <div className="border border-emerald-500/20 bg-black/80 p-2.5 flex items-center justify-between font-mono">
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1.5">
-          <Zap className={`h-3.5 w-3.5 ${isHigh ? "text-emerald-400" : "text-zinc-500"}`} />
-          <span className="text-[9px] text-zinc-500 font-bold">KINETIC</span>
+          <Zap className={`h-3.5 w-3.5 ${isHigh ? "text-emerald-400" : "text-emerald-500/60"}`} />
+          <span className="text-[9px] text-emerald-500/60 font-bold">KINETIC</span>
         </div>
         <span className={`text-xs font-black ${isHigh ? "floor-high-pulse" : "text-amber-400"}`}>
           {(kState.floorROI * 100).toFixed(0)}% ROI
         </span>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-[9px] text-zinc-600">HOUSE: {(kState.houseMBBP * 100).toFixed(0)}%</span>
+        <span className="text-[9px] text-emerald-500/40">HOUSE: {(kState.houseMBBP * 100).toFixed(0)}%</span>
         <span className={`text-[8px] px-1.5 py-0.5 border font-extrabold ${
           isHigh ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-amber-400 border-amber-500/30 bg-amber-500/10"
         }`} data-testid="badge-kinetic-pulse">{kState.pulse}</span>
@@ -132,7 +132,7 @@ function LiveIndicator({ label, value, trend, color }: { label: string; value: s
       <div className="absolute top-0 right-0 w-8 h-8 opacity-5">
         {trend === "up" ? <ArrowUpRight className="w-full h-full" /> : trend === "down" ? <ArrowDownRight className="w-full h-full" /> : <Activity className="w-full h-full" />}
       </div>
-      <p className="text-[8px] text-zinc-500 font-bold tracking-widest uppercase">{label}</p>
+      <p className="text-[8px] text-emerald-500/60 font-bold tracking-widest uppercase">{label}</p>
       <p className={`text-lg font-black font-mono mt-0.5 ${
         color.includes("emerald") ? "text-emerald-400" :
         color.includes("lime") ? "text-lime-400" :
@@ -144,7 +144,7 @@ function LiveIndicator({ label, value, trend, color }: { label: string; value: s
       </p>
       {trend && (
         <div className={`flex items-center gap-0.5 mt-1 ${
-          trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-zinc-500"
+          trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-emerald-500/60"
         }`}>
           {trend === "up" ? <ArrowUpRight className="h-2.5 w-2.5" /> : trend === "down" ? <ArrowDownRight className="h-2.5 w-2.5" /> : <Activity className="h-2.5 w-2.5" />}
           <span className="text-[8px] font-bold">{trend === "up" ? "BULLISH" : trend === "down" ? "BEARISH" : "STABLE"}</span>
@@ -211,7 +211,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
           <BarChart3 className="h-8 w-8 text-emerald-500/30" />
         </div>
         <p className="text-white font-black text-lg mb-2" data-testid="text-no-positions">NO POSITIONS YET</p>
-        <p className="text-zinc-500 text-xs mb-4">Head to the trading floor to acquire your first position</p>
+        <p className="text-emerald-500/60 text-xs mb-4">Head to the trading floor to acquire your first position</p>
         <Link
           href="/"
           className="inline-block bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2.5 font-black text-sm transition-colors"
@@ -234,13 +234,13 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 6px #34d399" }} />
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[9px] text-zinc-500 font-mono">PRICE: <span className="text-emerald-400">${livePrice.toFixed(4)}</span></span>
-            <span className="text-[9px] text-zinc-500 font-mono">MBBP: <span className="text-lime-400">${liveMbbp.toFixed(4)}</span></span>
-            <span className="text-zinc-600 text-[9px] font-mono">{activePositions.length} ACTIVE</span>
+            <span className="text-[9px] text-emerald-500/60 font-mono">PRICE: <span className="text-emerald-400">${livePrice.toFixed(4)}</span></span>
+            <span className="text-[9px] text-emerald-500/60 font-mono">MBBP: <span className="text-lime-400">${liveMbbp.toFixed(4)}</span></span>
+            <span className="text-emerald-500/40 text-[9px] font-mono">{activePositions.length} ACTIVE</span>
           </div>
         </div>
 
-        <div className="divide-y divide-zinc-900/80">
+        <div className="divide-y divide-emerald-500/10">
           {activePositions.map((pos, i) => {
             const roiPositive = pos.roi > 0;
             const isQueued = pos.queueStatus === "QUEUED" || pos.queueStatus === "OFFERED";
@@ -255,12 +255,12 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
               <div key={pos.id} className="px-4 py-3 hover:bg-emerald-950/10 transition-colors" data-testid={`desk-position-${pos.id}`}>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0 relative">
-                    <span className="text-zinc-700 text-[10px] font-mono absolute -top-1 -left-1 bg-black px-0.5">#{i + 1}</span>
+                    <span className="text-emerald-500/25 text-[10px] font-mono absolute -top-1 -left-1 bg-black px-0.5">#{i + 1}</span>
                     {pos.coverImage ? (
-                      <img src={pos.coverImage} alt="" className="w-12 h-12 border border-zinc-700" />
+                      <img src={pos.coverImage} alt="" className="w-12 h-12 border border-emerald-500/20" />
                     ) : (
-                      <div className="w-12 h-12 bg-zinc-900 border border-zinc-700 flex items-center justify-center">
-                        <Flame className="h-4 w-4 text-zinc-600" />
+                      <div className="w-12 h-12 bg-emerald-950 border border-emerald-500/20 flex items-center justify-center">
+                        <Flame className="h-4 w-4 text-emerald-500/40" />
                       </div>
                     )}
                   </div>
@@ -275,18 +275,18 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
                       }`}>{pos.queueStatus || "QUEUED"}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-zinc-600 text-[9px] font-mono">{pos.trackingNumber}</span>
+                      <span className="text-emerald-500/40 text-[9px] font-mono">{pos.trackingNumber}</span>
                       {pos.queuePosition && (
-                        <span className="text-zinc-600 text-[8px]">QUEUE #{pos.queuePosition}</span>
+                        <span className="text-emerald-500/40 text-[8px]">QUEUE #{pos.queuePosition}</span>
                       )}
-                      <span className="text-zinc-600 text-[8px]">{mult.toFixed(2)}x MULT</span>
+                      <span className="text-emerald-500/40 text-[8px]">{mult.toFixed(2)}x MULT</span>
                     </div>
                   </div>
 
                   <div className="flex-shrink-0 text-right mr-3">
                     <div className="flex items-center gap-2 justify-end">
-                      <span className="text-zinc-500 text-xs font-mono">${pos.buyIn.toFixed(2)}</span>
-                      <span className="text-zinc-700">→</span>
+                      <span className="text-emerald-500/60 text-xs font-mono">${pos.buyIn.toFixed(2)}</span>
+                      <span className="text-emerald-500/25">→</span>
                       <span className="text-emerald-400 text-sm font-black font-mono">${offer.toFixed(2)}</span>
                     </div>
                     <div className={`flex items-center justify-end gap-1 ${roiPositive ? "text-emerald-400" : "text-red-400"}`}>
@@ -324,34 +324,34 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
           })}
         </div>
 
-        <div className="px-4 py-2 border-t border-zinc-800 flex items-center justify-between">
+        <div className="px-4 py-2 border-t border-emerald-500/15 flex items-center justify-between">
           <Link href="/" className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 border border-emerald-500/30 px-2.5 py-1.5 hover:bg-emerald-500/10 transition-colors" data-testid="link-buy-more">
             <Zap className="h-3 w-3" /> BUY MORE ON FLOOR <ChevronRight className="h-2.5 w-2.5" />
           </Link>
-          <span className="text-[8px] text-zinc-600 font-mono">ACCEPT = LOCK PROFIT | HOLD = WAIT FOR HIGHER OFFER</span>
+          <span className="text-[8px] text-emerald-500/40 font-mono">ACCEPT = LOCK PROFIT | HOLD = WAIT FOR HIGHER OFFER</span>
         </div>
       </div>
 
       {settledPositions.length > 0 && (
-        <div className="border border-zinc-800 bg-black/60">
-          <div className="bg-zinc-900/30 px-4 py-2 border-b border-zinc-800 flex items-center gap-2">
-            <CheckCircle className="h-3 w-3 text-zinc-500" />
-            <span className="text-zinc-500 text-[10px] font-black tracking-wider">SETTLED POSITIONS</span>
-            <span className="text-zinc-700 text-[9px]">{settledPositions.length}</span>
+        <div className="border border-emerald-500/15 bg-black/60">
+          <div className="bg-emerald-950/30 px-4 py-2 border-b border-emerald-500/15 flex items-center gap-2">
+            <CheckCircle className="h-3 w-3 text-emerald-500/60" />
+            <span className="text-emerald-500/60 text-[10px] font-black tracking-wider">SETTLED POSITIONS</span>
+            <span className="text-emerald-500/25 text-[9px]">{settledPositions.length}</span>
           </div>
-          <div className="divide-y divide-zinc-900/50">
+          <div className="divide-y divide-emerald-500/10">
             {settledPositions.map((pos) => (
               <div key={pos.id} className="flex items-center gap-3 px-4 py-2.5 opacity-60" data-testid={`settled-position-${pos.id}`}>
                 {pos.coverImage ? (
-                  <img src={pos.coverImage} alt="" className="w-8 h-8 border border-zinc-800 flex-shrink-0 grayscale" />
+                  <img src={pos.coverImage} alt="" className="w-8 h-8 border border-emerald-500/15 flex-shrink-0 grayscale" />
                 ) : (
-                  <div className="w-8 h-8 bg-zinc-900 border border-zinc-800 flex-shrink-0 flex items-center justify-center">
-                    <Flame className="h-3 w-3 text-zinc-700" />
+                  <div className="w-8 h-8 bg-emerald-950 border border-emerald-500/15 flex-shrink-0 flex items-center justify-center">
+                    <Flame className="h-3 w-3 text-emerald-500/25" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-zinc-400 text-xs font-bold truncate">{pos.trackTitle}</p>
-                  <span className="text-zinc-700 text-[9px]">{pos.trackingNumber}</span>
+                  <p className="text-emerald-400/70 text-xs font-bold truncate">{pos.trackTitle}</p>
+                  <span className="text-emerald-500/25 text-[9px]">{pos.trackingNumber}</span>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <span className="text-emerald-500/60 text-xs font-bold font-mono">
@@ -398,7 +398,7 @@ export default function TraderPage() {
   if (!trader) {
     return (
       <div className="min-h-full flex items-center justify-center bg-black">
-        <p className="text-zinc-500 font-mono text-sm">TRADER NOT FOUND</p>
+        <p className="text-emerald-500/60 font-mono text-sm">TRADER NOT FOUND</p>
       </div>
     );
   }
@@ -449,7 +449,7 @@ export default function TraderPage() {
                     <span className="text-[8px] px-1.5 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 font-black">ADMIN</span>
                   )}
                 </div>
-                <p className="text-zinc-500 text-[10px] mt-1">
+                <p className="text-emerald-500/60 text-[10px] mt-1">
                   {hasTrust ? `TRUST: ${trader.trust!.trustId} | BENEFICIARY` : "ACTIVE TRADER"} | AITITRADE DEX
                 </p>
                 <div className="flex items-center gap-3 mt-2">
@@ -501,40 +501,40 @@ export default function TraderPage() {
                 <span className="text-[11px] text-emerald-400 font-black tracking-wider">GLOBAL SETTLEMENT TRACKER</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[9px] text-zinc-500">${ksReached} CYCLES COMPLETED</span>
+                <span className="text-[9px] text-emerald-500/60">${ksReached} CYCLES COMPLETED</span>
                 {isCloseToSettlement && (
                   <span className="text-[8px] px-1.5 py-0.5 bg-red-500/20 text-red-400 border border-red-500/30 font-bold animate-pulse">IMMINENT</span>
                 )}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3 mb-3">
-              <div className="bg-zinc-900/80 border border-zinc-800 p-2.5 text-center">
-                <p className="text-[8px] text-zinc-500 tracking-widest">GROSS INTAKE</p>
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5 text-center">
+                <p className="text-[8px] text-emerald-500/60 tracking-widest">GROSS INTAKE</p>
                 <p className="text-lg text-emerald-400 font-black">${grossIntake.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-zinc-800 p-2.5 text-center">
-                <p className="text-[8px] text-zinc-500 tracking-widest">NEXT $1K AT</p>
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5 text-center">
+                <p className="text-[8px] text-emerald-500/60 tracking-widest">NEXT $1K AT</p>
                 <p className="text-lg text-lime-400 font-black">${nextKAt.toLocaleString('en-US')}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-zinc-800 p-2.5 text-center">
-                <p className="text-[8px] text-zinc-500 tracking-widest">FUND AVAILABLE</p>
-                <p className={`text-lg font-black ${fundAvailable > 0 ? "text-green-400" : "text-zinc-500"}`}>${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5 text-center">
+                <p className="text-[8px] text-emerald-500/60 tracking-widest">FUND AVAILABLE</p>
+                <p className={`text-lg font-black ${fundAvailable > 0 ? "text-green-400" : "text-emerald-500/60"}`}>${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
               </div>
             </div>
             <div className="relative">
-              <div className="w-full bg-zinc-900 h-4 border border-zinc-700/50 overflow-hidden">
+              <div className="w-full bg-emerald-950 h-4 border border-emerald-500/20/50 overflow-hidden">
                 <div
                   className={`h-full transition-all duration-700 ${isCloseToSettlement ? "bg-red-500 animate-pulse" : "bg-emerald-500"}`}
                   style={{ width: `${cyclePct}%` }}
                 />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={`text-[9px] font-black ${cyclePct > 50 ? "text-black" : "text-zinc-400"}`}>
+                  <span className={`text-[9px] font-black ${cyclePct > 50 ? "text-black" : "text-emerald-400/70"}`}>
                     {cyclePct.toFixed(1)}% — ${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO PAYOUT
                   </span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-2 text-[9px] text-zinc-600">
+            <div className="flex items-center justify-between mt-2 text-[9px] text-emerald-500/40">
               <span>KINETIC FLOOR / CEO LIVE RATE</span>
               <span>EVERY $1K TRADED = KINETIC SETTLEMENT</span>
             </div>
@@ -552,19 +552,19 @@ export default function TraderPage() {
                   <p className="text-white font-black text-lg" data-testid="text-trust-balance">
                     ${trader.trust!.noteAmount.toFixed(2)}
                   </p>
-                  <div className="mt-1.5 h-1.5 bg-zinc-800 overflow-hidden">
+                  <div className="mt-1.5 h-1.5 bg-emerald-500/10 overflow-hidden">
                     <div className="h-full bg-amber-500 transition-all" style={{ width: `${paidPct}%` }} />
                   </div>
-                  <p className="text-zinc-600 text-[8px] mt-1">{paidPct}% AMORTIZED — ${trader.trust!.outstandingBalance.toFixed(2)} BAL</p>
+                  <p className="text-emerald-500/40 text-[8px] mt-1">{paidPct}% AMORTIZED — ${trader.trust!.outstandingBalance.toFixed(2)} BAL</p>
                 </div>
                 <div className="bg-black/60 border border-amber-500/20 p-3">
                   <p className="text-[8px] text-amber-500/60 tracking-widest">MONTHLY AMORT</p>
                   <p className="text-white font-black text-lg" data-testid="text-monthly-amort">${trader.trust!.monthlyCommitment}/MO</p>
-                  <p className="text-zinc-600 text-[8px] mt-1.5">{trader.trust!.monthsRemaining} MONTHS REMAINING</p>
+                  <p className="text-emerald-500/40 text-[8px] mt-1.5">{trader.trust!.monthsRemaining} MONTHS REMAINING</p>
                 </div>
                 <div className="bg-black/60 border border-amber-500/20 p-3">
                   <p className="text-[8px] text-amber-500/60 tracking-widest">BENEFICIARY</p>
-                  <p className={`font-black text-lg ${trader.trust!.isBeneficiary ? "text-emerald-400" : "text-zinc-500"}`} data-testid="text-beneficiary-status">
+                  <p className={`font-black text-lg ${trader.trust!.isBeneficiary ? "text-emerald-400" : "text-emerald-500/60"}`} data-testid="text-beneficiary-status">
                     {trader.trust!.isBeneficiary ? "ACTIVE" : "INACTIVE"}
                   </p>
                   {trader.trust!.giftedYield > 0 && (
@@ -581,7 +581,7 @@ export default function TraderPage() {
             <div className="border border-amber-500/30 bg-amber-500/5 p-6 text-center">
               <Crown className="h-10 w-10 text-amber-500/40 mx-auto mb-3" />
               <p className="text-amber-400 font-black text-lg mb-1">UPGRADE TO SOVEREIGN TRUST</p>
-              <p className="text-zinc-500 text-xs mb-4">Unlock premium Spotify room, CEO Class, Trust Vault & more</p>
+              <p className="text-emerald-500/60 text-xs mb-4">Unlock premium Spotify room, CEO Class, Trust Vault & more</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link
                   href="/membership"
@@ -600,12 +600,12 @@ export default function TraderPage() {
                   <DollarSign className="h-4 w-4" /> OPEN BROKERAGE ACCOUNT
                 </a>
               </div>
-              <p className="text-zinc-600 text-[9px] mt-3 truncate">$25 DOWN + $19.79/MO | $AITITRADEBROKERAGE</p>
+              <p className="text-emerald-500/40 text-[9px] mt-3 truncate">$25 DOWN + $19.79/MO | $AITITRADEBROKERAGE</p>
             </div>
           )}
 
-          <div className="bg-zinc-900/30 border border-zinc-800 p-3">
-            <div className="flex items-center justify-between text-[9px] text-zinc-600 flex-wrap gap-2">
+          <div className="bg-emerald-950/30 border border-emerald-500/15 p-3">
+            <div className="flex items-center justify-between text-[9px] text-emerald-500/40 flex-wrap gap-2">
               <span>KINETIC FLOOR SPLIT</span>
               <span>90% ROI BUY-BACK</span>
               <span>$1K SETTLEMENT CYCLE</span>

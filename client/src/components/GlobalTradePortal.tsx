@@ -410,7 +410,7 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
         <div className="flex items-center gap-1.5 min-w-0">
           <SiSpotify className="h-3 w-3 text-green-400 flex-shrink-0" />
           <span className="font-bold text-xs sm:text-sm text-emerald-400 flex-shrink-0">{currentAsset.ticker}</span>
-          <span className="text-[7px] sm:text-[9px] text-zinc-500 truncate">{currentAsset.title}</span>
+          <span className="text-[7px] sm:text-[9px] text-emerald-500/60 truncate">{currentAsset.title}</span>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {tunedIn && playerState?.isPlaying ? (
@@ -424,17 +424,17 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
       {!tunedIn ? (
         <div className="p-3 sm:p-4">
           <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-2 text-center">
-            <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-              <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">TYPE</p>
+            <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+              <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">TYPE</p>
               <p className="text-[10px] sm:text-xs text-amber-400 font-extrabold">GLOBAL</p>
             </div>
-            <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-              <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">SOURCE</p>
+            <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+              <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">SOURCE</p>
               <p className="text-[10px] sm:text-xs text-green-400 font-extrabold">SPOTIFY</p>
             </div>
-            <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-              <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">ACCESS</p>
-              <p className="text-[10px] sm:text-xs text-zinc-300 font-extrabold">PREMIUM</p>
+            <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+              <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">ACCESS</p>
+              <p className="text-[10px] sm:text-xs text-emerald-300 font-extrabold">PREMIUM</p>
             </div>
           </div>
           <Button
@@ -466,7 +466,7 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
               <p className="text-white text-[10px] font-extrabold truncate">
                 {playerState?.trackName?.toUpperCase() || currentAsset.title}
               </p>
-              <p className="text-zinc-500 text-[8px] truncate">
+              <p className="text-emerald-500/60 text-[8px] truncate">
                 {playerState?.artistName || currentAsset.artistName || "GLOBAL ASSET"}
               </p>
               <p className="text-emerald-400 text-[7px] font-bold mt-0.5">
@@ -475,16 +475,16 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
             </div>
           </div>
 
-          <div className="bg-zinc-900 rounded-sm h-1 overflow-hidden">
+          <div className="bg-emerald-950 rounded-sm h-1 overflow-hidden">
             <div className="bg-emerald-400 h-full transition-all duration-1000" style={{ width: `${progressPct}%` }} />
           </div>
-          <div className="flex justify-between text-[7px] text-zinc-600">
+          <div className="flex justify-between text-[7px] text-emerald-500/40">
             <span>{formatTime(playerState?.progressMs || 0)}</span>
             <span>{formatTime(playerState?.durationMs || 0)}</span>
           </div>
 
           <div className="flex items-center justify-center gap-3">
-            <button onClick={handlePrev} className="text-zinc-500 hover:text-emerald-400 transition-colors" data-testid={`button-global-prev-${portalIndex}`}>
+            <button onClick={handlePrev} className="text-emerald-500/60 hover:text-emerald-400 transition-colors" data-testid={`button-global-prev-${portalIndex}`}>
               <SkipBack className="h-4 w-4" />
             </button>
             <button
@@ -494,15 +494,15 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
             >
               {playerState?.isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
             </button>
-            <button onClick={handleNext} className="text-zinc-500 hover:text-emerald-400 transition-colors" data-testid={`button-global-next-${portalIndex}`}>
+            <button onClick={handleNext} className="text-emerald-500/60 hover:text-emerald-400 transition-colors" data-testid={`button-global-next-${portalIndex}`}>
               <SkipForward className="h-4 w-4" />
             </button>
-            <button onClick={handleMute} className="text-zinc-500 hover:text-emerald-400 transition-colors ml-2">
+            <button onClick={handleMute} className="text-emerald-500/60 hover:text-emerald-400 transition-colors ml-2">
               {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
             </button>
             <button
               onClick={() => { setAutopilot(!autopilot); autopilotRef.current = !autopilot; }}
-              className={`ml-1 transition-colors ${autopilot ? "text-emerald-400" : "text-zinc-500 hover:text-emerald-400"}`}
+              className={`ml-1 transition-colors ${autopilot ? "text-emerald-400" : "text-emerald-500/60 hover:text-emerald-400"}`}
               title={autopilot ? "AUTOPILOT ON — auto-advances to next song" : "AUTOPILOT OFF"}
               data-testid={`button-global-autopilot-${portalIndex}`}
             >
@@ -510,7 +510,7 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
             </button>
             <button
               onClick={() => setShowQueue(!showQueue)}
-              className={`ml-1 transition-colors ${showQueue ? "text-emerald-400" : "text-zinc-500 hover:text-emerald-400"}`}
+              className={`ml-1 transition-colors ${showQueue ? "text-emerald-400" : "text-emerald-500/60 hover:text-emerald-400"}`}
               data-testid={`button-global-queue-${portalIndex}`}
             >
               <ListMusic className="h-3.5 w-3.5" />
@@ -522,8 +522,8 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
               <Clock className="h-2.5 w-2.5 text-emerald-400/60" />
               <span className="text-[7px] text-emerald-400/80 font-bold">{formatSessionTime(sessionTime)}</span>
             </div>
-            <span className="text-[7px] text-zinc-500">{songsPlayed} PLAYED</span>
-            <span className={`text-[7px] font-bold ${autopilot ? "text-emerald-400" : "text-zinc-600"}`}>
+            <span className="text-[7px] text-emerald-500/60">{songsPlayed} PLAYED</span>
+            <span className={`text-[7px] font-bold ${autopilot ? "text-emerald-400" : "text-emerald-500/40"}`}>
               {autopilot ? "AUTO ●" : "MANUAL"}
             </span>
           </div>
@@ -535,7 +535,7 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
                 <button
                   key={idx}
                   onClick={() => handleSelectAsset(idx)}
-                  className={`w-full text-left px-2 py-1 flex items-center gap-2 text-[8px] hover:bg-emerald-950/50 transition-colors ${idx === currentIndex ? "bg-emerald-950/30 text-emerald-400" : "text-zinc-500"}`}
+                  className={`w-full text-left px-2 py-1 flex items-center gap-2 text-[8px] hover:bg-emerald-950/50 transition-colors ${idx === currentIndex ? "bg-emerald-950/30 text-emerald-400" : "text-emerald-500/60"}`}
                   data-testid={`queue-item-${portalIndex}-${idx}`}
                 >
                   <span className="font-bold w-4">{idx + 1}</span>
@@ -548,8 +548,8 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
         </div>
       )}
 
-      <div className="border-t border-zinc-800 px-2 sm:px-3 py-1 flex items-center justify-between bg-zinc-900/30">
-        <span className="text-[7px] text-zinc-600 font-bold">{currentAsset.ticker} • GLOBAL RADIO</span>
+      <div className="border-t border-emerald-500/15 px-2 sm:px-3 py-1 flex items-center justify-between bg-emerald-950/30">
+        <span className="text-[7px] text-emerald-500/40 font-bold">{currentAsset.ticker} • GLOBAL RADIO</span>
         <span className="text-[7px] text-emerald-400/40 font-bold">97.7 THE FLAME</span>
       </div>
     </div>

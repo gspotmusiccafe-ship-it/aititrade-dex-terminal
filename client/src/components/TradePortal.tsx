@@ -98,50 +98,50 @@ export function TradePortal({ unitPrice, grossSales, ticker, orderId, onAcceptDi
         <h3 className="text-lime-500 text-[11px] font-extrabold underline flex items-center gap-1">
           <Shield className="h-3 w-3" /> TRADE PORTAL — {portal.name.replace(/_/g, " ")}
         </h3>
-        <span className="text-[9px] text-zinc-500">{ticker}</span>
+        <span className="text-[9px] text-emerald-500/60">{ticker}</span>
       </div>
 
       <div className="grid grid-cols-4 gap-1 text-center mb-2">
-        <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-          <p className="text-[8px] text-zinc-500 font-bold">ENTRY</p>
+        <div className="bg-emerald-950/60 p-1.5 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/60 font-bold">ENTRY</p>
           <p className="text-[11px] text-lime-400 font-extrabold" data-testid="portal-tbi">${unitPrice.toFixed(2)}</p>
         </div>
-        <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-          <p className="text-[8px] text-zinc-500 font-bold">PRICE</p>
+        <div className="bg-emerald-950/60 p-1.5 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/60 font-bold">PRICE</p>
           <p className="text-[11px] text-amber-400 font-extrabold" data-testid="portal-price">$0.01–$1.00</p>
         </div>
-        <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-          <p className="text-[8px] text-zinc-500 font-bold">MBBP</p>
+        <div className="bg-emerald-950/60 p-1.5 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/60 font-bold">MBBP</p>
           <p className="text-[11px] text-cyan-400 font-extrabold" data-testid="portal-mbbp">CLOSE+$1</p>
         </div>
-        <div className="bg-zinc-900/80 p-1.5 border border-zinc-800">
-          <p className="text-[8px] text-zinc-500 font-bold">FLOOR</p>
+        <div className="bg-emerald-950/60 p-1.5 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/60 font-bold">FLOOR</p>
           <p className="text-[11px] text-white font-extrabold" data-testid="portal-floor">{poolLabel}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-1 text-center mb-2">
-        <div className="bg-zinc-900/60 p-1 border border-zinc-800">
-          <p className="text-[8px] text-zinc-600">CLOSE AT</p>
+        <div className="bg-emerald-950/50 p-1 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/40">CLOSE AT</p>
           <p className="text-[10px] text-lime-400 font-bold" data-testid="portal-close-at">1K VOL</p>
         </div>
-        <div className="bg-zinc-900/60 p-1 border border-zinc-800">
-          <p className="text-[8px] text-zinc-600">SETTLEMENT</p>
+        <div className="bg-emerald-950/50 p-1 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/40">SETTLEMENT</p>
           <p className="text-[10px] text-cyan-400 font-bold" data-testid="portal-settlement">FIFO QUEUE</p>
         </div>
-        <div className="bg-zinc-900/60 p-1 border border-zinc-800">
-          <p className="text-[8px] text-zinc-600">DISCOUNT</p>
+        <div className="bg-emerald-950/50 p-1 border border-emerald-500/15">
+          <p className="text-[8px] text-emerald-500/40">DISCOUNT</p>
           <p className="text-[10px] text-yellow-400 font-bold" data-testid="portal-discount">SETTLES FIRST</p>
         </div>
       </div>
 
       {offerVisible && (
-        <div className="mt-2 animate-pulse bg-zinc-900 p-3 border border-yellow-500/30" data-testid="discount-offer-panel">
+        <div className="mt-2 animate-pulse bg-emerald-950 p-3 border border-yellow-500/30" data-testid="discount-offer-panel">
           <div className="flex items-center gap-1 mb-1">
             <AlertTriangle className="h-3 w-3 text-yellow-400" />
             <p className="text-yellow-400 font-bold text-[11px]">DISCOUNT EXIT AVAILABLE</p>
           </div>
-          <p className="text-[10px] text-zinc-400 mb-2">
+          <p className="text-[10px] text-emerald-400/70 mb-2">
             Take a <span className="text-yellow-400 font-bold">discount exit</span> now and settle first in queue?
           </p>
           <div className="flex gap-2">
@@ -154,14 +154,14 @@ export function TradePortal({ unitPrice, grossSales, ticker, orderId, onAcceptDi
               <DollarSign className="h-3 w-3 inline mr-0.5" />ACCEPT DISCOUNT
             </button>
             <button
-              className="border border-zinc-500 text-zinc-400 px-3 py-1 text-[10px] font-bold hover:bg-zinc-800 transition-colors"
+              className="border border-emerald-500/30 text-emerald-400/70 px-3 py-1 text-[10px] font-bold hover:bg-emerald-500/10 transition-colors"
               onClick={() => { onHoldForMbbp?.(); setOfferVisible(false); }}
               data-testid="btn-hold-mbbp"
             >
               <Clock className="h-3 w-3 inline mr-0.5" />HOLD FOR MBBP
             </button>
           </div>
-          <p className="text-[8px] mt-2 text-zinc-500 italic flex items-center gap-1">
+          <p className="text-[8px] mt-2 text-emerald-500/60 italic flex items-center gap-1">
             <TrendingUp className="h-2.5 w-2.5" />
             Discounters settle first in the FIFO queue. MBBP holders wait for market close.
           </p>
@@ -183,7 +183,7 @@ export function LivingTicker({ unitPrice, currentFloor }: { unitPrice: number; c
         {status}
       </span>
       <span className="animate-pulse text-lime-500">●</span>
-      <span className="text-zinc-600 ml-auto">{portal.name.replace(/_/g, " ")} | $0.01–$1.00 | MBBP=CLOSE+$1</span>
+      <span className="text-emerald-500/40 ml-auto">{portal.name.replace(/_/g, " ")} | $0.01–$1.00 | MBBP=CLOSE+$1</span>
     </div>
   );
 }
@@ -198,16 +198,16 @@ export function TreasuryMonitor({ stats }: { stats: TreasuryStats }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 bg-zinc-950" data-testid="treasury-monitor">
       <div className="border border-lime-900 p-4 bg-black">
-        <h3 className="text-zinc-500 text-xs uppercase tracking-widest">House Treasury</h3>
+        <h3 className="text-emerald-500/60 text-xs uppercase tracking-widest">House Treasury</h3>
         <p className="text-3xl font-mono text-lime-400 mt-2" data-testid="treasury-balance">{stats.formattedBalance}</p>
-        <p className="text-[10px] text-zinc-600 mt-1">House pool from all cycles</p>
+        <p className="text-[10px] text-emerald-500/40 mt-1">House pool from all cycles</p>
       </div>
-      <div className="border border-zinc-800 p-4 bg-black">
-        <h3 className="text-zinc-500 text-xs uppercase tracking-widest">Active Floor Volume</h3>
+      <div className="border border-emerald-500/15 p-4 bg-black">
+        <h3 className="text-emerald-500/60 text-xs uppercase tracking-widest">Active Floor Volume</h3>
         <p className="text-3xl font-mono text-white mt-2" data-testid="treasury-volume">{stats.activeFloorVolume}</p>
       </div>
-      <div className="border border-zinc-800 p-4 bg-black">
-        <h3 className="text-zinc-500 text-xs uppercase tracking-widest">System Efficiency</h3>
+      <div className="border border-emerald-500/15 p-4 bg-black">
+        <h3 className="text-emerald-500/60 text-xs uppercase tracking-widest">System Efficiency</h3>
         <p className="text-3xl font-mono text-yellow-500 mt-2" data-testid="treasury-efficiency">{stats.efficiency}</p>
       </div>
     </div>
@@ -226,7 +226,7 @@ export function PortalBadge({ unitPrice }: { unitPrice: number }) {
     PRO_30: "text-violet-400 border-violet-500/30",
     HIGH_50: "text-amber-400 border-amber-500/30",
   };
-  const cls = colorMap[portal.name] || "text-zinc-400 border-zinc-500/30";
+  const cls = colorMap[portal.name] || "text-emerald-400/70 border-emerald-500/30/30";
 
   return (
     <span className={`text-[8px] font-extrabold border px-1.5 py-0.5 ${cls}`} data-testid="portal-badge">

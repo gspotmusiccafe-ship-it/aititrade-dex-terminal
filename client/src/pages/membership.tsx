@@ -47,7 +47,7 @@ export default function MembershipPage() {
   return (
     <div className="min-h-full pb-28 bg-black">
       {isAuthenticated && (
-        <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-black/90 backdrop-blur border-b border-zinc-800">
+        <div className="sticky top-0 z-50 flex items-center justify-between px-6 py-3 bg-black/90 backdrop-blur border-b border-emerald-500/15">
           <span className="text-lime-400 font-mono font-extrabold text-sm tracking-widest">AITITRADE</span>
           <button
             onClick={() => logout()}
@@ -70,7 +70,7 @@ export default function MembershipPage() {
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight mb-4 text-white font-mono" data-testid="text-membership-title">
             ACTIVATE YOUR POSITION
           </h1>
-          <p className="text-zinc-400 max-w-xl mx-auto text-sm font-mono">
+          <p className="text-emerald-400/70 max-w-xl mx-auto text-sm font-mono">
             One account. Full exchange access. $25 down payment activates your sovereign trading position.
             $19.79/mo for 24 months via Cash App.
           </p>
@@ -93,40 +93,40 @@ export default function MembershipPage() {
             </div>
             <div className="text-right">
               <span className="text-3xl font-black text-lime-400 font-mono">$25</span>
-              <span className="text-zinc-500 font-mono text-xs ml-1">DOWN</span>
+              <span className="text-emerald-500/60 font-mono text-xs ml-1">DOWN</span>
             </div>
           </div>
 
           <div className="p-6 space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {terms.map((term) => (
-                <div key={term.label} className="border border-zinc-800 bg-zinc-900/50 p-3 text-center">
-                  <p className="text-zinc-500 text-[10px] font-mono font-bold mb-1">{term.label}</p>
+                <div key={term.label} className="border border-emerald-500/15 bg-emerald-950/50 p-3 text-center">
+                  <p className="text-emerald-500/60 text-[10px] font-mono font-bold mb-1">{term.label}</p>
                   <p className="text-lime-400 text-xs font-mono font-extrabold">{term.value}</p>
                 </div>
               ))}
             </div>
 
             <div className="space-y-2">
-              <p className="text-zinc-500 text-[10px] font-mono font-bold tracking-wider mb-3">FULL ACCESS INCLUDES:</p>
+              <p className="text-emerald-500/60 text-[10px] font-mono font-bold tracking-wider mb-3">FULL ACCESS INCLUDES:</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {features.map((feature, i) => (
                   <div key={i} className="flex items-start gap-2 text-sm">
                     <Check className="h-3.5 w-3.5 flex-shrink-0 mt-0.5 text-lime-400" />
-                    <span className="text-zinc-300 font-mono text-xs">{feature}</span>
+                    <span className="text-emerald-300 font-mono text-xs">{feature}</span>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="border-t border-zinc-800 pt-6">
+            <div className="border-t border-emerald-500/15 pt-6">
               {isMember ? (
                 <div className="text-center space-y-3">
                   <div className="flex items-center justify-center gap-2 text-lime-400 font-mono font-extrabold text-sm">
                     <Shield className="h-4 w-4" />
                     YOUR TRADING ACCOUNT IS ACTIVE
                   </div>
-                  <p className="text-zinc-500 text-[10px] font-mono">
+                  <p className="text-emerald-500/60 text-[10px] font-mono">
                     Continue monthly payments via Cash App to maintain your position
                   </p>
                   <a
@@ -156,7 +156,7 @@ export default function MembershipPage() {
                       <ExternalLink className="h-4 w-4 ml-2" />
                     </Button>
                   </a>
-                  <p className="text-center text-zinc-600 text-[10px] font-mono">
+                  <p className="text-center text-emerald-500/40 text-[10px] font-mono">
                     SEND $25 TO $AITITRADEBROKERAGE ON CASH APP — YOUR ACCOUNT WILL BE ACTIVATED WITHIN 24 HOURS
                   </p>
                 </div>
@@ -164,8 +164,8 @@ export default function MembershipPage() {
             </div>
           </div>
 
-          <div className="bg-zinc-900/50 border-t border-zinc-800 px-6 py-4">
-            <div className="flex items-center justify-between text-[10px] font-mono text-zinc-600">
+          <div className="bg-emerald-950/50 border-t border-emerald-500/15 px-6 py-4">
+            <div className="flex items-center justify-between text-[10px] font-mono text-emerald-500/40">
               <span>KINETIC FLOOR SPLIT ON ALL TRADES</span>
               <span>$1K SETTLEMENT CYCLE</span>
               <span>FIFO QUEUE</span>
@@ -196,18 +196,18 @@ export default function MembershipPage() {
               <UserPlus className="h-4 w-4 inline mr-2" />
               CREATE TRADER — FREE TRIAL
             </button>
-            <p className="text-zinc-600 text-[9px] font-mono mt-2">
+            <p className="text-emerald-500/40 text-[9px] font-mono mt-2">
               Trial access to the trading floor. Upgrade anytime via Cash App.
             </p>
           </div>
         )}
 
-        <div className="text-center mt-8 p-6 border border-zinc-800 bg-zinc-900/30">
+        <div className="text-center mt-8 p-6 border border-emerald-500/15 bg-emerald-950/30">
           <Zap className="h-6 w-6 text-lime-400/40 mx-auto mb-3" />
-          <p className="text-zinc-400 text-xs font-mono mb-1">
+          <p className="text-emerald-400/70 text-xs font-mono mb-1">
             ALL PAYMENTS PROCESSED VIA CASH APP
           </p>
-          <p className="text-zinc-600 text-[10px] font-mono">
+          <p className="text-emerald-500/40 text-[10px] font-mono">
             $AITITRADEBROKERAGE — SOVEREIGN DIGITAL ASSET EXCHANGE
           </p>
         </div>

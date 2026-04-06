@@ -41,7 +41,7 @@ function YouTubeVideoPanel({ videoUrl, onClose }: { videoUrl: string; onClose: (
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-zinc-500 hover:text-lime-400"
+          className="h-6 w-6 text-emerald-500/60 hover:text-lime-400"
           onClick={onClose}
           data-testid="button-close-video"
         >
@@ -144,17 +144,17 @@ export function MusicPlayer() {
             <span className="text-green-500 font-black text-xs uppercase italic">Direct Order Maker</span>
             <div className="flex items-center gap-2">
               <span className="text-red-600 text-[10px] font-bold animate-pulse">P2P_LIVE</span>
-              <button onClick={() => setOrderMakerOpen(false)} className="text-zinc-600 hover:text-green-400"><X className="h-3.5 w-3.5" /></button>
+              <button onClick={() => setOrderMakerOpen(false)} className="text-emerald-500/40 hover:text-green-400"><X className="h-3.5 w-3.5" /></button>
             </div>
           </div>
           <div className="mb-3">
-            <p className="text-[9px] text-zinc-500 tracking-wider mb-1">ASSET</p>
+            <p className="text-[9px] text-emerald-500/60 tracking-wider mb-1">ASSET</p>
             <p className="text-white font-black text-sm uppercase truncate">{currentTrack.title}</p>
-            <p className="text-zinc-600 text-[9px]">{currentTrack.artist?.name} | {ticker}</p>
+            <p className="text-emerald-500/40 text-[9px]">{currentTrack.artist?.name} | {ticker}</p>
           </div>
           <div className="bg-black border border-green-900/50 p-2.5 mb-3">
             <p className="text-white text-[10px] font-mono font-bold">STIMULATION: $7.00 FOR $21.00 MBB</p>
-            <p className="text-zinc-600 text-[9px] mt-1">KINETIC SPLIT • FLOOR / CEO LIVE RATE</p>
+            <p className="text-emerald-500/40 text-[9px] mt-1">KINETIC SPLIT • FLOOR / CEO LIVE RATE</p>
           </div>
           <a
             href="https://cash.app/app/JNXGD73"
@@ -165,7 +165,7 @@ export function MusicPlayer() {
           >
             OPEN BROKERAGE ACCOUNT
           </a>
-          <p className="text-[8px] text-zinc-700 mt-2 text-center truncate">$AITITRADEBROKERAGE • NO PAYPAL</p>
+          <p className="text-[8px] text-emerald-500/25 mt-2 text-center truncate">$AITITRADEBROKERAGE • NO PAYPAL</p>
         </div>
       )}
       {videoOpen && hasYouTubeVideo && currentTrack && (
@@ -203,7 +203,7 @@ export function MusicPlayer() {
             <div className="p-2">
               <p className="text-[9px] text-emerald-500/40 uppercase px-2 py-1">NOW PLAYING</p>
               <div className="flex items-center gap-2 p-2 bg-emerald-500/5 border border-emerald-500/10">
-                <div className="w-7 h-7 bg-zinc-900 overflow-hidden flex-shrink-0">
+                <div className="w-7 h-7 bg-emerald-950 overflow-hidden flex-shrink-0">
                   {currentTrack.coverImage ? (
                     <img src={currentTrack.coverImage} alt="" className="w-full h-full object-cover opacity-80" />
                   ) : (
@@ -214,7 +214,7 @@ export function MusicPlayer() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-bold truncate text-emerald-400">{currentTrack.title.toUpperCase()}</p>
-                  <p className="text-[9px] text-zinc-600 truncate">{currentTrack.artist?.name}</p>
+                  <p className="text-[9px] text-emerald-500/40 truncate">{currentTrack.artist?.name}</p>
                 </div>
               </div>
             </div>
@@ -236,7 +236,7 @@ export function MusicPlayer() {
                       >
                         <div className="flex flex-col items-center flex-shrink-0 w-6">
                           <button
-                            className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isFirst ? "text-zinc-800 cursor-default" : "text-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20"}`}
+                            className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isFirst ? "text-emerald-900 cursor-default" : "text-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20"}`}
                             onClick={(e) => { e.stopPropagation(); if (!isFirst) moveInQueue(actualIndex, actualIndex - 1); }}
                             disabled={isFirst}
                             data-testid={`button-queue-up-${actualIndex}`}
@@ -245,7 +245,7 @@ export function MusicPlayer() {
                           </button>
                           <span className="text-[9px] text-emerald-500/40 font-mono font-bold leading-none">{i + 1}</span>
                           <button
-                            className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isLast ? "text-zinc-800 cursor-default" : "text-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20"}`}
+                            className={`h-5 w-5 flex items-center justify-center rounded transition-colors ${isLast ? "text-emerald-900 cursor-default" : "text-emerald-500/50 hover:text-emerald-400 hover:bg-emerald-500/10 active:bg-emerald-500/20"}`}
                             onClick={(e) => { e.stopPropagation(); if (!isLast) moveInQueue(actualIndex, actualIndex + 1); }}
                             disabled={isLast}
                             data-testid={`button-queue-down-${actualIndex}`}
@@ -255,12 +255,12 @@ export function MusicPlayer() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[10px] text-white truncate">{track.title}</p>
-                          <p className="text-[9px] text-zinc-600 truncate">{track.artist?.name}</p>
+                          <p className="text-[9px] text-emerald-500/40 truncate">{track.artist?.name}</p>
                         </div>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-5 w-5 opacity-0 group-hover/item:opacity-100 text-zinc-600 flex-shrink-0"
+                          className="h-5 w-5 opacity-0 group-hover/item:opacity-100 text-emerald-500/40 flex-shrink-0"
                           onClick={(e) => { e.stopPropagation(); removeFromQueue(actualIndex); }}
                           data-testid={`button-remove-queue-${actualIndex}`}
                         >
@@ -282,28 +282,28 @@ export function MusicPlayer() {
             <Wifi className="h-3 w-3 text-red-400 animate-pulse" />
             <span className="text-[9px] text-red-400 font-extrabold tracking-widest">CONTINUOUS BROADCAST</span>
           </div>
-          <span className="text-[9px] text-zinc-600">|</span>
+          <span className="text-[9px] text-emerald-500/40">|</span>
           <div className="flex items-center gap-1">
             <Clock className="h-2.5 w-2.5 text-amber-400/70" />
             <span className="text-[9px] text-amber-400 font-bold">{getShowLabel(currentShow)}</span>
           </div>
-          <span className="text-[9px] text-zinc-600">|</span>
-          <span className="text-[9px] text-zinc-500">MARKET-ONLY FEED</span>
-          <span className="text-[9px] text-zinc-600">|</span>
+          <span className="text-[9px] text-emerald-500/40">|</span>
+          <span className="text-[9px] text-emerald-500/60">MARKET-ONLY FEED</span>
+          <span className="text-[9px] text-emerald-500/40">|</span>
           <span className="text-[9px] text-lime-400 font-bold">AUTOPILOT LOCKED</span>
-          <span className="text-[9px] text-zinc-600">|</span>
-          <span className="text-[9px] text-zinc-500">AD-BRIDGE</span>
-          <span className="text-[9px] text-zinc-600">|</span>
+          <span className="text-[9px] text-emerald-500/40">|</span>
+          <span className="text-[9px] text-emerald-500/60">AD-BRIDGE</span>
+          <span className="text-[9px] text-emerald-500/40">|</span>
           <div className="flex items-center gap-1" data-testid="signal-strength-indicator">
             <span className={`w-1.5 h-1.5 rounded-full ${
               signalStrength === "GREEN" ? "bg-lime-400 shadow-[0_0_6px_rgba(132,204,22,0.6)]" :
               signalStrength === "RED" ? "bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] animate-pulse" :
-              "bg-zinc-600"
+              "bg-emerald-800"
             }`} />
             <span className={`text-[9px] font-extrabold ${
               signalStrength === "GREEN" ? "text-lime-400" :
               signalStrength === "RED" ? "text-red-400" :
-              "text-zinc-500"
+              "text-emerald-500/60"
             }`}>
               SIGNAL {signalStrength}
             </span>
@@ -404,19 +404,19 @@ export function MusicPlayer() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 h-9 md:h-10">
               <div className="flex items-center gap-0.5">
-                <Button variant="ghost" size="icon" className={`h-7 w-7 ${shuffle ? "text-emerald-400" : "text-zinc-600"} hover:text-emerald-400`} onClick={toggleShuffle} data-testid="button-shuffle">
+                <Button variant="ghost" size="icon" className={`h-7 w-7 ${shuffle ? "text-emerald-400" : "text-emerald-500/40"} hover:text-emerald-400`} onClick={toggleShuffle} data-testid="button-shuffle">
                   <Shuffle className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-emerald-400" onClick={prevTrack} data-testid="button-prev-track">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-400/70 hover:text-emerald-400" onClick={prevTrack} data-testid="button-prev-track">
                   <SkipBack className="h-3.5 w-3.5" />
                 </Button>
                 <button onClick={togglePlay} className="h-8 w-8 rounded-full bg-lime-500 hover:bg-lime-400 text-black flex items-center justify-center transition-colors" style={{ boxShadow: isPlaying ? "0 0 16px rgba(132,204,22,0.6), 0 0 30px rgba(132,204,22,0.2)" : "0 0 8px rgba(132,204,22,0.3)" }} data-testid="button-play-pause">
                   {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
                 </button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-400 hover:text-emerald-400" onClick={nextTrack} data-testid="button-next-track">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-400/70 hover:text-emerald-400" onClick={nextTrack} data-testid="button-next-track">
                   <SkipForward className="h-3.5 w-3.5" />
                 </Button>
-                <Button variant="ghost" size="icon" className={`h-7 w-7 ${repeat !== "off" ? "text-emerald-400" : "text-zinc-600"} hover:text-emerald-400`} onClick={toggleRepeat} data-testid="button-repeat">
+                <Button variant="ghost" size="icon" className={`h-7 w-7 ${repeat !== "off" ? "text-emerald-400" : "text-emerald-500/40"} hover:text-emerald-400`} onClick={toggleRepeat} data-testid="button-repeat">
                   {repeat === "one" ? <Repeat1 className="h-3 w-3" /> : <Repeat className="h-3 w-3" />}
                 </Button>
               </div>
@@ -434,7 +434,7 @@ export function MusicPlayer() {
                 <button
                   onClick={toggleAutopilot}
                   className={`flex-1 h-full flex items-center justify-center gap-1 text-[9px] font-extrabold uppercase tracking-wider transition-all border ${
-                    autopilot ? "bg-lime-500/20 border-lime-500/50 text-lime-400" : "border-zinc-700 text-zinc-400 hover:border-lime-500/40 hover:text-lime-400 bg-zinc-900"
+                    autopilot ? "bg-lime-500/20 border-lime-500/50 text-lime-400" : "border-emerald-500/20 text-emerald-400/70 hover:border-lime-500/40 hover:text-lime-400 bg-emerald-950"
                   }`}
                   data-testid="button-autopilot-toggle"
                 >
@@ -443,7 +443,7 @@ export function MusicPlayer() {
                 <button
                   onClick={toggleBroadcast}
                   className={`flex-1 h-full flex items-center justify-center gap-1 text-[9px] font-extrabold uppercase tracking-wider transition-all border ${
-                    broadcast ? "bg-red-500/20 border-red-500/50 text-red-400 animate-pulse" : "border-zinc-700 text-zinc-400 hover:border-red-500/40 hover:text-red-400 bg-zinc-900"
+                    broadcast ? "bg-red-500/20 border-red-500/50 text-red-400 animate-pulse" : "border-emerald-500/20 text-emerald-400/70 hover:border-red-500/40 hover:text-red-400 bg-emerald-950"
                   }`}
                   data-testid="button-broadcast-toggle"
                 >
@@ -522,12 +522,12 @@ export function MusicPlayer() {
                 <p className="text-[9px] sm:text-[10px] text-violet-400 font-black tracking-wider truncate">97.7 THE FLAME — SONG PURCHASE</p>
               </div>
               <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+                <div className="bg-emerald-950/60 border border-violet-500/15 p-2.5">
                   <p className="text-[8px] text-violet-500/40 tracking-wider">SONG</p>
                   <p className="text-sm text-violet-400 font-bold mt-0.5 truncate">{currentTrack.title}</p>
-                  <p className="text-[7px] text-zinc-500 mt-0.5 truncate">{currentTrack.artist?.name || "G. SMOOTH"}</p>
+                  <p className="text-[7px] text-emerald-500/60 mt-0.5 truncate">{currentTrack.artist?.name || "G. SMOOTH"}</p>
                 </div>
-                <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+                <div className="bg-emerald-950/60 border border-violet-500/15 p-2.5">
                   <p className="text-[8px] text-violet-500/40 tracking-wider">PRICE</p>
                   <p className="text-xl text-violet-400 font-black mt-0.5">$2.50</p>
                 </div>
@@ -537,8 +537,8 @@ export function MusicPlayer() {
                 <p className="text-lg sm:text-2xl text-green-400 font-black tracking-normal sm:tracking-wider truncate">$AITITRADEBROKERAGE</p>
                 <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
               </div>
-              <div className="border border-zinc-700 bg-zinc-900/50 p-2.5 text-center">
-                <p className="text-[8px] text-zinc-500 tracking-wider">INCLUDE IN CASH APP NOTE</p>
+              <div className="border border-emerald-500/20 bg-emerald-950/50 p-2.5 text-center">
+                <p className="text-[8px] text-emerald-500/60 tracking-wider">INCLUDE IN CASH APP NOTE</p>
                 <p className="text-[10px] text-white font-bold mt-1">SONG: {currentTrack.title}</p>
               </div>
               <button

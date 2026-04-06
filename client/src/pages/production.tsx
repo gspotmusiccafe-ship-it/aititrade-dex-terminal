@@ -286,29 +286,29 @@ export default function ProductionPage() {
           </div>
 
           <div className="p-6 space-y-6">
-            <div className="p-4 bg-black border border-zinc-800">
+            <div className="p-4 bg-black border border-emerald-500/15">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-zinc-500 text-[10px] uppercase font-bold font-mono">Ledger Status</p>
+                <p className="text-emerald-500/60 text-[10px] uppercase font-bold font-mono">Ledger Status</p>
                 {trustStatus?.isMember ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />}
               </div>
               <p className="text-green-500 font-mono font-black text-sm" data-testid="text-ledger-status">
                 ${noteAmount.toFixed(2)} NOTE SIGNED // $25 ACTIVATED
               </p>
               <div className="grid grid-cols-4 gap-3 mt-3">
-                <div className="border border-zinc-800 bg-zinc-900/50 p-2 text-center">
-                  <p className="text-zinc-600 text-[8px] font-mono">OUTSTANDING</p>
+                <div className="border border-emerald-500/15 bg-emerald-950/50 p-2 text-center">
+                  <p className="text-emerald-500/40 text-[8px] font-mono">OUTSTANDING</p>
                   <p className="text-green-400 text-xs font-mono font-extrabold">${outstanding.toFixed(2)}</p>
                 </div>
-                <div className="border border-zinc-800 bg-zinc-900/50 p-2 text-center">
-                  <p className="text-zinc-600 text-[8px] font-mono">MONTHLY</p>
+                <div className="border border-emerald-500/15 bg-emerald-950/50 p-2 text-center">
+                  <p className="text-emerald-500/40 text-[8px] font-mono">MONTHLY</p>
                   <p className="text-green-400 text-xs font-mono font-extrabold">${monthly}</p>
                 </div>
-                <div className="border border-zinc-800 bg-zinc-900/50 p-2 text-center">
-                  <p className="text-zinc-600 text-[8px] font-mono">MONTHS LEFT</p>
+                <div className="border border-emerald-500/15 bg-emerald-950/50 p-2 text-center">
+                  <p className="text-emerald-500/40 text-[8px] font-mono">MONTHS LEFT</p>
                   <p className="text-green-400 text-xs font-mono font-extrabold">{monthsLeft}</p>
                 </div>
-                <div className="border border-zinc-800 bg-zinc-900/50 p-2 text-center">
-                  <p className="text-zinc-600 text-[8px] font-mono">COST/ASSET</p>
+                <div className="border border-emerald-500/15 bg-emerald-950/50 p-2 text-center">
+                  <p className="text-emerald-500/40 text-[8px] font-mono">COST/ASSET</p>
                   <p className="text-green-400 text-xs font-mono font-extrabold">$0.38</p>
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function ProductionPage() {
               </div>
               <div className="space-y-3">
                 <div>
-                  <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">SONG CONCEPT / PROMPT</label>
+                  <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-1">SONG CONCEPT / PROMPT</label>
                   <textarea
                     value={lyricsPrompt}
                     onChange={(e) => setLyricsPrompt(e.target.value)}
@@ -332,13 +332,13 @@ export default function ProductionPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">GENRE</label>
+                    <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-1">GENRE</label>
                     <input type="text" value={lyricsGenre} onChange={(e) => setLyricsGenre(e.target.value)}
                       className="w-full bg-black border border-violet-700/50 p-2 text-violet-300 text-sm font-mono focus:border-violet-400 focus:outline-none"
                       data-testid="input-lyrics-genre" />
                   </div>
                   <div>
-                    <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">MOOD</label>
+                    <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-1">MOOD</label>
                     <input type="text" value={lyricsMood} onChange={(e) => setLyricsMood(e.target.value)}
                       className="w-full bg-black border border-violet-700/50 p-2 text-violet-300 text-sm font-mono focus:border-violet-400 focus:outline-none"
                       data-testid="input-lyrics-mood" />
@@ -354,7 +354,7 @@ export default function ProductionPage() {
                     <div className="flex items-center justify-between">
                       <p className="text-violet-400 text-[10px] font-mono font-bold">GENERATED LYRICS:</p>
                       <button type="button" onClick={() => { navigator.clipboard.writeText(generatedLyrics); toast({ title: "Copied!" }); }}
-                        className="text-zinc-500 hover:text-violet-400 text-[9px] font-mono flex items-center gap-1" data-testid="button-copy-lyrics">
+                        className="text-emerald-500/60 hover:text-violet-400 text-[9px] font-mono flex items-center gap-1" data-testid="button-copy-lyrics">
                         <Copy className="h-3 w-3" /> COPY
                       </button>
                     </div>
@@ -375,18 +375,18 @@ export default function ProductionPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Music className="h-5 w-5 text-green-400" />
                 <h3 className="text-green-300 font-mono font-black text-lg uppercase">STEP 2 — BEAT MACHINE</h3>
-                <span className="text-zinc-600 text-[9px] font-mono ml-auto">$0.35/TRACK</span>
+                <span className="text-emerald-500/40 text-[9px] font-mono ml-auto">$0.35/TRACK</span>
               </div>
 
               <div className="mb-4">
-                <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-2">VOCAL TYPE</label>
+                <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-2">VOCAL TYPE</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {VOICE_OPTIONS.map((v) => (
                     <button key={v.value} type="button"
                       onClick={() => { setVoiceType(v.value); if (v.value !== "duet") setMakeInstrumental(false); }}
                       className={`text-[9px] font-mono font-bold py-2 px-2 border transition-all ${voiceType === v.value
                         ? "border-green-500 bg-green-900/40 text-green-300"
-                        : "border-zinc-700 text-zinc-500 hover:border-green-700 hover:text-green-400"}`}
+                        : "border-emerald-500/20 text-emerald-500/60 hover:border-green-700 hover:text-green-400"}`}
                       data-testid={`button-voice-${v.value}`}>
                       {v.value.startsWith("female") ? <span className="text-pink-400 mr-1">&#9792;</span> : v.value.startsWith("male") ? <span className="text-blue-400 mr-1">&#9794;</span> : <span className="text-purple-400 mr-1">&#9892;</span>}
                       {v.label}
@@ -396,7 +396,7 @@ export default function ProductionPage() {
                     onClick={() => { setMakeInstrumental(true); setVoiceType("female-smooth"); }}
                     className={`text-[9px] font-mono font-bold py-2 px-2 border transition-all ${makeInstrumental
                       ? "border-yellow-500 bg-yellow-900/40 text-yellow-300"
-                      : "border-zinc-700 text-zinc-500 hover:border-yellow-700 hover:text-yellow-400"}`}
+                      : "border-emerald-500/20 text-emerald-500/60 hover:border-yellow-700 hover:text-yellow-400"}`}
                     data-testid="button-voice-instrumental">
                     <MicOff className="h-3 w-3 inline mr-1" /> INSTRUMENTAL (NO VOCALS)
                   </button>
@@ -413,7 +413,7 @@ export default function ProductionPage() {
 
               <div className="flex items-center gap-3 mt-3">
                 <div className="flex-1">
-                  <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">STYLE TAGS</label>
+                  <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-1">STYLE TAGS</label>
                   <input type="text" value={audioStyle} onChange={(e) => setAudioStyle(e.target.value)}
                     className="w-full bg-black border border-green-700/50 p-2 text-green-400 text-xs font-mono focus:border-green-400 focus:outline-none"
                     data-testid="input-audio-style" />
@@ -458,7 +458,7 @@ export default function ProductionPage() {
               {!generatedAudioUrl && generatedSunoId && (
                 <div className="mt-3 p-3 border border-yellow-700/30 bg-yellow-950/20 text-center">
                   <p className="text-yellow-400 text-[10px] font-mono font-bold">BEAT QUEUED — SUNO ID: {generatedSunoId}</p>
-                  <p className="text-zinc-500 text-[9px] font-mono">Audio is being generated. Check back shortly or re-generate.</p>
+                  <p className="text-emerald-500/60 text-[9px] font-mono">Audio is being generated. Check back shortly or re-generate.</p>
                 </div>
               )}
             </div>
@@ -467,7 +467,7 @@ export default function ProductionPage() {
               <div className="flex items-center gap-2 mb-4">
                 <Image className="h-5 w-5 text-amber-400" />
                 <h3 className="text-amber-300 font-mono font-black text-lg uppercase">STEP 3 — ARTWORK (IDEOGRAM v2)</h3>
-                <span className="text-zinc-600 text-[9px] font-mono ml-auto">$0.03/IMAGE</span>
+                <span className="text-emerald-500/40 text-[9px] font-mono ml-auto">$0.03/IMAGE</span>
               </div>
               <textarea value={visualPrompt} onChange={(e) => { setVisualPrompt(e.target.value); setArtApproved(false); setGeneratedArtUrl(null); }}
                 placeholder="Describe the album art style... (auto-generates from title if empty)"
@@ -508,7 +508,7 @@ export default function ProductionPage() {
 
               <div className="space-y-3 mb-4">
                 <div>
-                  <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">ASSET TITLE (REQUIRED)</label>
+                  <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-1">ASSET TITLE (REQUIRED)</label>
                   <input type="text" value={assetTitle} onChange={(e) => setAssetTitle(e.target.value)}
                     placeholder="Enter asset title..."
                     className="w-full bg-black border border-green-700/50 p-3 text-white text-sm font-mono focus:border-green-400 focus:outline-none"
@@ -516,34 +516,34 @@ export default function ProductionPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-zinc-500 text-[9px] font-mono font-bold block mb-1">UNIT PRICE ($)</label>
+                    <label className="text-emerald-500/60 text-[9px] font-mono font-bold block mb-1">UNIT PRICE ($)</label>
                     <input type="text" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)}
                       className="w-full bg-black border border-green-700/50 p-2 text-green-400 text-sm font-mono focus:border-green-400 focus:outline-none"
                       data-testid="input-unit-price" />
                   </div>
                   <div className="flex items-end">
-                    <div className="w-full border border-zinc-800 bg-zinc-900/50 p-2 text-center">
-                      <p className="text-zinc-600 text-[8px] font-mono">WHOLESALE COST</p>
+                    <div className="w-full border border-emerald-500/15 bg-emerald-950/50 p-2 text-center">
+                      <p className="text-emerald-500/40 text-[8px] font-mono">WHOLESALE COST</p>
                       <p className="text-green-400 text-sm font-mono font-extrabold">$0.38</p>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-3 bg-black border border-zinc-800 mb-4">
-                <p className="text-zinc-500 text-[10px] uppercase font-bold font-mono mb-2">APPROVAL STATUS</p>
+              <div className="p-3 bg-black border border-emerald-500/15 mb-4">
+                <p className="text-emerald-500/60 text-[10px] uppercase font-bold font-mono mb-2">APPROVAL STATUS</p>
                 <div className="flex gap-6 text-[10px] font-mono">
                   <div className="flex items-center gap-1.5">
-                    {generatedLyrics ? <CheckCircle2 className="h-3 w-3 text-violet-500" /> : <div className="h-3 w-3 border border-zinc-600" />}
-                    <span className={generatedLyrics ? "text-violet-400 font-extrabold" : "text-zinc-600"}>LYRICS</span>
+                    {generatedLyrics ? <CheckCircle2 className="h-3 w-3 text-violet-500" /> : <div className="h-3 w-3 border border-emerald-500/25" />}
+                    <span className={generatedLyrics ? "text-violet-400 font-extrabold" : "text-emerald-500/40"}>LYRICS</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {beatApproved ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <div className="h-3 w-3 border border-zinc-600" />}
-                    <span className={beatApproved ? "text-green-400 font-extrabold" : "text-zinc-600"}>BEAT {beatApproved ? "APPROVED" : ""}</span>
+                    {beatApproved ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <div className="h-3 w-3 border border-emerald-500/25" />}
+                    <span className={beatApproved ? "text-green-400 font-extrabold" : "text-emerald-500/40"}>BEAT {beatApproved ? "APPROVED" : ""}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {artApproved ? <CheckCircle2 className="h-3 w-3 text-amber-500" /> : <div className="h-3 w-3 border border-zinc-600" />}
-                    <span className={artApproved ? "text-amber-400 font-extrabold" : "text-zinc-600"}>ART {artApproved ? "APPROVED" : ""}</span>
+                    {artApproved ? <CheckCircle2 className="h-3 w-3 text-amber-500" /> : <div className="h-3 w-3 border border-emerald-500/25" />}
+                    <span className={artApproved ? "text-amber-400 font-extrabold" : "text-emerald-500/40"}>ART {artApproved ? "APPROVED" : ""}</span>
                   </div>
                 </div>
               </div>
@@ -553,25 +553,25 @@ export default function ProductionPage() {
                 data-testid="button-push-to-floor">
                 {isPushing ? <><Loader2 className="h-5 w-5 animate-spin" /> PUSHING TO FLOOR...</> : <><Rocket className="h-5 w-5" /> PUSH TO GLOBAL FLOOR</>}
               </button>
-              <p className="text-center text-zinc-600 text-[9px] font-mono mt-2">
+              <p className="text-center text-emerald-500/40 text-[9px] font-mono mt-2">
                 SUNO BEAT ($0.35) + DALL-E ART ($0.03) + FLOOR LISTING — KINETIC SPLIT ACTIVE
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <div className="border border-zinc-800 bg-zinc-900/30 p-3 text-center">
+              <div className="border border-emerald-500/15 bg-emerald-950/30 p-3 text-center">
                 <Zap className="h-4 w-4 text-green-500/40 mx-auto mb-1" />
-                <p className="text-zinc-500 text-[9px] font-mono font-bold">{kineticState?.floorPct ?? 54}% FLOOR</p>
+                <p className="text-emerald-500/60 text-[9px] font-mono font-bold">{kineticState?.floorPct ?? 54}% FLOOR</p>
                 <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * ((kineticState?.floorPct ?? 54) / 100)).toFixed(2)}</p>
               </div>
-              <div className="border border-zinc-800 bg-zinc-900/30 p-3 text-center">
+              <div className="border border-emerald-500/15 bg-emerald-950/30 p-3 text-center">
                 <DollarSign className="h-4 w-4 text-green-500/40 mx-auto mb-1" />
-                <p className="text-zinc-500 text-[9px] font-mono font-bold">{kineticState?.ceoPct ?? 46}% CEO</p>
+                <p className="text-emerald-500/60 text-[9px] font-mono font-bold">{kineticState?.ceoPct ?? 46}% CEO</p>
                 <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * ((kineticState?.ceoPct ?? 46) / 100)).toFixed(2)}</p>
               </div>
-              <div className="border border-zinc-800 bg-zinc-900/30 p-3 text-center">
+              <div className="border border-emerald-500/15 bg-emerald-950/30 p-3 text-center">
                 <Radio className="h-4 w-4 text-green-500/40 mx-auto mb-1" />
-                <p className="text-zinc-500 text-[9px] font-mono font-bold">TRUST TITHE</p>
+                <p className="text-emerald-500/60 text-[9px] font-mono font-bold">TRUST TITHE</p>
                 <p className="text-green-400 text-xs font-mono font-extrabold">${(parseFloat(unitPrice || "0") * ((kineticState?.ceoPct ?? 46) / 100) * 0.10).toFixed(2)}</p>
               </div>
             </div>

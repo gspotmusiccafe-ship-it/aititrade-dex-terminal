@@ -84,10 +84,10 @@ function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSe
   const sparkData = history.length >= 2 ? history : generateSparklineData(trackSeed, livePrice, 24);
 
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800 p-1.5 sm:p-2 mb-1.5 sm:mb-2" data-testid="mbbp-indicator">
+    <div className="bg-emerald-950/60 border border-emerald-500/15 p-1.5 sm:p-2 mb-1.5 sm:mb-2" data-testid="mbbp-indicator">
       <div className="flex items-center justify-between mb-0.5 sm:mb-1">
         <div className="flex items-center gap-1">
-          <span className="text-[7px] sm:text-[8px] text-zinc-500 font-bold tracking-wider">LIVE PRICE</span>
+          <span className="text-[7px] sm:text-[8px] text-emerald-500/60 font-bold tracking-wider">LIVE PRICE</span>
           <span className={`text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 border font-extrabold ${marketOpen ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/30" : "text-red-400 bg-red-500/10 border-red-500/30"}`}>
             {marketOpen ? "OPEN" : "CLOSED"}
           </span>
@@ -106,7 +106,7 @@ function MBBPIndicator({ livePrice, liveMbbp, discountOffer, marketOpen, trackSe
             <p className="text-[7px] sm:text-[8px] text-yellow-400 font-bold animate-pulse">DISCOUNT: ${(discountOffer * tbi).toFixed(2)} — LOCK &amp; QUEUE FIRST</p>
           )}
           {discountOffer === 0 && (
-            <p className="text-[7px] sm:text-[8px] text-zinc-600">$0.01 — $1.00 RANGE</p>
+            <p className="text-[7px] sm:text-[8px] text-emerald-500/40">$0.01 — $1.00 RANGE</p>
           )}
         </div>
         <MomentumSparkline data={sparkData} color={chartColor} />
@@ -169,15 +169,15 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
               <p className="text-[8px] text-emerald-500/30 mt-2 tracking-wider">SYNTHETIC POSITION — PAPER TRADE</p>
             </div>
             <div className="grid grid-cols-3 gap-1.5 text-center">
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5">
                 <p className="text-[8px] text-emerald-500/40 tracking-wider">ASSET / TICKER</p>
                 <p className="text-sm text-emerald-400 font-bold mt-0.5">${receipt.ticker}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5">
                 <p className="text-[8px] text-emerald-500/40 tracking-wider">UNIT PRICE</p>
                 <p className="text-sm text-emerald-400 font-bold mt-0.5">${receipt.unitPrice.toFixed(2)}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5">
                 <p className="text-[8px] text-emerald-500/40 tracking-wider">AI MODEL</p>
                 <p className="text-[10px] text-emerald-400 font-bold mt-0.5" data-testid="text-ai-model-mint">{receipt.aiModel}</p>
               </div>
@@ -211,15 +211,15 @@ function MintCertificate({ receipt, onClose }: { receipt: MintReceipt; onClose: 
               </div>
             )}
             <div className="grid grid-cols-3 gap-1.5 text-center">
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2">
                 <p className="text-[8px] text-emerald-500/40">LEDGER GROSS</p>
                 <p className="text-xs text-white font-bold">${receipt.grossSales.toFixed(2)}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2">
                 <p className="text-[8px] text-emerald-500/40">TOTAL MINTS</p>
                 <p className="text-xs text-emerald-400 font-bold" data-testid="text-total-mints">{receipt.totalMints} / {receipt.mintCap}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2">
                 <p className="text-[8px] text-emerald-500/40">CAPACITY</p>
                 <p className={`text-xs font-bold ${receipt.capacityPct >= 60 ? "text-yellow-400" : "text-emerald-400"}`}>{receipt.capacityPct}%</p>
               </div>
@@ -293,15 +293,15 @@ function TrustCertificate({ receipt, onClose }: { receipt: TrustReceipt; onClose
               <p className="text-[8px] text-emerald-500/30 mt-2 tracking-wider">MONITORED TRUST — VERIFIED GLOBAL RELEASE</p>
             </div>
             <div className="grid grid-cols-3 gap-1.5 text-center">
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5">
                 <p className="text-[8px] text-emerald-500/40 tracking-wider">ASSET / TICKER</p>
                 <p className="text-sm text-emerald-400 font-bold mt-0.5">${receipt.ticker}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5">
                 <p className="text-[8px] text-emerald-500/40 tracking-wider">UNIT PRICE</p>
                 <p className="text-sm text-emerald-400 font-bold mt-0.5">${receipt.unitPrice.toFixed(2)}</p>
               </div>
-              <div className="bg-zinc-900/80 border border-emerald-500/15 p-2.5">
+              <div className="bg-emerald-950/60 border border-emerald-500/15 p-2.5">
                 <p className="text-[8px] text-emerald-500/40 tracking-wider">AI MODEL</p>
                 <p className="text-[10px] text-emerald-400 font-bold mt-0.5" data-testid="text-ai-model-trust">{receipt.aiModel}</p>
               </div>
@@ -429,11 +429,11 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
             <p className="text-[9px] sm:text-[10px] text-lime-400 font-black tracking-wider truncate">AITITRADE BROKERAGE — ORDER</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
+            <div className="bg-emerald-950/60 border border-lime-500/15 p-2.5">
               <p className="text-[8px] text-lime-500/40 tracking-wider">ASSET</p>
               <p className="text-sm text-lime-400 font-bold mt-0.5">{ticker}</p>
             </div>
-            <div className="bg-zinc-900/80 border border-lime-500/15 p-2.5">
+            <div className="bg-emerald-950/60 border border-lime-500/15 p-2.5">
               <p className="text-[8px] text-lime-500/40 tracking-wider">BUY-IN PRICE</p>
               <p className="text-xl text-lime-400 font-black mt-0.5">${price.toFixed(2)}</p>
             </div>
@@ -445,7 +445,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
           </div>
           <div className="border border-lime-500/20 bg-lime-950/30 p-2.5 text-center">
             <p className="text-[9px] text-lime-500/50">FLOOR RETAINED — CEO GROSS (G. SMOOTH MANDATE)</p>
-            <p className="text-[8px] text-zinc-600 mt-1">ONCE PAID, TRADE LOCKS — STIMULATION STARTING</p>
+            <p className="text-[8px] text-emerald-500/40 mt-1">ONCE PAID, TRADE LOCKS — STIMULATION STARTING</p>
           </div>
           {tradeData && (
             <div className="border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-center">
@@ -491,7 +491,7 @@ function TradeCashAppCheckout({ track, open, onClose, onSuccess }: { track: Trac
                 <p className="text-[10px] text-green-400/60 mt-1">AMOUNT: ${price.toFixed(2)}</p>
               </div>
               <div className="text-center">
-                <p className="text-[8px] text-zinc-500">Or tap below to open Cash App directly</p>
+                <p className="text-[8px] text-emerald-500/60">Or tap below to open Cash App directly</p>
                 <a
                   href={tradeData.url || "https://cash.app/$AITITRADEBROKERAGE/" + price.toFixed(2)}
                   target="_blank"
@@ -566,12 +566,12 @@ function BuySongCashAppCheckout({ track, open, onClose }: { track: TrackWithArti
             <p className="text-[9px] sm:text-[10px] text-violet-400 font-black tracking-wider truncate">97.7 THE FLAME — SONG PURCHASE</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-center">
-            <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+            <div className="bg-emerald-950/60 border border-violet-500/15 p-2.5">
               <p className="text-[8px] text-violet-500/40 tracking-wider">SONG</p>
               <p className="text-sm text-violet-400 font-bold mt-0.5 truncate">{track.title}</p>
-              <p className="text-[7px] text-zinc-500 mt-0.5 truncate">{track.artist?.name || "Unknown"}</p>
+              <p className="text-[7px] text-emerald-500/60 mt-0.5 truncate">{track.artist?.name || "Unknown"}</p>
             </div>
-            <div className="bg-zinc-900/80 border border-violet-500/15 p-2.5">
+            <div className="bg-emerald-950/60 border border-violet-500/15 p-2.5">
               <p className="text-[8px] text-violet-500/40 tracking-wider">PRICE</p>
               <p className="text-xl text-violet-400 font-black mt-0.5">${SONG_PRICE.toFixed(2)}</p>
             </div>
@@ -633,7 +633,7 @@ function BuySongCashAppCheckout({ track, open, onClose }: { track: TrackWithArti
                 <p className="text-[10px] text-green-400/60 mt-1">AMOUNT: ${SONG_PRICE.toFixed(2)}</p>
               </div>
               <div className="text-center">
-                <p className="text-[8px] text-zinc-500">Or tap below to open Cash App directly</p>
+                <p className="text-[8px] text-emerald-500/60">Or tap below to open Cash App directly</p>
                 <a
                   href={purchaseData.url || "https://cash.app/$AITITRADEBROKERAGE/" + SONG_PRICE.toFixed(2)}
                   target="_blank"
@@ -815,7 +815,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
         <div className="flex items-center justify-between gap-1">
           <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1 overflow-hidden">
             <span className={`font-bold text-xs sm:text-sm flex-shrink-0 ${isClosed ? "text-red-400" : isGlobal ? "text-amber-400" : isInspirational ? "text-violet-400" : "text-lime-400"}`}>{ticker}</span>
-            <span className="text-zinc-400 text-[8px] sm:text-[10px] font-semibold truncate">{assetId}</span>
+            <span className="text-emerald-400/70 text-[8px] sm:text-[10px] font-semibold truncate">{assetId}</span>
             {isGlobal && (
               <span className="text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 font-extrabold flex items-center gap-0.5 flex-shrink-0"><Globe className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> VAULT</span>
             )}
@@ -888,7 +888,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
 
       <div className="p-2 sm:p-3">
         <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-          <div className="relative w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 overflow-hidden flex-shrink-0 border border-emerald-500/10">
+          <div className="relative w-8 h-8 sm:w-10 sm:h-10 bg-emerald-950 overflow-hidden flex-shrink-0 border border-emerald-500/10">
             {track.coverImage ? (
               <img src={track.coverImage} alt={track.title} className="w-full h-full object-cover opacity-80" />
             ) : (
@@ -910,35 +910,35 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="text-xs sm:text-sm font-extrabold text-lime-400 truncate">{track.title.toUpperCase()}</h3>
-            <p className="text-[10px] sm:text-[11px] text-zinc-400 font-semibold truncate">{track.artist?.name || "UNKNOWN"}</p>
+            <p className="text-[10px] sm:text-[11px] text-emerald-400/70 font-semibold truncate">{track.artist?.name || "UNKNOWN"}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-0.5 sm:mb-1 text-center">
-          <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-            <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">GROSS</p>
-            <p className={`text-[10px] sm:text-xs font-extrabold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-lime-400" : "text-zinc-500"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+          <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">GROSS</p>
+            <p className={`text-[10px] sm:text-xs font-extrabold ${isClosed ? "text-red-400" : grossSales > 0 ? "text-lime-400" : "text-emerald-500/60"}`}>${grossSales.toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
           </div>
-          <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-            <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">UNITS</p>
+          <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">UNITS</p>
             <p className="text-[10px] sm:text-xs text-white font-extrabold">{sales.toLocaleString()}</p>
           </div>
-          <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-            <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">BUY-IN</p>
+          <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">BUY-IN</p>
             <p className={`text-[10px] sm:text-xs font-extrabold ${priceClass}`}>{priceLabel}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
-          <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">MBBP</p>
+          <div className="bg-emerald-950/60 p-0.5 sm:p-1 border border-emerald-500/15">
+            <p className="text-[7px] sm:text-[9px] text-emerald-500/60 font-bold">MBBP</p>
             <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveMbbp > 1.00 ? "text-amber-400" : "text-lime-400"}`} data-testid="card-mbbp">{mbbpLabel}</p>
           </div>
-          <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">DISCOUNT</p>
-            <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveDiscount > 0 ? "text-yellow-400 animate-pulse" : "text-zinc-600"}`} data-testid="card-discount">{discountLabel}</p>
+          <div className="bg-emerald-950/60 p-0.5 sm:p-1 border border-emerald-500/15">
+            <p className="text-[7px] sm:text-[9px] text-emerald-500/60 font-bold">DISCOUNT</p>
+            <p className={`text-[9px] sm:text-[11px] font-extrabold ${liveDiscount > 0 ? "text-yellow-400 animate-pulse" : "text-emerald-500/40"}`} data-testid="card-discount">{discountLabel}</p>
           </div>
-          <div className={`bg-zinc-900/80 p-0.5 sm:p-1 border ${isInspirational ? "border-violet-500/20" : "border-zinc-800"}`}>
-            <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">SPLIT</p>
+          <div className={`bg-emerald-950/60 p-0.5 sm:p-1 border ${isInspirational ? "border-violet-500/20" : "border-emerald-500/15"}`}>
+            <p className="text-[7px] sm:text-[9px] text-emerald-500/60 font-bold">SPLIT</p>
             <p className="text-[9px] sm:text-[11px] font-extrabold text-emerald-400">{minterFeeLabel}</p>
           </div>
         </div>
@@ -963,14 +963,14 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
         ) : (
           <div className="mb-1.5 sm:mb-2">
             <div className="flex items-center justify-between mb-0.5">
-              <span className={`text-[8px] sm:text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-zinc-400"}`}>
+              <span className={`text-[8px] sm:text-[10px] font-extrabold ${isFlashZone ? "text-red-400" : "text-emerald-400/70"}`}>
                 PROGRESS
               </span>
               <span className={`text-[8px] sm:text-[11px] font-extrabold ${isClosed ? "text-red-400" : isFlashZone ? "text-red-400" : isHighCapacity ? "text-amber-400" : "text-lime-400"}`}>
                 ${globalGross.toLocaleString('en-US', { minimumFractionDigits: 0 })} / ${nextKAt.toLocaleString('en-US')}
               </span>
             </div>
-            <div className="w-full bg-zinc-900 h-2.5 sm:h-3 relative overflow-hidden border border-zinc-700/50">
+            <div className="w-full bg-emerald-950 h-2.5 sm:h-3 relative overflow-hidden border border-emerald-500/20/50">
               <div
                 className={`h-full transition-all duration-500 ${urgencyBg} ${urgencyPulse}`}
                 style={{ width: `${capacityPct}%` }}
@@ -982,13 +982,13 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
                 <div className="absolute right-0 top-0 h-full w-[10%] bg-red-500/30 animate-pulse" />
               )}
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-[7px] sm:text-[8px] font-black ${capacityPct > 50 ? "text-black" : "text-zinc-400"}`}>
+                <span className={`text-[7px] sm:text-[8px] font-black ${capacityPct > 50 ? "text-black" : "text-emerald-400/70"}`}>
                   {capacityPct.toFixed(1)}%
                 </span>
               </div>
             </div>
             <div className="flex items-center justify-between mt-0.5 flex-wrap gap-x-2">
-              <span className="text-zinc-400 text-[8px] sm:text-[10px] font-bold">{priceLabel}/U | {portal.name}</span>
+              <span className="text-emerald-400/70 text-[8px] sm:text-[10px] font-bold">{priceLabel}/U | {portal.name}</span>
               {!isFlashZone && (
                 <span className="text-lime-400/70 text-[8px] sm:text-[10px] font-bold">${remaining.toLocaleString('en-US', { minimumFractionDigits: 0 })} TO ${kineticPayout}</span>
               )}
@@ -1081,7 +1081,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
           </button>
           <button
             onClick={() => setShowP2P(!showP2P)}
-            className={`border text-[8px] sm:text-[10px] font-bold py-1 sm:py-1.5 px-1.5 sm:px-2 text-center transition-colors flex-shrink-0 ${showP2P ? "border-green-500/50 text-green-400 bg-green-500/10" : "border-zinc-700 text-zinc-500 hover:border-green-500/30 hover:text-green-400"}`}
+            className={`border text-[8px] sm:text-[10px] font-bold py-1 sm:py-1.5 px-1.5 sm:px-2 text-center transition-colors flex-shrink-0 ${showP2P ? "border-green-500/50 text-green-400 bg-green-500/10" : "border-emerald-500/20 text-emerald-500/60 hover:border-green-500/30 hover:text-green-400"}`}
             data-testid={`button-p2p-toggle-${track.id}`}
           >
             <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 inline" />
@@ -1095,11 +1095,11 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
           </h3>
           <div className="flex justify-between items-end mb-3">
             <div className="min-w-0">
-              <p className="text-zinc-500 text-[8px] sm:text-[9px] font-bold tracking-wider">CURRENT TBI (BUY-IN)</p>
+              <p className="text-emerald-500/60 text-[8px] sm:text-[9px] font-bold tracking-wider">CURRENT TBI (BUY-IN)</p>
               <p className="text-white text-xl sm:text-2xl font-black">${price.toFixed(2)}</p>
             </div>
             <div className="text-right flex-shrink-0 ml-2">
-              <p className="text-zinc-500 text-[8px] sm:text-[9px] font-bold tracking-wider">MBB TARGET</p>
+              <p className="text-emerald-500/60 text-[8px] sm:text-[9px] font-bold tracking-wider">MBB TARGET</p>
               <p className="text-green-400 text-base sm:text-lg font-bold">$21.00</p>
             </div>
           </div>
@@ -1110,7 +1110,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
           >
             <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> OPEN BROKERAGE ACCOUNT
           </button>
-          <p className="text-[8px] sm:text-[9px] text-zinc-600 mt-2 text-center uppercase tracking-wider sm:tracking-widest break-words">
+          <p className="text-[8px] sm:text-[9px] text-emerald-500/40 mt-2 text-center uppercase tracking-wider sm:tracking-widest break-words">
             No PayPal • Direct P2P Settlement • Floor Protected
           </p>
         </div>
@@ -1152,172 +1152,189 @@ function StakeEarningsGraph({ amount, terms, selectedTerm }: { amount: number; t
   const activeIdx = activeTerm ? terms.indexOf(activeTerm) : terms.length - 1;
   const totalEarn = amount * (activeTerm?.returnPct || 25) / 100;
   const termDays = activeTerm?.days || 180;
-  const maxEarn = totalEarn * 1.25;
+  const maxEarn = totalEarn * 1.35;
 
   const colors = ["#22d3ee", "#a78bfa", "#34d399"];
   const termColor = colors[activeIdx] || "#34d399";
 
   const [tick, setTick] = useState(0);
+  const [flashGain, setFlashGain] = useState(false);
+  const [flashDrop, setFlashDrop] = useState(false);
   useEffect(() => {
-    const iv = setInterval(() => setTick(t => t + 1), 2000);
+    const iv = setInterval(() => setTick(t => t + 1), 120);
     return () => clearInterval(iv);
   }, []);
+  useEffect(() => {
+    const fv = setInterval(() => {
+      const r = Math.random();
+      if (r < 0.35) { setFlashGain(true); setTimeout(() => setFlashGain(false), 600); }
+      else if (r < 0.5) { setFlashDrop(true); setTimeout(() => setFlashDrop(false), 400); }
+    }, 1800);
+    return () => clearInterval(fv);
+  }, []);
 
-  const seed = (s: number) => {
-    let x = Math.sin(s * 9301 + 49297) * 49297;
-    return x - Math.floor(x);
-  };
-
-  const numCandles = 20;
-  const daysPerCandle = termDays / numCandles;
+  const numPts = 60;
+  const pts: { x: number; y: number; val: number }[] = [];
   const dailyEarn = totalEarn / termDays;
-  const slotW = gW / numCandles;
-  const candleW = slotW * 0.55;
-
-  const candles: { slot: number; open: number; close: number; high: number; low: number; bullish: boolean }[] = [];
-  let prevClose = 0;
-  for (let i = 0; i < numCandles; i++) {
-    const earnEnd = dailyEarn * (i + 1) * daysPerCandle;
-    const jitter = seed(activeIdx * 100 + i + tick * 0.005) * 0.4 - 0.2;
-    const open = i === 0 ? 0 : prevClose;
-    const close = earnEnd * (1 + jitter * 0.08);
-    const spread = dailyEarn * daysPerCandle;
-    const high = Math.max(open, close) + seed(activeIdx * 200 + i) * spread * 0.35;
-    const low = Math.max(0, Math.min(open, close) - seed(activeIdx * 300 + i) * spread * 0.25);
-    candles.push({ slot: i, open, close, high, low, bullish: close >= open });
-    prevClose = close;
+  for (let i = 0; i <= numPts; i++) {
+    const pct = i / numPts;
+    const dayAt = pct * termDays;
+    const base = dailyEarn * dayAt;
+    const wave1 = Math.sin(pct * 8 + tick * 0.06 + activeIdx) * totalEarn * 0.08;
+    const wave2 = Math.sin(pct * 14 + tick * 0.1 + activeIdx * 2) * totalEarn * 0.04;
+    const wave3 = Math.sin(pct * 22 + tick * 0.15) * totalEarn * 0.025;
+    const dip1 = pct > 0.2 && pct < 0.35 ? -totalEarn * 0.06 * Math.sin((pct - 0.2) / 0.15 * Math.PI) : 0;
+    const dip2 = pct > 0.55 && pct < 0.65 ? -totalEarn * 0.04 * Math.sin((pct - 0.55) / 0.1 * Math.PI) : 0;
+    const surge = pct > 0.7 && pct < 0.85 ? totalEarn * 0.05 * Math.sin((pct - 0.7) / 0.15 * Math.PI) : 0;
+    const val = Math.max(0, base + wave1 + wave2 + wave3 + dip1 + dip2 + surge);
+    const x = PAD_L + pct * gW;
+    const y = PAD_T + gH - (Math.min(val, maxEarn) / maxEarn) * gH;
+    pts.push({ x, y, val });
   }
 
-  const toY = (val: number) => PAD_T + gH - (Math.min(val, maxEarn) / maxEarn) * gH;
-  const toX = (slot: number) => PAD_L + slot * slotW + slotW / 2;
+  const linePath = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  const areaPath = linePath + ` L${pts[pts.length - 1].x},${PAD_T + gH} L${pts[0].x},${PAD_T + gH} Z`;
+  const lastPt = pts[pts.length - 1];
+  const lastVal = lastPt.val;
+  const prevVal = pts[Math.max(0, pts.length - 5)].val;
+  const isUp = lastVal >= prevVal;
 
   const yTicks = 5;
-  const dailyGrowthLabel = activeTerm
-    ? `$${(totalEarn / activeTerm.days).toFixed(3)}/DAY`
-    : "";
+  const dailyGrowthLabel = activeTerm ? `$${(totalEarn / activeTerm.days).toFixed(3)}/DAY` : "";
 
   return (
-    <div className="mb-2 rounded-lg border border-zinc-700/50 p-2" data-testid={`stake-graph-${amount}`}
+    <div className="mb-2 rounded-lg border border-emerald-500/20/50 p-2 relative overflow-hidden" data-testid={`stake-graph-${amount}`}
       style={{ background: "linear-gradient(180deg, #0a0f1a 0%, #0d1117 50%, #0a0a0f 100%)" }}>
+      {flashGain && (
+        <div className="absolute inset-0 pointer-events-none z-10 rounded-lg"
+          style={{ background: `radial-gradient(ellipse at 80% 30%, ${termColor}18 0%, transparent 70%)`, animation: "pulse 0.6s ease-out" }} />
+      )}
+      {flashDrop && (
+        <div className="absolute inset-0 pointer-events-none z-10 rounded-lg"
+          style={{ background: "radial-gradient(ellipse at 50% 60%, #ef444418 0%, transparent 70%)", animation: "pulse 0.4s ease-out" }} />
+      )}
       <div className="flex items-center justify-between mb-1.5 px-0.5">
         <div className="flex items-center gap-1.5">
           <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: termColor, boxShadow: `0 0 6px ${termColor}` }} />
+            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: termColor, boxShadow: `0 0 8px ${termColor}` }} />
             <span className="text-[8px] sm:text-[9px] font-bold tracking-widest" style={{ color: termColor }}>YIELD TERMINAL</span>
           </div>
-          <span className="text-[7px] text-zinc-600 font-mono">|</span>
-          <span className="text-[7px] text-zinc-500 font-mono">${amount} STAKE</span>
+          <span className="text-[7px] text-emerald-500/40 font-mono">|</span>
+          <span className="text-[7px] text-emerald-500/60 font-mono">${amount} STAKE</span>
         </div>
         <div className="flex items-center gap-2">
           {dailyGrowthLabel && (
-            <span className="text-[7px] sm:text-[8px] font-black font-mono px-1 py-0.5 rounded" 
+            <span className="text-[7px] sm:text-[8px] font-black font-mono px-1 py-0.5 rounded"
               style={{ color: termColor, backgroundColor: `${termColor}15`, border: `1px solid ${termColor}30` }}>
               {dailyGrowthLabel}
             </span>
           )}
           {terms.map((t, idx) => (
             <span key={t.days} className="flex items-center gap-0.5 cursor-pointer">
-              <span className="inline-block w-2 h-2 rounded-sm" style={{ 
+              <span className="inline-block w-2 h-2 rounded-sm" style={{
                 backgroundColor: selectedTerm === t.days || (selectedTerm === null && idx === terms.length - 1) ? colors[idx] : `${colors[idx]}40`,
                 boxShadow: selectedTerm === t.days ? `0 0 4px ${colors[idx]}` : "none"
               }} />
               <span className={`text-[7px] sm:text-[8px] font-bold font-mono ${
-                selectedTerm === t.days || (selectedTerm === null && idx === terms.length - 1) ? "text-white" : "text-zinc-600"
+                selectedTerm === t.days || (selectedTerm === null && idx === terms.length - 1) ? "text-white" : "text-emerald-500/40"
               }`}>{t.days}D</span>
             </span>
           ))}
         </div>
       </div>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id={`grid-fade-${amount}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={termColor} stopOpacity="0.03" />
-            <stop offset="100%" stopColor={termColor} stopOpacity="0" />
-          </linearGradient>
-          <filter id={`glow-${amount}`}>
-            <feGaussianBlur stdDeviation="1" result="coloredBlur" />
-            <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
+      <div className="relative">
+        <div className="absolute top-0 right-1 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded"
+          style={{ backgroundColor: isUp ? `${termColor}20` : "#ef444420", border: `1px solid ${isUp ? termColor : "#ef4444"}40` }}>
+          <span className="text-[8px] font-black font-mono" style={{ color: isUp ? termColor : "#ef4444" }}>
+            {isUp ? "▲" : "▼"} ${lastVal.toFixed(2)}
+          </span>
+        </div>
 
-        <rect x={PAD_L} y={PAD_T} width={gW} height={gH} fill={`url(#grid-fade-${amount})`} />
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id={`area-grad-${amount}-${activeIdx}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={termColor} stopOpacity="0.25" />
+              <stop offset="50%" stopColor={termColor} stopOpacity="0.08" />
+              <stop offset="100%" stopColor={termColor} stopOpacity="0" />
+            </linearGradient>
+            <filter id={`glow-${amount}`}>
+              <feGaussianBlur stdDeviation="1.5" result="coloredBlur" />
+              <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+            <filter id={`line-glow-${amount}`}>
+              <feGaussianBlur stdDeviation="0.8" result="coloredBlur" />
+              <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
 
-        {Array.from({ length: yTicks + 1 }).map((_, i) => {
-          const pct = i / yTicks;
-          const y = PAD_T + gH - pct * gH;
-          const val = (maxEarn * pct);
-          return (
-            <g key={i}>
-              <line x1={PAD_L} y1={y} x2={PAD_L + gW} y2={y} stroke="#1a1f2e" strokeWidth="0.4" />
-              <text x={PAD_L - 3} y={y + 1.5} textAnchor="end" fill="#4a5568" fontSize="4" fontFamily="'Courier New', monospace">${val.toFixed(0)}</text>
-            </g>
-          );
-        })}
+          {Array.from({ length: yTicks + 1 }).map((_, i) => {
+            const pct = i / yTicks;
+            const y = PAD_T + gH - pct * gH;
+            const val = maxEarn * pct;
+            return (
+              <g key={i}>
+                <line x1={PAD_L} y1={y} x2={PAD_L + gW} y2={y} stroke="#1a1f2e" strokeWidth="0.4" />
+                <text x={PAD_L - 3} y={y + 1.5} textAnchor="end" fill="#4a5568" fontSize="4" fontFamily="'Courier New', monospace">${val.toFixed(0)}</text>
+              </g>
+            );
+          })}
 
-        {Array.from({ length: 5 }).map((_, i) => {
-          const d = Math.round((termDays / 4) * i);
-          const x = PAD_L + (d / termDays) * gW;
-          return (
-            <g key={i}>
-              <line x1={x} y1={PAD_T} x2={x} y2={PAD_T + gH} stroke="#1a1f2e" strokeWidth="0.4" />
-              <text x={x} y={H - 3} textAnchor="middle" fill="#4a5568" fontSize="4" fontFamily="'Courier New', monospace">{d}d</text>
-            </g>
-          );
-        })}
+          {Array.from({ length: 5 }).map((_, i) => {
+            const d = Math.round((termDays / 4) * i);
+            const x = PAD_L + (d / termDays) * gW;
+            return (
+              <g key={i}>
+                <line x1={x} y1={PAD_T} x2={x} y2={PAD_T + gH} stroke="#1a1f2e" strokeWidth="0.4" />
+                <text x={x} y={H - 3} textAnchor="middle" fill="#4a5568" fontSize="4" fontFamily="'Courier New', monospace">{d}d</text>
+              </g>
+            );
+          })}
 
-        <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + gH} stroke="#2d3748" strokeWidth="0.6" />
-        <line x1={PAD_L} y1={PAD_T + gH} x2={PAD_L + gW} y2={PAD_T + gH} stroke="#2d3748" strokeWidth="0.6" />
+          <line x1={PAD_L} y1={PAD_T} x2={PAD_L} y2={PAD_T + gH} stroke="#2d3748" strokeWidth="0.6" />
+          <line x1={PAD_L} y1={PAD_T + gH} x2={PAD_L + gW} y2={PAD_T + gH} stroke="#2d3748" strokeWidth="0.6" />
 
-        {candles.map((c, ci) => {
-          const cx = toX(c.slot);
-          const bodyTop = toY(Math.max(c.open, c.close));
-          const bodyBot = toY(Math.min(c.open, c.close));
-          const bodyH = Math.max(bodyBot - bodyTop, 0.8);
-          const bullColor = termColor;
-          const bearColor = activeIdx === 0 ? "#164e63" : activeIdx === 1 ? "#3b0764" : "#064e3b";
-          const fill = c.bullish ? bullColor : bearColor;
-          const wickCol = c.bullish ? bullColor : "#4a5568";
-          return (
-            <g key={ci}>
-              <line x1={cx} y1={toY(c.high)} x2={cx} y2={toY(c.low)} stroke={wickCol} strokeWidth="0.5" />
-              <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={fill}
-                stroke={c.bullish ? bullColor : "#374151"} strokeWidth="0.3" rx="0.4" />
-              {c.bullish && (
-                <rect x={cx - candleW / 2} y={bodyTop} width={candleW} height={bodyH} fill={bullColor} opacity="0.15" rx="0.4"
-                  filter={`url(#glow-${amount})`} />
-              )}
-            </g>
-          );
-        })}
+          <path d={areaPath} fill={`url(#area-grad-${amount}-${activeIdx})`} />
 
-        <line x1={PAD_L} y1={toY(totalEarn)} x2={PAD_L + gW} y2={toY(totalEarn)} 
-          stroke={termColor} strokeWidth="0.5" strokeDasharray="3,2" opacity="0.6" />
-        <rect x={PAD_L + gW - 28} y={toY(totalEarn) - 4.5} width="28" height="9" rx="1.5" 
-          fill={termColor} opacity="0.15" stroke={termColor} strokeWidth="0.4" />
-        <text x={PAD_L + gW - 14} y={toY(totalEarn) + 1.5} textAnchor="middle" fill={termColor} 
-          fontSize="5" fontWeight="bold" fontFamily="'Courier New', monospace" filter={`url(#glow-${amount})`}>
-          +${totalEarn.toFixed(0)}
-        </text>
+          <path d={linePath} fill="none" stroke={termColor} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"
+            filter={`url(#line-glow-${amount})`} opacity="0.9" />
 
-        <circle cx={toX(numCandles - 1)} cy={toY(candles[numCandles - 1]?.close || 0)} r="2" 
-          fill={termColor} opacity="0.8" filter={`url(#glow-${amount})`}>
-          <animate attributeName="r" values="2;3;2" dur="2s" repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.8;0.4;0.8" dur="2s" repeatCount="indefinite" />
-        </circle>
-      </svg>
+          <line x1={PAD_L} y1={PAD_T + gH - (totalEarn / maxEarn) * gH} x2={PAD_L + gW} y2={PAD_T + gH - (totalEarn / maxEarn) * gH}
+            stroke={termColor} strokeWidth="0.5" strokeDasharray="3,2" opacity="0.4" />
+          <rect x={PAD_L + gW - 28} y={PAD_T + gH - (totalEarn / maxEarn) * gH - 4.5} width="28" height="9" rx="1.5"
+            fill={termColor} opacity="0.12" stroke={termColor} strokeWidth="0.3" />
+          <text x={PAD_L + gW - 14} y={PAD_T + gH - (totalEarn / maxEarn) * gH + 1.5} textAnchor="middle" fill={termColor}
+            fontSize="5" fontWeight="bold" fontFamily="'Courier New', monospace">
+            +${totalEarn.toFixed(0)}
+          </text>
+
+          <line x1={lastPt.x} y1={lastPt.y} x2={lastPt.x} y2={PAD_T + gH} stroke={termColor} strokeWidth="0.3" strokeDasharray="2,2" opacity="0.3" />
+
+          <circle cx={lastPt.x} cy={lastPt.y} r="6" fill={termColor} opacity="0.08">
+            <animate attributeName="r" values="4;8;4" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.1;0.03;0.1" dur="2s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={lastPt.x} cy={lastPt.y} r="2.5" fill={termColor} opacity="0.7" filter={`url(#glow-${amount})`}>
+            <animate attributeName="r" values="2;3;2" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.8;0.4;0.8" dur="1.5s" repeatCount="indefinite" />
+          </circle>
+          <circle cx={lastPt.x} cy={lastPt.y} r="1" fill="white" opacity="0.9" />
+        </svg>
+      </div>
 
       <div className="flex items-center justify-between mt-1 px-0.5">
         <div className="flex items-center gap-1">
-          <span className="text-[6px] text-zinc-600 font-mono">TERM</span>
+          <span className="text-[6px] text-emerald-500/40 font-mono">TERM</span>
           <span className="text-[7px] font-bold font-mono" style={{ color: termColor }}>{termDays} DAYS</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[6px] text-zinc-500 font-mono tracking-wider">GROWTH SIMULATION</span>
+          <div className="w-1 h-1 rounded-full animate-pulse" style={{ backgroundColor: isUp ? "#34d399" : "#ef4444" }} />
+          <span className="text-[6px] font-mono tracking-wider" style={{ color: isUp ? "#34d399" : "#ef4444" }}>
+            {isUp ? "GAINING" : "DIP"} — LIVE
+          </span>
         </div>
         <div className="flex items-center gap-1">
-          <span className="text-[6px] text-zinc-600 font-mono">ROI</span>
+          <span className="text-[6px] text-emerald-500/40 font-mono">ROI</span>
           <span className="text-[7px] font-bold font-mono" style={{ color: termColor }}>{activeTerm?.returnPct || 25}%</span>
         </div>
       </div>
@@ -1407,7 +1424,7 @@ function StakingSection() {
                 <div className="flex items-center justify-between gap-1">
                   <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
                     <span className={`font-bold text-xs sm:text-sm flex-shrink-0 ${isPremium ? "text-amber-400" : "text-lime-400"}`}>{ticker}</span>
-                    <span className="text-zinc-400 text-[8px] sm:text-[10px] font-semibold">{assetId}</span>
+                    <span className="text-emerald-400/70 text-[8px] sm:text-[10px] font-semibold">{assetId}</span>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <span className={`text-[10px] sm:text-[11px] font-extrabold ${isPremium ? "text-amber-400" : "text-lime-400"}`}>${tier.amount}</span>
@@ -1425,40 +1442,40 @@ function StakingSection() {
 
               <div className="p-2 sm:p-3">
                 <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-zinc-900 border border-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-950 border border-amber-500/10 flex items-center justify-center flex-shrink-0">
                     <Coins className={`h-4 w-4 sm:h-5 sm:w-5 ${isPremium ? "text-amber-400" : "text-emerald-400"}`} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-xs sm:text-sm font-extrabold text-lime-400">${tier.amount} LIQUIDITY STAKE</h3>
-                    <p className="text-[10px] sm:text-[11px] text-zinc-400 font-semibold">GUARANTEED {minReturn}%-{maxReturn}% RETURN</p>
+                    <p className="text-[10px] sm:text-[11px] text-emerald-400/70 font-semibold">GUARANTEED {minReturn}%-{maxReturn}% RETURN</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-0.5 sm:mb-1 text-center">
-                  <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">DEPOSIT</p>
+                  <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+                    <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">DEPOSIT</p>
                     <p className={`text-[10px] sm:text-xs font-extrabold ${isPremium ? "text-amber-400" : "text-lime-400"}`}>${tier.amount}</p>
                   </div>
-                  <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">MIN EARN</p>
+                  <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+                    <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">MIN EARN</p>
                     <p className="text-[10px] sm:text-xs text-emerald-400 font-extrabold">${(tier.amount * minReturn / 100).toFixed(2)}</p>
                   </div>
-                  <div className="bg-zinc-900/80 p-1 sm:p-1.5 border border-zinc-800">
-                    <p className="text-[8px] sm:text-[10px] text-zinc-400 font-bold">MAX EARN</p>
+                  <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
+                    <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">MAX EARN</p>
                     <p className="text-[10px] sm:text-xs text-emerald-300 font-extrabold">${(tier.amount * maxReturn / 100).toFixed(2)}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
-                  <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-                    <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">45 DAYS</p>
+                  <div className="bg-emerald-950/60 p-0.5 sm:p-1 border border-emerald-500/15">
+                    <p className="text-[7px] sm:text-[9px] text-emerald-500/60 font-bold">45 DAYS</p>
                     <p className="text-[9px] sm:text-[11px] font-extrabold text-emerald-400">{tier.terms[0].returnPct}%</p>
                   </div>
-                  <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-                    <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">90 DAYS</p>
+                  <div className="bg-emerald-950/60 p-0.5 sm:p-1 border border-emerald-500/15">
+                    <p className="text-[7px] sm:text-[9px] text-emerald-500/60 font-bold">90 DAYS</p>
                     <p className="text-[9px] sm:text-[11px] font-extrabold text-amber-400">{tier.terms[1]?.returnPct || "—"}%</p>
                   </div>
-                  <div className="bg-zinc-900/80 p-0.5 sm:p-1 border border-zinc-800">
-                    <p className="text-[7px] sm:text-[9px] text-zinc-500 font-bold">180 DAYS</p>
+                  <div className="bg-emerald-950/60 p-0.5 sm:p-1 border border-emerald-500/15">
+                    <p className="text-[7px] sm:text-[9px] text-emerald-500/60 font-bold">180 DAYS</p>
                     <p className="text-[9px] sm:text-[11px] font-extrabold text-lime-400">{tier.terms[2]?.returnPct || "—"}%</p>
                   </div>
                 </div>
@@ -1476,7 +1493,7 @@ function StakingSection() {
                           className={`border py-2 text-center transition-all ${
                             selectedTerm === term.days
                               ? "border-emerald-400 bg-emerald-500/15 text-emerald-300"
-                              : "border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:border-emerald-500/40"
+                              : "border-emerald-500/20 bg-emerald-950/50 text-emerald-400/70 hover:border-emerald-500/40"
                           }`}
                           data-testid={`staking-term-${term.days}`}
                         >
@@ -1515,7 +1532,7 @@ function StakingSection() {
           <div className="px-2 sm:px-3 py-1 sm:py-1.5 border-b border-amber-500/20 bg-amber-500/5 flex items-center gap-1">
             <Lock className="h-3 w-3 text-amber-400" />
             <span className="text-[9px] sm:text-[10px] text-amber-400 font-black tracking-wider">MY STAKING POSITIONS</span>
-            <span className="text-[7px] sm:text-[8px] text-zinc-500 ml-auto">{activeStakes.length} ACTIVE</span>
+            <span className="text-[7px] sm:text-[8px] text-emerald-500/60 ml-auto">{activeStakes.length} ACTIVE</span>
           </div>
           {activeStakes.map((stake: any) => {
             const principal = parseFloat(stake.amount || "0");
@@ -1526,11 +1543,11 @@ function StakingSection() {
             const elapsed = Math.max(0, totalDays - daysLeft);
             const progressPct = Math.min(100, (elapsed / totalDays) * 100);
             return (
-              <div key={stake.id} className="px-2 sm:px-3 py-2 border-b border-zinc-800/50" data-testid={`stake-row-${stake.id}`}>
+              <div key={stake.id} className="px-2 sm:px-3 py-2 border-b border-emerald-500/15/50" data-testid={`stake-row-${stake.id}`}>
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] sm:text-xs font-black text-amber-300">${principal}</span>
-                    <span className="text-[7px] sm:text-[8px] text-zinc-500">{stake.termDays}d @ {pct}%</span>
+                    <span className="text-[7px] sm:text-[8px] text-emerald-500/60">{stake.termDays}d @ {pct}%</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px] sm:text-xs font-black text-emerald-400">${payout.toFixed(2)}</span>
@@ -1540,7 +1557,7 @@ function StakingSection() {
                   </div>
                 </div>
                 {stake.status !== "PENDING" && (
-                  <div className="w-full bg-zinc-800 h-1 overflow-hidden">
+                  <div className="w-full bg-emerald-500/10 h-1 overflow-hidden">
                     <div className={`h-full transition-all duration-500 ${daysLeft === 0 ? "bg-lime-400" : "bg-amber-500"}`} style={{ width: `${progressPct}%` }} />
                   </div>
                 )}
@@ -1567,11 +1584,11 @@ function StakingSection() {
                 <p className="text-[8px] text-amber-400/60 tracking-widest">AMOUNT TO SEND</p>
                 <p className="text-2xl text-amber-300 font-black mt-1">${selectedAmount}.00</p>
               </div>
-              <div className="border border-zinc-700 bg-zinc-900/50 p-2.5 text-center">
-                <p className="text-[8px] text-zinc-500 tracking-wider">INCLUDE IN CASH APP NOTE</p>
+              <div className="border border-emerald-500/20 bg-emerald-950/50 p-2.5 text-center">
+                <p className="text-[8px] text-emerald-500/60 tracking-wider">INCLUDE IN CASH APP NOTE</p>
                 <p className="text-[10px] text-white font-bold mt-1">STAKE: ${selectedAmount} / {selectedTerm} DAYS</p>
               </div>
-              <p className="text-[8px] text-zinc-500 text-center">Admin will confirm payment and activate your stake</p>
+              <p className="text-[8px] text-emerald-500/60 text-center">Admin will confirm payment and activate your stake</p>
               <button onClick={() => setShowCashAppDialog(false)} className="w-full bg-amber-600 hover:bg-amber-700 text-black font-black py-3 text-sm tracking-wider" data-testid="button-staking-close">
                 GOT IT — SENDING NOW
               </button>
@@ -1678,37 +1695,37 @@ export default function HomePage() {
               <div className="bg-red-600 text-white text-[8px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full animate-pulse font-bold flex-shrink-0">LIVE</div>
             </div>
             <div className="flex items-center gap-2 text-[9px] sm:text-[10px]">
-              <span className="text-zinc-600 hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span className="text-emerald-500/40 hidden sm:inline">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[8px] sm:text-[9px]">97.7 THE FLAME</Badge>
             </div>
           </div>
 
           <div className="grid grid-cols-4 gap-1 sm:gap-2">
-            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
-              <p className="text-[7px] sm:text-[9px] text-zinc-600">GROSS</p>
+            <div className="bg-emerald-950 border border-emerald-500/15 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-emerald-500/40">GROSS</p>
               <p className="text-[10px] sm:text-sm text-emerald-400 font-bold">${totalGrossSales.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
-              <p className="text-[7px] sm:text-[9px] text-zinc-600">UNITS</p>
+            <div className="bg-emerald-950 border border-emerald-500/15 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-emerald-500/40">UNITS</p>
               <p className="text-[10px] sm:text-sm text-white font-bold">{totalUnits.toLocaleString()}</p>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
-              <p className="text-[7px] sm:text-[9px] text-zinc-600">OPEN</p>
+            <div className="bg-emerald-950 border border-emerald-500/15 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-emerald-500/40">OPEN</p>
               <p className="text-[10px] sm:text-sm text-emerald-400 font-bold">{openCount}</p>
             </div>
-            <div className="bg-zinc-900 border border-zinc-800 p-1.5 sm:p-2">
-              <p className="text-[7px] sm:text-[9px] text-zinc-600">CLOSED</p>
-              <p className="text-[10px] sm:text-sm font-bold"><span className="text-red-400">{closedCount}</span><span className="text-zinc-600">/{displayTracks.length}</span></p>
+            <div className="bg-emerald-950 border border-emerald-500/15 p-1.5 sm:p-2">
+              <p className="text-[7px] sm:text-[9px] text-emerald-500/40">CLOSED</p>
+              <p className="text-[10px] sm:text-sm font-bold"><span className="text-red-400">{closedCount}</span><span className="text-emerald-500/40">/{displayTracks.length}</span></p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-1.5 sm:p-2 px-3 sm:px-4 bg-black border-b border-zinc-800" data-testid="trade-indicators-bar">
+      <div className="p-1.5 sm:p-2 px-3 sm:px-4 bg-black border-b border-emerald-500/15" data-testid="trade-indicators-bar">
         <div className="flex items-center gap-1.5 sm:gap-2 mb-1">
-          <span className="text-[8px] sm:text-[9px] text-zinc-500 font-bold uppercase tracking-wider">SECTORS</span>
-          <span className="text-zinc-700 hidden sm:inline">|</span>
-          <span className="text-[8px] sm:text-[9px] text-zinc-600 hidden sm:inline">81 PORTALS — 9×9</span>
+          <span className="text-[8px] sm:text-[9px] text-emerald-500/60 font-bold uppercase tracking-wider">SECTORS</span>
+          <span className="text-emerald-500/25 hidden sm:inline">|</span>
+          <span className="text-[8px] sm:text-[9px] text-emerald-500/40 hidden sm:inline">81 PORTALS — 9×9</span>
           <div className="ml-auto flex items-center gap-1.5">
             <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-red-600 animate-ping" />
             <span className="text-[8px] sm:text-[10px] text-white font-black italic" data-testid="text-live-signal">97.7 THE FLAME</span>
@@ -1716,7 +1733,7 @@ export default function HomePage() {
         </div>
         <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
           {[
-            { name: "NANO", tbi: "$1", color: "text-zinc-400 border-zinc-700" },
+            { name: "NANO", tbi: "$1", color: "text-emerald-400/70 border-emerald-500/20" },
             { name: "MICRO", tbi: "$2", color: "text-emerald-400 border-emerald-500/30" },
             { name: "PENNY", tbi: "$3.50", color: "text-emerald-400 border-emerald-500/30" },
             { name: "MINI", tbi: "$5", color: "text-lime-400 border-lime-500/30" },
@@ -1726,7 +1743,7 @@ export default function HomePage() {
             { name: "PRO", tbi: "$25", color: "text-orange-400 border-orange-500/30" },
             { name: "SOV", tbi: "$50", color: "text-red-400 border-red-500/30" },
           ].map(s => (
-            <span key={s.name} className={`text-[7px] sm:text-[9px] font-bold border px-1 sm:px-1.5 py-0.5 bg-zinc-900/80 whitespace-nowrap flex-shrink-0 ${s.color}`}>
+            <span key={s.name} className={`text-[7px] sm:text-[9px] font-bold border px-1 sm:px-1.5 py-0.5 bg-emerald-950/60 whitespace-nowrap flex-shrink-0 ${s.color}`}>
               {s.name} {s.tbi}
             </span>
           ))}
@@ -1737,7 +1754,7 @@ export default function HomePage() {
         <div className="border-b border-emerald-500/20 bg-black">
           <button
             onClick={() => setShowIntel(!showIntel)}
-            className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] hover:bg-zinc-900/50 transition-colors"
+            className="w-full px-4 py-1.5 flex items-center justify-between text-[10px] hover:bg-emerald-950/50 transition-colors"
             data-testid="button-toggle-intel"
           >
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -1748,45 +1765,45 @@ export default function HomePage() {
                   ? "text-lime-400 border-lime-500/40 bg-lime-500/10"
                   : marketSession.marketSentiment === "BEAR"
                   ? "text-red-400 border-red-500/40 bg-red-500/10"
-                  : "text-zinc-400 border-zinc-600 bg-zinc-800"
+                  : "text-emerald-400/70 border-emerald-500/25 bg-emerald-500/10"
               }`}>
                 {marketSession.marketSentiment === "BULL" ? "▲ BULL" : marketSession.marketSentiment === "BEAR" ? "▼ BEAR" : "— NEUTRAL"}
               </span>
             </div>
-            <span className="text-zinc-600">{showIntel ? "▲ COLLAPSE" : "▼ EXPAND"}</span>
+            <span className="text-emerald-500/40">{showIntel ? "▲ COLLAPSE" : "▼ EXPAND"}</span>
           </button>
 
           {showIntel && (
             <div className="px-4 pb-3 space-y-3">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">SESSION ID</p>
+                <div className="bg-emerald-950/60 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">SESSION ID</p>
                   <p className="text-[10px] text-lime-400 font-bold" data-testid="text-session-id">{marketSession.sessionId}</p>
                 </div>
-                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">TODAY'S TRADING RATE</p>
+                <div className="bg-emerald-950/60 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">TODAY'S TRADING RATE</p>
                   <p className="text-sm text-lime-400 font-extrabold" data-testid="text-trading-rate">{marketSession.tradingRate}%</p>
-                  <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="mt-1 h-1 bg-emerald-500/10 rounded-full overflow-hidden">
                     <div className="h-full bg-lime-500 rounded-full" style={{ width: `${((marketSession.tradingRate - 35) / 20) * 100}%` }} />
                   </div>
                 </div>
-                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">MARKET VOLATILITY</p>
+                <div className="bg-emerald-950/60 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">MARKET VOLATILITY</p>
                   <p className={`text-sm font-extrabold ${marketSession.volatility > 30 ? "text-red-400" : marketSession.volatility > 20 ? "text-amber-400" : "text-lime-400"}`} data-testid="text-volatility">
                     {marketSession.volatility}%
                   </p>
-                  <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="mt-1 h-1 bg-emerald-500/10 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full ${marketSession.volatility > 30 ? "bg-red-500" : marketSession.volatility > 20 ? "bg-amber-500" : "bg-lime-500"}`} style={{ width: `${(marketSession.volatility / 45) * 100}%` }} />
                   </div>
                 </div>
-                <div className="bg-zinc-900/80 border border-lime-500/20 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">LIQUIDITY SPLIT</p>
+                <div className="bg-emerald-950/60 border border-lime-500/20 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">LIQUIDITY SPLIT</p>
                   <div className="flex items-center gap-1 mt-0.5">
                     <span className="text-[10px] text-emerald-400 font-bold">70% PAYOUT</span>
-                    <span className="text-[10px] text-zinc-600">|</span>
+                    <span className="text-[10px] text-emerald-500/40">|</span>
                     <span className="text-[10px] text-amber-400 font-bold">30% HOUSE</span>
                   </div>
-                  <div className="mt-1 h-1 bg-zinc-800 rounded-full overflow-hidden flex">
+                  <div className="mt-1 h-1 bg-emerald-500/10 rounded-full overflow-hidden flex">
                     <div className="h-full bg-emerald-500 rounded-l-full" style={{ width: "70%" }} />
                     <div className="h-full bg-amber-500 rounded-r-full" style={{ width: "30%" }} />
                   </div>
@@ -1794,23 +1811,23 @@ export default function HomePage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                <div className="bg-zinc-900/80 border border-zinc-800 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">ACTIVE POOLS</p>
-                  <p className="text-sm text-white font-bold">{marketSession.activePools} <span className="text-zinc-600 text-[9px]">/ {marketSession.totalPools}</span></p>
+                <div className="bg-emerald-950/60 border border-emerald-500/15 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">ACTIVE POOLS</p>
+                  <p className="text-sm text-white font-bold">{marketSession.activePools} <span className="text-emerald-500/40 text-[9px]">/ {marketSession.totalPools}</span></p>
                 </div>
-                <div className="bg-zinc-900/80 border border-zinc-800 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">POOL TIERS TODAY</p>
+                <div className="bg-emerald-950/60 border border-emerald-500/15 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">POOL TIERS TODAY</p>
                   <div className="flex gap-2 mt-0.5">
-                    <span className="text-[9px] text-zinc-400 font-bold">$500: {marketSession.pools?.filter(p => p.poolSize === 500).length || 0}</span>
+                    <span className="text-[9px] text-emerald-400/70 font-bold">$500: {marketSession.pools?.filter(p => p.poolSize === 500).length || 0}</span>
                     <span className="text-[9px] text-lime-400 font-bold">$1K: {marketSession.pools?.filter(p => p.poolSize === 1000).length || 0}</span>
                     <span className="text-[9px] text-amber-400 font-bold">$2K: {marketSession.pools?.filter(p => p.poolSize === 2000).length || 0}</span>
                   </div>
                 </div>
-                <div className="bg-zinc-900/80 border border-zinc-800 p-2">
-                  <p className="text-[8px] text-zinc-600 tracking-widest">FLASH WARNINGS TODAY</p>
+                <div className="bg-emerald-950/60 border border-emerald-500/15 p-2">
+                  <p className="text-[8px] text-emerald-500/40 tracking-widest">FLASH WARNINGS TODAY</p>
                   <p className="text-sm text-red-400 font-bold">
                     {marketSession.pools?.filter(p => p.isFlashScheduled).length || 0}
-                    <span className="text-[9px] text-zinc-600 ml-1">SCHEDULED</span>
+                    <span className="text-[9px] text-emerald-500/40 ml-1">SCHEDULED</span>
                   </p>
                   {marketSession.nextFlashAt && (
                     <p className="text-[8px] text-red-400 animate-pulse mt-0.5">
@@ -1824,7 +1841,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <div className="px-3 sm:px-4 py-1.5 sm:py-2 border-b border-zinc-800 bg-zinc-900/50">
+      <div className="px-3 sm:px-4 py-1.5 sm:py-2 border-b border-emerald-500/15 bg-emerald-950/50">
         <div className="flex items-center gap-2 sm:gap-4 text-[9px] sm:text-[10px] flex-wrap">
           <span className={`font-bold ${engineConnected ? "text-emerald-400" : "text-red-400"}`}>
             {engineConnected ? "● LIVE" : "○ OFF"}
@@ -1844,7 +1861,7 @@ export default function HomePage() {
               ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 0 })} TO SETTLE
             </span>
           )}
-          <span className="ml-auto text-zinc-600 text-[8px] sm:text-[10px]">{user?.firstName || user?.email || "PUBLIC"}{user?.cashTag && <span className="text-green-400 ml-1">{user.cashTag}</span>}</span>
+          <span className="ml-auto text-emerald-500/40 text-[8px] sm:text-[10px]">{user?.firstName || user?.email || "PUBLIC"}{user?.cashTag && <span className="text-green-400 ml-1">{user.cashTag}</span>}</span>
         </div>
       </div>
 
@@ -1852,10 +1869,10 @@ export default function HomePage() {
         {loadingTracks ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-black border border-zinc-800 p-4">
-                <Skeleton className="h-3 w-24 mb-2 bg-zinc-800" />
-                <Skeleton className="h-10 w-full mb-2 bg-zinc-800" />
-                <Skeleton className="h-6 w-full bg-zinc-800" />
+              <div key={i} className="bg-black border border-emerald-500/15 p-4">
+                <Skeleton className="h-3 w-24 mb-2 bg-emerald-500/10" />
+                <Skeleton className="h-10 w-full mb-2 bg-emerald-500/10" />
+                <Skeleton className="h-6 w-full bg-emerald-500/10" />
               </div>
             ))}
           </div>
@@ -1878,18 +1895,18 @@ export default function HomePage() {
             </div>
           </>
         ) : (
-          <div className="text-center py-20 border border-zinc-800">
+          <div className="text-center py-20 border border-emerald-500/15">
             <Zap className="h-8 w-8 text-emerald-500/30 mx-auto mb-3" />
             <p className="text-emerald-500/50 text-sm">NO ASSETS LISTED</p>
-            <p className="text-zinc-700 text-[10px] mt-1">Add rows to the database to list assets</p>
+            <p className="text-emerald-500/25 text-[10px] mt-1">Add rows to the database to list assets</p>
           </div>
         )}
       </div>
 
       <StakingSection />
 
-      <div className="px-4 py-2 border-t border-zinc-800 bg-zinc-900/30">
-        <div className="flex items-center justify-between text-[9px] text-zinc-600 font-mono">
+      <div className="px-4 py-2 border-t border-emerald-500/15 bg-emerald-950/30">
+        <div className="flex items-center justify-between text-[9px] text-emerald-500/40 font-mono">
           <span className="truncate">AITITRADE DEX | 97.7 THE FLAME</span>
           <span className="truncate hidden sm:inline">81 PORTALS | $1-$50 | $1K SETTLE | {kineticState?.splitLabel || "LIVE"} SPLIT</span>
         </div>

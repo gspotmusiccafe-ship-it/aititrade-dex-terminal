@@ -281,7 +281,7 @@ export default function DashboardPage() {
             </div>
             <div className="text-right">
               <p className="text-xs text-lime-400 font-extrabold">{progressPercent}% COMPLETE</p>
-              <p className="text-[10px] text-zinc-500">{completedCount}/12 STEPS</p>
+              <p className="text-[10px] text-emerald-500/60">{completedCount}/12 STEPS</p>
             </div>
           </div>
 
@@ -296,11 +296,11 @@ export default function DashboardPage() {
                 <span className="text-amber-400 font-bold">IN PROGRESS ({inProgressCount})</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-zinc-700 rounded-sm" />
-                <span className="text-zinc-500 font-bold">LOCKED ({12 - completedCount - inProgressCount})</span>
+                <div className="w-3 h-3 bg-emerald-800 rounded-sm" />
+                <span className="text-emerald-500/60 font-bold">LOCKED ({12 - completedCount - inProgressCount})</span>
               </div>
             </div>
-            <div className="mt-2 h-2 bg-zinc-900 border border-zinc-800 overflow-hidden">
+            <div className="mt-2 h-2 bg-emerald-950 border border-emerald-500/15 overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-lime-500 to-lime-400 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
@@ -309,15 +309,15 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex gap-2 px-4 py-3 border-b border-lime-500/20">
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 border ${isMintor ? "border-lime-500/40 bg-lime-500/10" : "border-zinc-700 bg-zinc-900"}`}>
-              <div className={`w-2 h-2 rounded-full ${isMintor ? "bg-lime-400" : "bg-zinc-600"}`} />
-              <span className={`text-[10px] font-extrabold ${isMintor ? "text-lime-400" : "text-zinc-500"}`} data-testid="status-mintor">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 border ${isMintor ? "border-lime-500/40 bg-lime-500/10" : "border-emerald-500/20 bg-emerald-950"}`}>
+              <div className={`w-2 h-2 rounded-full ${isMintor ? "bg-lime-400" : "bg-emerald-800"}`} />
+              <span className={`text-[10px] font-extrabold ${isMintor ? "text-lime-400" : "text-emerald-500/60"}`} data-testid="status-mintor">
                 MINTOR: {isMintor ? "ACTIVE" : "INACTIVE"}
               </span>
             </div>
-            <div className={`flex items-center gap-1.5 px-3 py-1.5 border ${isTrustee ? "border-amber-500/40 bg-amber-500/10" : "border-zinc-700 bg-zinc-900"}`}>
-              <div className={`w-2 h-2 rounded-full ${isTrustee ? "bg-amber-400" : "bg-zinc-600"}`} />
-              <span className={`text-[10px] font-extrabold ${isTrustee ? "text-amber-400" : "text-zinc-500"}`} data-testid="status-trustee">
+            <div className={`flex items-center gap-1.5 px-3 py-1.5 border ${isTrustee ? "border-amber-500/40 bg-amber-500/10" : "border-emerald-500/20 bg-emerald-950"}`}>
+              <div className={`w-2 h-2 rounded-full ${isTrustee ? "bg-amber-400" : "bg-emerald-800"}`} />
+              <span className={`text-[10px] font-extrabold ${isTrustee ? "text-amber-400" : "text-emerald-500/60"}`} data-testid="status-trustee">
                 TRUSTEE: {isTrustee ? "ACTIVE" : "INACTIVE"}
               </span>
             </div>
@@ -340,19 +340,19 @@ export default function DashboardPage() {
               ? "border-lime-500/50 bg-lime-500/5"
               : status === "in_progress"
               ? "border-amber-500/50 bg-amber-500/5"
-              : "border-zinc-800 bg-black";
+              : "border-emerald-500/15 bg-black";
 
             const titleColor = status === "completed"
               ? "text-lime-400"
               : status === "in_progress"
               ? "text-amber-400"
-              : "text-zinc-500";
+              : "text-emerald-500/60";
 
             const iconColor = status === "completed"
               ? "text-lime-400"
               : status === "in_progress"
               ? "text-amber-400"
-              : "text-zinc-600";
+              : "text-emerald-500/40";
 
             return (
               <div
@@ -379,7 +379,7 @@ export default function DashboardPage() {
                     ) : status === "in_progress" ? (
                       <Circle className="h-6 w-6 text-amber-400 fill-amber-400/20" />
                     ) : (
-                      <Circle className="h-6 w-6 text-zinc-700" />
+                      <Circle className="h-6 w-6 text-emerald-500/25" />
                     )}
                   </button>
 
@@ -396,26 +396,26 @@ export default function DashboardPage() {
                       )}
                     </div>
                     <h3 className={`text-sm font-extrabold tracking-tight ${titleColor}`}>{step.title}</h3>
-                    <p className="text-[10px] text-zinc-500">{step.subtitle}</p>
+                    <p className="text-[10px] text-emerald-500/60">{step.subtitle}</p>
                   </div>
 
                   <div className="flex-shrink-0">
                     {isExpanded ? (
-                      <ChevronUp className="h-4 w-4 text-zinc-500" />
+                      <ChevronUp className="h-4 w-4 text-emerald-500/60" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 text-zinc-500" />
+                      <ChevronDown className="h-4 w-4 text-emerald-500/60" />
                     )}
                   </div>
                 </div>
 
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-zinc-800/50 pt-3">
-                    <p className="text-xs text-zinc-400 mb-3 leading-relaxed">{step.description}</p>
+                  <div className="px-4 pb-4 border-t border-emerald-500/15/50 pt-3">
+                    <p className="text-xs text-emerald-400/70 mb-3 leading-relaxed">{step.description}</p>
                     <ul className="space-y-1.5 mb-4">
                       {step.details.map((detail, i) => (
                         <li key={i} className="flex items-start gap-2 text-[11px]">
-                          <span className={`mt-0.5 ${status === "completed" ? "text-lime-400" : status === "in_progress" ? "text-amber-400" : "text-zinc-600"}`}>▸</span>
-                          <span className={status === "completed" ? "text-lime-400/70" : status === "in_progress" ? "text-amber-400/70" : "text-zinc-500"}>{detail}</span>
+                          <span className={`mt-0.5 ${status === "completed" ? "text-lime-400" : status === "in_progress" ? "text-amber-400" : "text-emerald-500/40"}`}>▸</span>
+                          <span className={status === "completed" ? "text-lime-400/70" : status === "in_progress" ? "text-amber-400/70" : "text-emerald-500/60"}>{detail}</span>
                         </li>
                       ))}
                     </ul>
@@ -426,7 +426,7 @@ export default function DashboardPage() {
                             ? "bg-lime-600 text-white hover:bg-lime-700"
                             : status === "in_progress"
                             ? "bg-amber-600 text-white hover:bg-amber-700"
-                            : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                            : "bg-emerald-500/10 text-emerald-400/70 hover:bg-emerald-800"
                         }`}
                         onClick={() => cycleStatus(step.number)}
                         disabled={updateStepMutation.isPending}
@@ -451,7 +451,7 @@ export default function DashboardPage() {
               </div>
               <div className="text-[8px] text-amber-400/60 font-bold border border-amber-500/30 bg-amber-500/10 px-2 py-0.5">TRUSTEE EXCLUSIVE</div>
             </div>
-            <p className="text-[10px] text-zinc-400 mb-3">Download your official Trust Certificate as proof of sovereign asset ownership. Includes TRST-977 identifier, trust terms, and 16% Minter credit schedule.</p>
+            <p className="text-[10px] text-emerald-400/70 mb-3">Download your official Trust Certificate as proof of sovereign asset ownership. Includes TRST-977 identifier, trust terms, and 16% Minter credit schedule.</p>
             <button
               onClick={() => setShowCertificate(true)}
               className="w-full flex items-center justify-center gap-2 bg-amber-500/10 border border-amber-500/40 text-amber-400 font-mono text-[11px] font-extrabold py-2.5 hover:bg-amber-500/20 transition-colors"
@@ -463,8 +463,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="mt-6 border border-zinc-800 bg-black p-4">
-          <p className="text-[10px] text-zinc-500 font-bold mb-3">ACTIVATE TRADING ACCOUNT</p>
+        <div className="mt-6 border border-emerald-500/15 bg-black p-4">
+          <p className="text-[10px] text-emerald-500/60 font-bold mb-3">ACTIVATE TRADING ACCOUNT</p>
           <a
             href={CASH_APP_URL}
             target="_blank"

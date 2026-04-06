@@ -295,7 +295,7 @@ function TradersLeaderboard() {
                   {index + 1}
                 </div>
 
-                <div className="w-10 h-10 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                   <Shield className="h-5 w-5 text-lime-400/60" />
                 </div>
 
@@ -320,7 +320,7 @@ function TradersLeaderboard() {
                 </div>
 
                 <div className="text-right flex-shrink-0 hidden sm:block">
-                  <p className={`font-bold text-sm ${trader.roi > 0 ? "text-emerald-400" : "text-zinc-500"}`}>
+                  <p className={`font-bold text-sm ${trader.roi > 0 ? "text-emerald-400" : "text-emerald-500/60"}`}>
                     {trader.roi}%
                   </p>
                   <p className="text-[10px] text-muted-foreground">ROI</p>

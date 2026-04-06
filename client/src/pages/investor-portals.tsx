@@ -48,12 +48,12 @@ function StreamProgress({ streams, royaltyEarned, royaltyProgress }: { streams: 
   const earned = royaltyEarned;
 
   return (
-    <div className="mt-3 p-2.5 bg-black/60 border border-zinc-800 rounded">
+    <div className="mt-3 p-2.5 bg-black/60 border border-emerald-500/15 rounded">
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[8px] text-zinc-500 font-bold tracking-widest">STREAM ROYALTY PROGRESS</span>
+        <span className="text-[8px] text-emerald-500/60 font-bold tracking-widest">STREAM ROYALTY PROGRESS</span>
         <span className="text-[9px] text-emerald-400 font-mono font-bold">{streams.toLocaleString()} STREAMS</span>
       </div>
-      <div className="relative w-full bg-zinc-900 h-3 rounded-full overflow-hidden border border-zinc-800">
+      <div className="relative w-full bg-emerald-950 h-3 rounded-full overflow-hidden border border-emerald-500/15">
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{
@@ -67,8 +67,8 @@ function StreamProgress({ streams, royaltyEarned, royaltyProgress }: { streams: 
         </div>
       </div>
       <div className="flex items-center justify-between mt-1.5">
-        <span className="text-[8px] text-zinc-600 font-mono">EARNED: <span className="text-emerald-400">${earned.toFixed(2)}</span></span>
-        <span className="text-[8px] text-zinc-600 font-mono">TARGET: <span className="text-amber-400">${target832.toFixed(2)}</span> (25% of $3,330)</span>
+        <span className="text-[8px] text-emerald-500/40 font-mono">EARNED: <span className="text-emerald-400">${earned.toFixed(2)}</span></span>
+        <span className="text-[8px] text-emerald-500/40 font-mono">TARGET: <span className="text-amber-400">${target832.toFixed(2)}</span> (25% of $3,330)</span>
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
       }}
       data-testid={`investor-portal-${portal.id}`}
     >
-      <div className="px-4 py-3 border-b border-zinc-800/60 flex items-center justify-between"
+      <div className="px-4 py-3 border-b border-emerald-500/15/60 flex items-center justify-between"
         style={{ background: isFull ? "linear-gradient(90deg, #78350f10, transparent)" : "linear-gradient(90deg, #065f4620, transparent)" }}>
         <div className="flex items-center gap-2">
           <Globe className={`h-4 w-4 ${isFull ? "text-amber-500" : "text-emerald-400"}`} />
@@ -99,7 +99,7 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
             <span className="text-[7px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black rounded">FILLED</span>
           )}
         </div>
-        <span className="text-[9px] text-zinc-500 font-mono">${parseFloat(portal.targetRaise).toLocaleString()} FUND</span>
+        <span className="text-[9px] text-emerald-500/60 font-mono">${parseFloat(portal.targetRaise).toLocaleString()} FUND</span>
       </div>
 
       <div className="p-4 space-y-3">
@@ -109,7 +109,7 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-white font-black text-sm truncate">{portal.songTitle}</h3>
-            <p className="text-zinc-500 text-[9px] mt-0.5">GLOBAL TRADING ASSET</p>
+            <p className="text-emerald-500/60 text-[9px] mt-0.5">GLOBAL TRADING ASSET</p>
             {portal.spotifyUrl && (
               <a
                 href={portal.spotifyUrl}
@@ -126,29 +126,29 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded p-2 text-center">
-            <p className="text-[7px] text-zinc-600 tracking-widest">ENTRY</p>
+          <div className="bg-emerald-950/50 border border-emerald-500/15 rounded p-2 text-center">
+            <p className="text-[7px] text-emerald-500/40 tracking-widest">ENTRY</p>
             <p className="text-emerald-400 font-black text-sm">${parseFloat(portal.entryPrice).toFixed(0)}</p>
           </div>
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded p-2 text-center">
-            <p className="text-[7px] text-zinc-600 tracking-widest">DOWN</p>
+          <div className="bg-emerald-950/50 border border-emerald-500/15 rounded p-2 text-center">
+            <p className="text-[7px] text-emerald-500/40 tracking-widest">DOWN</p>
             <p className="text-lime-400 font-black text-sm">${parseFloat(portal.downPayment).toFixed(0)}</p>
           </div>
-          <div className="bg-zinc-900/60 border border-zinc-800 rounded p-2 text-center">
-            <p className="text-[7px] text-zinc-600 tracking-widest">MONTHLY</p>
+          <div className="bg-emerald-950/50 border border-emerald-500/15 rounded p-2 text-center">
+            <p className="text-[7px] text-emerald-500/40 tracking-widest">MONTHLY</p>
             <p className="text-amber-400 font-black text-sm">${parseFloat(portal.monthlyPayment).toFixed(2)}</p>
           </div>
         </div>
 
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded p-2.5">
+        <div className="bg-emerald-950/40 border border-emerald-500/15 rounded p-2.5">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[8px] text-zinc-500 font-bold tracking-widest">O/I CAPACITY</span>
+            <span className="text-[8px] text-emerald-500/60 font-bold tracking-widest">O/I CAPACITY</span>
             <span className="text-[9px] font-mono">
               <span className="text-emerald-400 font-bold">{portal.currentInvestors || 0}</span>
-              <span className="text-zinc-600"> / {portal.maxInvestors}</span>
+              <span className="text-emerald-500/40"> / {portal.maxInvestors}</span>
             </span>
           </div>
-          <div className="relative w-full bg-zinc-800 h-2.5 rounded-full overflow-hidden">
+          <div className="relative w-full bg-emerald-500/10 h-2.5 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all"
               style={{
@@ -159,7 +159,7 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
               }}
             />
           </div>
-          <p className="text-[8px] text-zinc-600 mt-1 text-right">
+          <p className="text-[8px] text-emerald-500/40 mt-1 text-right">
             {portal.spotsRemaining > 0 ? `${portal.spotsRemaining} SPOTS LEFT` : "PORTAL FULL"}
           </p>
         </div>
@@ -168,18 +168,18 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
           <div className="border border-emerald-500/20 rounded p-2 bg-emerald-950/10">
             <div className="flex items-center gap-1">
               <TrendingUp className="h-3 w-3 text-emerald-400" />
-              <span className="text-[7px] text-zinc-500 tracking-widest">BASE RETURN</span>
+              <span className="text-[7px] text-emerald-500/60 tracking-widest">BASE RETURN</span>
             </div>
             <p className="text-emerald-400 font-black text-lg mt-0.5">{parseFloat(portal.baseReturnPct)}%</p>
-            <p className="text-[7px] text-zinc-600">${(parseFloat(portal.entryPrice) * parseFloat(portal.baseReturnPct) / 100).toFixed(2)} ON ${parseFloat(portal.entryPrice).toFixed(0)}</p>
+            <p className="text-[7px] text-emerald-500/40">${(parseFloat(portal.entryPrice) * parseFloat(portal.baseReturnPct) / 100).toFixed(2)} ON ${parseFloat(portal.entryPrice).toFixed(0)}</p>
           </div>
           <div className="border border-amber-500/20 rounded p-2 bg-amber-950/10">
             <div className="flex items-center gap-1">
               <ArrowUpRight className="h-3 w-3 text-amber-400" />
-              <span className="text-[7px] text-zinc-500 tracking-widest">MAX GROWTH</span>
+              <span className="text-[7px] text-emerald-500/60 tracking-widest">MAX GROWTH</span>
             </div>
             <p className="text-amber-400 font-black text-lg mt-0.5">{parseFloat(portal.maxReturnPct)}%</p>
-            <p className="text-[7px] text-zinc-600">{portal.termMonths} MONTH TERM</p>
+            <p className="text-[7px] text-emerald-500/40">{portal.termMonths} MONTH TERM</p>
           </div>
         </div>
 
@@ -189,8 +189,8 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
           royaltyProgress={portal.royaltyProgress || 0}
         />
 
-        <div className="text-[8px] text-zinc-600 bg-zinc-900/30 border border-zinc-800 rounded p-2 font-mono leading-relaxed">
-          <span className="text-zinc-500 font-bold">TERMS:</span> ${parseFloat(portal.downPayment).toFixed(0)} DOWN + ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO × {portal.termMonths} MO = ${parseFloat(portal.entryPrice).toFixed(0)} | 0% INTEREST | PAID VIA $AITITRADEBROKERAGE
+        <div className="text-[8px] text-emerald-500/40 bg-emerald-950/30 border border-emerald-500/15 rounded p-2 font-mono leading-relaxed">
+          <span className="text-emerald-500/60 font-bold">TERMS:</span> ${parseFloat(portal.downPayment).toFixed(0)} DOWN + ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO × {portal.termMonths} MO = ${parseFloat(portal.entryPrice).toFixed(0)} | 0% INTEREST | PAID VIA $AITITRADEBROKERAGE
         </div>
 
         {!isFull && (
@@ -277,25 +277,25 @@ export default function InvestorPortalsPage() {
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">GLOBAL TRADING PORTALS</h1>
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" style={{ boxShadow: "0 0 8px #34d399" }} />
           </div>
-          <p className="text-zinc-500 text-sm max-w-xl">
+          <p className="text-emerald-500/60 text-sm max-w-xl">
             Owner/Investor opportunities — $500 entry, 10 O/I per portal, 25% base return with up to 100% growth potential over 24 months.
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
             <div className="bg-black/60 border border-emerald-500/20 rounded-lg p-3 text-center">
-              <p className="text-[8px] text-zinc-500 tracking-widest">PORTALS OPEN</p>
+              <p className="text-[8px] text-emerald-500/60 tracking-widest">PORTALS OPEN</p>
               <p className="text-emerald-400 font-black text-xl">{openPortals}</p>
             </div>
             <div className="bg-black/60 border border-cyan-500/20 rounded-lg p-3 text-center">
-              <p className="text-[8px] text-zinc-500 tracking-widest">TOTAL O/I</p>
+              <p className="text-[8px] text-emerald-500/60 tracking-widest">TOTAL O/I</p>
               <p className="text-cyan-400 font-black text-xl">{totalInvestors}</p>
             </div>
             <div className="bg-black/60 border border-lime-500/20 rounded-lg p-3 text-center">
-              <p className="text-[8px] text-zinc-500 tracking-widest">TOTAL RAISED</p>
+              <p className="text-[8px] text-emerald-500/60 tracking-widest">TOTAL RAISED</p>
               <p className="text-lime-400 font-black text-xl">${totalRaised.toLocaleString()}</p>
             </div>
             <div className="bg-black/60 border border-amber-500/20 rounded-lg p-3 text-center">
-              <p className="text-[8px] text-zinc-500 tracking-widest">TOTAL STREAMS</p>
+              <p className="text-[8px] text-emerald-500/60 tracking-widest">TOTAL STREAMS</p>
               <p className="text-amber-400 font-black text-xl">{totalStreams.toLocaleString()}</p>
             </div>
           </div>
@@ -320,8 +320,8 @@ export default function InvestorPortalsPage() {
           ))}
         </div>
 
-        <div className="mt-8 bg-zinc-900/30 border border-zinc-800 rounded-lg p-4 text-center">
-          <p className="text-zinc-500 text-[10px] font-mono leading-relaxed">
+        <div className="mt-8 bg-emerald-950/30 border border-emerald-500/15 rounded-lg p-4 text-center">
+          <p className="text-emerald-500/60 text-[10px] font-mono leading-relaxed">
             ROYALTY CALCULATION: $3,330 PER 1M STREAMS × 25% BASE = $832.50 PER O/I
             <br />
             STREAM PROGRESS × 0.0025% = REAL-TIME YIELD TRACKING

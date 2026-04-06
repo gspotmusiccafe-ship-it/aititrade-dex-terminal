@@ -269,7 +269,7 @@ function SpotifyControls({ showId, spotifyUrl }: { showId: number; spotifyUrl: s
               {formatMs(displayProgress)} / {formatMs(nowPlaying.durationMs)}
             </div>
           </div>
-          <div className="mt-1.5 h-1 bg-zinc-900 overflow-hidden">
+          <div className="mt-1.5 h-1 bg-emerald-950 overflow-hidden">
             <div
               className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
               style={{ width: `${nowPlaying.durationMs > 0 ? Math.min((displayProgress / nowPlaying.durationMs) * 100, 100) : 0}%` }}
@@ -761,7 +761,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                     {formatMs(displayProgress)} / {formatMs(nowPlaying.durationMs)}
                   </div>
                 </div>
-                <div className="mt-1.5 h-1 bg-zinc-900 overflow-hidden">
+                <div className="mt-1.5 h-1 bg-emerald-950 overflow-hidden">
                   <div
                     className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
                     style={{ width: `${nowPlaying.durationMs > 0 ? Math.min((displayProgress / nowPlaying.durationMs) * 100, 100) : 0}%` }}
@@ -869,7 +869,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1">
                 {Object.entries(engagementData.stats.actionCounts).map(([action, total]) => (
-                  <div key={action} className="flex items-center justify-between bg-zinc-900 border border-emerald-500/10 px-2 py-1">
+                  <div key={action} className="flex items-center justify-between bg-emerald-950 border border-emerald-500/10 px-2 py-1">
                     <span className="text-[9px] text-emerald-500/50 capitalize">{action.replace("_", " ")}</span>
                     <span className="text-[9px] text-emerald-400 font-bold">{String(total)}</span>
                   </div>
@@ -881,7 +881,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                   <p className="text-[9px] text-emerald-500/40 mb-1 uppercase">Top Played:</p>
                   <div className="space-y-0.5">
                     {engagementData.stats.topTracks.map((track, i) => (
-                      <div key={i} className="flex items-center justify-between bg-zinc-900 border border-emerald-500/10 px-2 py-1">
+                      <div key={i} className="flex items-center justify-between bg-emerald-950 border border-emerald-500/10 px-2 py-1">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-[9px] font-bold text-emerald-400 w-3">{i + 1}</span>
                           <div className="min-w-0">
@@ -932,7 +932,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                   <p className="text-[8px] text-emerald-500/40">GROSS LEDGER</p>
                 </div>
               </div>
-              <div className="w-full bg-zinc-900 border border-emerald-500/10 h-4 relative overflow-hidden">
+              <div className="w-full bg-emerald-950 border border-emerald-500/10 h-4 relative overflow-hidden">
                 <div
                   className={`h-full transition-all ${mintStats.totalMints >= mintStats.mintCap * 0.6 ? "bg-yellow-500" : "bg-emerald-500"}`}
                   style={{ width: `${Math.min(100, (mintStats.totalMints / mintStats.mintCap) * 100)}%` }}
@@ -945,7 +945,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
                 <div className="space-y-0.5">
                   <p className="text-[9px] text-emerald-500/40 uppercase">Asset Breakdown:</p>
                   {mintStats.assets.filter(a => a.mints > 0).map(asset => (
-                    <div key={asset.id} className="flex items-center justify-between bg-zinc-900 border border-emerald-500/10 px-2 py-1">
+                    <div key={asset.id} className="flex items-center justify-between bg-emerald-950 border border-emerald-500/10 px-2 py-1">
                       <span className="text-[10px] text-emerald-400 font-bold">${(asset.title || "").replace(/\s+/g, "").toUpperCase().slice(0, 8)}</span>
                       <div className="flex gap-3">
                         <span className="text-[9px] text-emerald-500/50">{asset.mints} MINTS</span>
@@ -1130,14 +1130,14 @@ function MyJamSessions() {
       {mySessions.map(session => {
         const scheduleDays = session.daysOfWeek ? session.daysOfWeek.split(",").map(d => DAY_NAMES[parseInt(d)]).join(", ") : "Every day";
         return (
-          <div key={session.id} className="flex items-center gap-3 bg-zinc-900 border border-emerald-500/10 p-2" data-testid={`my-session-${session.id}`}>
+          <div key={session.id} className="flex items-center gap-3 bg-emerald-950 border border-emerald-500/10 p-2" data-testid={`my-session-${session.id}`}>
             <div className="flex-1 min-w-0">
               <p className="text-xs text-emerald-400 font-bold truncate">{session.name.toUpperCase()}</p>
               <p className="text-[9px] text-emerald-500/40">
                 {formatTime12(session.scheduledTime)} · {scheduleDays}
               </p>
             </div>
-            <span className={`text-[8px] font-bold px-1.5 py-0.5 border ${session.isActive ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-zinc-500 border-zinc-700"}`}>
+            <span className={`text-[8px] font-bold px-1.5 py-0.5 border ${session.isActive ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" : "text-emerald-500/60 border-emerald-500/20"}`}>
               {session.isActive ? "ACTIVE" : "OFF"}
             </span>
             <button
@@ -1146,7 +1146,7 @@ function MyJamSessions() {
               disabled={toggleMutation.isPending}
               data-testid={`button-toggle-${session.id}`}
             >
-              <Power className={`h-3.5 w-3.5 ${session.isActive ? "text-emerald-400" : "text-zinc-600"}`} />
+              <Power className={`h-3.5 w-3.5 ${session.isActive ? "text-emerald-400" : "text-emerald-500/40"}`} />
             </button>
             <button
               className="h-7 w-7 flex items-center justify-center text-red-500/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"

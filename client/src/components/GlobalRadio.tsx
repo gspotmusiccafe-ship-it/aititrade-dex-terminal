@@ -67,13 +67,13 @@ function VUMeter({ level, label }: { level: number; label: string }) {
           return (
             <div
               key={i}
-              className={`w-[5px] transition-all duration-100 ${active ? color : "bg-zinc-800"}`}
+              className={`w-[5px] transition-all duration-100 ${active ? color : "bg-emerald-500/10"}`}
               style={{ height: `${((i + 1) / bars) * 100}%`, opacity: active ? 1 : 0.3 }}
             />
           );
         })}
       </div>
-      <span className="text-[7px] text-zinc-600 font-extrabold tracking-wider">{label}</span>
+      <span className="text-[7px] text-emerald-500/40 font-extrabold tracking-wider">{label}</span>
     </div>
   );
 }
@@ -88,9 +88,9 @@ function Turntable({ isActive, isPlaying, albumArt, deckLabel, trackName, artist
   ticker: string;
 }) {
   return (
-    <div className={`flex-1 border ${isActive ? "border-lime-500/40" : "border-zinc-800"} bg-zinc-950 p-3 relative overflow-hidden`}>
+    <div className={`flex-1 border ${isActive ? "border-lime-500/40" : "border-emerald-500/15"} bg-zinc-950 p-3 relative overflow-hidden`}>
       <div className="flex items-center justify-between mb-2">
-        <span className={`text-[9px] font-extrabold tracking-widest ${isActive ? "text-lime-400" : "text-zinc-600"}`}>{deckLabel}</span>
+        <span className={`text-[9px] font-extrabold tracking-widest ${isActive ? "text-lime-400" : "text-emerald-500/40"}`}>{deckLabel}</span>
         {isActive && isPlaying && (
           <span className="text-[7px] font-extrabold text-red-400 animate-pulse flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-red-500" />ON AIR
@@ -99,7 +99,7 @@ function Turntable({ isActive, isPlaying, albumArt, deckLabel, trackName, artist
       </div>
 
       <div className="flex items-center justify-center mb-3">
-        <div className={`relative w-28 h-28 rounded-full border-2 ${isActive ? "border-lime-500/30" : "border-zinc-800"} bg-black flex items-center justify-center overflow-hidden`}>
+        <div className={`relative w-28 h-28 rounded-full border-2 ${isActive ? "border-lime-500/30" : "border-emerald-500/15"} bg-black flex items-center justify-center overflow-hidden`}>
           <div className={`absolute inset-0 rounded-full ${isActive && isPlaying ? "animate-spin" : ""}`} style={{ animationDuration: "3s" }}>
             {albumArt ? (
               <img src={albumArt} alt="" className="w-full h-full object-cover rounded-full opacity-60" />
@@ -110,12 +110,12 @@ function Turntable({ isActive, isPlaying, albumArt, deckLabel, trackName, artist
               background: "repeating-radial-gradient(circle, transparent 0px, transparent 3px, rgba(0,0,0,0.3) 3px, rgba(0,0,0,0.3) 4px)"
             }} />
           </div>
-          <div className="absolute w-5 h-5 rounded-full bg-zinc-900 border border-zinc-700 z-10 flex items-center justify-center">
+          <div className="absolute w-5 h-5 rounded-full bg-emerald-950 border border-emerald-500/20 z-10 flex items-center justify-center">
             <div className="w-1.5 h-1.5 rounded-full bg-lime-400/60" />
           </div>
           {isActive && (
-            <div className="absolute -right-1 top-8 w-10 h-[2px] bg-zinc-600 origin-left rotate-[30deg] z-20">
-              <div className="absolute right-0 -top-[3px] w-2 h-2 bg-zinc-500 rounded-full" />
+            <div className="absolute -right-1 top-8 w-10 h-[2px] bg-emerald-800 origin-left rotate-[30deg] z-20">
+              <div className="absolute right-0 -top-[3px] w-2 h-2 bg-emerald-500 rounded-full" />
             </div>
           )}
         </div>
@@ -125,10 +125,10 @@ function Turntable({ isActive, isPlaying, albumArt, deckLabel, trackName, artist
         {trackName ? (
           <>
             <p className="text-[10px] font-extrabold text-white truncate">{trackName.toUpperCase()}</p>
-            <p className="text-[8px] text-zinc-500 truncate">{artistName}</p>
+            <p className="text-[8px] text-emerald-500/60 truncate">{artistName}</p>
           </>
         ) : (
-          <p className={`text-[10px] ${isActive ? "text-lime-400/50" : "text-zinc-700"}`}>{ticker}</p>
+          <p className={`text-[10px] ${isActive ? "text-lime-400/50" : "text-emerald-500/25"}`}>{ticker}</p>
         )}
       </div>
     </div>
@@ -598,7 +598,7 @@ export default function GlobalRadio() {
             <Radio className="h-5 w-5 text-lime-400" />
             <div>
               <h2 className="text-lime-400 font-extrabold text-sm tracking-widest">97.7 THE FLAME GLOBAL</h2>
-              <p className="text-[8px] text-zinc-600">DUAL-DECK BROADCAST CONSOLE</p>
+              <p className="text-[8px] text-emerald-500/40">DUAL-DECK BROADCAST CONSOLE</p>
             </div>
           </div>
         </div>
@@ -633,7 +633,7 @@ export default function GlobalRadio() {
                 className={`flex-shrink-0 px-2 py-1 border text-[8px] font-extrabold transition-all ${
                   i === currentAssetIndex
                     ? "border-lime-400 bg-lime-500/10 text-lime-400 shadow-[0_0_8px_rgba(132,204,22,0.2)]"
-                    : "border-zinc-800 text-zinc-600 hover:border-lime-500/30 hover:text-lime-400"
+                    : "border-emerald-500/15 text-emerald-500/40 hover:border-lime-500/30 hover:text-lime-400"
                 }`}
                 data-testid={`button-rotation-asset-${i}`}
               >
@@ -661,7 +661,7 @@ export default function GlobalRadio() {
               <VUMeter level={vuRight} label="R" />
 
               <div className="flex flex-col items-center gap-1 w-full mt-1">
-                <span className="text-[7px] text-zinc-600 font-extrabold">XFADER</span>
+                <span className="text-[7px] text-emerald-500/40 font-extrabold">XFADER</span>
                 <input
                   type="range"
                   min={0}
@@ -672,8 +672,8 @@ export default function GlobalRadio() {
                   data-testid="input-crossfade"
                 />
                 <div className="flex justify-between w-full">
-                  <span className="text-[6px] text-zinc-700">A</span>
-                  <span className="text-[6px] text-zinc-700">B</span>
+                  <span className="text-[6px] text-emerald-500/25">A</span>
+                  <span className="text-[6px] text-emerald-500/25">B</span>
                 </div>
               </div>
             </div>
@@ -696,7 +696,7 @@ export default function GlobalRadio() {
                 <span className="text-[9px] text-lime-400 font-extrabold flex-1 truncate">
                   {deckAAsset.title?.toUpperCase()} — {deckAAsset.artistName || "UNKNOWN"}
                 </span>
-                <span className="text-[8px] text-zinc-600">QUEUED</span>
+                <span className="text-[8px] text-emerald-500/40">QUEUED</span>
               </div>
             </div>
           )}
@@ -707,9 +707,9 @@ export default function GlobalRadio() {
                 <span className="text-[9px] text-lime-400 font-extrabold flex-1 truncate">
                   {playerState.trackName.toUpperCase()} — {playerState.artistName}
                 </span>
-                <span className="text-[9px] text-zinc-600">{formatMs(playerState.progressMs)} / {formatMs(playerState.durationMs)}</span>
+                <span className="text-[9px] text-emerald-500/40">{formatMs(playerState.progressMs)} / {formatMs(playerState.durationMs)}</span>
               </div>
-              <div className="h-1 bg-zinc-800 rounded overflow-hidden">
+              <div className="h-1 bg-emerald-500/10 rounded overflow-hidden">
                 <div
                   className="h-full bg-lime-500 transition-all"
                   style={{ width: `${playerState.durationMs ? (playerState.progressMs / playerState.durationMs) * 100 : 0}%` }}
@@ -771,7 +771,7 @@ export default function GlobalRadio() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleVolumeChange(volume === 0 ? 0.5 : 0)}
-                className="text-zinc-500 hover:text-lime-400 transition-colors"
+                className="text-emerald-500/60 hover:text-lime-400 transition-colors"
                 data-testid="button-volume-mute"
               >
                 {volume === 0 ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
@@ -786,7 +786,7 @@ export default function GlobalRadio() {
                 className="flex-1 h-1 accent-lime-400"
                 data-testid="input-volume"
               />
-              <span className="text-[9px] text-zinc-600 w-8 text-right font-extrabold">{Math.round(volume * 100)}%</span>
+              <span className="text-[9px] text-emerald-500/40 w-8 text-right font-extrabold">{Math.round(volume * 100)}%</span>
             </div>
           )}
 
@@ -797,7 +797,7 @@ export default function GlobalRadio() {
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 border text-[10px] font-extrabold transition-all ${
                   autopilot
                     ? "border-lime-400 bg-lime-500/10 text-lime-400 shadow-[0_0_8px_rgba(132,204,22,0.15)]"
-                    : "border-zinc-800 text-zinc-600 hover:border-lime-500/30"
+                    : "border-emerald-500/15 text-emerald-500/40 hover:border-lime-500/30"
                 }`}
                 data-testid="button-autopilot-toggle"
               >
@@ -809,7 +809,7 @@ export default function GlobalRadio() {
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 border text-[10px] font-extrabold transition-all ${
                   broadcast
                     ? "border-red-400 bg-red-500/10 text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.15)] animate-pulse"
-                    : "border-zinc-800 text-zinc-600 hover:border-red-500/30"
+                    : "border-emerald-500/15 text-emerald-500/40 hover:border-red-500/30"
                 }`}
                 data-testid="button-broadcast-toggle"
               >
@@ -827,36 +827,36 @@ export default function GlobalRadio() {
                   <span className="text-[9px] text-red-400 font-extrabold">CONTINUOUS BROADCAST ENGINE</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Clock className="h-2.5 w-2.5 text-zinc-600" />
+                  <Clock className="h-2.5 w-2.5 text-emerald-500/40" />
                   <span className="text-[9px] text-lime-400 font-mono font-extrabold" data-testid="text-broadcast-uptime">
                     {formatUptime(broadcastUptime)}
                   </span>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-1">
-                <div className="text-center px-1 py-0.5 border border-zinc-800">
-                  <p className="text-[6px] text-zinc-700 font-extrabold">SHOW</p>
+                <div className="text-center px-1 py-0.5 border border-emerald-500/15">
+                  <p className="text-[6px] text-emerald-500/25 font-extrabold">SHOW</p>
                   <p className="text-[8px] text-lime-400 font-extrabold" data-testid="text-current-show">{getShowLabel(currentShow)}</p>
                 </div>
-                <div className="text-center px-1 py-0.5 border border-zinc-800">
-                  <p className="text-[6px] text-zinc-700 font-extrabold">AUTOPILOT</p>
-                  <p className={`text-[8px] font-extrabold ${autopilot ? "text-lime-400" : "text-zinc-600"}`}>
+                <div className="text-center px-1 py-0.5 border border-emerald-500/15">
+                  <p className="text-[6px] text-emerald-500/25 font-extrabold">AUTOPILOT</p>
+                  <p className={`text-[8px] font-extrabold ${autopilot ? "text-lime-400" : "text-emerald-500/40"}`}>
                     {autopilot ? "ENGAGED" : "MANUAL"}
                   </p>
                 </div>
-                <div className="text-center px-1 py-0.5 border border-zinc-800">
-                  <p className="text-[6px] text-zinc-700 font-extrabold">WATCHDOG</p>
+                <div className="text-center px-1 py-0.5 border border-emerald-500/15">
+                  <p className="text-[6px] text-emerald-500/25 font-extrabold">WATCHDOG</p>
                   <p className="text-[8px] text-lime-400 font-extrabold">ACTIVE</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <span className="text-[7px] text-zinc-700 font-extrabold">AD-BRIDGE:</span>
+                <span className="text-[7px] text-emerald-500/25 font-extrabold">AD-BRIDGE:</span>
                 <span className="text-[7px] text-lime-400 font-extrabold">3s RESUME</span>
-                <span className="text-[7px] text-zinc-800">|</span>
-                <span className="text-[7px] text-zinc-700 font-extrabold">POLLING:</span>
+                <span className="text-[7px] text-emerald-900">|</span>
+                <span className="text-[7px] text-emerald-500/25 font-extrabold">POLLING:</span>
                 <span className="text-[7px] text-lime-400 font-extrabold">5s INTERVAL</span>
-                <span className="text-[7px] text-zinc-800">|</span>
-                <span className="text-[7px] text-zinc-700 font-extrabold">SHOWS:</span>
+                <span className="text-[7px] text-emerald-900">|</span>
+                <span className="text-[7px] text-emerald-500/25 font-extrabold">SHOWS:</span>
                 <span className="text-[7px] text-lime-400 font-extrabold">60s SWITCH</span>
               </div>
             </div>
@@ -865,31 +865,31 @@ export default function GlobalRadio() {
           {royaltyPool && (
             <div className="grid grid-cols-3 gap-1">
               <div className="text-center p-2 border border-lime-500/10 bg-lime-500/5">
-                <p className="text-[7px] text-zinc-600 font-extrabold">VAULT RATE</p>
+                <p className="text-[7px] text-emerald-500/40 font-extrabold">VAULT RATE</p>
                 <p className="text-xs font-extrabold text-lime-400">{royaltyPool.trustVaultRate}</p>
               </div>
               <div className="text-center p-2 border border-lime-500/10 bg-lime-500/5">
-                <p className="text-[7px] text-zinc-600 font-extrabold">TRUST VAULT</p>
+                <p className="text-[7px] text-emerald-500/40 font-extrabold">TRUST VAULT</p>
                 <p className="text-xs font-extrabold text-lime-400">${royaltyPool.trustVaultAmount.toLocaleString()}</p>
               </div>
               <div className="text-center p-2 border border-lime-500/10 bg-lime-500/5">
-                <p className="text-[7px] text-zinc-600 font-extrabold">VALUATION</p>
+                <p className="text-[7px] text-emerald-500/40 font-extrabold">VALUATION</p>
                 <p className="text-xs font-extrabold text-lime-400">${royaltyPool.currentTrustValuation.toLocaleString()}</p>
               </div>
             </div>
           )}
 
           {heartbeatLogs.length > 0 && (
-            <div className="border border-zinc-800">
-              <div className="px-3 py-1 border-b border-zinc-800 flex items-center gap-2 bg-zinc-950">
+            <div className="border border-emerald-500/15">
+              <div className="px-3 py-1 border-b border-emerald-500/15 flex items-center gap-2 bg-zinc-950">
                 <Activity className="h-2.5 w-2.5 text-lime-400" />
                 <span className="text-[8px] text-lime-400 font-extrabold">HEARTBEAT — 30s SYNC</span>
               </div>
               <div className="max-h-20 overflow-y-auto">
                 {heartbeatLogs.slice(0, 5).map((log, i) => (
-                  <div key={i} className="px-3 py-0.5 flex items-center justify-between text-[7px] border-b border-zinc-900 last:border-0">
-                    <span className="text-zinc-700">{new Date(log.timestamp).toLocaleTimeString()}</span>
-                    <span className="text-zinc-600">{log.asset}</span>
+                  <div key={i} className="px-3 py-0.5 flex items-center justify-between text-[7px] border-b border-emerald-950 last:border-0">
+                    <span className="text-emerald-500/25">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                    <span className="text-emerald-500/40">{log.asset}</span>
                     <span className={log.verified ? "text-lime-400 font-extrabold" : "text-red-400 font-extrabold"}>
                       {log.verified ? "✓ VERIFIED" : "✗ MISMATCH"}
                     </span>

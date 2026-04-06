@@ -1400,7 +1400,7 @@ function CreativeSuiteTab() {
           </div>
           CEO COMMAND CENTER
         </h3>
-        <p className="text-sm text-zinc-500 mt-2 font-mono">
+        <p className="text-sm text-emerald-500/60 mt-2 font-mono">
           QUICK-LAUNCH CREATIVE TOOLS — Each opens in a dedicated 1200×800 popup window for full-speed operation.
         </p>
       </div>
@@ -1423,7 +1423,7 @@ function CreativeSuiteTab() {
                     {tool.subtitle}
                   </p>
                 </div>
-                <p className="text-zinc-400 text-xs font-mono text-center leading-relaxed">
+                <p className="text-emerald-400/70 text-xs font-mono text-center leading-relaxed">
                   {tool.description}
                 </p>
               </div>
@@ -1454,7 +1454,7 @@ function CreativeSuiteTab() {
         ))}
       </div>
 
-      <Card className="bg-black/50 border border-zinc-800 overflow-hidden">
+      <Card className="bg-black/50 border border-emerald-500/15 overflow-hidden">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <div className="h-8 w-8 rounded bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5 border border-amber-500/20">
@@ -1462,7 +1462,7 @@ function CreativeSuiteTab() {
             </div>
             <div>
               <p className="text-xs font-bold font-mono text-amber-400 mb-1">IDEOGRAM PROMPT — GOLD/LIME TRUST CERTIFICATE</p>
-              <p className="text-[11px] font-mono text-zinc-500 leading-relaxed select-all">{IDEOGRAM_PROMPT}</p>
+              <p className="text-[11px] font-mono text-emerald-500/60 leading-relaxed select-all">{IDEOGRAM_PROMPT}</p>
             </div>
           </div>
         </CardContent>
@@ -1561,7 +1561,7 @@ function LyricsTab({ artistId }: { artistId: string }) {
           </div>
           ASSET MINT — AI SONG GENERATOR
         </h3>
-        <p className="text-sm text-zinc-400 mt-2 font-mono">Describe your song idea below. AI generates complete lyrics. Edit, then mint your asset for distribution.</p>
+        <p className="text-sm text-emerald-400/70 mt-2 font-mono">Describe your song idea below. AI generates complete lyrics. Edit, then mint your asset for distribution.</p>
       </div>
 
       <Card className="bg-card/60 border-lime-500/30 overflow-hidden w-full">
@@ -1580,7 +1580,7 @@ function LyricsTab({ artistId }: { artistId: string }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
             <div>
-              <Label className="text-sm font-bold text-zinc-300">Genre</Label>
+              <Label className="text-sm font-bold text-emerald-300">Genre</Label>
               <Input
                 value={genre}
                 onChange={(e) => setGenre(e.target.value)}
@@ -1591,7 +1591,7 @@ function LyricsTab({ artistId }: { artistId: string }) {
               />
             </div>
             <div>
-              <Label className="text-sm font-bold text-zinc-300">Mood</Label>
+              <Label className="text-sm font-bold text-emerald-300">Mood</Label>
               <Input
                 value={mood}
                 onChange={(e) => setMood(e.target.value)}
@@ -1602,7 +1602,7 @@ function LyricsTab({ artistId }: { artistId: string }) {
               />
             </div>
             <div>
-              <Label className="text-sm font-bold text-zinc-300">Style Reference</Label>
+              <Label className="text-sm font-bold text-emerald-300">Style Reference</Label>
               <Input
                 value={style}
                 onChange={(e) => setStyle(e.target.value)}
@@ -1632,7 +1632,7 @@ function LyricsTab({ artistId }: { artistId: string }) {
               <Sparkles className="h-5 w-5 text-lime-400" />
               GENERATED LYRICS — READY TO MINT
             </CardTitle>
-            <CardDescription className="text-zinc-400">Review and edit your lyrics, then mint your asset for beat production & distribution</CardDescription>
+            <CardDescription className="text-emerald-400/70">Review and edit your lyrics, then mint your asset for beat production & distribution</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 w-full">
             <div className="w-full">

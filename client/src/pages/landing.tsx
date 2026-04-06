@@ -138,13 +138,13 @@ function MiniRadio() {
     <div className="fixed top-[74px] left-0 right-0 z-40 font-mono" data-testid="mini-radio">
       <audio ref={audioRef} preload="metadata" />
       <div className="bg-black/95 backdrop-blur-sm border-b border-emerald-500/20">
-        <div className="h-[2px] bg-zinc-900"><div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${pct}%` }} /></div>
+        <div className="h-[2px] bg-emerald-950"><div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${pct}%` }} /></div>
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-2.5 h-10">
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <Disc3 className={`h-3 w-3 text-lime-400 ${isPlaying ? "animate-spin" : ""}`} style={{ animationDuration: "2s" }} />
             <span className="text-[8px] text-lime-400 font-extrabold tracking-widest hidden sm:inline">97.7 THE FLAME</span>
           </div>
-          <div className="w-7 h-7 flex-shrink-0 bg-zinc-900 border border-emerald-500/20 overflow-hidden">
+          <div className="w-7 h-7 flex-shrink-0 bg-emerald-950 border border-emerald-500/20 overflow-hidden">
             {coverSrc ? (
               <img src={coverSrc} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -153,19 +153,19 @@ function MiniRadio() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] text-lime-400 font-extrabold truncate">{current?.title?.toUpperCase() || "ASSET RADIO"}</p>
-            <p className="text-[8px] text-zinc-500 truncate">{current?.artist?.name || "AITIFY"}</p>
+            <p className="text-[8px] text-emerald-500/60 truncate">{current?.artist?.name || "AITIFY"}</p>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <button onClick={() => skipTo(currentIndex - 1)} disabled={!playlist.length} className="p-0.5 text-zinc-500 hover:text-lime-400 disabled:opacity-20" data-testid="mini-radio-prev"><SkipBack className="h-3 w-3" /></button>
+            <button onClick={() => skipTo(currentIndex - 1)} disabled={!playlist.length} className="p-0.5 text-emerald-500/60 hover:text-lime-400 disabled:opacity-20" data-testid="mini-radio-prev"><SkipBack className="h-3 w-3" /></button>
             <button onClick={togglePlay} disabled={!playlist.length} className="w-7 h-7 bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center disabled:opacity-30" data-testid="mini-radio-play">
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
             </button>
-            <button onClick={() => skipTo(currentIndex + 1)} disabled={!playlist.length} className="p-0.5 text-zinc-500 hover:text-lime-400 disabled:opacity-20" data-testid="mini-radio-next"><SkipForward className="h-3 w-3" /></button>
-            <button onClick={() => setIsMuted(!isMuted)} className="p-0.5 text-zinc-600 hover:text-zinc-400 ml-1" data-testid="mini-radio-mute">
+            <button onClick={() => skipTo(currentIndex + 1)} disabled={!playlist.length} className="p-0.5 text-emerald-500/60 hover:text-lime-400 disabled:opacity-20" data-testid="mini-radio-next"><SkipForward className="h-3 w-3" /></button>
+            <button onClick={() => setIsMuted(!isMuted)} className="p-0.5 text-emerald-500/40 hover:text-emerald-400/70 ml-1" data-testid="mini-radio-mute">
               {isMuted ? <VolumeX className="h-3 w-3" /> : <Volume2 className="h-3 w-3" />}
             </button>
           </div>
-          <div className="hidden sm:flex items-center gap-0.5 text-[7px] text-zinc-600 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-0.5 text-[7px] text-emerald-500/40 flex-shrink-0">
             <span>{formatTime(currentTime)}</span><span>/</span><span>{formatTime(duration)}</span>
           </div>
           {isPlaying && <span className="text-[7px] text-red-400 font-bold animate-pulse flex-shrink-0">LIVE</span>}
@@ -524,7 +524,7 @@ function LiveTradeFeed() {
         {trades.map((trade, i) => (
           <div
             key={trade.id}
-            className={`flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/80 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/10 border-l-2 border-l-emerald-400" : "hover:bg-zinc-900/50"}`}
+            className={`flex items-center justify-between px-3 py-1.5 border-b border-emerald-500/15/80 text-[9px] sm:text-[10px] ${i === 0 ? "bg-emerald-500/10 border-l-2 border-l-emerald-400" : "hover:bg-emerald-950/50"}`}
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <span className={`px-1.5 py-0.5 font-extrabold text-[7px] border ${
@@ -541,7 +541,7 @@ function LiveTradeFeed() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="text-cyan-500/70 text-[8px] font-bold">{trade.portal}</span>
               <span className="text-lime-300 font-bold" style={{ textShadow: "0 0 4px rgba(190,242,100,0.3)" }}>${trade.amount}</span>
-              <span className="text-zinc-500 text-[7px] w-16 text-right">{trade.time}</span>
+              <span className="text-emerald-500/60 text-[7px] w-16 text-right">{trade.time}</span>
             </div>
           </div>
         ))}
@@ -574,7 +574,7 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
   const signalColor = signal === "BUY" ? "text-lime-400 border-lime-500/40 bg-lime-500/10" : signal === "SELL" ? "text-red-400 border-red-500/40 bg-red-500/10" : "text-amber-400 border-amber-500/40 bg-amber-500/10";
 
   const tiers = [
-    { name: "NANO", tbi: 1, color: "text-zinc-400" },
+    { name: "NANO", tbi: 1, color: "text-emerald-400/70" },
     { name: "MICRO", tbi: 2, color: "text-emerald-400" },
     { name: "PENNY", tbi: 3.5, color: "text-emerald-400" },
     { name: "MINI", tbi: 5, color: "text-lime-400" },
@@ -595,11 +595,11 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-[7px] sm:text-[8px] px-1.5 py-0.5 border font-extrabold ${signalColor}`}>{signal}</span>
-            <span className="text-[8px] text-zinc-600">{new Date().toLocaleTimeString('en-US', { hour12: false })}</span>
+            <span className="text-[8px] text-emerald-500/40">{new Date().toLocaleTimeString('en-US', { hour12: false })}</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-px bg-zinc-800">
+        <div className="grid grid-cols-2 gap-px bg-emerald-500/10">
           <div className="bg-black p-2 sm:p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[8px] text-emerald-500/70 font-bold tracking-wider">TBI OSCILLATOR</span>
@@ -633,7 +633,7 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-px bg-zinc-800 border-t border-zinc-800">
+        <div className="grid grid-cols-4 gap-px bg-emerald-500/10 border-t border-emerald-500/15">
           <div className="bg-black p-1.5 sm:p-2 text-center">
             <p className="text-[7px] text-emerald-500/60 font-bold">MBBP RATIO</p>
             <p className="text-[10px] sm:text-xs text-amber-400 font-black">{mbbpRatio}%</p>
@@ -743,11 +743,11 @@ export default function LandingPage() {
               <span className="text-lime-400/80 font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block" /> LIVE NOW
               </span>
-              <span className="text-zinc-700">|</span>
+              <span className="text-emerald-500/25">|</span>
               <span className="text-emerald-400/80 font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" /> 81 PORTALS
               </span>
-              <span className="text-zinc-700">|</span>
+              <span className="text-emerald-500/25">|</span>
               <span className="text-amber-400/80 font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block animate-pulse" /> $2-$50 BUY-IN
               </span>
