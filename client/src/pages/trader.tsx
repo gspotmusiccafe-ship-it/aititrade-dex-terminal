@@ -157,11 +157,17 @@ function LiveIndicator({ label, value, trend, color }: { label: string; value: s
 function TraderDesk({ positions, userId }: { positions: TraderData["positions"]; userId: string }) {
   const { toast } = useToast();
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [oTick, setOTick] = useState(0);
 
   const { data: engineState } = useQuery<{ price: number; mbbp: number; marketOpen: boolean }>({
     queryKey: ["/api/engine/state"],
     refetchInterval: 3000,
   });
+
+  useEffect(() => {
+    const iv = setInterval(() => setOTick(t => t + 1), 800);
+    return () => clearInterval(iv);
+  }, []);
 
   const acceptMut = useMutation({
     mutationFn: async (queueId: string) => {
@@ -242,14 +248,16 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
 
         <div className="divide-y divide-emerald-500/10">
           {activePositions.map((pos, i) => {
-            const roiPositive = pos.roi > 0;
             const isQueued = pos.queueStatus === "QUEUED" || pos.queueStatus === "OFFERED";
             const isHolding = pos.queueStatus === "HOLDING";
             const canTrade = isQueued || isHolding;
             const isPending = pendingAction === pos.id;
-            const offer = pos.currentOffer || pos.buyBack;
-            const mult = pos.currentMultiplier || 1.0;
+            const seed = Math.sin((i + 1) * 7919 + oTick * 0.4) * 0.03 + Math.sin((i + 1) * 1301 + oTick * 0.7) * 0.015;
+            const baseOffer = pos.currentOffer || pos.buyBack;
+            const offer = parseFloat((baseOffer * (1 + seed)).toFixed(4));
+            const mult = parseFloat(((pos.currentMultiplier || 1.0) * (1 + seed * 0.5)).toFixed(3));
             const profitLoss = offer - pos.buyIn;
+            const roiPositive = profitLoss >= 0;
 
             return (
               <div key={pos.id} className="px-4 py-3 hover:bg-emerald-950/10 transition-colors" data-testid={`desk-position-${pos.id}`}>

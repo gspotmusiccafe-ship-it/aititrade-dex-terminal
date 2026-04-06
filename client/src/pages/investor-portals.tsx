@@ -193,21 +193,25 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
           <span className="text-emerald-500/60 font-bold">TERMS:</span> ${parseFloat(portal.downPayment).toFixed(0)} DOWN + ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO × {portal.termMonths} MO = ${parseFloat(portal.entryPrice).toFixed(0)} | 0% INTEREST | PAID VIA $AITITRADEBROKERAGE
         </div>
 
-        {!isFull && (
-          <button
-            onClick={() => onJoin(portal.id)}
-            disabled={joining}
-            className="w-full py-3 rounded font-black text-sm text-white transition-all hover:scale-[1.02] disabled:opacity-50 flex items-center justify-center gap-2"
-            style={{
-              background: "linear-gradient(135deg, #059669, #10b981)",
-              boxShadow: "0 0 15px rgba(16,185,129,0.3)",
-            }}
-            data-testid={`btn-join-${portal.id}`}
-          >
-            {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crown className="h-4 w-4" />}
-            BECOME OWNER/INVESTOR — ${parseFloat(portal.downPayment).toFixed(0)} DOWN
-          </button>
-        )}
+        <a
+          href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.downPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20DOWN%20PAYMENT`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-2.5 rounded font-black text-xs text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+          style={{ background: "linear-gradient(135deg, #00D632, #00C244)", boxShadow: "0 0 12px rgba(0,214,50,0.25)" }}
+          data-testid={`btn-cashapp-down-${portal.id}`}
+        >
+          <DollarSign className="h-3.5 w-3.5" /> PAY ${parseFloat(portal.downPayment).toFixed(0)} DOWN VIA CASH APP
+        </a>
+        <a
+          href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.monthlyPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20MONTHLY%20PAYMENT`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-2 rounded font-bold text-[10px] text-emerald-300 flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-950/40 transition-all hover:bg-emerald-950/60"
+          data-testid={`btn-cashapp-monthly-${portal.id}`}
+        >
+          <DollarSign className="h-3 w-3" /> PAY ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO VIA CASH APP
+        </a>
       </div>
     </div>
   );

@@ -1031,14 +1031,9 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
 
-      const allNative = await db.select({
-        salesCount: tracks.salesCount,
-        unitPrice: tracks.unitPrice,
-      }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
-
-      const totalVolume = allNative.reduce((sum, t) => {
-        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "2.00"));
-      }, 0);
+      const grossIntake = await getGrossIntake();
+      const totalVolume = grossIntake;
+      const totalPaidOut = await getTotalPaidOut();
 
       const dashPulse = getKineticState();
       const traderSettlementPool = totalVolume * dashPulse.floorROI;
@@ -1046,8 +1041,6 @@ export async function registerRoutes(
 
       const distanceToClose = 1000 - (totalVolume % 1000);
       const cyclesCompleted = Math.floor(totalVolume / 1000);
-      const payoutPerK = Math.round(1000 * dashPulse.floorROI);
-      const totalPaidOut = cyclesCompleted * payoutPerK;
 
       const [orderStats] = await db.select({
         settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
@@ -3637,7 +3630,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         sunoId = songs[0].id;
         engineUsed = "suno-v4.5";
       } else {
-        const voice = makeInstrumental ? "alloy" : "nova";
+        const voice = makeInstrumental ? "alloy" : "onyx";
         const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
         sunoId = `admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const audioFilePath = path.join(process.cwd(), "uploads", `${sunoId}.mp3`);
@@ -3747,7 +3740,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         }
       } else {
         try {
-          const voice = makeInstrumental ? "alloy" : "nova";
+          const voice = makeInstrumental ? "alloy" : "onyx";
           const audioBuffer = await performVocal(audioPrompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
           const audioId = `direct-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
@@ -3891,7 +3884,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         });
       } else {
         console.log(`[BEAT-GEN] No music API key — using AI vocal engine: style=${style}, voice=${voiceType}`);
-        const voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = voiceType?.includes("female") ? "nova" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "alloy";
+        const voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = voiceType?.includes("female") ? "shimmer" : voiceType?.includes("male-deep") ? "onyx" : voiceType?.includes("male-raspy") ? "echo" : "onyx";
         const audioBuffer = await performVocal(prompt.slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
         const audioId = `beat-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const audioPath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
@@ -4085,7 +4078,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         }
       } else {
         try {
-          const voice = makeInstrumental ? "alloy" : "nova";
+          const voice = makeInstrumental ? "alloy" : "onyx";
           const audioBuffer = await performVocal((audioPrompt || title).slice(0, 4096), style || "R&B, Smooth, Melodic", voice, "mp3");
           const audioId = `push-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           const audioFilePath = path.join(process.cwd(), "uploads", `${audioId}.mp3`);
@@ -6885,6 +6878,35 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json({ success: true, newTotal });
     } catch (error: any) {
       res.status(500).json({ message: "Failed to confirm payment" });
+    }
+  });
+
+  app.delete("/api/admin/investor-entries/:id", isAdmin, async (req: any, res) => {
+    try {
+      const [entry] = await db.select().from(globalInvestorEntries).where(eq(globalInvestorEntries.id, req.params.id));
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      await db.delete(globalInvestorEntries).where(eq(globalInvestorEntries.id, req.params.id));
+      await db.update(globalInvestorPortals).set({
+        currentInvestors: sql`GREATEST(COALESCE(${globalInvestorPortals.currentInvestors}, 1) - 1, 0)`,
+      }).where(eq(globalInvestorPortals.id, entry.portalId));
+      console.log(`[INVESTOR] Removed investor ${entry.displayName} from portal ${entry.portalId} — non-payment`);
+      res.json({ success: true, message: `Removed ${entry.displayName}` });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to remove investor" });
+    }
+  });
+
+  app.get("/api/admin/investor-portals", isAdmin, async (_req: any, res) => {
+    try {
+      const portals = await db.select().from(globalInvestorPortals).orderBy(asc(globalInvestorPortals.createdAt));
+      const entries = await db.select().from(globalInvestorEntries);
+      const result = portals.map(p => ({
+        ...p,
+        investors: entries.filter(e => e.portalId === p.id),
+      }));
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to load portals" });
     }
   });
 

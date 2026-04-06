@@ -3905,6 +3905,138 @@ function CreateArtistHeaderButton() {
   );
 }
 
+function InvestorManagementTab() {
+  const { toast } = useToast();
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [confirmingPay, setConfirmingPay] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState("25");
+
+  const { data: portals, isLoading, refetch } = useQuery<any[]>({
+    queryKey: ["/api/admin/investor-portals"],
+    refetchInterval: 10000,
+  });
+
+  const removeInvestor = async (entryId: string, name: string) => {
+    if (!window.confirm(`REMOVE ${name} FOR NON-PAYMENT? This cannot be undone.`)) return;
+    setRemoving(entryId);
+    try {
+      const res = await apiRequest("DELETE", `/api/admin/investor-entries/${entryId}`);
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "INVESTOR REMOVED", description: `${name} removed for non-payment` });
+        refetch();
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to remove investor", variant: "destructive" });
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  const confirmPayment = async (entryId: string) => {
+    setConfirmingPay(entryId);
+    try {
+      const res = await apiRequest("POST", `/api/admin/investor-entries/${entryId}/confirm-payment`, { amount: parseFloat(payAmount) });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "PAYMENT CONFIRMED", description: `$${payAmount} recorded — total: $${data.newTotal}` });
+        setConfirmingPay(null);
+        setPayAmount("25");
+        refetch();
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Failed to confirm payment", variant: "destructive" });
+    } finally {
+      setConfirmingPay(null);
+    }
+  };
+
+  if (isLoading) return <div className="text-amber-400 animate-pulse font-mono p-6">LOADING INVESTOR DATA...</div>;
+
+  const allInvestors = portals?.flatMap(p => p.investors?.map((inv: any) => ({ ...inv, songTitle: p.songTitle, portalName: p.name })) || []) || [];
+
+  return (
+    <div className="space-y-6" data-testid="investor-management-tab">
+      <div className="bg-black border border-amber-500/30 rounded-lg p-5 font-mono">
+        <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-3">
+          <h2 className="text-lg text-amber-400 font-black tracking-tight uppercase">INVESTOR MANAGEMENT</h2>
+          <div className="text-[10px] text-amber-500/60">{allInvestors.length} TOTAL INVESTORS</div>
+        </div>
+
+        {allInvestors.length === 0 ? (
+          <div className="text-center py-10 text-amber-500/40 text-sm">NO INVESTORS YET</div>
+        ) : (
+          <div className="space-y-3">
+            {allInvestors.map((inv: any) => {
+              const totalOwed = parseFloat(inv.entryPrice || "0");
+              const totalPaid = parseFloat(inv.totalPaid || "0");
+              const remaining = Math.max(0, totalOwed - totalPaid);
+              const pctPaid = totalOwed > 0 ? Math.min(100, (totalPaid / totalOwed) * 100) : 0;
+              const isDelinquent = !inv.downPaymentPaid && inv.status !== "COMPLETED";
+              const isActive = inv.status === "ACTIVE";
+              const isRemoving = removing === inv.id;
+
+              return (
+                <div key={inv.id} className={`border rounded-lg p-4 ${isDelinquent ? "border-red-500/40 bg-red-950/10" : "border-emerald-500/20 bg-emerald-950/5"}`} data-testid={`investor-row-${inv.id}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-sm font-black text-white">{inv.displayName}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isDelinquent ? "bg-red-500/20 text-red-400" : isActive ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                          {isDelinquent ? "DELINQUENT" : inv.status || "PENDING"}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-amber-500/60 mb-2">{inv.songTitle || inv.portalName}</div>
+                      <div className="flex flex-wrap gap-3 text-[10px]">
+                        <span className="text-emerald-400">PAID: <span className="font-bold text-white">${totalPaid.toFixed(2)}</span></span>
+                        <span className="text-amber-400">OWED: <span className="font-bold text-white">${totalOwed.toFixed(2)}</span></span>
+                        <span className="text-cyan-400">REMAINING: <span className="font-bold text-white">${remaining.toFixed(2)}</span></span>
+                        <span className="text-lime-400">MONTHS: <span className="font-bold text-white">{inv.monthsPaid || 0}</span></span>
+                        <span className={inv.downPaymentPaid ? "text-emerald-400" : "text-red-400"}>DOWN: <span className="font-bold">{inv.downPaymentPaid ? "PAID" : "UNPAID"}</span></span>
+                      </div>
+                      <div className="mt-2 h-1.5 bg-black/50 rounded-full overflow-hidden border border-emerald-500/10">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pctPaid}%`, background: pctPaid >= 100 ? "#10b981" : pctPaid > 50 ? "#f59e0b" : "#ef4444" }} />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                      {confirmingPay === inv.id ? (
+                        <div className="flex items-center gap-1">
+                          <input type="number" value={payAmount} onChange={e => setPayAmount(e.target.value)} className="w-16 bg-black border border-emerald-500/30 text-emerald-400 text-xs p-1 rounded font-mono" data-testid={`input-pay-amount-${inv.id}`} />
+                          <button onClick={() => confirmPayment(inv.id)} className="px-2 py-1 bg-emerald-600 text-white text-[10px] font-bold rounded hover:bg-emerald-500" data-testid={`btn-confirm-pay-${inv.id}`}>
+                            OK
+                          </button>
+                          <button onClick={() => { setConfirmingPay(null); setPayAmount("25"); }} className="px-2 py-1 bg-zinc-700 text-white text-[10px] rounded">X</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmingPay(inv.id)} className="px-3 py-1.5 bg-emerald-900/60 border border-emerald-500/30 text-emerald-400 text-[10px] font-bold rounded hover:bg-emerald-800/60 transition-colors" data-testid={`btn-pay-${inv.id}`}>
+                          CONFIRM PAYMENT
+                        </button>
+                      )}
+                      <button
+                        onClick={() => removeInvestor(inv.id, inv.displayName)}
+                        disabled={isRemoving}
+                        className="px-3 py-1.5 bg-red-950/60 border border-red-500/30 text-red-400 text-[10px] font-bold rounded hover:bg-red-900/60 transition-colors disabled:opacity-50"
+                        data-testid={`btn-remove-investor-${inv.id}`}
+                      >
+                        {isRemoving ? "REMOVING..." : "REMOVE — NON-PAYMENT"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PortalControlPanel() {
   const { data: portals, isLoading, refetch } = useQuery<{
     id: string;
@@ -5205,6 +5337,10 @@ export default function AdminPage() {
                 <DollarSign className="h-4 w-4 mr-1.5 text-amber-400" />
                 Staking
               </TabsTrigger>
+              <TabsTrigger value="investors" data-testid="tab-investors" className="whitespace-nowrap data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-400">
+                <Users className="h-4 w-4 mr-1.5 text-orange-400" />
+                Investors
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -5302,6 +5438,10 @@ export default function AdminPage() {
 
           <TabsContent value="staking">
             <StakingAdminTab />
+          </TabsContent>
+
+          <TabsContent value="investors">
+            <InvestorManagementTab />
           </TabsContent>
         </Tabs>
         </div>
