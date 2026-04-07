@@ -648,7 +648,7 @@ export default function TraderPage() {
               </div>
 
               <a
-                href="https://cutt.ly/MUSIC-MARKET"
+                href="https://cutt.ly/mtDWjqRv"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-black text-sm transition-all border border-violet-400/40"
