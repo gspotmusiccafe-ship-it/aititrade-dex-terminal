@@ -185,129 +185,58 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         sourceNodeRef.current = source;
 
         const preGain = ctx.createGain();
-        preGain.gain.value = 0.82;
+        preGain.gain.value = 0.75;
 
         const rumbleFilter = ctx.createBiquadFilter();
         rumbleFilter.type = "highpass";
-        rumbleFilter.frequency.value = 25;
+        rumbleFilter.frequency.value = 30;
         rumbleFilter.Q.value = 0.7;
-
-        const subBass = ctx.createBiquadFilter();
-        subBass.type = "peaking";
-        subBass.frequency.value = 45;
-        subBass.Q.value = 0.9;
-        subBass.gain.value = 7.5;
-
-        const bassBody = ctx.createBiquadFilter();
-        bassBody.type = "peaking";
-        bassBody.frequency.value = 80;
-        bassBody.Q.value = 0.7;
-        bassBody.gain.value = 6.0;
-
-        const bassPunch = ctx.createBiquadFilter();
-        bassPunch.type = "peaking";
-        bassPunch.frequency.value = 120;
-        bassPunch.Q.value = 1.2;
-        bassPunch.gain.value = 4.5;
 
         const bassShelf = ctx.createBiquadFilter();
         bassShelf.type = "lowshelf";
-        bassShelf.frequency.value = 160;
-        bassShelf.gain.value = 3.5;
+        bassShelf.frequency.value = 100;
+        bassShelf.gain.value = 2.5;
 
         const mudCut = ctx.createBiquadFilter();
         mudCut.type = "peaking";
         mudCut.frequency.value = 300;
-        mudCut.Q.value = 0.8;
-        mudCut.gain.value = -2.5;
-
-        const boxCut = ctx.createBiquadFilter();
-        boxCut.type = "peaking";
-        boxCut.frequency.value = 500;
-        boxCut.Q.value = 0.6;
-        boxCut.gain.value = -1.0;
-
-        const vocalWarmth = ctx.createBiquadFilter();
-        vocalWarmth.type = "peaking";
-        vocalWarmth.frequency.value = 900;
-        vocalWarmth.Q.value = 0.5;
-        vocalWarmth.gain.value = 1.5;
+        mudCut.Q.value = 0.6;
+        mudCut.gain.value = -1.5;
 
         const vocalPresence = ctx.createBiquadFilter();
         vocalPresence.type = "peaking";
         vocalPresence.frequency.value = 2500;
-        vocalPresence.Q.value = 0.6;
-        vocalPresence.gain.value = 3.0;
-
-        const vocalClarity = ctx.createBiquadFilter();
-        vocalClarity.type = "peaking";
-        vocalClarity.frequency.value = 4000;
-        vocalClarity.Q.value = 0.7;
-        vocalClarity.gain.value = 2.5;
-
-        const deEsser = ctx.createBiquadFilter();
-        deEsser.type = "peaking";
-        deEsser.frequency.value = 6500;
-        deEsser.Q.value = 4.0;
-        deEsser.gain.value = -3.0;
-
-        const trebleCrisp = ctx.createBiquadFilter();
-        trebleCrisp.type = "peaking";
-        trebleCrisp.frequency.value = 8000;
-        trebleCrisp.Q.value = 0.5;
-        trebleCrisp.gain.value = 3.5;
-
-        const hiHatSparkle = ctx.createBiquadFilter();
-        hiHatSparkle.type = "peaking";
-        hiHatSparkle.frequency.value = 12000;
-        hiHatSparkle.Q.value = 0.6;
-        hiHatSparkle.gain.value = 4.0;
+        vocalPresence.Q.value = 0.5;
+        vocalPresence.gain.value = 1.5;
 
         const airShelf = ctx.createBiquadFilter();
         airShelf.type = "highshelf";
-        airShelf.frequency.value = 14000;
-        airShelf.gain.value = 3.0;
-
-        const bassComp = ctx.createDynamicsCompressor();
-        bassComp.threshold.value = -24;
-        bassComp.knee.value = 6;
-        bassComp.ratio.value = 3;
-        bassComp.attack.value = 0.008;
-        bassComp.release.value = 0.150;
+        airShelf.frequency.value = 10000;
+        airShelf.gain.value = 1.0;
 
         const masterComp = ctx.createDynamicsCompressor();
-        masterComp.threshold.value = -14;
-        masterComp.knee.value = 10;
-        masterComp.ratio.value = 3.5;
-        masterComp.attack.value = 0.005;
-        masterComp.release.value = 0.100;
+        masterComp.threshold.value = -18;
+        masterComp.knee.value = 12;
+        masterComp.ratio.value = 2.5;
+        masterComp.attack.value = 0.020;
+        masterComp.release.value = 0.200;
 
         const limiter = ctx.createDynamicsCompressor();
-        limiter.threshold.value = -1.5;
+        limiter.threshold.value = -2;
         limiter.knee.value = 0;
         limiter.ratio.value = 20;
-        limiter.attack.value = 0.0005;
-        limiter.release.value = 0.040;
+        limiter.attack.value = 0.001;
+        limiter.release.value = 0.050;
 
         const postGain = ctx.createGain();
-        postGain.gain.value = 0.92;
+        postGain.gain.value = 0.88;
 
         source.connect(preGain);
         preGain.connect(rumbleFilter);
-        rumbleFilter.connect(subBass);
-        subBass.connect(bassBody);
-        bassBody.connect(bassPunch);
-        bassPunch.connect(bassShelf);
-        bassShelf.connect(bassComp);
-        bassComp.connect(mudCut);
-        mudCut.connect(boxCut);
-        boxCut.connect(vocalWarmth);
-        vocalWarmth.connect(vocalPresence);
-        vocalPresence.connect(vocalClarity);
-        vocalClarity.connect(deEsser);
-        deEsser.connect(trebleCrisp);
-        trebleCrisp.connect(hiHatSparkle);
-        hiHatSparkle.connect(airShelf);
+        rumbleFilter.connect(bassShelf);
+        bassShelf.connect(mudCut);
+        mudCut.connect(vocalPresence);
+        vocalPresence.connect(airShelf);
         airShelf.connect(masterComp);
         masterComp.connect(limiter);
         limiter.connect(postGain);
