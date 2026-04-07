@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Music2, Play, Pause, Clock, Headphones, Users, ArrowRight, SkipForward, SkipBack, Volume2, VolumeX, Disc3, Mail, Lock, User, Eye, EyeOff, TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, Phone } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { MarketTicker } from "@/components/market-ticker";
-import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
+import logoImage from "@assets/a-bold-radio-station-logo-featuring-aiti_1n6BE9AnRHSDyOdG86KF_1775583562146.jpeg";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Shuffle, Repeat, Repeat1, ShoppingCart, ListMusic, X, Trash2, DollarSign, Radio, Wifi, Clock, Video, VideoOff, Zap, ChevronUp, ChevronDown } from "lucide-react";
-import logoImage from "@assets/AITIFY_MUSIC_RADIO_LOGO_IMAGE_1773164873830.png";
+import logoImage from "@assets/a-bold-radio-station-logo-featuring-aiti_1n6BE9AnRHSDyOdG86KF_1775583562146.jpeg";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { TipJarDialog } from "@/components/tip-jar-dialog";
