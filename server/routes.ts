@@ -5114,13 +5114,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         listingId: marketHoldings.listingId,
         cnt: sql<number>`COUNT(*)`,
       }).from(marketHoldings).groupBy(marketHoldings.listingId);
-      const countMap = new Map(holdingCounts.map(h => [h.listingId, h.cnt]));
+      const countMap = new Map(holdingCounts.map(h => [h.listingId, Number(h.cnt) || 0]));
 
       const resaleCounts = await db.select({
         listingId: marketHoldings.listingId,
         cnt: sql<number>`COUNT(*)`,
       }).from(marketHoldings).where(eq(marketHoldings.listedForSale, true)).groupBy(marketHoldings.listingId);
-      const resaleMap = new Map(resaleCounts.map(r => [r.listingId, r.cnt]));
+      const resaleMap = new Map(resaleCounts.map(r => [r.listingId, Number(r.cnt) || 0]));
 
       const withPrices = listings.map(l => {
         const analyst = getAnalystSignal(l);
@@ -5161,7 +5161,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const maxSupply = listing.maxSupply || 25;
       const holdingTotal = await db.select({ cnt: sql<number>`COUNT(*)` }).from(marketHoldings)
         .where(eq(marketHoldings.listingId, req.params.id));
-      const holders = holdingTotal[0]?.cnt || 0;
+      const holders = Number(holdingTotal[0]?.cnt) || 0;
 
       res.json({
         ...listing,
@@ -5219,7 +5219,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         if (!fromResaleId) {
           const currentHolders = await tx.select({ cnt: sql<number>`COUNT(*)` }).from(marketHoldings)
             .where(eq(marketHoldings.listingId, listingId));
-          const holdingCount = currentHolders[0]?.cnt || 0;
+          const holdingCount = Number(currentHolders[0]?.cnt) || 0;
           if (holdingCount >= maxSupply) {
             throw new Error(`POOL_FULL:${maxSupply}:${holdingCount}`);
           }
