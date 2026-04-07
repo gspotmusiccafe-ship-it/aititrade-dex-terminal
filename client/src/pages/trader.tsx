@@ -252,15 +252,20 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
             const isHolding = pos.queueStatus === "HOLDING";
             const canTrade = isQueued || isHolding;
             const isPending = pendingAction === pos.id;
-            const wave1 = Math.sin((i + 1) * 7919 + oTick * 0.35);
-            const wave2 = Math.sin((i + 1) * 1301 + oTick * 0.6);
-            const wave3 = Math.sin((i + 1) * 4253 + oTick * 0.18);
-            const raw = wave1 * 0.55 + wave2 * 0.30 + wave3 * 0.15;
-            const biased = raw < 0 ? raw * 1.4 : raw * 2.2;
-            const swing = biased * 0.04;
+            const s1 = Math.sin((i + 1) * 7919 + oTick * 0.28);
+            const s2 = Math.sin((i + 1) * 1301 + oTick * 0.53);
+            const s3 = Math.sin((i + 1) * 4253 + oTick * 0.14);
+            const s4 = Math.sin((i + 1) * 9137 + oTick * 0.91);
+            const raw = s1 * 0.4 + s2 * 0.25 + s3 * 0.2 + s4 * 0.15;
+            const spike = s4 > 0.85 ? (s4 - 0.85) * 6.0 : 0;
+            const crash = s1 < -0.7 && s2 < 0 ? (Math.abs(s1) - 0.7) * 2.5 : 0;
+            const pctMove = raw < 0
+              ? raw * 0.30 - crash * 0.15
+              : raw * 0.50 + spike * 0.60;
+            const clampedPct = Math.max(-0.18, Math.min(1.0, pctMove));
             const baseOffer = pos.buyIn;
-            const offer = parseFloat((baseOffer * (1 + swing)).toFixed(2));
-            const mult = parseFloat(((pos.currentMultiplier || 1.0) * (1 + swing * 0.5)).toFixed(3));
+            const offer = parseFloat((baseOffer * (1 + clampedPct)).toFixed(2));
+            const mult = parseFloat(((pos.currentMultiplier || 1.0) * (1 + clampedPct * 0.4)).toFixed(2));
             const profitLoss = offer - pos.buyIn;
             const roiPct = pos.buyIn > 0 ? Math.abs(profitLoss / pos.buyIn * 100).toFixed(1) : "0";
             const roiPositive = profitLoss >= 0;
