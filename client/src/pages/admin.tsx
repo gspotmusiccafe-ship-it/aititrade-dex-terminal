@@ -4035,6 +4035,125 @@ function CreateArtistHeaderButton() {
   );
 }
 
+function MusicMarketAdminTab() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: listings, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/market/listings"],
+  });
+
+  const syncMut = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/market/sync-tracks"),
+    onSuccess: async (res: any) => {
+      const data = await res.json();
+      toast({ title: "Synced", description: `${data.added} new listings added (${data.total} total tracks)` });
+      queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
+    },
+    onError: () => toast({ title: "Sync failed", variant: "destructive" }),
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => apiRequest("DELETE", `/api/admin/market/listing/${id}`),
+    onSuccess: () => {
+      toast({ title: "Listing removed" });
+      queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
+    },
+  });
+
+  const [addForm, setAddForm] = useState({ title: "", artistName: "", genre: "", basePrice: "1.00" });
+
+  const addMut = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/admin/market/add-listing", addForm),
+    onSuccess: () => {
+      toast({ title: "Listing added" });
+      setAddForm({ title: "", artistName: "", genre: "", basePrice: "1.00" });
+      queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
+    },
+    onError: () => toast({ title: "Failed to add listing", variant: "destructive" }),
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-lime-400 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5" /> Music Market Management
+        </h2>
+        <Button
+          onClick={() => syncMut.mutate()}
+          disabled={syncMut.isPending}
+          className="bg-lime-600 hover:bg-lime-700"
+          data-testid="btn-sync-tracks"
+        >
+          {syncMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+          Sync All Tracks
+        </Button>
+      </div>
+
+      <Card className="bg-zinc-900/60 border-lime-500/20">
+        <CardContent className="pt-4 space-y-3">
+          <h3 className="text-sm font-bold text-lime-300">Add Custom Listing</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Input placeholder="Title" value={addForm.title} onChange={e => setAddForm({ ...addForm, title: e.target.value })} data-testid="input-market-title" />
+            <Input placeholder="Artist" value={addForm.artistName} onChange={e => setAddForm({ ...addForm, artistName: e.target.value })} data-testid="input-market-artist" />
+            <Input placeholder="Genre" value={addForm.genre} onChange={e => setAddForm({ ...addForm, genre: e.target.value })} data-testid="input-market-genre" />
+            <Input placeholder="Base Price" value={addForm.basePrice} onChange={e => setAddForm({ ...addForm, basePrice: e.target.value })} data-testid="input-market-price" />
+          </div>
+          <Button onClick={() => addMut.mutate()} disabled={addMut.isPending || !addForm.title || !addForm.artistName} className="bg-lime-600 hover:bg-lime-700" data-testid="btn-add-listing">
+            {addMut.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+            Add Listing
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-zinc-900/60 border-lime-500/20">
+        <CardContent className="pt-4">
+          <h3 className="text-sm font-bold text-lime-300 mb-3">Active Listings ({listings?.length || 0})</h3>
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-lime-400" /></div>
+          ) : !listings?.length ? (
+            <p className="text-zinc-500 text-center py-8">No listings yet. Click "Sync All Tracks" to import from your catalog.</p>
+          ) : (
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              {listings.map((l: any) => (
+                <div key={l.id} className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-zinc-800 hover:border-lime-500/30 transition-colors" data-testid={`market-listing-${l.id}`}>
+                  <div className="flex items-center gap-3">
+                    {l.coverImage ? (
+                      <img src={l.coverImage} className="w-10 h-10 rounded object-cover" alt={l.title} />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-zinc-800 flex items-center justify-center"><Music className="h-4 w-4 text-zinc-500" /></div>
+                    )}
+                    <div>
+                      <p className="font-bold text-sm">{l.title}</p>
+                      <p className="text-xs text-zinc-400">{l.artistName} {l.genre ? `· ${l.genre}` : ""}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-lime-400">${parseFloat(l.currentPrice || l.basePrice).toFixed(2)}</p>
+                      <p className="text-xs text-zinc-500">Vol: {l.volume || 0} · Sold: {l.totalSold || 0}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      onClick={() => deleteMut.mutate(l.id)}
+                      disabled={deleteMut.isPending}
+                      data-testid={`btn-delete-listing-${l.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function InvestorManagementTab() {
   const { toast } = useToast();
   const [removing, setRemoving] = useState<string | null>(null);
@@ -4130,7 +4249,7 @@ function InvestorManagementTab() {
 
   if (isLoading) return <div className="text-amber-400 animate-pulse font-mono p-6">LOADING INVESTOR DATA...</div>;
 
-  const allInvestors = portals?.flatMap(p => p.investors?.map((inv: any) => ({ ...inv, songTitle: p.songTitle, portalName: p.name })) || []) || [];
+  const allInvestors = portals?.flatMap(p => p.investors?.map((inv: any) => ({ ...inv, songTitle: p.songTitle, portalName: p.portalName, entryPrice: p.entryPrice, termMonths: p.termMonths, monthlyPayment: p.monthlyPayment })) || []) || [];
 
   return (
     <div className="space-y-6" data-testid="investor-management-tab">
@@ -4241,6 +4360,32 @@ function InvestorManagementTab() {
         </div>
       </div>
 
+      {allInvestors.length > 0 && (
+        <div className="bg-black border border-violet-500/30 rounded-lg p-5 font-mono mb-4">
+          <div className="flex items-center justify-between mb-3 border-b border-violet-500/20 pb-2">
+            <h2 className="text-sm text-violet-400 font-black uppercase">PAYMENT SUMMARY</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-violet-950/20 border border-violet-500/15 rounded p-3 text-center">
+              <p className="text-[8px] text-violet-500/60 tracking-widest">TOTAL COLLECTED</p>
+              <p className="text-violet-400 font-black text-lg">${allInvestors.reduce((s: number, inv: any) => s + parseFloat(inv.totalPaid || "0"), 0).toFixed(2)}</p>
+            </div>
+            <div className="bg-amber-950/20 border border-amber-500/15 rounded p-3 text-center">
+              <p className="text-[8px] text-amber-500/60 tracking-widest">TOTAL OUTSTANDING</p>
+              <p className="text-amber-400 font-black text-lg">${allInvestors.reduce((s: number, inv: any) => s + Math.max(0, parseFloat(inv.entryPrice || "0") - parseFloat(inv.totalPaid || "0")), 0).toFixed(2)}</p>
+            </div>
+            <div className="bg-emerald-950/20 border border-emerald-500/15 rounded p-3 text-center">
+              <p className="text-[8px] text-emerald-500/60 tracking-widest">DOWN PAYMENTS CONFIRMED</p>
+              <p className="text-emerald-400 font-black text-lg">{allInvestors.filter((inv: any) => inv.downPaymentPaid).length} / {allInvestors.length}</p>
+            </div>
+            <div className="bg-red-950/20 border border-red-500/15 rounded p-3 text-center">
+              <p className="text-[8px] text-red-500/60 tracking-widest">DELINQUENT</p>
+              <p className="text-red-400 font-black text-lg">{allInvestors.filter((inv: any) => !inv.downPaymentPaid && inv.status !== "COMPLETED").length}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-black border border-amber-500/30 rounded-lg p-5 font-mono">
         <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-3">
           <h2 className="text-lg text-amber-400 font-black tracking-tight uppercase">INVESTOR MANAGEMENT</h2>
@@ -4270,12 +4415,16 @@ function InvestorManagementTab() {
                           {isDelinquent ? "DELINQUENT" : inv.status || "PENDING"}
                         </span>
                       </div>
-                      <div className="text-[10px] text-amber-500/60 mb-2">{inv.songTitle || inv.portalName}</div>
+                      <div className="flex items-center gap-2 text-[10px] text-amber-500/60 mb-2">
+                        <span>{inv.songTitle || inv.portalName}</span>
+                        {inv.cashTag && <span className="text-green-400 font-bold">{inv.cashTag}</span>}
+                        {inv.userId && <span className="text-zinc-500 text-[8px]">ID: {inv.userId.slice(0,8)}...</span>}
+                      </div>
                       <div className="flex flex-wrap gap-3 text-[10px]">
                         <span className="text-emerald-400">PAID: <span className="font-bold text-white">${totalPaid.toFixed(2)}</span></span>
                         <span className="text-amber-400">OWED: <span className="font-bold text-white">${totalOwed.toFixed(2)}</span></span>
                         <span className="text-cyan-400">REMAINING: <span className="font-bold text-white">${remaining.toFixed(2)}</span></span>
-                        <span className="text-lime-400">MONTHS: <span className="font-bold text-white">{inv.monthsPaid || 0}</span></span>
+                        <span className="text-lime-400">MONTHS: <span className="font-bold text-white">{inv.monthsPaid || 0} / {inv.termMonths || 24}</span></span>
                         <span className={inv.downPaymentPaid ? "text-emerald-400" : "text-red-400"}>DOWN: <span className="font-bold">{inv.downPaymentPaid ? "PAID" : "UNPAID"}</span></span>
                       </div>
                       <div className="mt-2 h-1.5 bg-black/50 rounded-full overflow-hidden border border-emerald-500/10">
@@ -5621,6 +5770,10 @@ export default function AdminPage() {
                 <Users className="h-4 w-4 mr-1.5 text-orange-400" />
                 Investors
               </TabsTrigger>
+              <TabsTrigger value="music-market" data-testid="tab-music-market" className="whitespace-nowrap data-[state=active]:bg-lime-500/10 data-[state=active]:text-lime-400">
+                <TrendingUp className="h-4 w-4 mr-1.5 text-lime-400" />
+                Music Market
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -5722,6 +5875,10 @@ export default function AdminPage() {
 
           <TabsContent value="investors">
             <InvestorManagementTab />
+          </TabsContent>
+
+          <TabsContent value="music-market">
+            <MusicMarketAdminTab />
           </TabsContent>
         </Tabs>
         </div>

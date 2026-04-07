@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { generateArtwork } from "./image-gen";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries, payToPlay, marketListings, marketHoldings, marketTransactions } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -1182,14 +1182,16 @@ export async function registerRoutes(
         settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
       }).from(orders);
 
-      const allNative = await db.select({
-        salesCount: tracks.salesCount,
-        unitPrice: tracks.unitPrice,
-      }).from(tracks).where(sql`COALESCE(${tracks.releaseType}, 'native') = 'native'`);
-
-      const activeFloorVolume = allNative.reduce((sum, t) => {
-        return sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "2.00"));
-      }, 0);
+      const [floorVolumeResult] = await db.select({
+        total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
+      }).from(orders).where(
+        and(
+          isNotNull(orders.buyerEmail),
+          sql`${orders.buyerEmail} != ''`,
+          inArray(orders.status, ["confirmed", "settled", "settled_early"])
+        )
+      );
+      const activeFloorVolume = parseFloat(floorVolumeResult?.total || "0");
 
       const totalRevenue = parseFloat(treasuryResult?.totalRevenue || "0");
       const totalVolume = activeFloorVolume + totalRevenue;
@@ -1211,23 +1213,38 @@ export async function registerRoutes(
   app.get("/api/mints/total", async (req, res) => {
     try {
       const [result] = await db.select({ total: count() }).from(orders);
+      const grossFromOrders = await getGrossIntake();
       const allTracks = await db.select({
         id: tracks.id,
         title: tracks.title,
         salesCount: tracks.salesCount,
         unitPrice: tracks.unitPrice,
       }).from(tracks);
-      const totalGross = allTracks.reduce((sum, t) => sum + ((t.salesCount || 0) * parseFloat(t.unitPrice || "3.50")), 0);
+      const perTrackOrders = await db.select({
+        trackId: orders.trackId,
+        cnt: sql<number>`COUNT(*)`,
+        gross: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
+      }).from(orders).where(
+        and(
+          isNotNull(orders.buyerEmail),
+          sql`${orders.buyerEmail} != ''`,
+          inArray(orders.status, ["confirmed", "settled", "settled_early"])
+        )
+      ).groupBy(orders.trackId);
+      const trackOrderMap = new Map(perTrackOrders.map(r => [r.trackId, { cnt: r.cnt, gross: parseFloat(r.gross || "0") }]));
       res.json({
         totalMints: result?.total || 0,
         mintCap: 1000,
-        totalGross: parseFloat(totalGross.toFixed(2)),
-        assets: allTracks.map(t => ({
-          id: t.id,
-          title: t.title,
-          mints: t.salesCount || 0,
-          gross: parseFloat(((t.salesCount || 0) * parseFloat(t.unitPrice || "3.50")).toFixed(2)),
-        })),
+        totalGross: parseFloat(grossFromOrders.toFixed(2)),
+        assets: allTracks.map(t => {
+          const orderData = trackOrderMap.get(t.id);
+          return {
+            id: t.id,
+            title: t.title,
+            mints: orderData?.cnt || 0,
+            gross: parseFloat((orderData?.gross || 0).toFixed(2)),
+          };
+        }),
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch mint stats" });
@@ -5001,6 +5018,390 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error) {
       console.error("Error updating video URL:", error);
       res.status(500).json({ message: "Failed to update video URL" });
+    }
+  });
+
+  // === MUSIC MARKET — RETAIL STOCK EXCHANGE ===
+
+  function getMarketPrice(listing: any): number {
+    const base = parseFloat(listing.basePrice || "1.00");
+    const current = parseFloat(listing.currentPrice || base.toString());
+    const t = Date.now() / 1000;
+    const seed = listing.id ? listing.id.charCodeAt(0) * 7919 + (listing.id.charCodeAt(1) || 0) * 1301 : 0;
+    const s1 = Math.sin(seed + t * 0.013) * 0.08;
+    const s2 = Math.sin(seed * 0.7 + t * 0.037) * 0.05;
+    const s3 = Math.sin(seed * 1.3 + t * 0.091) * 0.03;
+    const s4 = Math.sin(seed * 0.3 + t * 0.0017) * 0.12;
+    const volumeBoost = Math.min(0.5, (listing.totalSold || 0) * 0.005);
+    const drift = s1 + s2 + s3 + s4 + volumeBoost;
+    const spike = Math.sin(seed * 2.1 + t * 0.003) > 0.92 ? 0.15 : 0;
+    const price = current * (1 + drift + spike);
+    return Math.max(0.25, parseFloat(price.toFixed(2)));
+  }
+
+  app.get("/api/market/listings", async (_req, res) => {
+    try {
+      const listings = await db.select().from(marketListings).where(eq(marketListings.active, true)).orderBy(desc(marketListings.totalSold));
+      const withPrices = listings.map(l => ({
+        ...l,
+        livePrice: getMarketPrice(l),
+      }));
+      res.json(withPrices);
+    } catch (error) {
+      console.error("Market listings error:", error);
+      res.status(500).json({ message: "Failed to fetch listings" });
+    }
+  });
+
+  app.get("/api/market/listings/:id", async (req, res) => {
+    try {
+      const [listing] = await db.select().from(marketListings).where(eq(marketListings.id, req.params.id));
+      if (!listing) return res.status(404).json({ message: "Listing not found" });
+      const recent = await db.select().from(marketTransactions).where(eq(marketTransactions.listingId, req.params.id)).orderBy(desc(marketTransactions.createdAt)).limit(20);
+      const resaleOffers = await db.select({
+        id: marketHoldings.id,
+        askPrice: marketHoldings.askPrice,
+        userId: marketHoldings.userId,
+      }).from(marketHoldings).where(
+        and(eq(marketHoldings.listingId, req.params.id), eq(marketHoldings.listedForSale, true))
+      ).orderBy(asc(marketHoldings.askPrice));
+      res.json({
+        ...listing,
+        livePrice: getMarketPrice(listing),
+        recentTrades: recent,
+        resaleOffers,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch listing" });
+    }
+  });
+
+  app.post("/api/market/buy", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Login required" });
+      const { listingId, fromResaleId } = req.body;
+      if (!listingId) return res.status(400).json({ message: "Listing ID required" });
+
+      const [listing] = await db.select().from(marketListings).where(eq(marketListings.id, listingId));
+      if (!listing || !listing.active) return res.status(404).json({ message: "Listing not found" });
+
+      let price: number;
+      let sellerId: string | null = null;
+
+      if (fromResaleId) {
+        const [resale] = await db.select().from(marketHoldings).where(
+          and(eq(marketHoldings.id, fromResaleId), eq(marketHoldings.listedForSale, true))
+        );
+        if (!resale) return res.status(404).json({ message: "Resale offer not found" });
+        if (resale.userId === userId) return res.status(400).json({ message: "Cannot buy your own listing" });
+        price = parseFloat(resale.askPrice || "0");
+        sellerId = resale.userId;
+        await db.delete(marketHoldings).where(eq(marketHoldings.id, fromResaleId));
+      } else {
+        price = getMarketPrice(listing);
+      }
+
+      const [holding] = await db.insert(marketHoldings).values({
+        userId,
+        listingId,
+        purchasePrice: price.toFixed(2),
+        quantity: 1,
+        listedForSale: false,
+      }).returning();
+
+      await db.insert(marketTransactions).values({
+        listingId,
+        buyerId: userId,
+        sellerId,
+        price: price.toFixed(2),
+        type: fromResaleId ? "RESALE" : "BUY",
+      });
+
+      const newHigh = Math.max(parseFloat(listing.highPrice || "0"), price);
+      const newLow = listing.lowPrice && parseFloat(listing.lowPrice) > 0
+        ? Math.min(parseFloat(listing.lowPrice), price) : price;
+      await db.update(marketListings).set({
+        currentPrice: price.toFixed(2),
+        highPrice: newHigh.toFixed(2),
+        lowPrice: newLow.toFixed(2),
+        volume: sql`COALESCE(${marketListings.volume}, 0) + 1`,
+        totalSold: sql`COALESCE(${marketListings.totalSold}, 0) + 1`,
+      }).where(eq(marketListings.id, listingId));
+
+      res.json({ success: true, holding, price, message: `Acquired "${listing.title}" at $${price.toFixed(2)}` });
+    } catch (error) {
+      console.error("Market buy error:", error);
+      res.status(500).json({ message: "Purchase failed" });
+    }
+  });
+
+  app.post("/api/market/sell", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Login required" });
+      const { holdingId, askPrice } = req.body;
+      if (!holdingId || !askPrice) return res.status(400).json({ message: "Holding ID and ask price required" });
+      const price = parseFloat(askPrice);
+      if (price < 0.25) return res.status(400).json({ message: "Minimum ask price is $0.25" });
+
+      const [holding] = await db.select().from(marketHoldings).where(
+        and(eq(marketHoldings.id, holdingId), eq(marketHoldings.userId, userId))
+      );
+      if (!holding) return res.status(404).json({ message: "Holding not found" });
+
+      await db.update(marketHoldings).set({
+        listedForSale: true,
+        askPrice: price.toFixed(2),
+      }).where(eq(marketHoldings.id, holdingId));
+
+      res.json({ success: true, message: `Listed for sale at $${price.toFixed(2)}` });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to list for sale" });
+    }
+  });
+
+  app.post("/api/market/cancel-sale", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { holdingId } = req.body;
+      const [holding] = await db.select().from(marketHoldings).where(
+        and(eq(marketHoldings.id, holdingId), eq(marketHoldings.userId, userId))
+      );
+      if (!holding) return res.status(404).json({ message: "Holding not found" });
+      await db.update(marketHoldings).set({ listedForSale: false, askPrice: null }).where(eq(marketHoldings.id, holdingId));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to cancel" });
+    }
+  });
+
+  app.get("/api/market/portfolio", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "Login required" });
+      const holdings = await db.select().from(marketHoldings).where(eq(marketHoldings.userId, userId));
+      const listingIds = [...new Set(holdings.map(h => h.listingId))];
+      let listings: any[] = [];
+      if (listingIds.length > 0) {
+        listings = await db.select().from(marketListings).where(inArray(marketListings.id, listingIds));
+      }
+      const listingMap = new Map(listings.map(l => [l.id, l]));
+      const portfolio = holdings.map(h => {
+        const listing = listingMap.get(h.listingId);
+        const livePrice = listing ? getMarketPrice(listing) : parseFloat(h.purchasePrice || "0");
+        const purchasePrice = parseFloat(h.purchasePrice || "0");
+        return {
+          ...h,
+          title: listing?.title || "Unknown",
+          artistName: listing?.artistName || "Unknown",
+          coverImage: listing?.coverImage,
+          livePrice,
+          profitLoss: parseFloat((livePrice - purchasePrice).toFixed(2)),
+          roiPct: purchasePrice > 0 ? parseFloat(((livePrice - purchasePrice) / purchasePrice * 100).toFixed(1)) : 0,
+        };
+      });
+      const totalValue = portfolio.reduce((s, p) => s + p.livePrice, 0);
+      const totalInvested = portfolio.reduce((s, p) => s + parseFloat(p.purchasePrice || "0"), 0);
+      res.json({ holdings: portfolio, totalValue, totalInvested, totalPL: totalValue - totalInvested });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch portfolio" });
+    }
+  });
+
+  app.get("/api/market/leaderboard", async (_req, res) => {
+    try {
+      const allHoldings = await db.select().from(marketHoldings);
+      const allListings = await db.select().from(marketListings);
+      const listingMap = new Map(allListings.map(l => [l.id, l]));
+      const userPortfolios = new Map<string, number>();
+      for (const h of allHoldings) {
+        const listing = listingMap.get(h.listingId);
+        const livePrice = listing ? getMarketPrice(listing) : parseFloat(h.purchasePrice || "0");
+        userPortfolios.set(h.userId, (userPortfolios.get(h.userId) || 0) + livePrice);
+      }
+      const allUsers = await db.select({ id: users.id, username: users.username, profileImage: users.profileImage, displayName: users.displayName }).from(users);
+      const userMap = new Map(allUsers.map(u => [u.id, u]));
+      const board = Array.from(userPortfolios.entries())
+        .map(([userId, value]) => {
+          const u = userMap.get(userId);
+          return { userId, username: u?.displayName || u?.username || "Trader", profileImage: u?.profileImage, portfolioValue: parseFloat(value.toFixed(2)), holdings: allHoldings.filter(h => h.userId === userId).length };
+        })
+        .sort((a, b) => b.portfolioValue - a.portfolioValue)
+        .slice(0, 50);
+      const first10k = board.find(b => b.portfolioValue >= 10000);
+      res.json({ leaderboard: board, first10k: first10k || null, contestGoal: 10000 });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch leaderboard" });
+    }
+  });
+
+  app.post("/api/admin/market/add-listing", isAdmin, async (req: any, res) => {
+    try {
+      const { title, artistName, coverImage, genre, basePrice, trackId } = req.body;
+      if (!title || !artistName) return res.status(400).json({ message: "Title and artist name required" });
+      const price = parseFloat(basePrice) || 1.00;
+      const [listing] = await db.insert(marketListings).values({
+        trackId: trackId || null,
+        title,
+        artistName,
+        coverImage: coverImage || null,
+        genre: genre || null,
+        basePrice: price.toFixed(2),
+        currentPrice: price.toFixed(2),
+        highPrice: price.toFixed(2),
+        lowPrice: price.toFixed(2),
+        volume: 0,
+        totalSold: 0,
+        active: true,
+      }).returning();
+      res.json(listing);
+    } catch (error) {
+      console.error("Add listing error:", error);
+      res.status(500).json({ message: "Failed to add listing" });
+    }
+  });
+
+  app.post("/api/admin/market/sync-tracks", isAdmin, async (req: any, res) => {
+    try {
+      const allTracks = await db.select().from(tracks);
+      const existing = await db.select({ trackId: marketListings.trackId }).from(marketListings);
+      const existingIds = new Set(existing.map(e => e.trackId).filter(Boolean));
+      let added = 0;
+      for (const track of allTracks) {
+        if (existingIds.has(track.id)) continue;
+        const price = parseFloat(track.unitPrice || "2.00");
+        await db.insert(marketListings).values({
+          trackId: track.id,
+          title: track.title,
+          artistName: track.artistId || "AITITRADE",
+          coverImage: track.coverImage || null,
+          genre: track.genre || null,
+          basePrice: price.toFixed(2),
+          currentPrice: price.toFixed(2),
+          highPrice: price.toFixed(2),
+          lowPrice: price.toFixed(2),
+          volume: 0,
+          totalSold: 0,
+          active: true,
+        });
+        added++;
+      }
+      res.json({ success: true, added, total: allTracks.length });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to sync" });
+    }
+  });
+
+  app.delete("/api/admin/market/listing/:id", isAdmin, async (req: any, res) => {
+    try {
+      await db.delete(marketListings).where(eq(marketListings.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete" });
+    }
+  });
+
+  // === PAY-TO-PLAY (Non-native radio features) ===
+
+  app.get("/api/pay-to-play", async (_req, res) => {
+    try {
+      const items = await db.select().from(payToPlay).where(eq(payToPlay.active, true)).orderBy(desc(payToPlay.createdAt));
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching pay-to-play:", error);
+      res.status(500).json({ message: "Failed to fetch" });
+    }
+  });
+
+  app.get("/api/admin/pay-to-play", isAdmin, async (_req, res) => {
+    try {
+      const items = await db.select().from(payToPlay).orderBy(desc(payToPlay.createdAt));
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching pay-to-play:", error);
+      res.status(500).json({ message: "Failed to fetch" });
+    }
+  });
+
+  app.post("/api/admin/pay-to-play", isAdmin, async (req: any, res) => {
+    try {
+      const { artistName, songTitle, videoUrl, coverImage, genre, fee, cashTag, maxPlays, notes } = req.body;
+      if (!artistName || !songTitle || !videoUrl) {
+        return res.status(400).json({ message: "Artist name, song title, and video URL are required" });
+      }
+      const [item] = await db.insert(payToPlay).values({
+        artistName,
+        songTitle,
+        videoUrl,
+        coverImage: coverImage || null,
+        genre: genre || null,
+        fee: fee || "25.00",
+        cashTag: cashTag || null,
+        maxPlays: maxPlays || 100,
+        notes: notes || null,
+        submittedBy: req.user.claims.sub,
+        feePaid: false,
+        paymentConfirmed: false,
+        active: false,
+        plays: 0,
+      }).returning();
+      res.json(item);
+    } catch (error) {
+      console.error("Error creating pay-to-play:", error);
+      res.status(500).json({ message: "Failed to create" });
+    }
+  });
+
+  app.patch("/api/admin/pay-to-play/:id/confirm", isAdmin, async (req: any, res) => {
+    try {
+      await db.update(payToPlay).set({ paymentConfirmed: true, feePaid: true, active: true }).where(eq(payToPlay.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to confirm" });
+    }
+  });
+
+  app.patch("/api/admin/pay-to-play/:id/deactivate", isAdmin, async (req: any, res) => {
+    try {
+      await db.update(payToPlay).set({ active: false }).where(eq(payToPlay.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to deactivate" });
+    }
+  });
+
+  app.patch("/api/admin/pay-to-play/:id/activate", isAdmin, async (req: any, res) => {
+    try {
+      await db.update(payToPlay).set({ active: true }).where(eq(payToPlay.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to activate" });
+    }
+  });
+
+  app.delete("/api/admin/pay-to-play/:id", isAdmin, async (req: any, res) => {
+    try {
+      await db.delete(payToPlay).where(eq(payToPlay.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete" });
+    }
+  });
+
+  app.post("/api/pay-to-play/:id/played", async (req, res) => {
+    try {
+      const [item] = await db.select().from(payToPlay).where(eq(payToPlay.id, req.params.id));
+      if (!item) return res.status(404).json({ message: "Not found" });
+      const newPlays = (item.plays || 0) + 1;
+      const updates: any = { plays: newPlays };
+      if (item.maxPlays && newPlays >= item.maxPlays) {
+        updates.active = false;
+      }
+      await db.update(payToPlay).set(updates).where(eq(payToPlay.id, req.params.id));
+      res.json({ plays: newPlays, maxPlays: item.maxPlays, active: updates.active !== false });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update" });
     }
   });
 

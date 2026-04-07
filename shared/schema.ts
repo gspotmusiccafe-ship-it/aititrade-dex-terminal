@@ -490,6 +490,73 @@ export const insertGlobalRotationSchema = createInsertSchema(globalRotation).omi
 export type InsertGlobalRotation = z.infer<typeof insertGlobalRotationSchema>;
 export type GlobalRotation = typeof globalRotation.$inferSelect;
 
+export const payToPlay = pgTable("pay_to_play", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  artistName: varchar("artist_name").notNull(),
+  songTitle: varchar("song_title").notNull(),
+  videoUrl: text("video_url").notNull(),
+  coverImage: text("cover_image"),
+  genre: varchar("genre"),
+  fee: text("fee").notNull().default("25.00"),
+  feePaid: boolean("fee_paid").default(false),
+  cashTag: varchar("cash_tag"),
+  paymentConfirmed: boolean("payment_confirmed").default(false),
+  plays: integer("plays").default(0),
+  maxPlays: integer("max_plays").default(100),
+  active: boolean("active").default(false),
+  submittedBy: varchar("submitted_by"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPayToPlaySchema = createInsertSchema(payToPlay).omit({ id: true, createdAt: true });
+export type InsertPayToPlay = z.infer<typeof insertPayToPlaySchema>;
+export type PayToPlay = typeof payToPlay.$inferSelect;
+
+export const marketListings = pgTable("market_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  trackId: varchar("track_id"),
+  title: varchar("title").notNull(),
+  artistName: varchar("artist_name").notNull(),
+  coverImage: text("cover_image"),
+  genre: varchar("genre"),
+  basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  currentPrice: decimal("current_price", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  highPrice: decimal("high_price", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  lowPrice: decimal("low_price", { precision: 10, scale: 2 }).notNull().default("1.00"),
+  volume: integer("volume").default(0),
+  totalSold: integer("total_sold").default(0),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const marketHoldings = pgTable("market_holdings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  listingId: varchar("listing_id").notNull(),
+  purchasePrice: decimal("purchase_price", { precision: 10, scale: 2 }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  listedForSale: boolean("listed_for_sale").default(false),
+  askPrice: decimal("ask_price", { precision: 10, scale: 2 }),
+  purchasedAt: timestamp("purchased_at").defaultNow(),
+});
+
+export const marketTransactions = pgTable("market_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  listingId: varchar("listing_id").notNull(),
+  buyerId: varchar("buyer_id"),
+  sellerId: varchar("seller_id"),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  type: varchar("type").notNull().default("BUY"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertMarketListingSchema = createInsertSchema(marketListings).omit({ id: true, createdAt: true });
+export type InsertMarketListing = z.infer<typeof insertMarketListingSchema>;
+export type MarketListing = typeof marketListings.$inferSelect;
+export type MarketHolding = typeof marketHoldings.$inferSelect;
+export type MarketTransaction = typeof marketTransactions.$inferSelect;
+
 export const trusts = pgTable("trusts", {
   id: text("id").primaryKey(),
   status: varchar("status", { length: 20 }).notNull().default("OPEN"),

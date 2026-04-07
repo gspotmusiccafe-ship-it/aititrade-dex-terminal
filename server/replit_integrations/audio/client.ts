@@ -186,16 +186,20 @@ export async function voiceChatStream(
  */
 export async function textToSpeech(
   text: string,
-  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy",
+  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "onyx",
   format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "wav"
 ): Promise<Buffer> {
+  const soulfulSystemPrompt = voice === "shimmer" || voice === "nova"
+    ? `You are a warm, sophisticated female voice — think Anita Baker hosting a late-night R&B radio show. Speak with a smooth, rich, velvety tone. Your delivery is unhurried, confident, and dripping with soul. Use natural pauses and slight melodic inflection. This is BLACK RADIO — elegant, sensual, and real. Never sound clinical, perky, or like a corporate narrator.`
+    : `You are a deep, rich male voice — think Gerald Levert or Barry White hosting a late-night R&B radio show. Speak with a warm, resonant, baritone tone that commands attention. Your delivery is smooth and laid back, with natural pauses and gravitas. This is BLACK RADIO — authoritative, soulful, and intimate. Never sound clinical, generic, or like a pop announcer.`;
+
   const response = await openai.chat.completions.create({
     model: "gpt-audio",
     modalities: ["text", "audio"],
     audio: { voice, format },
     messages: [
-      { role: "system", content: "You are an assistant that performs text-to-speech." },
-      { role: "user", content: `Repeat the following text verbatim: ${text}` },
+      { role: "system", content: soulfulSystemPrompt },
+      { role: "user", content: `Say the following exactly as written, with feeling and soul: ${text}` },
     ],
   });
   const audioData = (response.choices[0]?.message as any)?.audio?.data ?? "";
@@ -266,15 +270,19 @@ Style direction: ${style}`;
  */
 export async function textToSpeechStream(
   text: string,
-  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "alloy"
+  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "onyx"
 ): Promise<AsyncIterable<string>> {
+  const soulfulSystemPrompt = voice === "shimmer" || voice === "nova"
+    ? `You are a warm, sophisticated female voice — think Anita Baker hosting a late-night R&B radio show. Speak with a smooth, rich, velvety tone. Your delivery is unhurried, confident, and dripping with soul. Use natural pauses and slight melodic inflection. This is BLACK RADIO — elegant, sensual, and real. Never sound clinical, perky, or like a corporate narrator.`
+    : `You are a deep, rich male voice — think Gerald Levert or Barry White hosting a late-night R&B radio show. Speak with a warm, resonant, baritone tone that commands attention. Your delivery is smooth and laid back, with natural pauses and gravitas. This is BLACK RADIO — authoritative, soulful, and intimate. Never sound clinical, generic, or like a pop announcer.`;
+
   const stream = await openai.chat.completions.create({
     model: "gpt-audio",
     modalities: ["text", "audio"],
     audio: { voice, format: "pcm16" },
     messages: [
-      { role: "system", content: "You are an assistant that performs text-to-speech." },
-      { role: "user", content: `Repeat the following text verbatim: ${text}` },
+      { role: "system", content: soulfulSystemPrompt },
+      { role: "user", content: `Say the following exactly as written, with feeling and soul: ${text}` },
     ],
     stream: true,
   });

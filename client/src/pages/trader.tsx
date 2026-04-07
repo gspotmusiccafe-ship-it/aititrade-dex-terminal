@@ -165,7 +165,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
   });
 
   useEffect(() => {
-    const iv = setInterval(() => setOTick(t => t + 1), 800);
+    const iv = setInterval(() => setOTick(t => t + 1), 400);
     return () => clearInterval(iv);
   }, []);
 
@@ -251,20 +251,23 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
             const isQueued = pos.queueStatus === "QUEUED" || pos.queueStatus === "OFFERED";
             const canTrade = isQueued;
             const isPending = pendingAction === pos.id;
-            const s1 = Math.sin((i + 1) * 7919 + oTick * 0.28);
-            const s2 = Math.sin((i + 1) * 1301 + oTick * 0.53);
-            const s3 = Math.sin((i + 1) * 4253 + oTick * 0.14);
-            const s4 = Math.sin((i + 1) * 9137 + oTick * 0.91);
-            const raw = s1 * 0.4 + s2 * 0.25 + s3 * 0.2 + s4 * 0.15;
-            const spike = s4 > 0.85 ? (s4 - 0.85) * 6.0 : 0;
-            const crash = s1 < -0.7 && s2 < 0 ? (Math.abs(s1) - 0.7) * 2.5 : 0;
+            const seed = (i + 1) * 7919;
+            const t = oTick * 0.05;
+            const s1 = Math.sin(seed + t * 1.73);
+            const s2 = Math.sin(seed * 0.164 + t * 2.91);
+            const s3 = Math.sin(seed * 0.538 + t * 0.87);
+            const s4 = Math.sin(seed * 1.157 + t * 4.53);
+            const raw = s1 * 0.35 + s2 * 0.28 + s3 * 0.22 + s4 * 0.15;
+            const spike = s4 > 0.82 ? (s4 - 0.82) * 5.5 : 0;
+            const crash = s1 < -0.65 && s2 < -0.1 ? (Math.abs(s1) - 0.65) * 2.8 : 0;
+            const engineBias = liveMbbp > 1.0 ? (liveMbbp - 1.0) * 0.3 : 0;
             const pctMove = raw < 0
-              ? raw * 0.30 - crash * 0.15
-              : raw * 0.50 + spike * 0.60;
+              ? raw * 0.28 - crash * 0.18
+              : raw * 0.55 + spike * 0.50 + engineBias;
             const clampedPct = Math.max(-0.18, Math.min(1.0, pctMove));
             const baseOffer = pos.buyIn;
             const offer = parseFloat((baseOffer * (1 + clampedPct)).toFixed(2));
-            const mult = parseFloat(((pos.currentMultiplier || 1.0) * (1 + clampedPct * 0.4)).toFixed(2));
+            const mult = parseFloat(((pos.currentMultiplier || liveMbbp || 1.0) * (1 + clampedPct * 0.35)).toFixed(2));
             const profitLoss = offer - pos.buyIn;
             const roiPct = pos.buyIn > 0 ? Math.abs(profitLoss / pos.buyIn * 100).toFixed(1) : "0";
             const roiPositive = profitLoss >= 0;

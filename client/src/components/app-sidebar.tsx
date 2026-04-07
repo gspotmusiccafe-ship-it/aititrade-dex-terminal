@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Home, Search, Library, Plus, Heart, Music2, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3, Rocket, Upload, Lock, DollarSign } from "lucide-react";
+import { Home, Search, Library, Plus, Heart, Music2, Crown, User, Settings, LogOut, Shield, Radio, Trophy, KeyRound, Loader2, GraduationCap, Globe, ScrollText, BarChart3, Rocket, Upload, Lock, DollarSign, TrendingUp } from "lucide-react";
 import { SiSpotify } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -117,6 +117,14 @@ export function AppSidebar() {
                   <Link href="/leaderboard" data-testid="nav-leaderboard">
                     <Trophy className="h-5 w-5 text-yellow-500" />
                     <span>Leaderboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={location === "/music-market"}>
+                  <Link href="/music-market" data-testid="nav-music-market">
+                    <TrendingUp className="h-5 w-5 text-lime-400" />
+                    <span className="text-lime-400 font-extrabold">Music Market</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
