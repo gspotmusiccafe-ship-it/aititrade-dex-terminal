@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight, CheckCircle, Pause, RefreshCw } from "lucide-react";
+import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight, CheckCircle, Tag, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -187,20 +187,20 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
     },
   });
 
-  const holdMut = useMutation({
+  const discountSellMut = useMutation({
     mutationFn: async (queueId: string) => {
-      const res = await apiRequest("POST", "/api/settlement/hold", { queueId });
+      const res = await apiRequest("POST", "/api/trade/execute", { type: "DISCOUNT_EXIT", queueId });
       const data = await res.json();
-      if (data.success === false) throw new Error(data.message || "Position not found");
+      if (data.success === false) throw new Error(data.message || "Discount sell failed");
       return data;
     },
     onSuccess: (data: any) => {
-      toast({ title: "HOLDING", description: data.message || `Next offer at ${data.nextMultiplier}x` });
+      toast({ title: "DISCOUNT SELL QUEUED", description: data.message || `Queued first for settlement at discount` });
       queryClient.invalidateQueries({ queryKey: ["/api/trader", userId] });
       setPendingAction(null);
     },
     onError: (err: any) => {
-      toast({ title: "FAILED", description: err.message || "Could not hold", variant: "destructive" });
+      toast({ title: "FAILED", description: err.message || "Could not discount sell", variant: "destructive" });
       setPendingAction(null);
     },
   });
@@ -249,8 +249,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
         <div className="divide-y divide-emerald-500/10">
           {activePositions.map((pos, i) => {
             const isQueued = pos.queueStatus === "QUEUED" || pos.queueStatus === "OFFERED";
-            const isHolding = pos.queueStatus === "HOLDING";
-            const canTrade = isQueued || isHolding;
+            const canTrade = isQueued;
             const isPending = pendingAction === pos.id;
             const s1 = Math.sin((i + 1) * 7919 + oTick * 0.28);
             const s2 = Math.sin((i + 1) * 1301 + oTick * 0.53);
@@ -288,7 +287,6 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
                     <div className="flex items-center gap-2">
                       <p className="text-white text-sm font-black truncate">{pos.trackTitle}</p>
                       <span className={`text-[7px] px-1 py-0.5 font-bold border ${
-                        isHolding ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
                         pos.queueStatus === "SETTLED" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" :
                         "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
                       }`}>{pos.queueStatus || "QUEUED"}</span>
@@ -324,16 +322,16 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
                         data-testid={`btn-accept-${pos.id}`}
                       >
                         {isPending && acceptMut.isPending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
-                        ACCEPT
+                        SELL
                       </button>
                       <button
-                        onClick={() => { if (pos.queueId) { setPendingAction(pos.id); holdMut.mutate(pos.queueId); } }}
+                        onClick={() => { if (pos.queueId) { setPendingAction(pos.id); discountSellMut.mutate(pos.queueId); } }}
                         disabled={isPending || !pos.queueId}
-                        className="flex items-center gap-1 px-3 py-2 text-[10px] font-black bg-amber-600/20 hover:bg-amber-600/40 text-amber-400 border border-amber-500/40 transition-all disabled:opacity-50"
-                        data-testid={`btn-hold-${pos.id}`}
+                        className="flex items-center gap-1 px-3 py-2 text-[10px] font-black bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 border border-orange-500/40 transition-all disabled:opacity-50"
+                        data-testid={`btn-discount-sell-${pos.id}`}
                       >
-                        {isPending && holdMut.isPending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Pause className="h-3 w-3" />}
-                        HOLD
+                        {isPending && discountSellMut.isPending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <Tag className="h-3 w-3" />}
+                        DISCOUNT SELL
                       </button>
                     </div>
                   )}
@@ -347,7 +345,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
           <Link href="/" className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 border border-emerald-500/30 px-2.5 py-1.5 hover:bg-emerald-500/10 transition-colors" data-testid="link-buy-more">
             <Zap className="h-3 w-3" /> BUY MORE ON FLOOR <ChevronRight className="h-2.5 w-2.5" />
           </Link>
-          <span className="text-[8px] text-emerald-500/40 font-mono">ACCEPT = LOCK VALUE | HOLD = WAIT FOR THE BIG BOUNCE</span>
+          <span className="text-[8px] text-emerald-500/40 font-mono">SELL = LOCK VALUE | DISCOUNT SELL = EXIT AT REDUCED RATE</span>
         </div>
       </div>
 

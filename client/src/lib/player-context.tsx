@@ -75,6 +75,7 @@ interface PlayerContextType extends PlayerState {
   toggleAutopilot: () => void;
   setAutopilotPool: (tracks: TrackWithArtist[]) => void;
   toggleBroadcast: () => void;
+  startBroadcastWithPool: (pool: TrackWithArtist[]) => void;
   getShowLabel: (show: BroadcastShow) => string;
   getNextShowTime: () => { show: BroadcastShow; at: Date };
 }
@@ -184,68 +185,107 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         sourceNodeRef.current = source;
 
         const preGain = ctx.createGain();
-        preGain.gain.value = 0.82;
+        preGain.gain.value = 0.88;
+
+        const subRumble = ctx.createBiquadFilter();
+        subRumble.type = "highpass";
+        subRumble.frequency.value = 30;
+        subRumble.Q.value = 0.5;
 
         const subBass = ctx.createBiquadFilter();
         subBass.type = "peaking";
-        subBass.frequency.value = 55;
-        subBass.Q.value = 0.9;
-        subBass.gain.value = 5.5;
+        subBass.frequency.value = 60;
+        subBass.Q.value = 1.0;
+        subBass.gain.value = 6.0;
 
         const bass = ctx.createBiquadFilter();
         bass.type = "lowshelf";
-        bass.frequency.value = 150;
-        bass.gain.value = 4;
+        bass.frequency.value = 140;
+        bass.gain.value = 5.0;
 
         const warmth = ctx.createBiquadFilter();
         warmth.type = "peaking";
-        warmth.frequency.value = 250;
-        warmth.Q.value = 0.7;
-        warmth.gain.value = 2;
+        warmth.frequency.value = 280;
+        warmth.Q.value = 0.8;
+        warmth.gain.value = 3.0;
+
+        const body = ctx.createBiquadFilter();
+        body.type = "peaking";
+        body.frequency.value = 450;
+        body.Q.value = 0.6;
+        body.gain.value = 1.5;
 
         const lowMid = ctx.createBiquadFilter();
         lowMid.type = "peaking";
-        lowMid.frequency.value = 500;
-        lowMid.Q.value = 0.8;
-        lowMid.gain.value = 1;
+        lowMid.frequency.value = 800;
+        lowMid.Q.value = 0.7;
+        lowMid.gain.value = 1.0;
 
-        const mid = ctx.createBiquadFilter();
-        mid.type = "peaking";
-        mid.frequency.value = 1200;
-        mid.Q.value = 0.6;
-        mid.gain.value = 0.5;
+        const midClarity = ctx.createBiquadFilter();
+        midClarity.type = "peaking";
+        midClarity.frequency.value = 2000;
+        midClarity.Q.value = 0.5;
+        midClarity.gain.value = 1.5;
 
         const presence = ctx.createBiquadFilter();
         presence.type = "peaking";
-        presence.frequency.value = 3500;
-        presence.Q.value = 0.7;
-        presence.gain.value = 0.5;
+        presence.frequency.value = 4000;
+        presence.Q.value = 0.8;
+        presence.gain.value = 2.0;
 
-        const airBand = ctx.createBiquadFilter();
-        airBand.type = "highshelf";
-        airBand.frequency.value = 10000;
-        airBand.gain.value = -0.5;
+        const brilliance = ctx.createBiquadFilter();
+        brilliance.type = "peaking";
+        brilliance.frequency.value = 8000;
+        brilliance.Q.value = 0.6;
+        brilliance.gain.value = 1.5;
+
+        const air = ctx.createBiquadFilter();
+        air.type = "highshelf";
+        air.frequency.value = 12000;
+        air.gain.value = 2.5;
+
+        const deEsser = ctx.createBiquadFilter();
+        deEsser.type = "peaking";
+        deEsser.frequency.value = 6500;
+        deEsser.Q.value = 3.0;
+        deEsser.gain.value = -2.0;
 
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -14;
-        compressor.knee.value = 12;
-        compressor.ratio.value = 3;
-        compressor.attack.value = 0.008;
-        compressor.release.value = 0.150;
+        compressor.threshold.value = -18;
+        compressor.knee.value = 8;
+        compressor.ratio.value = 4;
+        compressor.attack.value = 0.003;
+        compressor.release.value = 0.120;
+
+        const limiter = ctx.createDynamicsCompressor();
+        limiter.threshold.value = -2;
+        limiter.knee.value = 0;
+        limiter.ratio.value = 20;
+        limiter.attack.value = 0.001;
+        limiter.release.value = 0.050;
+
+        const stereoWidth = ctx.createStereoPanner();
+        stereoWidth.pan.value = 0;
 
         const postGain = ctx.createGain();
-        postGain.gain.value = 0.92;
+        postGain.gain.value = 0.95;
 
         source.connect(preGain);
-        preGain.connect(subBass);
+        preGain.connect(subRumble);
+        subRumble.connect(subBass);
         subBass.connect(bass);
         bass.connect(warmth);
-        warmth.connect(lowMid);
-        lowMid.connect(mid);
-        mid.connect(presence);
-        presence.connect(airBand);
-        airBand.connect(compressor);
-        compressor.connect(postGain);
+        warmth.connect(body);
+        body.connect(lowMid);
+        lowMid.connect(midClarity);
+        midClarity.connect(presence);
+        presence.connect(brilliance);
+        brilliance.connect(air);
+        air.connect(deEsser);
+        deEsser.connect(compressor);
+        compressor.connect(limiter);
+        limiter.connect(stereoWidth);
+        stereoWidth.connect(postGain);
         postGain.connect(ctx.destination);
       } catch (e) {
         console.warn("Web Audio EQ not available, using direct playback");
@@ -750,6 +790,44 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const startBroadcastWithPool = useCallback((pool: TrackWithArtist[]) => {
+    if (state.broadcast || state.isPlaying || pool.length === 0) return;
+    const playable = pool.filter(t => t.audioUrl && !/(?:youtube\.com|youtu\.be)/.test(t.audioUrl));
+    if (playable.length === 0) return;
+    const shuffled = [...playable].sort(() => Math.random() - 0.5);
+    const first = shuffled[0];
+    broadcastRef.current = true;
+    broadcastStartRef.current = Date.now();
+    resumeAudioContext();
+    if (audioRef.current && first) {
+      playCountedRef.current = null;
+      audioRef.current.src = first.audioUrl;
+      const p = audioRef.current.play();
+      if (p !== undefined) {
+        p.then(() => {
+          reportPlay(first.id);
+          setState(prev => ({ ...prev, autoplayBlocked: false }));
+        }).catch(() => {
+          setState(prev => ({ ...prev, autoplayBlocked: true }));
+        });
+      }
+    }
+    setState(prev => ({
+      ...prev,
+      broadcast: true,
+      autopilot: true,
+      repeat: "all",
+      shuffle: true,
+      currentShow: getCurrentShow(),
+      autopilotPool: playable,
+      queue: shuffled,
+      queueIndex: 0,
+      currentTrack: first,
+      isPlaying: true,
+      progress: 0,
+    }));
+  }, [state.broadcast, state.isPlaying, resumeAudioContext, reportPlay]);
+
   useEffect(() => {
     if (!state.broadcast || !state.currentTrack || !state.isPlaying) {
       if (heartbeatRef.current) {
@@ -914,6 +992,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         toggleAutopilot,
         setAutopilotPool,
         toggleBroadcast,
+        startBroadcastWithPool,
         getShowLabel,
         getNextShowTime,
       }}

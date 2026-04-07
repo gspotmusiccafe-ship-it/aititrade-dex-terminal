@@ -1637,8 +1637,9 @@ function StakingSection() {
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { playTrack, currentTrack, setAutopilotPool } = usePlayer();
+  const { playTrack, currentTrack, setAutopilotPool, startBroadcastWithPool, broadcast, isPlaying } = usePlayer();
   const autoPlayedRef = useRef(false);
+  const flameStartedRef = useRef(false);
   const [showIntel, setShowIntel] = useState(false);
   usePortalConfigs();
   const { price: enginePrice, mbbp: engineMbbp, discountOffer: engineDiscount, marketOpen: engineMarketOpen, engineState, connected: engineConnected } = useEngineSocket();
@@ -1692,11 +1693,18 @@ export default function HomePage() {
   }, [autopilotPoolData, setAutopilotPool]);
 
   useEffect(() => {
-    if (featuredTracks && featuredTracks.length > 0 && !autoPlayedRef.current && !currentTrack) {
+    if (user && autopilotPoolData && autopilotPoolData.length > 0 && !flameStartedRef.current && !broadcast && !isPlaying) {
+      flameStartedRef.current = true;
+      startBroadcastWithPool(autopilotPoolData);
+    }
+  }, [user, autopilotPoolData, broadcast, isPlaying, startBroadcastWithPool]);
+
+  useEffect(() => {
+    if (!user && featuredTracks && featuredTracks.length > 0 && !autoPlayedRef.current && !currentTrack) {
       autoPlayedRef.current = true;
       playTrack(featuredTracks[0], featuredTracks);
     }
-  }, [featuredTracks]);
+  }, [user, featuredTracks]);
 
   const allTracks = featuredTracks || [];
   const displayTracks = allTracks;
