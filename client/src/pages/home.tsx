@@ -852,7 +852,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <span className={`text-[10px] sm:text-[11px] font-extrabold ${liveUp ? "text-lime-400" : "text-red-400"}`}>${liveOffer.toFixed(2)}</span>
+            <span className={`text-[10px] sm:text-[11px] font-extrabold ${priceClass}`}>{priceLabel}</span>
             {isGlobal ? (
               <span className="text-[7px] sm:text-[9px] px-1 py-0.5 bg-amber-500/10 text-amber-400 font-extrabold flex items-center gap-0.5">
                 <Shield className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> VAULT
@@ -949,9 +949,18 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             <p className="text-[10px] sm:text-xs text-white font-extrabold">{sales.toLocaleString()}</p>
           </div>
           <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
-            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">LIVE OFFER</p>
-            <p className={`text-[10px] sm:text-xs font-extrabold ${liveUp ? "text-lime-400" : "text-red-400"}`}>${liveOffer.toFixed(2)}</p>
-            <p className={`text-[7px] font-bold ${liveUp ? "text-emerald-400" : "text-red-400"}`}>{liveUp ? "+" : "-"}${Math.abs(livePL).toFixed(2)} ({liveRoiPct}%)</p>
+            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">BUY-IN</p>
+            <p className={`text-[10px] sm:text-xs font-extrabold ${priceClass}`}>{priceLabel}</p>
+          </div>
+        </div>
+        <div className={`mb-1 px-1.5 py-1 border ${liveUp ? "border-emerald-500/20 bg-emerald-950/40" : "border-red-500/20 bg-red-950/20"} flex items-center justify-between`}>
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${liveUp ? "bg-emerald-400" : "bg-red-400"} animate-pulse`} />
+            <span className="text-[8px] text-emerald-500/60 font-bold">LIVE OFFER</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] sm:text-xs font-extrabold ${liveUp ? "text-lime-400" : "text-red-400"}`}>${liveOffer.toFixed(2)}</span>
+            <span className={`text-[8px] font-bold ${liveUp ? "text-emerald-400" : "text-red-400"}`}>{liveUp ? "+" : "-"}${Math.abs(livePL).toFixed(2)} ({liveRoiPct}%)</span>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
