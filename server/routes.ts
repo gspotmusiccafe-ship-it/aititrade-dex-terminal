@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderHoldPosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1059,7 +1059,7 @@ export async function registerRoutes(
 
       const [orderStats] = await db.select({
         settledCount: sql<number>`COUNT(CASE WHEN status = 'settled_early' THEN 1 END)`,
-        holdingCount: sql<number>`COUNT(CASE WHEN status = 'confirmed' THEN 1 END)`,
+        activeCount: sql<number>`COUNT(CASE WHEN status = 'confirmed' THEN 1 END)`,
         totalOrders: sql<number>`COUNT(*)`,
       }).from(orders);
 
@@ -1074,7 +1074,7 @@ export async function registerRoutes(
         cyclesCompleted,
         totalPaidOut: parseFloat(totalPaidOut.toFixed(2)),
         settledCount: orderStats?.settledCount || 0,
-        holdingCount: orderStats?.holdingCount || 0,
+        activeCount: orderStats?.activeCount || 0,
         totalOrders: orderStats?.totalOrders || 0,
         complianceStatus: "ADHERED TO MINT FACTORY",
       });
@@ -4259,7 +4259,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         ...dashboard,
         splitMandate: "KINETIC",
         earlyAcceptMultiplier: 1.25,
-        holdBonusPerCycle: 0.15,
+        discountSellRate: 0.85,
       });
     } catch (error: any) {
       console.error("[SETTLEMENT] Status error:", error);
@@ -4292,16 +4292,16 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.post("/api/settlement/hold", isAuthenticated, async (req: any, res) => {
+  app.post("/api/settlement/discount-sell", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { queueId } = req.body;
       if (!queueId) return res.status(400).json({ message: "queueId required" });
-      const result = await traderHoldPosition(queueId, userId);
+      const result = await traderDiscountSell(queueId, userId);
       res.json(result);
     } catch (error: any) {
-      console.error("[SETTLEMENT] Hold error:", error);
-      res.status(500).json({ message: "Failed to hold position" });
+      console.error("[SETTLEMENT] Discount sell error:", error);
+      res.status(500).json({ message: "Failed to discount sell position" });
     }
   });
 
@@ -6760,7 +6760,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       }
 
       const userPositions = await db.select().from(settlementQueue)
-        .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
+        .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED"])))
         .orderBy(asc(settlementQueue.createdAt))
         .limit(1);
 
@@ -6873,7 +6873,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(400).json({ message: "Market is closed — wait for next cycle" });
       }
 
-      if (type === "HOLD_LOCK") {
+      if (type === "SELL") {
         const [currentUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         const userEmail = currentUser?.email || "";
 
@@ -6881,7 +6881,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           .where(and(
             eq(settlementQueue.userId, userId),
             eq(settlementQueue.trackId, trackId),
-            inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+            inArray(settlementQueue.status, ["QUEUED", "OFFERED"])
           ))
           .orderBy(asc(settlementQueue.createdAt));
 
@@ -6890,7 +6890,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
             .where(and(
               eq(settlementQueue.userId, userEmail),
               eq(settlementQueue.trackId, trackId),
-              inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+              inArray(settlementQueue.status, ["QUEUED", "OFFERED"])
             ))
             .orderBy(asc(settlementQueue.createdAt));
           if (positions.length > 0) {
@@ -6901,7 +6901,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         }
 
         if (positions.length === 0) {
-          return res.status(400).json({ message: "No open position for this song — BUY IN first via Cash App, then ENTER POSITION to lock price" });
+          return res.status(400).json({ message: "No open position for this song — BUY IN first via Cash App, then SELL to lock price" });
         }
 
         const currentMbbp = liveEngine.mbbp;
@@ -6918,66 +6918,83 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
         const [trackInfo] = await db.select().from(tracks).where(eq(tracks.id, trackId)).limit(1);
         const songName = trackInfo?.title || trackId;
-        console.log(`[ENTER POSITION] ${userId} | Song: ${songName} | LOCKED MBBP: $${currentMbbp.toFixed(4)} | ${positions.length} position(s) updated`);
+        console.log(`[SELL] ${userId} | Song: ${songName} | LOCKED MBBP: $${currentMbbp.toFixed(4)} | ${positions.length} position(s) updated`);
 
         return res.json({
-          status: "POSITION_LOCKED",
-          type: "HOLD_LOCK",
+          status: "SELL_LOCKED",
+          type: "SELL",
           lockedMbbp: currentMbbp,
           positions: positions.length,
           message: `${songName} locked at MBBP $${currentMbbp.toFixed(4)} — queued for settlement`,
         });
       }
 
-      if (type === "DISCOUNT_EXIT") {
-        const result = liveEngine.acceptDiscount(userId);
-        if (!result.ok) {
-          return res.status(400).json({ message: result.error || "Not in queue" });
-        }
-
+      if (type === "DISCOUNT_SELL") {
         const [discountUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         const discountEmail = discountUser?.email || "";
+        const queueId = req.body.queueId;
 
-        let userPositions = await db.select().from(settlementQueue)
-          .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
-          .orderBy(asc(settlementQueue.createdAt))
-          .limit(1);
+        let userPositions: any[] = [];
 
-        if (userPositions.length === 0 && discountEmail) {
+        if (queueId) {
           userPositions = await db.select().from(settlementQueue)
-            .where(and(eq(settlementQueue.userId, discountEmail), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
-            .orderBy(asc(settlementQueue.createdAt))
-            .limit(1);
-          if (userPositions.length > 0) {
-            await db.update(settlementQueue).set({ userId }).where(eq(settlementQueue.id, userPositions[0].id));
+            .where(and(eq(settlementQueue.id, queueId), eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED"])));
+          if (userPositions.length === 0 && discountEmail) {
+            userPositions = await db.select().from(settlementQueue)
+              .where(and(eq(settlementQueue.id, queueId), eq(settlementQueue.userId, discountEmail), inArray(settlementQueue.status, ["QUEUED", "OFFERED"])));
           }
         }
 
-        if (userPositions.length > 0) {
-          const pos = userPositions[0];
-          const buyIn = parseFloat(pos.buyIn || "0");
-          const discountOffer = parseFloat((buyIn * result.discountPrice).toFixed(2));
-          await db.update(settlementQueue).set({
-            lockedMbbp: result.discountPrice.toFixed(4),
-            currentOffer: discountOffer.toString(),
-            currentMultiplier: result.discountPrice.toFixed(4),
-            queuePosition: 0,
-            status: "QUEUED",
-          }).where(eq(settlementQueue.id, pos.id));
-          console.log(`[DISCOUNT EXIT] ${userId} | LOCKED DISCOUNT: $${result.discountPrice.toFixed(4)} | $${buyIn} → $${discountOffer} | QUEUED FIRST`);
+        if (userPositions.length === 0 && trackId) {
+          userPositions = await db.select().from(settlementQueue)
+            .where(and(eq(settlementQueue.userId, userId), eq(settlementQueue.trackId, trackId), inArray(settlementQueue.status, ["QUEUED", "OFFERED"])))
+            .orderBy(asc(settlementQueue.createdAt))
+            .limit(1);
+          if (userPositions.length === 0 && discountEmail) {
+            userPositions = await db.select().from(settlementQueue)
+              .where(and(eq(settlementQueue.userId, discountEmail), eq(settlementQueue.trackId, trackId), inArray(settlementQueue.status, ["QUEUED", "OFFERED"])))
+              .orderBy(asc(settlementQueue.createdAt))
+              .limit(1);
+          }
         }
+
+        if (userPositions.length === 0) {
+          return res.status(400).json({ message: "No open position found — BUY IN first via Cash App" });
+        }
+
+        if (userPositions[0].userId !== userId) {
+          await db.update(settlementQueue).set({ userId }).where(eq(settlementQueue.id, userPositions[0].id));
+        }
+
+        const pos = userPositions[0];
+        const buyIn = parseFloat(pos.buyIn || "0");
+        const currentMbbp = liveEngine.mbbp;
+        const discountRate = Math.max(0.5, currentMbbp * 0.85);
+        const discountPayout = parseFloat((buyIn * discountRate).toFixed(2));
+
+        await db.update(settlementQueue).set({
+          lockedMbbp: discountRate.toFixed(4),
+          currentOffer: discountPayout.toString(),
+          currentMultiplier: discountRate.toFixed(4),
+          queuePosition: 0,
+          status: "QUEUED",
+        }).where(eq(settlementQueue.id, pos.id));
+
+        const [trackInfo] = await db.select().from(tracks).where(eq(tracks.id, pos.trackId)).limit(1);
+        const songName = trackInfo?.title || pos.trackId;
+        console.log(`[DISCOUNT SELL] ${userId} | Song: ${songName} | DISCOUNT RATE: ${discountRate.toFixed(4)}x | $${buyIn} → $${discountPayout} | QUEUED FIRST`);
 
         return res.json({
           status: "DISCOUNT_QUEUED",
-          type: "DISCOUNT_EXIT",
+          type: "DISCOUNT_SELL",
           queued: true,
-          discountPrice: result.discountPrice,
-          expectedPayout: result.payout,
-          message: `Discount accepted at $${result.discountPrice.toFixed(4)} — queued FIRST for settlement`,
+          discountPrice: discountRate,
+          expectedPayout: discountPayout,
+          message: `Discount sell at ${discountRate.toFixed(4)}x — $${discountPayout.toFixed(2)} queued FIRST for settlement`,
         });
       }
 
-      return res.status(400).json({ message: "Invalid trade type. Use HOLD_LOCK or DISCOUNT_EXIT" });
+      return res.status(400).json({ message: "Invalid trade type. Use SELL or DISCOUNT_SELL" });
     } catch (error: any) {
       console.error("Trade execute error:", error);
       res.status(500).json({ message: "Failed to execute trade" });
@@ -7134,7 +7151,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
 
     const userPositions = await db.select().from(settlementQueue)
-      .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])))
+      .where(and(eq(settlementQueue.userId, userId), inArray(settlementQueue.status, ["QUEUED", "OFFERED"])))
       .orderBy(asc(settlementQueue.createdAt))
       .limit(1);
 

@@ -159,7 +159,7 @@ export function calculateTradeStatus(buyIn: number, currentFloorTotal: number) {
     earlyOffer: parseFloat(earlyOffer.toFixed(2)),
     houseTake: parseFloat(houseTake.toFixed(2)),
     maxPayout: parseFloat(maxPayout.toFixed(2)),
-    status: currentFloorTotal >= portal.pool ? "SETTLED" as const : "HOLDING" as const,
+    status: currentFloorTotal >= portal.pool ? "SETTLED" as const : "QUEUED" as const,
   };
 }
 
@@ -660,7 +660,7 @@ export async function enqueueTrader(
   const [maxPos] = await db.select({
     maxPos: sql<string>`COALESCE(MAX(queue_position), 0)`,
   }).from(settlementQueue).where(
-    inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+    inArray(settlementQueue.status, ["QUEUED", "OFFERED"])
   );
   const nextPos = parseInt(maxPos?.maxPos || "0") + 1;
 
@@ -746,7 +746,7 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
   console.log(`[GOVERNOR] Cycle #${cycleNumber} | Gross: $${grossIntake.toFixed(2)} | ${totalKsReached}K | KINETIC SPLIT: ${Math.round(closingSplit.floor*100)}/${Math.round(closingSplit.ceo*100)} | Payout/K: $${lockedPayout} | Paid: $${alreadyPaid.toFixed(2)} | Budget: $${payoutBudget.toFixed(2)}`);
 
   const queued = await db.select().from(settlementQueue)
-    .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"]))
+    .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED"]))
     .orderBy(asc(settlementQueue.queuePosition));
 
   let remaining = payoutBudget;
@@ -761,7 +761,7 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
 
     if (remaining <= 0 || offerAmount > remaining) {
       await db.update(settlementQueue).set({
-        status: "HOLDING",
+        status: "QUEUED",
         currentMultiplier: locked.toFixed(2),
         currentOffer: offerAmount.toFixed(2),
         cyclesHeld: (entry.cyclesHeld || 0) + 1,
@@ -850,10 +850,10 @@ export async function traderAcceptOffer(queueId: string, userId: string): Promis
   };
 }
 
-export async function traderHoldPosition(queueId: string, userId: string): Promise<{
+export async function traderDiscountSell(queueId: string, userId: string, discountRate?: number): Promise<{
   success: boolean;
-  nextMultiplier?: number;
-  nextOffer?: number;
+  discountMultiplier?: number;
+  discountOffer?: number;
   message: string;
 }> {
   const [entry] = await db.select().from(settlementQueue)
@@ -863,21 +863,25 @@ export async function traderHoldPosition(queueId: string, userId: string): Promi
   if (entry.status === "SETTLED") return { success: false, message: "Already settled" };
 
   const buyIn = parseFloat(entry.buyIn || "0");
-  const locked = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.25");
-  const offerAmount = parseFloat((buyIn * locked).toFixed(2));
+  const currentMult = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.25");
+  const rate = discountRate || Math.max(0.5, currentMult * 0.85);
+  const discountAmount = parseFloat((buyIn * rate).toFixed(2));
 
   await db.update(settlementQueue).set({
-    status: "HOLDING",
-    cyclesHeld: (entry.cyclesHeld || 0) + 1,
+    lockedMbbp: rate.toFixed(4),
+    currentOffer: discountAmount.toString(),
+    currentMultiplier: rate.toFixed(4),
+    queuePosition: 0,
+    status: "QUEUED",
   }).where(eq(settlementQueue.id, queueId));
 
-  console.log(`[GOVERNOR] TRADER HOLDING: ${userId} | LOCKED MBBP: ${locked}x | Settle at: $${offerAmount}`);
+  console.log(`[GOVERNOR] DISCOUNT SELL: ${userId} | ${currentMult}x → ${rate.toFixed(4)}x DISCOUNT | $${buyIn} → $${discountAmount} | QUEUED FIRST`);
 
   return {
     success: true,
-    nextMultiplier: locked,
-    nextOffer: offerAmount,
-    message: `HOLDING — Your locked MBBP is ${locked}x. Settlement: $${offerAmount.toFixed(2)} when fund is available.`,
+    discountMultiplier: rate,
+    discountOffer: discountAmount,
+    message: `DISCOUNT SELL — ${rate.toFixed(4)}x locked. $${discountAmount.toFixed(2)} queued FIRST for settlement.`,
   };
 }
 
@@ -885,7 +889,7 @@ export async function getTraderPositions(userId: string): Promise<SettlementOffe
   const positions = await db.select().from(settlementQueue)
     .where(and(
       eq(settlementQueue.userId, userId),
-      inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"])
+      inArray(settlementQueue.status, ["QUEUED", "OFFERED"])
     ))
     .orderBy(asc(settlementQueue.queuePosition));
 
@@ -947,7 +951,7 @@ export async function getSettlementDashboard(): Promise<{
   const [counts] = await db.select({
     total: sql<string>`COUNT(*)`,
     queued: sql<string>`SUM(CASE WHEN status IN ('QUEUED','OFFERED') THEN 1 ELSE 0 END)`,
-    holding: sql<string>`SUM(CASE WHEN status = 'HOLDING' THEN 1 ELSE 0 END)`,
+    discountQueued: sql<string>`SUM(CASE WHEN queue_position = 0 AND status = 'QUEUED' THEN 1 ELSE 0 END)`,
     settled: sql<string>`SUM(CASE WHEN status = 'SETTLED' THEN 1 ELSE 0 END)`,
   }).from(settlementQueue);
 
@@ -959,7 +963,7 @@ export async function getSettlementDashboard(): Promise<{
     .limit(10);
 
   const topQueued = await db.select().from(settlementQueue)
-    .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED", "HOLDING"]))
+    .where(inArray(settlementQueue.status, ["QUEUED", "OFFERED"]))
     .orderBy(asc(settlementQueue.queuePosition))
     .limit(20);
 
@@ -997,7 +1001,7 @@ export async function getSettlementDashboard(): Promise<{
     payoutPerK: getPayoutPerCycle(),
     totalTraders: parseInt(counts?.total || "0"),
     queuedCount: parseInt(counts?.queued || "0"),
-    holdingCount: parseInt(counts?.holding || "0"),
+    discountQueuedCount: parseInt(counts?.discountQueued || "0"),
     settledCount: parseInt(counts?.settled || "0"),
     currentCycle: completedCycles,
     cycleThreshold: SETTLEMENT_CYCLE_THRESHOLD,

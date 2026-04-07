@@ -189,7 +189,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
 
   const discountSellMut = useMutation({
     mutationFn: async (queueId: string) => {
-      const res = await apiRequest("POST", "/api/trade/execute", { type: "DISCOUNT_EXIT", queueId });
+      const res = await apiRequest("POST", "/api/trade/execute", { type: "DISCOUNT_SELL", queueId });
       const data = await res.json();
       if (data.success === false) throw new Error(data.message || "Discount sell failed");
       return data;

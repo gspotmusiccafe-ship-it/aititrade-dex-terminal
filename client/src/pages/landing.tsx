@@ -570,7 +570,7 @@ function StimulationBoard({ onSignup }: { onSignup: () => void }) {
   const mbbpRatio = parseFloat(((mbbLive / tbiLive) * 100).toFixed(1));
   const tbiPct = parseFloat(((swing) * 100).toFixed(1));
   const mbbPct = parseFloat(((swing * 1.4) * 100).toFixed(1));
-  const signal = mbbPct >= 3 ? "BUY" : mbbPct <= -2 ? "SELL" : "HOLD";
+  const signal = mbbPct >= 3 ? "BUY" : mbbPct <= -2 ? "SELL" : "STEADY";
   const signalColor = signal === "BUY" ? "text-lime-400 border-lime-500/40 bg-lime-500/10" : signal === "SELL" ? "text-red-400 border-red-500/40 bg-red-500/10" : "text-amber-400 border-amber-500/40 bg-amber-500/10";
 
   const tiers = [

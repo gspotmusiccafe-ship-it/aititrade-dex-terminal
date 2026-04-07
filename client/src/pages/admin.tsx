@@ -4897,7 +4897,7 @@ function SettlementGovernorTab() {
     payoutPerK: number;
     totalTraders: number;
     queuedCount: number;
-    holdingCount: number;
+    discountQueuedCount: number;
     settledCount: number;
     currentCycle: number;
     cycleThreshold: number;
@@ -5044,9 +5044,9 @@ function SettlementGovernorTab() {
           <p className="text-[7px] sm:text-[9px] text-zinc-500">QUEUED</p>
           <p className="text-sm sm:text-lg text-emerald-400 font-black">{dashboard.queuedCount}</p>
         </div>
-        <div className="bg-zinc-900 border border-amber-500/20 p-1.5 sm:p-2 text-center">
-          <p className="text-[7px] sm:text-[9px] text-zinc-500">HOLD</p>
-          <p className="text-sm sm:text-lg text-amber-400 font-black">{dashboard.holdingCount}</p>
+        <div className="bg-zinc-900 border border-orange-500/20 p-1.5 sm:p-2 text-center">
+          <p className="text-[7px] sm:text-[9px] text-zinc-500">DISCOUNT Q</p>
+          <p className="text-sm sm:text-lg text-orange-400 font-black">{dashboard.discountQueuedCount}</p>
         </div>
         <div className="bg-zinc-900 border border-lime-500/20 p-1.5 sm:p-2 text-center">
           <p className="text-[7px] sm:text-[9px] text-zinc-500">SETTLED</p>
@@ -5074,7 +5074,7 @@ function SettlementGovernorTab() {
                       {entry.cashTag && <span className="text-[8px] sm:text-[10px] text-green-400 font-bold">{entry.cashTag}</span>}
                       <span className={`text-[7px] sm:text-[8px] px-0.5 sm:px-1 py-0.5 border font-bold flex-shrink-0 ${
                         entry.status === "OFFERED" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" :
-                        entry.status === "HOLDING" ? "text-amber-400 border-amber-500/30 bg-amber-500/10" :
+                        entry.status === "DISCOUNT_QUEUED" ? "text-orange-400 border-orange-500/30 bg-orange-500/10" :
                         entry.status === "SETTLED" ? "text-lime-400 border-lime-500/30 bg-lime-500/10" :
                         "text-zinc-400 border-zinc-600 bg-zinc-800"
                       }`}>{entry.status}</span>
@@ -5140,7 +5140,7 @@ function TreasuryDashboard() {
     activeVolume: number;
     earlyPayouts: number;
     settledCount: number;
-    holdingCount: number;
+    activeCount: number;
   }>({
     queryKey: ["/api/admin/treasury-stats"],
     refetchInterval: 30000,
@@ -5194,8 +5194,8 @@ function TreasuryDashboard() {
         </div>
         <div className="bg-zinc-950 p-4 border border-zinc-800">
           <p className="text-zinc-500 text-xs uppercase mb-1">Active Positions</p>
-          <p className="text-2xl text-white font-bold" data-testid="treasury-holding-count">{stats?.holdingCount || 0}</p>
-          <p className="text-[10px] text-zinc-600 mt-1">Holding for MBBP settlement at close</p>
+          <p className="text-2xl text-white font-bold" data-testid="treasury-active-count">{stats?.activeCount || 0}</p>
+          <p className="text-[10px] text-zinc-600 mt-1">Queued for MBBP settlement</p>
         </div>
       </div>
 

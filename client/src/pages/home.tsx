@@ -714,11 +714,11 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
       }),
     onSuccess: async (res: any) => {
       const data = await res.json();
-      const isDiscount = data.type === "DISCOUNT_EXIT" || data.queued;
+      const isDiscount = data.type === "DISCOUNT_SELL" || data.queued;
       toast({
-        title: isDiscount ? "DISCOUNT ACCEPTED" : "MBBP PRICE LOCKED",
+        title: isDiscount ? "DISCOUNT SELL ACCEPTED" : "SELL LOCKED",
         description: isDiscount
-          ? "Queued FIRST — paid when settlement cycle runs"
+          ? `Discount sell at ${data.discountPrice?.toFixed(4) || "—"}x — queued FIRST for settlement`
           : `MBBP locked at $${data.lockedMbbp?.toFixed(4) || "—"} — queued for settlement`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/kinetic/state"] });
@@ -726,12 +726,12 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
     onError: (err: Error) => toast({ title: "TRADE FAILED", description: err.message, variant: "destructive" }),
   });
 
-  const handleHoldPulse = () => {
-    tradeMutation.mutate({ type: "HOLD_LOCK" });
+  const handleSell = () => {
+    tradeMutation.mutate({ type: "SELL" });
   };
 
-  const handleDiscountExit = () => {
-    tradeMutation.mutate({ type: "DISCOUNT_EXIT" });
+  const handleDiscountSell = () => {
+    tradeMutation.mutate({ type: "DISCOUNT_SELL" });
   };
 
   const isKineticHigh = kineticState?.pulse === "HIGH";
@@ -906,7 +906,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
         <div className="px-3 py-1.5 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center gap-2">
           <DollarSign className="h-3 w-3 text-emerald-400 flex-shrink-0" />
           <span className="text-[9px] text-emerald-400 font-bold">
-            ${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })} SETTLEMENT FUND AVAILABLE — ACCEPT OR HOLD
+            ${fundAvailable.toLocaleString('en-US', { minimumFractionDigits: 2 })} SETTLEMENT FUND AVAILABLE — SELL OR DISCOUNT SELL
           </span>
         </div>
       )}
@@ -1046,28 +1046,28 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
 
         <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
           <button
-            onClick={handleHoldPulse}
+            onClick={handleSell}
             disabled={tradeMutation.isPending || isClosed}
             className={`flex-1 border text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center transition-colors flex items-center justify-center gap-0.5 disabled:opacity-30 ${
               isKineticHigh
                 ? "bg-emerald-600/20 border-emerald-500/40 text-emerald-400 hover:bg-emerald-600/30 floor-high-active"
                 : "bg-amber-600/10 border-amber-500/30 text-amber-400 hover:bg-amber-600/20"
             }`}
-            data-testid={`button-hold-lock-${track.id}`}
+            data-testid={`button-sell-${track.id}`}
           >
-            <Lock className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> ENTER POSITION
+            <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> SELL
           </button>
           <button
-            onClick={handleDiscountExit}
+            onClick={handleDiscountSell}
             disabled={tradeMutation.isPending || isClosed}
             className={`flex-1 border text-[8px] sm:text-[10px] font-extrabold py-1 sm:py-1.5 text-center transition-colors flex items-center justify-center gap-0.5 disabled:opacity-30 ${
               isKineticHigh
                 ? "bg-cyan-600/20 border-cyan-500/40 text-cyan-400 hover:bg-cyan-600/30"
-                : "bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
+                : "bg-orange-500/10 border-orange-500/30 text-orange-400 hover:bg-orange-500/20"
             }`}
-            data-testid={`button-discount-exit-${track.id}`}
+            data-testid={`button-discount-sell-${track.id}`}
           >
-            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> TAKE DISCOUNT — QUEUE FIRST
+            <ArrowDownRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> DISCOUNT SELL
           </button>
         </div>
         <div className="flex gap-0.5 sm:gap-1 mb-0.5 sm:mb-1">
