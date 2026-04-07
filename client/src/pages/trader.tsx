@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight, CheckCircle, Tag, RefreshCw } from "lucide-react";
+import { Shield, DollarSign, TrendingUp, Activity, Loader2, ExternalLink, Zap, BarChart3, ArrowUpRight, ArrowDownRight, Clock, Target, Flame, Globe, Crown, ChevronRight, CheckCircle, Tag, RefreshCw, Lock, Users, Radio } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -596,6 +596,73 @@ export default function TraderPage() {
           )}
 
           <TraderDesk positions={trader.positions} userId={userId} />
+
+          <div className="border border-violet-500/30 bg-black/90 overflow-hidden" style={{ boxShadow: "0 0 20px rgba(139,92,246,0.08)" }} data-testid="private-room-section">
+            <div className="bg-gradient-to-r from-violet-950/50 to-black px-4 py-3 border-b border-violet-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-violet-400" />
+                <span className="text-violet-400 text-[11px] font-black tracking-wider">PRIVATE ROOM — TRADERS ONLY</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" style={{ boxShadow: "0 0 6px #a78bfa" }} />
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="h-3 w-3 text-violet-500/60" />
+                <span className="text-[9px] text-violet-500/60 font-mono">EXCLUSIVE ACCESS</span>
+              </div>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="bg-violet-950/20 border border-violet-500/15 p-2.5 text-center">
+                  <Radio className="h-4 w-4 text-violet-400 mx-auto mb-1" />
+                  <p className="text-[8px] text-violet-500/60 tracking-widest">MARKET NEWS</p>
+                  <p className="text-[10px] text-violet-300 font-bold mt-0.5">LIVE UPDATES</p>
+                </div>
+                <div className="bg-violet-950/20 border border-violet-500/15 p-2.5 text-center">
+                  <TrendingUp className="h-4 w-4 text-amber-400 mx-auto mb-1" />
+                  <p className="text-[8px] text-violet-500/60 tracking-widest">PRE-MARKET</p>
+                  <p className="text-[10px] text-amber-300 font-bold mt-0.5">EARLY ACCESS</p>
+                </div>
+                <div className="bg-violet-950/20 border border-violet-500/15 p-2.5 text-center">
+                  <Users className="h-4 w-4 text-emerald-400 mx-auto mb-1" />
+                  <p className="text-[8px] text-violet-500/60 tracking-widest">P2P TRADING</p>
+                  <p className="text-[10px] text-emerald-300 font-bold mt-0.5">DIRECT DEALS</p>
+                </div>
+              </div>
+
+              <div className="border border-violet-500/20 bg-violet-950/10 p-3">
+                <p className="text-[9px] text-violet-400/80 mb-2 font-bold">WHAT HAPPENS IN THE PRIVATE ROOM:</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <Zap className="h-3 w-3 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-[9px] text-violet-300/80">Songs posted BEFORE they hit the market — get in early, ride the wave when it drops</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <DollarSign className="h-3 w-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-[9px] text-violet-300/80">P2P sell & trade positions directly with other traders — set your own spread</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Target className="h-3 w-3 text-red-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-[9px] text-violet-300/80">Market intel, price targets, and brokerage updates posted live by AITITRADE</p>
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href="https://cutt.ly/MUSIC-MARKET"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-black text-sm transition-all border border-violet-400/40"
+                style={{ boxShadow: "0 0 15px rgba(139,92,246,0.3)" }}
+                data-testid="btn-enter-private-room"
+              >
+                <Lock className="h-4 w-4" />
+                ENTER PRIVATE ROOM
+                <ExternalLink className="h-3 w-3" />
+              </a>
+
+              <p className="text-center text-[7px] text-violet-500/40 tracking-wider">VERIFIED TRADERS ONLY — MARKET INTEL • P2P DEALS • PRE-DROPS</p>
+            </div>
+          </div>
 
           {!hasTrust && (
             <div className="border border-amber-500/30 bg-amber-500/5 p-6 text-center">
