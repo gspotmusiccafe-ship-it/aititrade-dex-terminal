@@ -3359,9 +3359,11 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
-  app.get("/api/download/cloud/:objectName", isAuthenticated, async (req: any, res) => {
+  app.get("/api/download/cloud", isAuthenticated, async (req: any, res) => {
     try {
-      const objectName = decodeURIComponent(req.params.objectName);
+      const objectName = req.query.path ? decodeURIComponent(req.query.path as string) : "";
+      if (!objectName) return res.status(400).json({ message: "No object path specified (?path=...)" });
+      console.log(`[DOWNLOAD] Cloud request for: ${objectName}`);
       const bucket = objectStorageClient.bucket(BUCKET_ID);
       const file = bucket.file(objectName);
       const [exists] = await file.exists();
@@ -3369,8 +3371,13 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         return res.status(404).json({ message: "File not found in cloud storage" });
       }
       const filename = path.basename(objectName);
-      res.set("Content-Disposition", `attachment; filename="${filename}"`);
-      res.set("Content-Type", "audio/wav");
+      const isStream = req.query.stream === "true";
+      if (isStream) {
+        res.set("Content-Type", "audio/wav");
+      } else {
+        res.set("Content-Disposition", `attachment; filename="${filename}"`);
+        res.set("Content-Type", "audio/wav");
+      }
       const stream = file.createReadStream();
       stream.pipe(res);
     } catch (error: any) {
@@ -7011,6 +7018,34 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json({ success: true, message: `Removed ${entry.displayName}` });
     } catch (error: any) {
       res.status(500).json({ message: "Failed to remove investor" });
+    }
+  });
+
+  app.post("/api/admin/investor-portals/create", isAdmin, async (req: any, res) => {
+    try {
+      const { songTitle, portalName, totalStreams, targetRaise, entryPrice, downPayment, monthlyPayment, termMonths, maxInvestors, baseReturnPct, maxReturnPct, spotifyUrl, spotifyUri } = req.body;
+      if (!songTitle) return res.status(400).json({ message: "Song title required" });
+      const [portal] = await db.insert(globalInvestorPortals).values({
+        portalName: portalName || songTitle,
+        songTitle,
+        totalStreams: totalStreams || 0,
+        targetRaise: targetRaise || "5000",
+        entryPrice: entryPrice || "500",
+        downPayment: downPayment || "25",
+        monthlyPayment: monthlyPayment || "19.79",
+        termMonths: termMonths || 24,
+        maxInvestors: maxInvestors || 10,
+        baseReturnPct: baseReturnPct || "25",
+        maxReturnPct: maxReturnPct || "100",
+        spotifyUrl: spotifyUrl || null,
+        spotifyUri: spotifyUri || null,
+        status: "OPEN",
+      }).returning();
+      console.log(`[INVESTOR PORTAL] Created: "${songTitle}" streams=${totalStreams || 0}`);
+      res.json(portal);
+    } catch (error: any) {
+      console.error("[INVESTOR PORTAL] Create failed:", error.message);
+      res.status(500).json({ message: "Failed to create portal" });
     }
   });
 

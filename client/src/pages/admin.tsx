@@ -1353,21 +1353,30 @@ function AdminMasteringTab() {
               <p className="text-sm text-muted-foreground">Artist: {req.artistId}</p>
               {req.notes && <p className="text-sm text-muted-foreground truncate">{req.notes}</p>}
               {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
-              {req.masteredUrl && (
-                <button
-                  onClick={() => {
-                    const url = req.masteredUrl.startsWith("/cloud/")
-                      ? `/api/download/cloud/${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
-                      : `${req.masteredUrl}?download=true`;
-                    downloadFile(url, `mastered-${req.trackId}.wav`);
-                  }}
-                  className="text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1 cursor-pointer"
-                  data-testid={`link-mastered-download-${req.id}`}
-                >
-                  <Download className="h-3 w-3" />
-                  Download Mastered File
-                </button>
-              )}
+              {req.masteredUrl && (() => {
+                const cloudPath = req.masteredUrl.replace("/cloud/", "");
+                const streamUrl = req.masteredUrl.startsWith("/cloud/")
+                  ? `/api/download/cloud?path=${encodeURIComponent(cloudPath)}&stream=true`
+                  : req.masteredUrl;
+                const dlUrl = req.masteredUrl.startsWith("/cloud/")
+                  ? `/api/download/cloud?path=${encodeURIComponent(cloudPath)}`
+                  : `${req.masteredUrl}?download=true`;
+                return (
+                  <div className="mt-1.5 space-y-1">
+                    <audio controls preload="none" className="w-full h-8" data-testid={`audio-mastered-${req.id}`}>
+                      <source src={streamUrl} type="audio/wav" />
+                    </audio>
+                    <button
+                      onClick={() => downloadFile(dlUrl, `mastered-${req.trackId}.wav`)}
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      data-testid={`link-mastered-download-${req.id}`}
+                    >
+                      <Download className="h-3 w-3" />
+                      Download WAV
+                    </button>
+                  </div>
+                );
+              })()}
               <p className="text-xs text-muted-foreground">{new Date(req.createdAt).toLocaleString()}</p>
             </div>
             <div className="flex items-center gap-2">
@@ -1447,7 +1456,7 @@ function AdminMasteringTab() {
                   size="sm"
                   onClick={() => {
                     const url = req.masteredUrl.startsWith("/cloud/")
-                      ? `/api/download/cloud/${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
+                      ? `/api/download/cloud?path=${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
                       : `${req.masteredUrl}?download=true`;
                     downloadFile(url, `mastered-${req.trackId}.wav`);
                   }}
@@ -3973,11 +3982,40 @@ function InvestorManagementTab() {
   const [payAmount, setPayAmount] = useState("25");
   const [streamInputs, setStreamInputs] = useState<Record<string, string>>({});
   const [savingStreams, setSavingStreams] = useState<string | null>(null);
+  const [showCreatePortal, setShowCreatePortal] = useState(false);
+  const [creatingPortal, setCreatingPortal] = useState(false);
+  const [newPortal, setNewPortal] = useState({
+    songTitle: "", portalName: "", totalStreams: "0", targetRaise: "5000",
+    entryPrice: "500", downPayment: "25", monthlyPayment: "19.79",
+    termMonths: "24", maxInvestors: "10", baseReturnPct: "25", maxReturnPct: "100",
+    spotifyUrl: "", spotifyUri: "",
+  });
 
   const { data: portals, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/investor-portals"],
     refetchInterval: 10000,
   });
+
+  const createPortal = async () => {
+    if (!newPortal.songTitle.trim()) {
+      toast({ title: "SONG TITLE REQUIRED", variant: "destructive" });
+      return;
+    }
+    setCreatingPortal(true);
+    try {
+      await apiRequest("POST", "/api/admin/investor-portals/create", {
+        ...newPortal,
+        totalStreams: parseInt(newPortal.totalStreams) || 0,
+        termMonths: parseInt(newPortal.termMonths) || 24,
+        maxInvestors: parseInt(newPortal.maxInvestors) || 10,
+      });
+      toast({ title: "PORTAL CREATED", description: newPortal.songTitle });
+      setNewPortal({ songTitle: "", portalName: "", totalStreams: "0", targetRaise: "5000", entryPrice: "500", downPayment: "25", monthlyPayment: "19.79", termMonths: "24", maxInvestors: "10", baseReturnPct: "25", maxReturnPct: "100", spotifyUrl: "", spotifyUri: "" });
+      setShowCreatePortal(false);
+      refetch();
+    } catch { toast({ title: "CREATE FAILED", variant: "destructive" }); }
+    setCreatingPortal(false);
+  };
 
   const removeInvestor = async (entryId: string, name: string) => {
     if (!window.confirm(`REMOVE ${name} FOR NON-PAYMENT? This cannot be undone.`)) return;
@@ -4036,6 +4074,83 @@ function InvestorManagementTab() {
 
   return (
     <div className="space-y-6" data-testid="investor-management-tab">
+      <div className="bg-black border border-green-500/30 rounded-lg p-5 font-mono mb-4">
+        <div className="flex items-center justify-between mb-3 border-b border-green-500/20 pb-2">
+          <h2 className="text-sm text-green-400 font-black uppercase">CREATE NEW INVESTOR PORTAL</h2>
+          <button
+            onClick={() => setShowCreatePortal(!showCreatePortal)}
+            className="px-3 py-1 bg-green-900/60 border border-green-500/30 text-green-400 text-[10px] font-bold rounded hover:bg-green-800/60"
+            data-testid="btn-toggle-create-portal"
+          >
+            {showCreatePortal ? "CLOSE" : "+ NEW PORTAL"}
+          </button>
+        </div>
+        {showCreatePortal && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Song Title *</label>
+                <input value={newPortal.songTitle} onChange={e => setNewPortal(p => ({ ...p, songTitle: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" placeholder="e.g. LOVE JONES" data-testid="input-portal-song-title" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Portal Name</label>
+                <input value={newPortal.portalName} onChange={e => setNewPortal(p => ({ ...p, portalName: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" placeholder="auto = song title" data-testid="input-portal-name" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Stream Count</label>
+                <input type="number" value={newPortal.totalStreams} onChange={e => setNewPortal(p => ({ ...p, totalStreams: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-streams" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Target Raise $</label>
+                <input value={newPortal.targetRaise} onChange={e => setNewPortal(p => ({ ...p, targetRaise: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-raise" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Entry Price $</label>
+                <input value={newPortal.entryPrice} onChange={e => setNewPortal(p => ({ ...p, entryPrice: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-entry" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Down Payment $</label>
+                <input value={newPortal.downPayment} onChange={e => setNewPortal(p => ({ ...p, downPayment: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-down" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Monthly $</label>
+                <input value={newPortal.monthlyPayment} onChange={e => setNewPortal(p => ({ ...p, monthlyPayment: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-monthly" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Term Months</label>
+                <input type="number" value={newPortal.termMonths} onChange={e => setNewPortal(p => ({ ...p, termMonths: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-term" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Max Investors</label>
+                <input type="number" value={newPortal.maxInvestors} onChange={e => setNewPortal(p => ({ ...p, maxInvestors: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" data-testid="input-portal-max" />
+              </div>
+              <div>
+                <label className="text-[10px] text-green-500/60 uppercase">Spotify URL</label>
+                <input value={newPortal.spotifyUrl} onChange={e => setNewPortal(p => ({ ...p, spotifyUrl: e.target.value }))}
+                  className="w-full bg-black border border-green-500/30 text-green-400 text-xs p-2 rounded font-mono" placeholder="optional" data-testid="input-portal-spotify" />
+              </div>
+            </div>
+            <button
+              onClick={createPortal}
+              disabled={creatingPortal || !newPortal.songTitle.trim()}
+              className="w-full py-2.5 bg-green-900/60 border border-green-500/30 text-green-400 text-sm font-bold rounded hover:bg-green-800/60 disabled:opacity-50 font-mono"
+              data-testid="btn-create-portal"
+            >
+              {creatingPortal ? "CREATING..." : "CREATE INVESTOR PORTAL"}
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="bg-black border border-cyan-500/30 rounded-lg p-5 font-mono mb-4">
         <div className="flex items-center justify-between mb-3 border-b border-cyan-500/20 pb-2">
           <h2 className="text-sm text-cyan-400 font-black uppercase">PORTAL STREAM COUNTS — MANUAL UPDATE</h2>

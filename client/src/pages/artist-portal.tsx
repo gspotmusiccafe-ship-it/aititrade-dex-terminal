@@ -1863,21 +1863,30 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                   </div>
                   <div className="flex items-center gap-2">
                     {statusBadge(req.status)}
-                    {req.status === "completed" && req.masteredUrl && (
-                      <button
-                        onClick={() => {
-                          const url = req.masteredUrl.startsWith("/cloud/") 
-                            ? `/api/download/cloud/${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
-                            : `${req.masteredUrl}?download=true`;
-                          downloadFile(url, `mastered-${req.trackId}.wav`);
-                        }}
-                        className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
-                        data-testid={`button-download-mastered-${req.id}`}
-                        title="Download mastered track"
-                      >
-                        <Download className="h-4 w-4" />
-                      </button>
-                    )}
+                    {req.status === "completed" && req.masteredUrl && (() => {
+                      const cloudPath = req.masteredUrl.replace("/cloud/", "");
+                      const streamUrl = req.masteredUrl.startsWith("/cloud/")
+                        ? `/api/download/cloud?path=${encodeURIComponent(cloudPath)}&stream=true`
+                        : req.masteredUrl;
+                      const dlUrl = req.masteredUrl.startsWith("/cloud/")
+                        ? `/api/download/cloud?path=${encodeURIComponent(cloudPath)}`
+                        : `${req.masteredUrl}?download=true`;
+                      return (
+                        <div className="flex flex-col gap-1">
+                          <audio controls preload="none" className="h-8 w-48" data-testid={`audio-mastered-${req.id}`}>
+                            <source src={streamUrl} type="audio/wav" />
+                          </audio>
+                          <button
+                            onClick={() => downloadFile(dlUrl, `mastered-${req.trackId}.wav`)}
+                            className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
+                            data-testid={`button-download-mastered-${req.id}`}
+                            title="Download mastered track"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                     {req.status !== "in_production" && (
                       <Button
                         variant="ghost"

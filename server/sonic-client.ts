@@ -5,7 +5,7 @@ import path from "path";
 const SONIC_API_BASE = "https://api.musicapi.ai/api/v1/sonic";
 
 function getApiKey(): string {
-  const key = process.env.SONIC_API_KEY || process.env.SUNO_API_KEY;
+  const key = process.env.SONIC_API_KEY;
   if (!key) throw new Error("SONIC_API_KEY not configured");
   return key;
 }
@@ -209,5 +209,5 @@ export async function downloadSonicAudio(audioUrl: string, localId: string): Pro
 }
 
 export function isSonicConfigured(): boolean {
-  return !!(process.env.SONIC_API_KEY || process.env.SUNO_API_KEY);
+  return !!process.env.SONIC_API_KEY;
 }
