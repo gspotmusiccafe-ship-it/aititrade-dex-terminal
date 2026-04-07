@@ -27,35 +27,48 @@ function isYouTubeUrl(url: string): boolean {
   return /(?:youtube\.com|youtu\.be)/.test(url);
 }
 
-function YouTubeVideoPanel({ videoUrl, onClose }: { videoUrl: string; onClose: () => void }) {
-  const videoId = extractYouTubeId(videoUrl);
-  if (!videoId) return null;
+function VideoPanel({ videoUrl, onClose }: { videoUrl: string; onClose: () => void }) {
+  const youtubeId = extractYouTubeId(videoUrl);
+  const isDirectVideo = !youtubeId && (videoUrl.includes(".mp4") || videoUrl.includes(".webm") || videoUrl.includes(".mov") || videoUrl.startsWith("http"));
+
+  if (!youtubeId && !isDirectVideo) return null;
 
   return (
-    <div className="fixed bottom-36 right-0 w-80 bg-black border border-lime-500/20 shadow-2xl z-50 font-mono" data-testid="youtube-video-panel">
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-lime-500/10 bg-lime-500/5">
+    <div className="fixed bottom-36 right-0 w-80 sm:w-96 bg-black border border-violet-500/30 shadow-2xl z-50 font-mono" style={{ boxShadow: "0 0 30px rgba(139,92,246,0.15)" }} data-testid="video-panel">
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-violet-500/20 bg-violet-500/5">
         <div className="flex items-center gap-1.5">
-          <Video className="h-3 w-3 text-lime-400" />
-          <span className="text-[9px] text-lime-400 font-extrabold">VIDEO STREAM</span>
+          <Video className="h-3 w-3 text-violet-400" />
+          <span className="text-[9px] text-violet-400 font-extrabold">97.7 THE FLAME — VIDEO</span>
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-emerald-500/60 hover:text-lime-400"
+          className="h-6 w-6 text-violet-500/60 hover:text-violet-400"
           onClick={onClose}
           data-testid="button-close-video"
         >
           <X className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="aspect-video w-full">
-        <iframe
-          src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
-          className="w-full h-full"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-          data-testid={`video-embed-${videoId}`}
-        />
+      <div className="aspect-video w-full bg-black">
+        {youtubeId ? (
+          <iframe
+            src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
+            className="w-full h-full"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            data-testid={`video-embed-${youtubeId}`}
+          />
+        ) : (
+          <video
+            src={videoUrl}
+            className="w-full h-full"
+            controls
+            autoPlay
+            playsInline
+            data-testid="video-native-player"
+          />
+        )}
       </div>
     </div>
   );
@@ -102,7 +115,10 @@ export function MusicPlayer() {
   const [showBuyDialog, setShowBuyDialog] = useState(false);
 
   const upcomingTracks = queue.slice(queueIndex + 1);
+  const trackVideoUrl = (currentTrack as any)?.videoUrl || "";
   const hasYouTubeVideo = currentTrack ? isYouTubeUrl(currentTrack.audioUrl) : false;
+  const hasVideo = !!(trackVideoUrl) || hasYouTubeVideo;
+  const activeVideoUrl = trackVideoUrl || (hasYouTubeVideo ? currentTrack!.audioUrl : "");
 
   if (!currentTrack) {
     return (
@@ -168,8 +184,8 @@ export function MusicPlayer() {
           <p className="text-[8px] text-emerald-500/25 mt-2 text-center truncate">$AITITRADEBROKERAGE • NO PAYPAL</p>
         </div>
       )}
-      {videoOpen && hasYouTubeVideo && currentTrack && (
-        <YouTubeVideoPanel videoUrl={currentTrack.audioUrl} onClose={() => setVideoOpen(false)} />
+      {videoOpen && hasVideo && activeVideoUrl && (
+        <VideoPanel videoUrl={activeVideoUrl} onClose={() => setVideoOpen(false)} />
       )}
       {queueOpen && (
         <div className="fixed right-0 bottom-36 w-[85vw] sm:w-72 max-h-[55vh] sm:max-h-[60vh] bg-black border border-emerald-500/20 shadow-2xl z-50 flex flex-col font-mono" data-testid="queue-panel">
@@ -467,8 +483,8 @@ export function MusicPlayer() {
                   <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 text-[8px] text-black flex items-center justify-center font-bold shadow-[0_0_6px_rgba(52,211,153,0.6)]">{upcomingTracks.length > 9 ? "9+" : upcomingTracks.length}</span>
                 )}
               </Button>
-              {hasYouTubeVideo && (
-                <Button variant="ghost" size="icon" className={`h-7 w-7 ${videoOpen ? "text-lime-400 drop-shadow-[0_0_6px_rgba(132,204,22,0.5)]" : "text-cyan-500/50"} hover:text-lime-400`} onClick={() => setVideoOpen(!videoOpen)} title="YouTube Video" data-testid="button-toggle-video">
+              {hasVideo && (
+                <Button variant="ghost" size="icon" className={`h-7 w-7 ${videoOpen ? "text-violet-400 drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]" : "text-violet-500/50"} hover:text-violet-400`} onClick={() => setVideoOpen(!videoOpen)} title="Video" data-testid="button-toggle-video">
                   {videoOpen ? <VideoOff className="h-3.5 w-3.5" /> : <Video className="h-3.5 w-3.5" />}
                 </Button>
               )}

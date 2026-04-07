@@ -49,6 +49,7 @@ export const tracks = pgTable("tracks", {
   isPrerelease: boolean("is_prerelease").default(false),
   releaseDate: timestamp("release_date"),
   genre: varchar("genre"),
+  videoUrl: text("video_url"),
   isFeatured: boolean("is_featured").default(false),
   sortPosition: integer("sort_position").default(0),
   createdAt: timestamp("created_at").defaultNow(),

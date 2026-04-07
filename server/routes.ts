@@ -4993,6 +4993,17 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.patch("/api/admin/tracks/:id/video", isAdmin, async (req: any, res) => {
+    try {
+      const { videoUrl } = req.body;
+      await db.update(tracks).set({ videoUrl: videoUrl || null }).where(eq(tracks.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating video URL:", error);
+      res.status(500).json({ message: "Failed to update video URL" });
+    }
+  });
+
   // Get radio playlist tracks (featured tracks)
   app.get("/api/admin/radio-playlist", isAdmin, async (req: any, res) => {
     try {

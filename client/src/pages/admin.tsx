@@ -2731,9 +2731,15 @@ function NativeOrderTab() {
   const qc = useQueryClient();
   const { data: nativeTracks, isLoading } = useQuery<any[]>({ queryKey: ["/api/tracks/featured"] });
   const [localOrder, setLocalOrder] = useState<any[]>([]);
+  const [videoInputs, setVideoInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (nativeTracks) setLocalOrder([...nativeTracks]);
+    if (nativeTracks) {
+      setLocalOrder([...nativeTracks]);
+      const vids: Record<string, string> = {};
+      nativeTracks.forEach((t: any) => { vids[t.id] = t.videoUrl || ""; });
+      setVideoInputs(vids);
+    }
   }, [nativeTracks]);
 
   const moveTrack = (fromIdx: number, toIdx: number) => {
@@ -2800,6 +2806,60 @@ function NativeOrderTab() {
         >
           {saveMutation.isPending ? "SAVING..." : "SAVE DJ ORDER"}
         </button>
+      </div>
+
+      <div className="bg-zinc-900/50 border border-violet-500/30 p-4">
+        <h3 className="text-violet-400 font-black text-lg mb-1">VIDEO LINKS — MP4 / YOUTUBE</h3>
+        <p className="text-zinc-500 text-xs mb-4">Paste a YouTube URL or direct MP4 link for each track. Video plays in the native player.</p>
+        <div className="space-y-2">
+          {localOrder.map((track) => (
+            <div key={track.id} className="bg-black border border-zinc-800 px-3 py-2" data-testid={`video-url-row-${track.id}`}>
+              <p className="text-white text-xs font-bold mb-1 truncate">{track.title}</p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Paste YouTube or MP4 URL..."
+                  value={videoInputs[track.id] || ""}
+                  onChange={(e) => setVideoInputs(prev => ({ ...prev, [track.id]: e.target.value }))}
+                  className="flex-1 bg-zinc-900 border border-zinc-700 text-white text-xs px-2 py-1.5 placeholder:text-zinc-600 focus:border-violet-500 outline-none"
+                  data-testid={`input-video-url-${track.id}`}
+                />
+                <button
+                  onClick={async () => {
+                    try {
+                      await apiRequest("PATCH", `/api/admin/tracks/${track.id}/video`, { videoUrl: videoInputs[track.id] || "" });
+                      toast({ title: "VIDEO SAVED", description: `${track.title} video URL updated` });
+                      qc.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+                    } catch { toast({ title: "FAILED", variant: "destructive" }); }
+                  }}
+                  className="bg-violet-600 hover:bg-violet-500 text-white font-black text-[10px] px-3 py-1.5 flex-shrink-0 transition-colors"
+                  data-testid={`btn-save-video-${track.id}`}
+                >
+                  SET
+                </button>
+                {(videoInputs[track.id] || "").length > 0 && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setVideoInputs(prev => ({ ...prev, [track.id]: "" }));
+                        await apiRequest("PATCH", `/api/admin/tracks/${track.id}/video`, { videoUrl: "" });
+                        toast({ title: "VIDEO REMOVED" });
+                        qc.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
+                      } catch { toast({ title: "FAILED", variant: "destructive" }); }
+                    }}
+                    className="text-red-400 hover:text-red-300 text-[10px] font-bold px-2 py-1.5 border border-red-500/30 flex-shrink-0"
+                    data-testid={`btn-remove-video-${track.id}`}
+                  >
+                    CLEAR
+                  </button>
+                )}
+              </div>
+              {track.videoUrl && (
+                <p className="text-violet-400/60 text-[9px] mt-1 truncate">ACTIVE: {track.videoUrl}</p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
