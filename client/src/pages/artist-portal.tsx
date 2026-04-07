@@ -1865,7 +1865,12 @@ function MasteringTab({ artistId, tracks }: { artistId: string; tracks: Track[] 
                     {statusBadge(req.status)}
                     {req.status === "completed" && req.masteredUrl && (
                       <button
-                        onClick={() => downloadFile(`${req.masteredUrl}?download=true`, `mastered-${req.trackId}.wav`)}
+                        onClick={() => {
+                          const url = req.masteredUrl.startsWith("/cloud/") 
+                            ? `/api/download/cloud/${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
+                            : `${req.masteredUrl}?download=true`;
+                          downloadFile(url, `mastered-${req.trackId}.wav`);
+                        }}
                         className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
                         data-testid={`button-download-mastered-${req.id}`}
                         title="Download mastered track"

@@ -1220,6 +1220,8 @@ function AdminMasteringTab() {
   const [notesDialogReq, setNotesDialogReq] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const { data: requests, isLoading } = useQuery<any[]>({
     queryKey: ["/api/admin/mastering-requests"],
@@ -1286,17 +1288,56 @@ function AdminMasteringTab() {
   }
 
   const pendingCount = requests?.filter(r => r.status === "pending").length || 0;
+  const processedCount = requests?.filter(r => r.status === "completed" || r.status === "rejected").length || 0;
+
+  const deleteOne = async (id: string) => {
+    if (!window.confirm("DELETE this mastering request and its files?")) return;
+    setDeletingId(id);
+    try {
+      await apiRequest("DELETE", `/api/admin/mastering-requests/${id}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mastering-requests"] });
+      toast({ title: "Deleted" });
+    } catch { toast({ title: "Delete failed", variant: "destructive" }); }
+    setDeletingId(null);
+  };
+
+  const deleteAllProcessed = async () => {
+    if (!window.confirm(`DELETE ALL ${processedCount} PROCESSED FILES? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      const res = await apiRequest("DELETE", "/api/admin/mastering-requests/bulk/processed");
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/mastering-requests"] });
+      toast({ title: `DELETED ${data.deleted} FILES` });
+    } catch { toast({ title: "Bulk delete failed", variant: "destructive" }); }
+    setBulkDeleting(false);
+  };
 
   return (
     <>
-      {pendingCount > 0 && (
-        <Card className="mb-4 border-yellow-500/30 bg-yellow-500/5">
-          <CardContent className="p-4 flex items-center gap-3">
-            <Headphones className="h-5 w-5 text-yellow-500" />
-            <p className="font-medium text-yellow-600">{pendingCount} pending mastering request{pendingCount > 1 ? "s" : ""}</p>
-          </CardContent>
-        </Card>
-      )}
+      <div className="flex items-center justify-between mb-4">
+        {pendingCount > 0 && (
+          <Card className="border-yellow-500/30 bg-yellow-500/5 flex-1 mr-3">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Headphones className="h-5 w-5 text-yellow-500" />
+              <p className="font-medium text-yellow-600">{pendingCount} pending mastering request{pendingCount > 1 ? "s" : ""}</p>
+            </CardContent>
+          </Card>
+        )}
+        {processedCount > 0 && (
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={deleteAllProcessed}
+            disabled={bulkDeleting}
+            className="gap-1.5 font-bold"
+            data-testid="btn-delete-all-processed"
+          >
+            {bulkDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            DELETE ALL {processedCount} PROCESSED
+          </Button>
+        )}
+      </div>
 
       <div className="space-y-2">
         {requests?.map((req) => (
@@ -1314,7 +1355,12 @@ function AdminMasteringTab() {
               {req.adminNotes && <p className="text-sm text-blue-400">Admin: {req.adminNotes}</p>}
               {req.masteredUrl && (
                 <button
-                  onClick={() => downloadFile(`${req.masteredUrl}?download=true`, `mastered-${req.trackId}.wav`)}
+                  onClick={() => {
+                    const url = req.masteredUrl.startsWith("/cloud/")
+                      ? `/api/download/cloud/${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
+                      : `${req.masteredUrl}?download=true`;
+                    downloadFile(url, `mastered-${req.trackId}.wav`);
+                  }}
                   className="text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1 cursor-pointer"
                   data-testid={`link-mastered-download-${req.id}`}
                 >
@@ -1399,13 +1445,28 @@ function AdminMasteringTab() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => downloadFile(`${req.masteredUrl}?download=true`, `mastered-${req.trackId}.wav`)}
+                  onClick={() => {
+                    const url = req.masteredUrl.startsWith("/cloud/")
+                      ? `/api/download/cloud/${encodeURIComponent(req.masteredUrl.replace("/cloud/", ""))}`
+                      : `${req.masteredUrl}?download=true`;
+                    downloadFile(url, `mastered-${req.trackId}.wav`);
+                  }}
                   data-testid={`button-download-mastered-${req.id}`}
                 >
                   <Download className="h-4 w-4 mr-1" />
                   Download
                 </Button>
               )}
+              <Button
+                variant="destructive"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => deleteOne(req.id)}
+                disabled={deletingId === req.id}
+                data-testid={`btn-delete-mastering-${req.id}`}
+              >
+                {deletingId === req.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              </Button>
             </div>
           </div>
         ))}
@@ -3910,6 +3971,8 @@ function InvestorManagementTab() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [confirmingPay, setConfirmingPay] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("25");
+  const [streamInputs, setStreamInputs] = useState<Record<string, string>>({});
+  const [savingStreams, setSavingStreams] = useState<string | null>(null);
 
   const { data: portals, isLoading, refetch } = useQuery<any[]>({
     queryKey: ["/api/admin/investor-portals"],
@@ -3955,12 +4018,54 @@ function InvestorManagementTab() {
     }
   };
 
+  const saveStreams = async (portalId: string) => {
+    const val = parseInt(streamInputs[portalId] || "0");
+    if (isNaN(val) || val < 0) return;
+    setSavingStreams(portalId);
+    try {
+      await apiRequest("POST", `/api/admin/investor-portals/${portalId}/update-streams`, { streams: val });
+      toast({ title: "STREAMS UPDATED", description: `Set to ${val.toLocaleString()}` });
+      refetch();
+    } catch { toast({ title: "Failed", variant: "destructive" }); }
+    setSavingStreams(null);
+  };
+
   if (isLoading) return <div className="text-amber-400 animate-pulse font-mono p-6">LOADING INVESTOR DATA...</div>;
 
   const allInvestors = portals?.flatMap(p => p.investors?.map((inv: any) => ({ ...inv, songTitle: p.songTitle, portalName: p.name })) || []) || [];
 
   return (
     <div className="space-y-6" data-testid="investor-management-tab">
+      <div className="bg-black border border-cyan-500/30 rounded-lg p-5 font-mono mb-4">
+        <div className="flex items-center justify-between mb-3 border-b border-cyan-500/20 pb-2">
+          <h2 className="text-sm text-cyan-400 font-black uppercase">PORTAL STREAM COUNTS — MANUAL UPDATE</h2>
+        </div>
+        <div className="space-y-2">
+          {portals?.map((p: any) => (
+            <div key={p.id} className="flex items-center gap-3 p-2 border border-cyan-500/10 rounded bg-cyan-950/10">
+              <span className="text-xs text-white font-bold flex-1 min-w-0 truncate">{p.songTitle}</span>
+              <span className="text-[10px] text-cyan-400 shrink-0">CURRENT: {(p.totalStreams || 0).toLocaleString()}</span>
+              <input
+                type="number"
+                min="0"
+                value={streamInputs[p.id] ?? (p.totalStreams || 0)}
+                onChange={e => setStreamInputs(prev => ({ ...prev, [p.id]: e.target.value }))}
+                className="w-24 bg-black border border-cyan-500/30 text-cyan-400 text-xs p-1.5 rounded font-mono"
+                data-testid={`input-streams-${p.id}`}
+              />
+              <button
+                onClick={() => saveStreams(p.id)}
+                disabled={savingStreams === p.id}
+                className="px-3 py-1.5 bg-cyan-900/60 border border-cyan-500/30 text-cyan-400 text-[10px] font-bold rounded hover:bg-cyan-800/60 disabled:opacity-50"
+                data-testid={`btn-save-streams-${p.id}`}
+              >
+                {savingStreams === p.id ? "SAVING..." : "SET"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="bg-black border border-amber-500/30 rounded-lg p-5 font-mono">
         <div className="flex items-center justify-between mb-4 border-b border-amber-500/20 pb-3">
           <h2 className="text-lg text-amber-400 font-black tracking-tight uppercase">INVESTOR MANAGEMENT</h2>

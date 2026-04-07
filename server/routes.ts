@@ -3259,7 +3259,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           "loudnorm=I=-11:TP=-1:LRA=8:print_format=json",
         ].join(","),
         "-ar", "48000",
-        "-sample_fmt", "s32",
+        "-sample_fmt", "s16",
         "-y",
         outputPath,
       ];
@@ -3356,6 +3356,26 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       return res.status(404).json({ message: "Mastered file not found" });
     } catch {
       return res.status(404).json({ message: "Mastered file not found" });
+    }
+  });
+
+  app.get("/api/download/cloud/:objectName", isAuthenticated, async (req: any, res) => {
+    try {
+      const objectName = decodeURIComponent(req.params.objectName);
+      const bucket = objectStorageClient.bucket(BUCKET_ID);
+      const file = bucket.file(objectName);
+      const [exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ message: "File not found in cloud storage" });
+      }
+      const filename = path.basename(objectName);
+      res.set("Content-Disposition", `attachment; filename="${filename}"`);
+      res.set("Content-Type", "audio/wav");
+      const stream = file.createReadStream();
+      stream.pipe(res);
+    } catch (error: any) {
+      console.error("[DOWNLOAD] Cloud download error:", error.message);
+      return res.status(500).json({ message: "Download failed" });
     }
   });
 
@@ -5741,6 +5761,63 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.delete("/api/admin/mastering-requests/bulk/processed", isAdmin, async (_req: any, res) => {
+    try {
+      const processed = await db.select().from(masteringRequests)
+        .where(sql`${masteringRequests.status} IN ('completed', 'rejected')`);
+      let deleted = 0;
+      for (const req of processed) {
+        if (req.masteredUrl) {
+          try {
+            if (req.masteredUrl.startsWith("/uploads/mastered/")) {
+              const localPath = path.join(masteredDir, path.basename(req.masteredUrl));
+              if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+            }
+            const filename = path.basename(req.masteredUrl);
+            const bucket = objectStorageClient.bucket(BUCKET_ID);
+            await bucket.file(`mastered/${filename}`).delete().catch(() => {});
+            if (req.masteredUrl.startsWith("/cloud/")) {
+              await bucket.file(req.masteredUrl.replace("/cloud/", "")).delete().catch(() => {});
+            }
+          } catch {}
+        }
+        await db.delete(masteringRequests).where(eq(masteringRequests.id, req.id));
+        deleted++;
+      }
+      console.log(`[MASTERING] Bulk deleted ${deleted} processed requests`);
+      res.json({ success: true, deleted });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to bulk delete" });
+    }
+  });
+
+  app.delete("/api/admin/mastering-requests/:id", isAdmin, async (req: any, res) => {
+    try {
+      const request = await storage.getMasteringRequest(req.params.id);
+      if (!request) return res.status(404).json({ message: "Not found" });
+      if (request.masteredUrl) {
+        try {
+          if (request.masteredUrl.startsWith("/uploads/mastered/")) {
+            const localPath = path.join(masteredDir, path.basename(request.masteredUrl));
+            if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+          }
+          if (request.masteredUrl.startsWith("/cloud/")) {
+            const objectName = request.masteredUrl.replace("/cloud/", "");
+            const bucket = objectStorageClient.bucket(BUCKET_ID);
+            await bucket.file(objectName).delete().catch(() => {});
+          }
+          const filename = path.basename(request.masteredUrl);
+          const bucket = objectStorageClient.bucket(BUCKET_ID);
+          await bucket.file(`mastered/${filename}`).delete().catch(() => {});
+        } catch {}
+      }
+      await db.delete(masteringRequests).where(eq(masteringRequests.id, req.params.id));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: "Failed to delete" });
+    }
+  });
+
   app.post("/api/admin/master-request/:requestId", isAdmin, async (req: any, res) => {
     try {
       const masteringReq = await storage.getMasteringRequest(req.params.requestId);
@@ -5816,7 +5893,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           "loudnorm=I=-11:TP=-1:LRA=8:print_format=json",
         ].join(","),
         "-ar", "48000",
-        "-sample_fmt", "s32",
+        "-sample_fmt", "s16",
         "-y",
         outputPath,
       ];

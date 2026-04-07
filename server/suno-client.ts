@@ -83,10 +83,10 @@ async function kieSubmit(options: SunoGenerateOptions): Promise<string> {
   }
 
   const data: any = await res.json();
-  const taskId = data?.data?.taskId;
+  const taskId = data?.data?.taskId || data?.taskId || data?.data?.task_id || data?.task_id || data?.id || data?.data?.id;
   if (!taskId) {
-    console.error(`[SUNO/KIE] No taskId in response:`, JSON.stringify(data));
-    throw new Error("Kie AI API did not return a task ID");
+    console.error(`[SUNO/KIE] No taskId in response:`, JSON.stringify(data).slice(0, 500));
+    throw new Error("Kie AI API did not return a task ID — response: " + JSON.stringify(data).slice(0, 200));
   }
 
   console.log(`[SUNO/KIE] Task submitted: ${taskId}`);
