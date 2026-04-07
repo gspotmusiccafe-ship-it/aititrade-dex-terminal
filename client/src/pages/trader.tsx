@@ -601,7 +601,7 @@ export default function TraderPage() {
             <div className="bg-gradient-to-r from-violet-950/50 to-black px-4 py-3 border-b border-violet-500/20 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Lock className="h-4 w-4 text-violet-400" />
-                <span className="text-violet-400 text-[11px] font-black tracking-wider">PRIVATE ROOM — TRADERS ONLY</span>
+                <span className="text-violet-400 text-[11px] font-black tracking-wider">THE TRADER'S ROOM</span>
                 <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" style={{ boxShadow: "0 0 6px #a78bfa" }} />
               </div>
               <div className="flex items-center gap-2">
@@ -656,7 +656,7 @@ export default function TraderPage() {
                 data-testid="btn-enter-private-room"
               >
                 <Lock className="h-4 w-4" />
-                ENTER PRIVATE ROOM
+                ENTER THE TRADER'S ROOM
                 <ExternalLink className="h-3 w-3" />
               </a>
 
