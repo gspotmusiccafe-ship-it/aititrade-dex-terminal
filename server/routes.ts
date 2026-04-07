@@ -113,6 +113,37 @@ export async function registerRoutes(
   seed81Portals().then(() => loadPortalsFromDb()).catch(err => console.error("[PORTALS] Init load failed:", err));
   initTrackPricing().catch(err => console.error("[MARKET] Init pricing failed:", err));
 
+  (async () => {
+    try {
+      const allTracks = await db.select().from(tracks).innerJoin(artists, eq(tracks.artistId, artists.id));
+      const existing = await db.select({ trackId: marketListings.trackId }).from(marketListings);
+      const existingIds = new Set(existing.map(e => e.trackId).filter(Boolean));
+      let added = 0;
+      for (const row of allTracks) {
+        if (existingIds.has(row.tracks.id)) continue;
+        const price = parseFloat(row.tracks.unitPrice || "2.00");
+        await db.insert(marketListings).values({
+          trackId: row.tracks.id,
+          title: row.tracks.title,
+          artistName: row.artists.name || "AITITRADE",
+          coverImage: row.tracks.coverImage || null,
+          genre: row.tracks.genre || null,
+          basePrice: price.toFixed(2),
+          currentPrice: price.toFixed(2),
+          highPrice: price.toFixed(2),
+          lowPrice: price.toFixed(2),
+          volume: 0,
+          totalSold: 0,
+          active: true,
+        });
+        added++;
+      }
+      if (added > 0) console.log(`[MARKET] Auto-synced ${added} tracks to Music Market listings`);
+    } catch (err) {
+      console.error("[MARKET] Auto-sync listings failed:", err);
+    }
+  })();
+
   console.log(`[STARTUP] Data persistence ON — orders, stakes, and sales preserved across restarts`);
 
   db.update(masteringRequests)
@@ -5166,19 +5197,18 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           type: fromResaleId ? "RESALE" : "BUY",
         });
 
-        if (listing.trackId) {
-          await tx.insert(orders).values({
-            trackId: listing.trackId,
-            trackingNumber,
-            buyerEmail: userRecord?.email || userId,
-            buyerName: userRecord?.displayName || userRecord?.username || "Market Buyer",
-            buyerCashTag: userRecord?.cashTag || null,
-            unitPrice: price.toFixed(2),
-            creatorCredit: "0.00",
-            status: "confirmed",
-            portalName: "MUSIC_MARKET",
-          });
-        }
+        const buyerDisplayName = userRecord ? [userRecord.firstName, userRecord.lastName].filter(Boolean).join(" ") || "Market Buyer" : "Market Buyer";
+        await tx.insert(orders).values({
+          trackId: listing.trackId || listingId,
+          trackingNumber,
+          buyerEmail: userRecord?.email || userId,
+          buyerName: buyerDisplayName,
+          buyerCashTag: userRecord?.cashTag || null,
+          unitPrice: price.toFixed(2),
+          creatorCredit: "0.00",
+          status: "confirmed",
+          portalName: "MUSIC_MARKET",
+        });
 
         const newHigh = Math.max(parseFloat(listing.highPrice || "0"), price);
         const newLow = listing.lowPrice && parseFloat(listing.lowPrice) > 0
@@ -5341,19 +5371,19 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   app.post("/api/admin/market/sync-tracks", isAdmin, async (req: any, res) => {
     try {
-      const allTracks = await db.select().from(tracks);
+      const allTracks = await db.select().from(tracks).innerJoin(artists, eq(tracks.artistId, artists.id));
       const existing = await db.select({ trackId: marketListings.trackId }).from(marketListings);
       const existingIds = new Set(existing.map(e => e.trackId).filter(Boolean));
       let added = 0;
-      for (const track of allTracks) {
-        if (existingIds.has(track.id)) continue;
-        const price = parseFloat(track.unitPrice || "2.00");
+      for (const row of allTracks) {
+        if (existingIds.has(row.tracks.id)) continue;
+        const price = parseFloat(row.tracks.unitPrice || "2.00");
         await db.insert(marketListings).values({
-          trackId: track.id,
-          title: track.title,
-          artistName: track.artistId || "AITITRADE",
-          coverImage: track.coverImage || null,
-          genre: track.genre || null,
+          trackId: row.tracks.id,
+          title: row.tracks.title,
+          artistName: row.artists.name || "AITITRADE",
+          coverImage: row.tracks.coverImage || null,
+          genre: row.tracks.genre || null,
           basePrice: price.toFixed(2),
           currentPrice: price.toFixed(2),
           highPrice: price.toFixed(2),
