@@ -484,6 +484,21 @@ export async function registerRoutes(
         streamDurationMs: streamDurationMs || 0,
         sessionStartedAt: sessionStartedAt ? new Date(sessionStartedAt) : null,
       });
+
+      if (action === "STREAM_HEARTBEAT" && trackName) {
+        try {
+          const matchingPortals = await db.select().from(globalInvestorPortals)
+            .where(sql`UPPER(${globalInvestorPortals.songTitle}) = UPPER(${trackName})`);
+          for (const portal of matchingPortals) {
+            await db.update(globalInvestorPortals)
+              .set({ totalStreams: sql`COALESCE(${globalInvestorPortals.totalStreams}, 0) + 1` })
+              .where(eq(globalInvestorPortals.id, portal.id));
+          }
+        } catch (e) {
+          console.error("[GlobalStream] Investor portal stream increment error:", e);
+        }
+      }
+
       res.json({ logged: true });
     } catch (error) {
       console.error("[GlobalStream] Log error:", error);
@@ -3226,18 +3241,25 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const ffmpegArgs = [
         "-i", inputPath,
         "-af", [
-          "highpass=f=35",
-          "lowpass=f=17500",
-          "equalizer=f=200:t=q:w=2:g=-1.5",
+          "highpass=f=28",
+          "lowpass=f=19000",
+          "equalizer=f=60:t=q:w=1.2:g=3",
+          "equalizer=f=100:t=q:w=1.5:g=2.5",
+          "equalizer=f=200:t=q:w=1.8:g=1",
           "equalizer=f=400:t=q:w=1.5:g=-0.5",
-          "equalizer=f=3000:t=q:w=2:g=1",
-          "equalizer=f=10000:t=q:w=1.5:g=0.5",
-          "acompressor=threshold=-14dB:ratio=2.5:attack=10:release=80:makeup=1dB",
-          "alimiter=limit=0.92:level=false",
-          "loudnorm=I=-14:TP=-1.5:LRA=9:print_format=json",
+          "equalizer=f=800:t=q:w=2:g=-1",
+          "equalizer=f=2500:t=q:w=2:g=1.5",
+          "equalizer=f=5000:t=q:w=1.5:g=1",
+          "equalizer=f=8000:t=q:w=2:g=0.5",
+          "equalizer=f=12000:t=q:w=1.5:g=1",
+          "equalizer=f=16000:t=q:w=2:g=0.5",
+          "acompressor=threshold=-18dB:ratio=2:attack=15:release=150:makeup=2dB:knee=6dB",
+          "acompressor=threshold=-10dB:ratio=3:attack=5:release=50:makeup=1dB",
+          "alimiter=limit=0.95:level=false:attack=3:release=50",
+          "loudnorm=I=-11:TP=-1:LRA=8:print_format=json",
         ].join(","),
-        "-ar", "44100",
-        "-sample_fmt", "s16",
+        "-ar", "48000",
+        "-sample_fmt", "s32",
         "-y",
         outputPath,
       ];
@@ -3271,11 +3293,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         fs.unlink(inputPath, () => {});
       }
 
-      let masteredUrl: string;
+      const masteredUrl = `/uploads/mastered/${outputFilename}`;
       try {
-        masteredUrl = await uploadToObjectStorage(outputPath, outputFilename, "audio/wav");
+        const objectName = `mastered/${outputFilename}`;
+        const bucket = objectStorageClient.bucket(BUCKET_ID);
+        const cloudFile = bucket.file(objectName);
+        await cloudFile.save(fs.readFileSync(outputPath), { metadata: { contentType: "audio/wav" } });
+        console.log(`[MASTERING] Also backed up to cloud: ${objectName}`);
       } catch {
-        masteredUrl = `/uploads/mastered/${outputFilename}`;
+        console.log(`[MASTERING] Cloud backup skipped — local file ready`);
       }
 
       const masteringReq = await storage.createMasteringRequest({
@@ -3311,22 +3337,25 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     const filePath = path.join(masteredDir, req.params.filename);
     if (fs.existsSync(filePath)) {
       res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
+      res.set("Content-Type", "audio/wav");
       return res.sendFile(filePath);
     }
     try {
-      const objectName = `uploads/${req.params.filename}`;
       const bucket = objectStorageClient.bucket(BUCKET_ID);
-      const file = bucket.file(objectName);
-      const [exists] = await file.exists();
-      if (!exists) {
-        return res.status(404).json({ message: "File not found" });
+      const paths = [`mastered/${req.params.filename}`, `uploads/${req.params.filename}`, `uploads/mastered/${req.params.filename}`];
+      for (const objectName of paths) {
+        const file = bucket.file(objectName);
+        const [exists] = await file.exists();
+        if (exists) {
+          res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
+          res.set("Content-Type", "audio/wav");
+          const stream = file.createReadStream();
+          return stream.pipe(res);
+        }
       }
-      res.set("Content-Disposition", `attachment; filename="${req.params.filename}"`);
-      res.set("Content-Type", "audio/wav");
-      const stream = file.createReadStream();
-      stream.pipe(res);
+      return res.status(404).json({ message: "Mastered file not found" });
     } catch {
-      return res.status(404).json({ message: "File not found" });
+      return res.status(404).json({ message: "Mastered file not found" });
     }
   });
 
@@ -3894,6 +3923,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
         res.json({
           audioUrl,
+          taskId: audioId,
           sunoId: audioId,
           engine: "vocal",
           status: "READY",
@@ -5768,18 +5798,25 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const ffmpegArgs = [
         "-i", inputPath,
         "-af", [
-          "highpass=f=35",
-          "lowpass=f=17500",
-          "equalizer=f=200:t=q:w=2:g=-1.5",
+          "highpass=f=28",
+          "lowpass=f=19000",
+          "equalizer=f=60:t=q:w=1.2:g=3",
+          "equalizer=f=100:t=q:w=1.5:g=2.5",
+          "equalizer=f=200:t=q:w=1.8:g=1",
           "equalizer=f=400:t=q:w=1.5:g=-0.5",
-          "equalizer=f=3000:t=q:w=2:g=1",
-          "equalizer=f=10000:t=q:w=1.5:g=0.5",
-          "acompressor=threshold=-14dB:ratio=2.5:attack=10:release=80:makeup=1dB",
-          "alimiter=limit=0.92:level=false",
-          "loudnorm=I=-14:TP=-1.5:LRA=9:print_format=json",
+          "equalizer=f=800:t=q:w=2:g=-1",
+          "equalizer=f=2500:t=q:w=2:g=1.5",
+          "equalizer=f=5000:t=q:w=1.5:g=1",
+          "equalizer=f=8000:t=q:w=2:g=0.5",
+          "equalizer=f=12000:t=q:w=1.5:g=1",
+          "equalizer=f=16000:t=q:w=2:g=0.5",
+          "acompressor=threshold=-18dB:ratio=2:attack=15:release=150:makeup=2dB:knee=6dB",
+          "acompressor=threshold=-10dB:ratio=3:attack=5:release=50:makeup=1dB",
+          "alimiter=limit=0.95:level=false:attack=3:release=50",
+          "loudnorm=I=-11:TP=-1:LRA=8:print_format=json",
         ].join(","),
-        "-ar", "44100",
-        "-sample_fmt", "s16",
+        "-ar", "48000",
+        "-sample_fmt", "s32",
         "-y",
         outputPath,
       ];
@@ -5799,11 +5836,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         fs.unlink(inputPath, () => {});
       }
 
-      let masteredUrl: string;
+      const masteredUrl = `/uploads/mastered/${outputFilename}`;
       try {
-        masteredUrl = await uploadToObjectStorage(outputPath, outputFilename, "audio/wav");
+        const objectName = `mastered/${outputFilename}`;
+        const bucket = objectStorageClient.bucket(BUCKET_ID);
+        const cloudFile = bucket.file(objectName);
+        await cloudFile.save(fs.readFileSync(outputPath), { metadata: { contentType: "audio/wav" } });
+        console.log(`[MASTERING] Also backed up to cloud: ${objectName}`);
       } catch {
-        masteredUrl = `/uploads/mastered/${outputFilename}`;
+        console.log(`[MASTERING] Cloud backup skipped — local file ready`);
       }
 
       const updated = await storage.updateMasteringRequest(masteringReq.id, {

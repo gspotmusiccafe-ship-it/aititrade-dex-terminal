@@ -210,7 +210,7 @@ export async function textToSpeech(
 export async function performVocal(
   lyrics: string,
   style: string,
-  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "nova",
+  voice: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" = "onyx",
   format: "wav" | "mp3" | "flac" | "opus" | "pcm16" = "mp3"
 ): Promise<Buffer> {
   const formattedLyrics = lyrics
