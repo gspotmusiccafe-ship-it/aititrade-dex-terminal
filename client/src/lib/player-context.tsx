@@ -185,23 +185,29 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         sourceNodeRef.current = source;
 
         const preGain = ctx.createGain();
-        preGain.gain.value = 0.75;
+        preGain.gain.value = 0.68;
 
         const rumbleFilter = ctx.createBiquadFilter();
         rumbleFilter.type = "highpass";
         rumbleFilter.frequency.value = 30;
         rumbleFilter.Q.value = 0.7;
 
+        const subBass = ctx.createBiquadFilter();
+        subBass.type = "peaking";
+        subBass.frequency.value = 50;
+        subBass.Q.value = 0.8;
+        subBass.gain.value = 4.5;
+
         const bassShelf = ctx.createBiquadFilter();
         bassShelf.type = "lowshelf";
-        bassShelf.frequency.value = 100;
-        bassShelf.gain.value = 2.5;
+        bassShelf.frequency.value = 120;
+        bassShelf.gain.value = 4.0;
 
         const mudCut = ctx.createBiquadFilter();
         mudCut.type = "peaking";
         mudCut.frequency.value = 300;
         mudCut.Q.value = 0.6;
-        mudCut.gain.value = -1.5;
+        mudCut.gain.value = -2.0;
 
         const vocalPresence = ctx.createBiquadFilter();
         vocalPresence.type = "peaking";
@@ -233,7 +239,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
         source.connect(preGain);
         preGain.connect(rumbleFilter);
-        rumbleFilter.connect(bassShelf);
+        rumbleFilter.connect(subBass);
+        subBass.connect(bassShelf);
         bassShelf.connect(mudCut);
         mudCut.connect(vocalPresence);
         vocalPresence.connect(airShelf);
