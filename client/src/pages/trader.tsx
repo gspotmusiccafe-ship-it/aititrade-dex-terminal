@@ -252,11 +252,17 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
             const isHolding = pos.queueStatus === "HOLDING";
             const canTrade = isQueued || isHolding;
             const isPending = pendingAction === pos.id;
-            const seed = Math.sin((i + 1) * 7919 + oTick * 0.4) * 0.03 + Math.sin((i + 1) * 1301 + oTick * 0.7) * 0.015;
-            const baseOffer = pos.currentOffer || pos.buyBack;
-            const offer = parseFloat((baseOffer * (1 + seed)).toFixed(4));
-            const mult = parseFloat(((pos.currentMultiplier || 1.0) * (1 + seed * 0.5)).toFixed(3));
+            const wave1 = Math.sin((i + 1) * 7919 + oTick * 0.35);
+            const wave2 = Math.sin((i + 1) * 1301 + oTick * 0.6);
+            const wave3 = Math.sin((i + 1) * 4253 + oTick * 0.18);
+            const raw = wave1 * 0.55 + wave2 * 0.30 + wave3 * 0.15;
+            const biased = raw < 0 ? raw * 1.4 : raw * 2.2;
+            const swing = biased * 0.04;
+            const baseOffer = pos.buyIn;
+            const offer = parseFloat((baseOffer * (1 + swing)).toFixed(2));
+            const mult = parseFloat(((pos.currentMultiplier || 1.0) * (1 + swing * 0.5)).toFixed(3));
             const profitLoss = offer - pos.buyIn;
+            const roiPct = pos.buyIn > 0 ? Math.abs(profitLoss / pos.buyIn * 100).toFixed(1) : "0";
             const roiPositive = profitLoss >= 0;
 
             return (
@@ -299,7 +305,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
                     </div>
                     <div className={`flex items-center justify-end gap-1 ${roiPositive ? "text-emerald-400" : "text-red-400"}`}>
                       {roiPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                      <span className="text-[10px] font-black">{profitLoss >= 0 ? "+" : ""}${profitLoss.toFixed(2)} ({pos.roi}%)</span>
+                      <span className="text-[10px] font-black">{profitLoss >= 0 ? "+" : "-"}${Math.abs(profitLoss).toFixed(2)} ({roiPct}%)</span>
                     </div>
                   </div>
 
@@ -336,7 +342,7 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
           <Link href="/" className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 border border-emerald-500/30 px-2.5 py-1.5 hover:bg-emerald-500/10 transition-colors" data-testid="link-buy-more">
             <Zap className="h-3 w-3" /> BUY MORE ON FLOOR <ChevronRight className="h-2.5 w-2.5" />
           </Link>
-          <span className="text-[8px] text-emerald-500/40 font-mono">ACCEPT = LOCK PROFIT | HOLD = WAIT FOR HIGHER OFFER</span>
+          <span className="text-[8px] text-emerald-500/40 font-mono">ACCEPT = LOCK VALUE | HOLD = WAIT FOR THE BIG BOUNCE</span>
         </div>
       </div>
 
