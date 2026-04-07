@@ -683,6 +683,13 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   const [showP2P, setShowP2P] = useState(false);
   const flashTriggeredRef = useRef(false);
   const { toast } = useToast();
+  const [cTick, setCTick] = useState(0);
+  const cardSeed = parseInt(String(track.id).replace(/\D/g, '').slice(0, 6) || '42') % 9999;
+
+  useEffect(() => {
+    const iv = setInterval(() => setCTick(t => t + 1), 800);
+    return () => clearInterval(iv);
+  }, []);
 
   const { data: kineticState } = useQuery<{
     floorROI: number;
@@ -741,6 +748,24 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
   const portal = getPortal(price);
   const poolCeiling = isGlobal ? CEILING : portal.pool;
   const ptCap = poolCeiling * 0.50;
+
+  const w1 = Math.sin(cardSeed * 7919 + cTick * 0.28);
+  const w2 = Math.sin(cardSeed * 1301 + cTick * 0.53);
+  const w3 = Math.sin(cardSeed * 4253 + cTick * 0.14);
+  const w4 = Math.sin(cardSeed * 9137 + cTick * 0.91);
+  const rawOsc = w1 * 0.4 + w2 * 0.25 + w3 * 0.2 + w4 * 0.15;
+  const spikeOsc = w4 > 0.85 ? (w4 - 0.85) * 6.0 : 0;
+  const crashOsc = w1 < -0.7 && w2 < 0 ? (Math.abs(w1) - 0.7) * 2.5 : 0;
+  const pctOsc = rawOsc < 0
+    ? rawOsc * 0.30 - crashOsc * 0.15
+    : rawOsc * 0.50 + spikeOsc * 0.60;
+  const clampOsc = Math.max(-0.18, Math.min(1.0, pctOsc));
+
+  const liveOffer = parseFloat((price * (1 + clampOsc)).toFixed(2));
+  const livePL = liveOffer - price;
+  const liveRoiPct = price > 0 ? Math.abs(livePL / price * 100).toFixed(1) : "0";
+  const liveUp = livePL >= 0;
+
   const liveMbbp = engineMbbp;
   const liveDiscount = engineDiscount;
   const mbbpDollar = parseFloat((liveMbbp * price).toFixed(2));
@@ -827,7 +852,7 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             )}
           </div>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <span className={`text-[10px] sm:text-[11px] font-extrabold ${priceClass}`}>{priceLabel}</span>
+            <span className={`text-[10px] sm:text-[11px] font-extrabold ${liveUp ? "text-lime-400" : "text-red-400"}`}>${liveOffer.toFixed(2)}</span>
             {isGlobal ? (
               <span className="text-[7px] sm:text-[9px] px-1 py-0.5 bg-amber-500/10 text-amber-400 font-extrabold flex items-center gap-0.5">
                 <Shield className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> VAULT
@@ -924,8 +949,9 @@ function AssetCard({ track, onPlay, settlement, enginePrice, engineMbbp, engineD
             <p className="text-[10px] sm:text-xs text-white font-extrabold">{sales.toLocaleString()}</p>
           </div>
           <div className="bg-emerald-950/60 p-1 sm:p-1.5 border border-emerald-500/15">
-            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">BUY-IN</p>
-            <p className={`text-[10px] sm:text-xs font-extrabold ${priceClass}`}>{priceLabel}</p>
+            <p className="text-[8px] sm:text-[10px] text-emerald-400/70 font-bold">LIVE OFFER</p>
+            <p className={`text-[10px] sm:text-xs font-extrabold ${liveUp ? "text-lime-400" : "text-red-400"}`}>${liveOffer.toFixed(2)}</p>
+            <p className={`text-[7px] font-bold ${liveUp ? "text-emerald-400" : "text-red-400"}`}>{liveUp ? "+" : "-"}${Math.abs(livePL).toFixed(2)} ({liveRoiPct}%)</p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-0.5 sm:gap-1 mb-1.5 sm:mb-2 text-center">
