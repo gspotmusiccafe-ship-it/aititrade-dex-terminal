@@ -5047,16 +5047,20 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     const t = Date.now() / 1000;
     const seed = listing.id ? listing.id.charCodeAt(0) * 4793 + (listing.id.charCodeAt(2) || 0) * 2311 : 0;
 
-    const momentumWave = Math.sin(seed + t * 0.0003) * 0.5 + 0.5;
-    const demandCurve = Math.min(2.0, volume * 0.02);
-    const scarcityPremium = 1.5 + momentumWave * 1.5;
-    const highWaterMark = Math.max(high, current) * 1.2;
+    const longWave = Math.sin(seed + t * 0.00008) * 0.5 + 0.5;
+    const midWave = Math.sin(seed * 0.6 + t * 0.00025) * 0.5 + 0.5;
+    const shortPulse = Math.sin(seed * 1.3 + t * 0.0009) * 0.3 + 0.7;
 
-    const rawTarget = current * scarcityPremium + demandCurve + highWaterMark * 0.3;
-    const jitter = Math.sin(seed * 1.7 + t * 0.0007) * 0.1 + 1.0;
+    const demandCurve = Math.min(5.0, volume * 0.05);
+    const scarcityPremium = 2.5 + longWave * 3.0 + midWave * 1.5;
+    const highWaterMark = Math.max(high, current) * 1.6;
+    const growthFactor = 1.0 + (base >= 4 ? 1.8 : base >= 2 ? 1.2 : 0.8);
+
+    const rawTarget = current * scarcityPremium * growthFactor + demandCurve + highWaterMark * 0.5;
+    const jitter = shortPulse * (Math.sin(seed * 2.3 + t * 0.0004) * 0.08 + 1.0);
     const target = rawTarget * jitter;
 
-    return Math.max(current * 1.5, parseFloat(target.toFixed(2)));
+    return Math.max(current * 2.5, parseFloat(target.toFixed(2)));
   }
 
   function getAnalystSignal(listing: any): { signal: string; momentum: string } {
