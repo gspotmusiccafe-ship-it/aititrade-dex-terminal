@@ -2814,6 +2814,7 @@ function NativeOrderTab() {
         <div className="space-y-2">
           {localOrder.map((track) => (
             <div key={track.id} className="bg-black border border-zinc-800 px-3 py-2" data-testid={`video-url-row-${track.id}`}>
+              <p className="text-[9px] text-amber-400 font-bold mb-1.5 tracking-wider">{track.title} — {track.artist?.name || "UNKNOWN"}</p>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
