@@ -185,107 +185,132 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
         sourceNodeRef.current = source;
 
         const preGain = ctx.createGain();
-        preGain.gain.value = 0.88;
+        preGain.gain.value = 0.82;
 
-        const subRumble = ctx.createBiquadFilter();
-        subRumble.type = "highpass";
-        subRumble.frequency.value = 30;
-        subRumble.Q.value = 0.5;
+        const rumbleFilter = ctx.createBiquadFilter();
+        rumbleFilter.type = "highpass";
+        rumbleFilter.frequency.value = 25;
+        rumbleFilter.Q.value = 0.7;
 
         const subBass = ctx.createBiquadFilter();
         subBass.type = "peaking";
-        subBass.frequency.value = 60;
-        subBass.Q.value = 1.0;
-        subBass.gain.value = 6.0;
+        subBass.frequency.value = 45;
+        subBass.Q.value = 0.9;
+        subBass.gain.value = 7.5;
 
-        const bass = ctx.createBiquadFilter();
-        bass.type = "lowshelf";
-        bass.frequency.value = 140;
-        bass.gain.value = 5.0;
+        const bassBody = ctx.createBiquadFilter();
+        bassBody.type = "peaking";
+        bassBody.frequency.value = 80;
+        bassBody.Q.value = 0.7;
+        bassBody.gain.value = 6.0;
 
-        const warmth = ctx.createBiquadFilter();
-        warmth.type = "peaking";
-        warmth.frequency.value = 280;
-        warmth.Q.value = 0.8;
-        warmth.gain.value = 3.0;
+        const bassPunch = ctx.createBiquadFilter();
+        bassPunch.type = "peaking";
+        bassPunch.frequency.value = 120;
+        bassPunch.Q.value = 1.2;
+        bassPunch.gain.value = 4.5;
 
-        const body = ctx.createBiquadFilter();
-        body.type = "peaking";
-        body.frequency.value = 450;
-        body.Q.value = 0.6;
-        body.gain.value = 1.5;
+        const bassShelf = ctx.createBiquadFilter();
+        bassShelf.type = "lowshelf";
+        bassShelf.frequency.value = 160;
+        bassShelf.gain.value = 3.5;
 
-        const lowMid = ctx.createBiquadFilter();
-        lowMid.type = "peaking";
-        lowMid.frequency.value = 800;
-        lowMid.Q.value = 0.7;
-        lowMid.gain.value = 1.0;
+        const mudCut = ctx.createBiquadFilter();
+        mudCut.type = "peaking";
+        mudCut.frequency.value = 300;
+        mudCut.Q.value = 0.8;
+        mudCut.gain.value = -2.5;
 
-        const midClarity = ctx.createBiquadFilter();
-        midClarity.type = "peaking";
-        midClarity.frequency.value = 2000;
-        midClarity.Q.value = 0.5;
-        midClarity.gain.value = 1.5;
+        const boxCut = ctx.createBiquadFilter();
+        boxCut.type = "peaking";
+        boxCut.frequency.value = 500;
+        boxCut.Q.value = 0.6;
+        boxCut.gain.value = -1.0;
 
-        const presence = ctx.createBiquadFilter();
-        presence.type = "peaking";
-        presence.frequency.value = 4000;
-        presence.Q.value = 0.8;
-        presence.gain.value = 2.0;
+        const vocalWarmth = ctx.createBiquadFilter();
+        vocalWarmth.type = "peaking";
+        vocalWarmth.frequency.value = 900;
+        vocalWarmth.Q.value = 0.5;
+        vocalWarmth.gain.value = 1.5;
 
-        const brilliance = ctx.createBiquadFilter();
-        brilliance.type = "peaking";
-        brilliance.frequency.value = 8000;
-        brilliance.Q.value = 0.6;
-        brilliance.gain.value = 1.5;
+        const vocalPresence = ctx.createBiquadFilter();
+        vocalPresence.type = "peaking";
+        vocalPresence.frequency.value = 2500;
+        vocalPresence.Q.value = 0.6;
+        vocalPresence.gain.value = 3.0;
 
-        const air = ctx.createBiquadFilter();
-        air.type = "highshelf";
-        air.frequency.value = 12000;
-        air.gain.value = 2.5;
+        const vocalClarity = ctx.createBiquadFilter();
+        vocalClarity.type = "peaking";
+        vocalClarity.frequency.value = 4000;
+        vocalClarity.Q.value = 0.7;
+        vocalClarity.gain.value = 2.5;
 
         const deEsser = ctx.createBiquadFilter();
         deEsser.type = "peaking";
         deEsser.frequency.value = 6500;
-        deEsser.Q.value = 3.0;
-        deEsser.gain.value = -2.0;
+        deEsser.Q.value = 4.0;
+        deEsser.gain.value = -3.0;
 
-        const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.value = -18;
-        compressor.knee.value = 8;
-        compressor.ratio.value = 4;
-        compressor.attack.value = 0.003;
-        compressor.release.value = 0.120;
+        const trebleCrisp = ctx.createBiquadFilter();
+        trebleCrisp.type = "peaking";
+        trebleCrisp.frequency.value = 8000;
+        trebleCrisp.Q.value = 0.5;
+        trebleCrisp.gain.value = 3.5;
+
+        const hiHatSparkle = ctx.createBiquadFilter();
+        hiHatSparkle.type = "peaking";
+        hiHatSparkle.frequency.value = 12000;
+        hiHatSparkle.Q.value = 0.6;
+        hiHatSparkle.gain.value = 4.0;
+
+        const airShelf = ctx.createBiquadFilter();
+        airShelf.type = "highshelf";
+        airShelf.frequency.value = 14000;
+        airShelf.gain.value = 3.0;
+
+        const bassComp = ctx.createDynamicsCompressor();
+        bassComp.threshold.value = -24;
+        bassComp.knee.value = 6;
+        bassComp.ratio.value = 3;
+        bassComp.attack.value = 0.008;
+        bassComp.release.value = 0.150;
+
+        const masterComp = ctx.createDynamicsCompressor();
+        masterComp.threshold.value = -14;
+        masterComp.knee.value = 10;
+        masterComp.ratio.value = 3.5;
+        masterComp.attack.value = 0.005;
+        masterComp.release.value = 0.100;
 
         const limiter = ctx.createDynamicsCompressor();
-        limiter.threshold.value = -2;
+        limiter.threshold.value = -1.5;
         limiter.knee.value = 0;
         limiter.ratio.value = 20;
-        limiter.attack.value = 0.001;
-        limiter.release.value = 0.050;
-
-        const stereoWidth = ctx.createStereoPanner();
-        stereoWidth.pan.value = 0;
+        limiter.attack.value = 0.0005;
+        limiter.release.value = 0.040;
 
         const postGain = ctx.createGain();
-        postGain.gain.value = 0.95;
+        postGain.gain.value = 0.92;
 
         source.connect(preGain);
-        preGain.connect(subRumble);
-        subRumble.connect(subBass);
-        subBass.connect(bass);
-        bass.connect(warmth);
-        warmth.connect(body);
-        body.connect(lowMid);
-        lowMid.connect(midClarity);
-        midClarity.connect(presence);
-        presence.connect(brilliance);
-        brilliance.connect(air);
-        air.connect(deEsser);
-        deEsser.connect(compressor);
-        compressor.connect(limiter);
-        limiter.connect(stereoWidth);
-        stereoWidth.connect(postGain);
+        preGain.connect(rumbleFilter);
+        rumbleFilter.connect(subBass);
+        subBass.connect(bassBody);
+        bassBody.connect(bassPunch);
+        bassPunch.connect(bassShelf);
+        bassShelf.connect(bassComp);
+        bassComp.connect(mudCut);
+        mudCut.connect(boxCut);
+        boxCut.connect(vocalWarmth);
+        vocalWarmth.connect(vocalPresence);
+        vocalPresence.connect(vocalClarity);
+        vocalClarity.connect(deEsser);
+        deEsser.connect(trebleCrisp);
+        trebleCrisp.connect(hiHatSparkle);
+        hiHatSparkle.connect(airShelf);
+        airShelf.connect(masterComp);
+        masterComp.connect(limiter);
+        limiter.connect(postGain);
         postGain.connect(ctx.destination);
       } catch (e) {
         console.warn("Web Audio EQ not available, using direct playback");
