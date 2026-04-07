@@ -7,7 +7,7 @@ import { Link } from "wouter";
 import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Tag, BarChart3,
   Trophy, Loader2, ArrowUpRight, ArrowDownRight, Activity, Zap,
-  Crown, Star, Medal, Eye, X, RefreshCw, ChevronRight, Music
+  Crown, Star, Medal, Eye, X, RefreshCw, ChevronRight, Music, QrCode, ExternalLink
 } from "lucide-react";
 
 interface MarketListing {
@@ -158,13 +158,158 @@ function StockCard({ listing, onBuy, buying }: { listing: MarketListing; onBuy: 
           <button
             onClick={() => onBuy(listing.id)}
             disabled={buying}
-            className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 transition-all disabled:opacity-50"
-            style={{ boxShadow: "0 0 10px rgba(16,185,129,0.2)" }}
+            className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black bg-green-600 hover:bg-green-500 text-white border border-green-500 transition-all disabled:opacity-50"
+            style={{ boxShadow: "0 0 10px rgba(34,197,94,0.25)" }}
             data-testid={`btn-buy-${listing.id}`}
           >
-            {buying ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
-            BUY
+            {buying ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
+            BUY — CASH APP
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClose: () => void }) {
+  const { toast } = useToast();
+  const [processing, setProcessing] = useState(false);
+  const [buyData, setBuyData] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const price = listing.livePrice;
+
+  const handleLockPosition = async () => {
+    try {
+      setProcessing(true);
+      setError(null);
+      const res = await apiRequest("POST", "/api/market/buy", { listingId: listing.id });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Purchase failed");
+      setBuyData(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/market/portfolio"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/market/leaderboard"] });
+      toast({ title: "POSITION LOCKED", description: `${data.trackingNumber} — Send $${data.price.toFixed(2)} to ${data.cashtag}` });
+    } catch (e: any) {
+      setError(e.message || "Failed to lock position");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-black border-2 border-green-500/60 font-mono max-w-sm w-full shadow-2xl shadow-green-500/20 relative max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()} data-testid="market-cashapp-dialog">
+        <div className="border-b border-green-500/30 px-4 py-2.5 flex items-center justify-between bg-green-950/80 sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-green-400" />
+            <span className="text-[11px] text-green-400 font-bold tracking-wider">MUSIC MARKET — CASH APP</span>
+          </div>
+          <button onClick={onClose} className="text-green-500/40 hover:text-green-400" data-testid="btn-close-cashapp"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="p-5 space-y-4">
+          <div className="border border-green-400/20 bg-green-950/30 p-3 text-center">
+            <p className="text-[9px] text-green-400 font-black tracking-wider">AITITRADE BROKERAGE — MARKET ORDER</p>
+          </div>
+
+          <div className="flex items-center gap-3 border border-green-500/15 bg-green-950/20 p-3">
+            {listing.coverImage ? (
+              <img src={listing.coverImage} alt="" className="w-14 h-14 border border-zinc-800 flex-shrink-0" />
+            ) : (
+              <div className="w-14 h-14 bg-gradient-to-br from-emerald-950 to-black border border-zinc-800 flex items-center justify-center flex-shrink-0">
+                <Music className="h-6 w-6 text-emerald-500/40" />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-black truncate">{listing.title}</p>
+              <p className="text-zinc-500 text-[9px] truncate">{listing.artistName}</p>
+              {listing.genre && <span className="text-[7px] text-emerald-500/50 uppercase">{listing.genre}</span>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-center">
+            <div className="bg-green-950/40 border border-green-500/15 p-2.5">
+              <p className="text-[8px] text-green-500/40 tracking-wider">ASSET</p>
+              <p className="text-sm text-green-400 font-bold mt-0.5 truncate">{listing.title.slice(0, 12)}</p>
+            </div>
+            <div className="bg-green-950/40 border border-green-500/15 p-2.5">
+              <p className="text-[8px] text-green-500/40 tracking-wider">MARKET PRICE</p>
+              <p className="text-xl text-green-400 font-black mt-0.5">${(buyData?.price || price).toFixed(2)}</p>
+            </div>
+          </div>
+
+          <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">
+            <p className="text-[9px] text-green-400/70 tracking-wider mb-1">SEND PAYMENT TO</p>
+            <p className="text-lg sm:text-2xl text-green-400 font-black tracking-normal sm:tracking-wider truncate">$AITITRADEBROKERAGE</p>
+            <p className="text-[8px] text-green-500/50 mt-1">VIA CASH APP</p>
+          </div>
+
+          <div className="border border-green-500/20 bg-green-950/30 p-2.5 text-center">
+            <p className="text-[9px] text-green-500/50">POSITION LOCKS AT CURRENT MARKET PRICE</p>
+            <p className="text-[8px] text-emerald-500/40 mt-1">ONCE PAID, YOUR SONG POSITION IS SECURED</p>
+          </div>
+
+          {buyData && (
+            <>
+              <div className="border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-center">
+                <p className="text-[8px] text-emerald-500/50 tracking-wider">TRACKING NUMBER</p>
+                <p className="text-sm text-emerald-400 font-black" data-testid="text-tracking-number">{buyData.trackingNumber}</p>
+                <p className="text-[8px] text-emerald-500/30 mt-1">INCLUDE IN CASH APP NOTE</p>
+              </div>
+
+              <div className="border-2 border-green-500/50 bg-green-950/30 p-4 text-center">
+                <p className="text-[9px] text-green-400/70 tracking-wider mb-2">SCAN TO PAY VIA CASH APP</p>
+                <div className="bg-white p-3 inline-block mx-auto">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(buyData.cashAppUrl)}`}
+                    alt="Cash App QR Code"
+                    className="w-[180px] h-[180px]"
+                    data-testid="img-market-cashapp-qr"
+                  />
+                </div>
+                <p className="text-base sm:text-lg text-green-400 font-black mt-2 truncate">$AITITRADEBROKERAGE</p>
+                <p className="text-[10px] text-green-400/60 mt-1">AMOUNT: ${buyData.price.toFixed(2)}</p>
+              </div>
+
+              <div className="text-center">
+                <p className="text-[8px] text-emerald-500/60">Or tap below to open Cash App directly</p>
+                <a
+                  href={buyData.cashAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 mt-2 px-6 py-2.5 bg-green-600 hover:bg-green-500 text-white font-black text-[11px] tracking-wider transition-colors"
+                  data-testid="link-market-cashapp-pay"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  OPEN CASH APP — ${buyData.price.toFixed(2)}
+                </a>
+              </div>
+            </>
+          )}
+
+          {error && (
+            <div className="border border-red-500/30 bg-red-500/10 p-2 text-center">
+              <p className="text-[10px] text-red-400 font-bold">{error}</p>
+            </div>
+          )}
+
+          {processing ? (
+            <div className="border border-green-500/30 bg-green-950/30 p-3 text-center">
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-[11px] text-green-400 font-bold animate-pulse">LOCKING POSITION...</p>
+              </div>
+            </div>
+          ) : !buyData ? (
+            <button
+              onClick={handleLockPosition}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 text-sm tracking-wider transition-colors"
+              data-testid="btn-lock-market-position"
+            >
+              <DollarSign className="h-4 w-4 inline mr-1" />
+              LOCK POSITION — ${price.toFixed(2)}
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
@@ -391,33 +536,16 @@ export default function MusicMarketPage() {
   const { toast } = useToast();
   const [showPortfolio, setShowPortfolio] = useState(false);
   const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [buyDialogListing, setBuyDialogListing] = useState<MarketListing | null>(null);
 
   const { data: listings, isLoading } = useQuery<MarketListing[]>({
     queryKey: ["/api/market/listings"],
     refetchInterval: 8000,
   });
 
-  const buyMut = useMutation({
-    mutationFn: async (listingId: string) => {
-      const res = await apiRequest("POST", "/api/market/buy", { listingId });
-      return res.json();
-    },
-    onSuccess: (data: any) => {
-      toast({ title: "PURCHASED!", description: data.message });
-      queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/market/portfolio"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/market/leaderboard"] });
-      setBuyingId(null);
-    },
-    onError: (err: any) => {
-      toast({ title: "BUY FAILED", description: err.message || "Could not complete purchase", variant: "destructive" });
-      setBuyingId(null);
-    },
-  });
-
   const handleBuy = (listingId: string) => {
-    setBuyingId(listingId);
-    buyMut.mutate(listingId);
+    const listing = listings?.find(l => l.id === listingId);
+    if (listing) setBuyDialogListing(listing);
   };
 
   if (isLoading) {
@@ -525,7 +653,7 @@ export default function MusicMarketPage() {
                   key={listing.id}
                   listing={listing}
                   onBuy={handleBuy}
-                  buying={buyingId === listing.id && buyMut.isPending}
+                  buying={false}
                 />
               ))}
             </div>
@@ -553,6 +681,13 @@ export default function MusicMarketPage() {
           )}
         </div>
       </div>
+
+      {buyDialogListing && (
+        <CashAppBuyDialog
+          listing={buyDialogListing}
+          onClose={() => setBuyDialogListing(null)}
+        />
+      )}
     </div>
   );
 }

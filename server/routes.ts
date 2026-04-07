@@ -5102,34 +5102,70 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         price = getMarketPrice(listing);
       }
 
-      const [holding] = await db.insert(marketHoldings).values({
-        userId,
-        listingId,
-        purchasePrice: price.toFixed(2),
-        quantity: 1,
-        listedForSale: false,
-      }).returning();
+      const trackingNumber = `MKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const cashtag = "$AITITRADEBROKERAGE";
+      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${price.toFixed(2)}`;
 
-      await db.insert(marketTransactions).values({
-        listingId,
-        buyerId: userId,
-        sellerId,
-        price: price.toFixed(2),
-        type: fromResaleId ? "RESALE" : "BUY",
+      const userRecord = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
+
+      const result = await db.transaction(async (tx) => {
+        const [holding] = await tx.insert(marketHoldings).values({
+          userId,
+          listingId,
+          purchasePrice: price.toFixed(2),
+          quantity: 1,
+          listedForSale: false,
+        }).returning();
+
+        await tx.insert(marketTransactions).values({
+          listingId,
+          buyerId: userId,
+          sellerId,
+          price: price.toFixed(2),
+          type: fromResaleId ? "RESALE" : "BUY",
+        });
+
+        if (listing.trackId) {
+          await tx.insert(orders).values({
+            trackId: listing.trackId,
+            trackingNumber,
+            buyerEmail: userRecord?.email || userId,
+            buyerName: userRecord?.displayName || userRecord?.username || "Market Buyer",
+            buyerCashTag: userRecord?.cashTag || null,
+            unitPrice: price.toFixed(2),
+            creatorCredit: "0.00",
+            status: "confirmed",
+            portalName: "MUSIC_MARKET",
+          });
+        }
+
+        const newHigh = Math.max(parseFloat(listing.highPrice || "0"), price);
+        const newLow = listing.lowPrice && parseFloat(listing.lowPrice) > 0
+          ? Math.min(parseFloat(listing.lowPrice), price) : price;
+        await tx.update(marketListings).set({
+          currentPrice: price.toFixed(2),
+          highPrice: newHigh.toFixed(2),
+          lowPrice: newLow.toFixed(2),
+          volume: sql`COALESCE(${marketListings.volume}, 0) + 1`,
+          totalSold: sql`COALESCE(${marketListings.totalSold}, 0) + 1`,
+        }).where(eq(marketListings.id, listingId));
+
+        return holding;
       });
 
-      const newHigh = Math.max(parseFloat(listing.highPrice || "0"), price);
-      const newLow = listing.lowPrice && parseFloat(listing.lowPrice) > 0
-        ? Math.min(parseFloat(listing.lowPrice), price) : price;
-      await db.update(marketListings).set({
-        currentPrice: price.toFixed(2),
-        highPrice: newHigh.toFixed(2),
-        lowPrice: newLow.toFixed(2),
-        volume: sql`COALESCE(${marketListings.volume}, 0) + 1`,
-        totalSold: sql`COALESCE(${marketListings.totalSold}, 0) + 1`,
-      }).where(eq(marketListings.id, listingId));
+      logEvent("MARKET_BUY", `${userRecord?.displayName || userId} bought "${listing.title}" at $${price.toFixed(2)} — ${trackingNumber}`);
 
-      res.json({ success: true, holding, price, message: `Acquired "${listing.title}" at $${price.toFixed(2)}` });
+      res.json({
+        success: true,
+        holding: result,
+        price,
+        trackingNumber,
+        cashtag,
+        cashAppUrl,
+        title: listing.title,
+        artistName: listing.artistName,
+        message: `Position locked for "${listing.title}" at $${price.toFixed(2)} — Send payment to ${cashtag}`,
+      });
     } catch (error) {
       console.error("Market buy error:", error);
       res.status(500).json({ message: "Purchase failed" });
