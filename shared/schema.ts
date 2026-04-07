@@ -526,6 +526,7 @@ export const marketListings = pgTable("market_listings", {
   lowPrice: decimal("low_price", { precision: 10, scale: 2 }).notNull().default("1.00"),
   volume: integer("volume").default(0),
   totalSold: integer("total_sold").default(0),
+  maxSupply: integer("max_supply").default(25),
   active: boolean("active").default(true),
   createdAt: timestamp("created_at").defaultNow(),
 });

@@ -27,6 +27,11 @@ interface MarketListing {
   momentum: string;
   volume: number;
   totalSold: number;
+  maxSupply: number;
+  holders: number;
+  seatsLeft: number;
+  poolFull: boolean;
+  resaleCount: number;
 }
 
 interface PortfolioItem {
@@ -170,6 +175,24 @@ function StockCard({ listing, onBuy, buying }: { listing: MarketListing; onBuy: 
           </div>
         </div>
 
+        <div className={`px-2 py-1.5 mt-1.5 flex items-center justify-between border ${listing.poolFull ? "bg-red-950/20 border-red-500/30" : "bg-emerald-950/20 border-emerald-500/20"}`} data-testid={`pool-status-${listing.id}`}>
+          <div className="flex items-center gap-2">
+            <span className="text-[8px] font-bold text-zinc-400">POOL</span>
+            <div className="w-20 h-1.5 bg-zinc-800 overflow-hidden">
+              <div
+                className={`h-full transition-all ${listing.poolFull ? "bg-red-500" : listing.seatsLeft <= 5 ? "bg-amber-500" : "bg-emerald-500"}`}
+                style={{ width: `${Math.min(100, (listing.holders / listing.maxSupply) * 100)}%` }}
+              />
+            </div>
+            <span className={`text-[9px] font-black ${listing.poolFull ? "text-red-400" : listing.seatsLeft <= 5 ? "text-amber-400" : "text-emerald-400"}`}>
+              {listing.holders}/{listing.maxSupply}
+            </span>
+          </div>
+          <span className={`text-[8px] font-black px-1.5 py-0.5 border ${listing.poolFull ? "text-red-400 border-red-500/40 bg-red-500/10" : listing.seatsLeft <= 5 ? "text-amber-400 border-amber-500/40 bg-amber-500/10" : "text-emerald-400 border-emerald-500/40 bg-emerald-500/10"}`}>
+            {listing.poolFull ? "SOLD OUT — RESALE ONLY" : listing.seatsLeft <= 5 ? `${listing.seatsLeft} SEATS LEFT` : `${listing.seatsLeft} SEATS OPEN`}
+          </span>
+        </div>
+
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/60">
           <div className="flex items-center gap-3">
             <MiniChart listing={listing} />
@@ -179,16 +202,36 @@ function StockCard({ listing, onBuy, buying }: { listing: MarketListing; onBuy: 
               <div>VOL: <span className="text-amber-400">{listing.volume}</span></div>
             </div>
           </div>
-          <button
-            onClick={() => onBuy(listing.id)}
-            disabled={buying}
-            className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black bg-green-600 hover:bg-green-500 text-white border border-green-500 transition-all disabled:opacity-50"
-            style={{ boxShadow: "0 0 10px rgba(34,197,94,0.25)" }}
-            data-testid={`btn-buy-${listing.id}`}
-          >
-            {buying ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
-            BUY — CASH APP
-          </button>
+          {listing.poolFull ? (
+            <div className="text-center">
+              <p className="text-[8px] text-red-400/60 mb-0.5">BUY FROM OWNERS</p>
+              {listing.resaleCount > 0 ? (
+                <button
+                  onClick={() => onBuy(listing.id)}
+                  disabled={buying}
+                  className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black bg-violet-600 hover:bg-violet-500 text-white border border-violet-500 transition-all disabled:opacity-50"
+                  style={{ boxShadow: "0 0 10px rgba(139,92,246,0.25)" }}
+                  data-testid={`btn-resale-${listing.id}`}
+                >
+                  {buying ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
+                  {listing.resaleCount} FOR SALE
+                </button>
+              ) : (
+                <span className="text-[9px] text-zinc-500 font-bold px-3 py-2 border border-zinc-700 bg-zinc-900">NO OFFERS YET</span>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => onBuy(listing.id)}
+              disabled={buying}
+              className="flex items-center gap-1.5 px-4 py-2 text-[10px] font-black bg-green-600 hover:bg-green-500 text-white border border-green-500 transition-all disabled:opacity-50"
+              style={{ boxShadow: "0 0 10px rgba(34,197,94,0.25)" }}
+              data-testid={`btn-buy-${listing.id}`}
+            >
+              {buying ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
+              BUY — CASH APP
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -202,12 +245,31 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
   const [error, setError] = useState<string | null>(null);
   const price = listing.livePrice;
 
-  const handleLockPosition = async () => {
+  const [resaleOffers, setResaleOffers] = useState<any[]>([]);
+  const [poolFullState, setPoolFullState] = useState(listing.poolFull || false);
+
+  const loadResaleOffers = async () => {
+    try {
+      const res = await fetch(`/api/market/listings/${listing.id}`);
+      const data = await res.json();
+      setResaleOffers(data.resaleOffers || []);
+    } catch {}
+  };
+
+  const handleLockPosition = async (fromResaleId?: string) => {
     try {
       setProcessing(true);
       setError(null);
-      const res = await apiRequest("POST", "/api/market/buy", { listingId: listing.id });
+      const body: any = { listingId: listing.id };
+      if (fromResaleId) body.fromResaleId = fromResaleId;
+      const res = await apiRequest("POST", "/api/market/buy", body);
       const data = await res.json();
+      if (data.poolFull) {
+        setPoolFullState(true);
+        setError(data.message);
+        await loadResaleOffers();
+        return;
+      }
       if (!data.success) throw new Error(data.message || "Purchase failed");
       setBuyData(data);
       queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
@@ -220,6 +282,10 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
       setProcessing(false);
     }
   };
+
+  useEffect(() => {
+    if (listing.poolFull) loadResaleOffers();
+  }, [listing.poolFull]);
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4" onClick={onClose}>
@@ -234,6 +300,19 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
         <div className="p-5 space-y-4">
           <div className="border border-green-400/20 bg-green-950/30 p-3 text-center">
             <p className="text-[9px] text-green-400 font-black tracking-wider">AITITRADE BROKERAGE — MARKET ORDER</p>
+          </div>
+
+          <div className={`flex items-center justify-between px-3 py-2 border ${poolFullState ? "border-red-500/30 bg-red-950/20" : "border-emerald-500/20 bg-emerald-950/20"}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-bold text-zinc-400">POOL</span>
+              <div className="w-16 h-1.5 bg-zinc-800 overflow-hidden">
+                <div className={`h-full ${poolFullState ? "bg-red-500" : listing.seatsLeft <= 5 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.min(100, (listing.holders / listing.maxSupply) * 100)}%` }} />
+              </div>
+              <span className={`text-[9px] font-black ${poolFullState ? "text-red-400" : "text-emerald-400"}`}>{listing.holders}/{listing.maxSupply}</span>
+            </div>
+            <span className={`text-[8px] font-black ${poolFullState ? "text-red-400" : "text-emerald-400"}`}>
+              {poolFullState ? "SOLD OUT" : `${listing.seatsLeft} SEATS LEFT`}
+            </span>
           </div>
 
           <div className="flex items-center gap-3 border border-green-500/15 bg-green-950/20 p-3">
@@ -327,6 +406,39 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
             </div>
           )}
 
+          {poolFullState && resaleOffers.length > 0 && !buyData && (
+            <div className="border-2 border-violet-500/40 bg-violet-950/20 p-3 space-y-2" data-testid="resale-board">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="h-3.5 w-3.5 text-violet-400" />
+                <span className="text-[10px] text-violet-400 font-black tracking-wider">RESALE BOARD — BUY FROM OWNERS</span>
+              </div>
+              {resaleOffers.map((offer: any) => (
+                <div key={offer.id} className="flex items-center justify-between border border-violet-500/20 bg-violet-950/30 px-3 py-2">
+                  <div>
+                    <p className="text-[9px] text-zinc-400">SELLER OFFER</p>
+                    <p className="text-sm text-violet-400 font-black">${parseFloat(offer.askPrice).toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => handleLockPosition(offer.id)}
+                    disabled={processing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black bg-violet-600 hover:bg-violet-500 text-white border border-violet-500 transition-all disabled:opacity-50"
+                    data-testid={`btn-buy-resale-${offer.id}`}
+                  >
+                    {processing ? <Loader2 className="h-3 w-3 animate-spin" /> : <DollarSign className="h-3 w-3" />}
+                    BUY THIS OFFER
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {poolFullState && resaleOffers.length === 0 && !buyData && (
+            <div className="border border-zinc-700 bg-zinc-900/50 p-3 text-center">
+              <p className="text-[10px] text-zinc-400 font-bold">POOL FULL — NO RESALE OFFERS YET</p>
+              <p className="text-[8px] text-zinc-500 mt-1">Check back later — owners may list their position for sale</p>
+            </div>
+          )}
+
           {processing ? (
             <div className="border border-green-500/30 bg-green-950/30 p-3 text-center">
               <div className="flex items-center justify-center gap-2">
@@ -334,9 +446,9 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
                 <p className="text-[11px] text-green-400 font-bold animate-pulse">LOCKING POSITION...</p>
               </div>
             </div>
-          ) : !buyData ? (
+          ) : !buyData && !poolFullState ? (
             <button
-              onClick={handleLockPosition}
+              onClick={() => handleLockPosition()}
               className="w-full bg-green-600 hover:bg-green-700 text-white font-black py-3 text-sm tracking-wider transition-colors"
               data-testid="btn-lock-market-position"
             >

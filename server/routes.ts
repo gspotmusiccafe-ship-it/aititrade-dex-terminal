@@ -122,6 +122,7 @@ export async function registerRoutes(
       for (const row of allTracks) {
         if (existingIds.has(row.tracks.id)) continue;
         const price = parseFloat(row.tracks.unitPrice || "2.00");
+        const poolSize = price >= 4 ? 15 : price >= 2 ? 20 : 25;
         await db.insert(marketListings).values({
           trackId: row.tracks.id,
           title: row.tracks.title,
@@ -134,6 +135,7 @@ export async function registerRoutes(
           lowPrice: price.toFixed(2),
           volume: 0,
           totalSold: 0,
+          maxSupply: poolSize,
           active: true,
         });
         added++;
@@ -5108,14 +5110,33 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.get("/api/market/listings", async (_req, res) => {
     try {
       const listings = await db.select().from(marketListings).where(eq(marketListings.active, true)).orderBy(desc(marketListings.totalSold));
+      const holdingCounts = await db.select({
+        listingId: marketHoldings.listingId,
+        cnt: sql<number>`COUNT(*)`,
+      }).from(marketHoldings).groupBy(marketHoldings.listingId);
+      const countMap = new Map(holdingCounts.map(h => [h.listingId, h.cnt]));
+
+      const resaleCounts = await db.select({
+        listingId: marketHoldings.listingId,
+        cnt: sql<number>`COUNT(*)`,
+      }).from(marketHoldings).where(eq(marketHoldings.listedForSale, true)).groupBy(marketHoldings.listingId);
+      const resaleMap = new Map(resaleCounts.map(r => [r.listingId, r.cnt]));
+
       const withPrices = listings.map(l => {
         const analyst = getAnalystSignal(l);
+        const maxSupply = l.maxSupply || 25;
+        const holders = countMap.get(l.id) || 0;
         return {
           ...l,
           livePrice: getMarketPrice(l),
           targetPrice: getTargetPrice(l),
           analystSignal: analyst.signal,
           momentum: analyst.momentum,
+          maxSupply,
+          holders,
+          seatsLeft: Math.max(0, maxSupply - holders),
+          poolFull: holders >= maxSupply,
+          resaleCount: resaleMap.get(l.id) || 0,
         };
       });
       res.json(withPrices);
@@ -5137,11 +5158,22 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       }).from(marketHoldings).where(
         and(eq(marketHoldings.listingId, req.params.id), eq(marketHoldings.listedForSale, true))
       ).orderBy(asc(marketHoldings.askPrice));
+      const maxSupply = listing.maxSupply || 25;
+      const holdingTotal = await db.select({ cnt: sql<number>`COUNT(*)` }).from(marketHoldings)
+        .where(eq(marketHoldings.listingId, req.params.id));
+      const holders = holdingTotal[0]?.cnt || 0;
+
       res.json({
         ...listing,
         livePrice: getMarketPrice(listing),
+        targetPrice: getTargetPrice(listing),
         recentTrades: recent,
         resaleOffers,
+        maxSupply,
+        holders,
+        seatsLeft: Math.max(0, maxSupply - holders),
+        poolFull: holders >= maxSupply,
+        resaleCount: resaleOffers.length,
       });
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch listing" });
@@ -5158,6 +5190,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const [listing] = await db.select().from(marketListings).where(eq(marketListings.id, listingId));
       if (!listing || !listing.active) return res.status(404).json({ message: "Listing not found" });
 
+      const maxSupply = listing.maxSupply || 25;
+
       let price: number;
       let sellerId: string | null = null;
 
@@ -5166,6 +5200,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           and(eq(marketHoldings.id, fromResaleId), eq(marketHoldings.listedForSale, true))
         );
         if (!resale) return res.status(404).json({ message: "Resale offer not found" });
+        if (resale.listingId !== listingId) return res.status(400).json({ message: "Resale offer does not match this listing" });
         if (resale.userId === userId) return res.status(400).json({ message: "Cannot buy your own listing" });
         price = parseFloat(resale.askPrice || "0");
         sellerId = resale.userId;
@@ -5181,6 +5216,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const userRecord = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
 
       const result = await db.transaction(async (tx) => {
+        if (!fromResaleId) {
+          const currentHolders = await tx.select({ cnt: sql<number>`COUNT(*)` }).from(marketHoldings)
+            .where(eq(marketHoldings.listingId, listingId));
+          const holdingCount = currentHolders[0]?.cnt || 0;
+          if (holdingCount >= maxSupply) {
+            throw new Error(`POOL_FULL:${maxSupply}:${holdingCount}`);
+          }
+        }
+
         const [holding] = await tx.insert(marketHoldings).values({
           userId,
           listingId,
@@ -5237,7 +5281,16 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         artistName: listing.artistName,
         message: `Position locked for "${listing.title}" at $${price.toFixed(2)} — Send payment to ${cashtag}`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message?.startsWith("POOL_FULL:")) {
+        const parts = error.message.split(":");
+        return res.status(400).json({
+          message: `POOL FULL — All ${parts[1]} seats taken. Buy from current owners on the resale board.`,
+          poolFull: true,
+          maxSupply: parseInt(parts[1]),
+          holdingCount: parseInt(parts[2]),
+        });
+      }
       console.error("Market buy error:", error);
       res.status(500).json({ message: "Purchase failed" });
     }
@@ -5348,6 +5401,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const { title, artistName, coverImage, genre, basePrice, trackId } = req.body;
       if (!title || !artistName) return res.status(400).json({ message: "Title and artist name required" });
       const price = parseFloat(basePrice) || 1.00;
+      const poolSize = price >= 4 ? 15 : price >= 2 ? 20 : 25;
       const [listing] = await db.insert(marketListings).values({
         trackId: trackId || null,
         title,
@@ -5360,6 +5414,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         lowPrice: price.toFixed(2),
         volume: 0,
         totalSold: 0,
+        maxSupply: poolSize,
         active: true,
       }).returning();
       res.json(listing);
@@ -5378,6 +5433,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       for (const row of allTracks) {
         if (existingIds.has(row.tracks.id)) continue;
         const price = parseFloat(row.tracks.unitPrice || "2.00");
+        const poolSize = price >= 4 ? 15 : price >= 2 ? 20 : 25;
         await db.insert(marketListings).values({
           trackId: row.tracks.id,
           title: row.tracks.title,
@@ -5390,6 +5446,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           lowPrice: price.toFixed(2),
           volume: 0,
           totalSold: 0,
+          maxSupply: poolSize,
           active: true,
         });
         added++;

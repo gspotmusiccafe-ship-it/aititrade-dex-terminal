@@ -45,6 +45,7 @@ The application utilizes a full-stack architecture with a focus on a dark-mode f
 -   **Image Generation**: Tiered fallback system: Kie AI Ideogram, then OpenAI DALL-E 3 proxy, then SVG placeholder generator.
 -   **Global Investor Portals**: Seven portals for Owner/Investors with specific fund sizes, entry requirements, and return structures.
 -   **Trader Desk**: Interface for traders to manage positions (ACCEPT/HOLD) with live market data.
+-   **Music Market Pool System**: Each listing has a `maxSupply` (kinetically set by base price: $4+ = 15, $2+ = 20, else 25). Once all seats are filled, direct buys are blocked and buyers must purchase from current holders on the resale board. StockCards show live pool gauge (holders/maxSupply), seats remaining, and "SOLD OUT — RESALE ONLY" badge when full. CashApp dialog shows resale offers with violet-themed buy buttons.
 -   **Data Persistence**: All critical data (orders, settlement cycles, salesCount, stakes) is preserved across restarts using PostgreSQL and Replit Object Storage.
 -   **File Storage**: Uploaded media (audio, images) stored in Replit Object Storage (GCS-backed).
 
