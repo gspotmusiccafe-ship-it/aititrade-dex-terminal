@@ -22,6 +22,9 @@ interface MarketListing {
   highPrice: string;
   lowPrice: string;
   livePrice: number;
+  targetPrice: number;
+  analystSignal: string;
+  momentum: string;
   volume: number;
   totalSold: number;
 }
@@ -111,6 +114,13 @@ function StockCard({ listing, onBuy, buying }: { listing: MarketListing; onBuy: 
   const change = listing.livePrice - base;
   const changePct = base > 0 ? (change / base * 100) : 0;
   const isUp = change >= 0;
+  const spread = listing.targetPrice - listing.livePrice;
+  const spreadPct = listing.livePrice > 0 ? ((spread / listing.livePrice) * 100) : 0;
+
+  const signalColor = listing.analystSignal === "STRONG BUY" ? "text-lime-400 bg-lime-500/15 border-lime-500/40" :
+    listing.analystSignal === "BUY" ? "text-emerald-400 bg-emerald-500/15 border-emerald-500/40" :
+    listing.analystSignal === "ACCUMULATE" ? "text-amber-400 bg-amber-500/15 border-amber-500/40" :
+    "text-zinc-400 bg-zinc-500/15 border-zinc-500/40";
 
   return (
     <div
@@ -133,7 +143,10 @@ function StockCard({ listing, onBuy, buying }: { listing: MarketListing; onBuy: 
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-black truncate">{listing.title}</p>
             <p className="text-zinc-500 text-[9px] truncate">{listing.artistName}</p>
-            {listing.genre && <span className="text-[7px] text-emerald-500/50 uppercase">{listing.genre}</span>}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {listing.genre && <span className="text-[7px] text-emerald-500/50 uppercase">{listing.genre}</span>}
+              <span className={`text-[7px] font-black px-1 py-0.5 border ${signalColor}`} data-testid={`signal-${listing.id}`}>{listing.analystSignal}</span>
+            </div>
           </div>
           <div className="text-right flex-shrink-0">
             <div className="text-lg">
@@ -146,7 +159,18 @@ function StockCard({ listing, onBuy, buying }: { listing: MarketListing; onBuy: 
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-zinc-800/60">
+        <div className="bg-amber-950/20 border border-amber-500/20 px-2 py-1.5 mt-2 flex items-center justify-between" data-testid={`target-${listing.id}`}>
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="h-3 w-3 text-amber-400" />
+            <span className="text-[8px] text-amber-400/70 font-bold">TARGET</span>
+            <span className="text-[11px] text-amber-400 font-black">${listing.targetPrice.toFixed(2)}</span>
+          </div>
+          <div className="text-right">
+            <span className="text-[9px] text-lime-400 font-black">+{spreadPct.toFixed(0)}% UPSIDE</span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-zinc-800/60">
           <div className="flex items-center gap-3">
             <MiniChart listing={listing} />
             <div className="text-[8px] text-zinc-500 space-y-0.5">
@@ -227,15 +251,25 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-green-950/40 border border-green-500/15 p-2.5">
-              <p className="text-[8px] text-green-500/40 tracking-wider">ASSET</p>
-              <p className="text-sm text-green-400 font-bold mt-0.5 truncate">{listing.title.slice(0, 12)}</p>
+              <p className="text-[8px] text-green-500/40 tracking-wider">BUY PRICE</p>
+              <p className="text-lg text-green-400 font-black mt-0.5">${(buyData?.price || price).toFixed(2)}</p>
             </div>
-            <div className="bg-green-950/40 border border-green-500/15 p-2.5">
-              <p className="text-[8px] text-green-500/40 tracking-wider">MARKET PRICE</p>
-              <p className="text-xl text-green-400 font-black mt-0.5">${(buyData?.price || price).toFixed(2)}</p>
+            <div className="bg-amber-950/40 border border-amber-500/20 p-2.5">
+              <p className="text-[8px] text-amber-400/60 tracking-wider">TARGET</p>
+              <p className="text-lg text-amber-400 font-black mt-0.5">${listing.targetPrice.toFixed(2)}</p>
             </div>
+            <div className="bg-lime-950/40 border border-lime-500/20 p-2.5">
+              <p className="text-[8px] text-lime-400/60 tracking-wider">UPSIDE</p>
+              <p className="text-lg text-lime-400 font-black mt-0.5">+{(listing.livePrice > 0 ? ((listing.targetPrice - listing.livePrice) / listing.livePrice * 100) : 0).toFixed(0)}%</p>
+            </div>
+          </div>
+
+          <div className="border border-amber-500/20 bg-amber-950/10 p-2 text-center">
+            <p className="text-[8px] text-amber-400/60">MARKET ANALYST</p>
+            <p className="text-[10px] text-amber-400 font-black">{listing.analystSignal} — MOMENTUM: {listing.momentum}</p>
+            <p className="text-[7px] text-amber-400/40 mt-0.5">EXCLUSIVE ASSET — NOT AVAILABLE ANYWHERE ELSE</p>
           </div>
 
           <div className="border-2 border-green-500/40 bg-green-950/30 p-3 text-center">

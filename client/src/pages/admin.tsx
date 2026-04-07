@@ -2810,25 +2810,24 @@ function NativeOrderTab() {
 
       <div className="bg-zinc-900/50 border border-violet-500/30 p-4">
         <h3 className="text-violet-400 font-black text-lg mb-1">VIDEO LINKS — MP4 / YOUTUBE</h3>
-        <p className="text-zinc-500 text-xs mb-4">Paste a YouTube URL or direct MP4 link for each track. Video plays in the native player.</p>
+        <p className="text-zinc-500 text-xs mb-4">Paste a YouTube URL or direct MP4 link. URL identifies the track/video.</p>
         <div className="space-y-2">
           {localOrder.map((track) => (
             <div key={track.id} className="bg-black border border-zinc-800 px-3 py-2" data-testid={`video-url-row-${track.id}`}>
-              <p className="text-white text-xs font-bold mb-1 truncate">{track.title}</p>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   placeholder="Paste YouTube or MP4 URL..."
                   value={videoInputs[track.id] || ""}
                   onChange={(e) => setVideoInputs(prev => ({ ...prev, [track.id]: e.target.value }))}
-                  className="flex-1 bg-zinc-900 border border-zinc-700 text-white text-xs px-2 py-1.5 placeholder:text-zinc-600 focus:border-violet-500 outline-none"
+                  className="flex-1 bg-zinc-900 border border-zinc-700 text-violet-300 text-xs px-2 py-1.5 placeholder:text-zinc-600 focus:border-violet-500 outline-none font-mono"
                   data-testid={`input-video-url-${track.id}`}
                 />
                 <button
                   onClick={async () => {
                     try {
                       await apiRequest("PATCH", `/api/admin/tracks/${track.id}/video`, { videoUrl: videoInputs[track.id] || "" });
-                      toast({ title: "VIDEO SAVED", description: `${track.title} video URL updated` });
+                      toast({ title: "URL SET", description: videoInputs[track.id] || "cleared" });
                       qc.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
                     } catch { toast({ title: "FAILED", variant: "destructive" }); }
                   }}
@@ -2843,7 +2842,7 @@ function NativeOrderTab() {
                       try {
                         setVideoInputs(prev => ({ ...prev, [track.id]: "" }));
                         await apiRequest("PATCH", `/api/admin/tracks/${track.id}/video`, { videoUrl: "" });
-                        toast({ title: "VIDEO REMOVED" });
+                        toast({ title: "URL CLEARED" });
                         qc.invalidateQueries({ queryKey: ["/api/tracks/featured"] });
                       } catch { toast({ title: "FAILED", variant: "destructive" }); }
                     }}
@@ -2855,7 +2854,7 @@ function NativeOrderTab() {
                 )}
               </div>
               {track.videoUrl && (
-                <p className="text-violet-400/60 text-[9px] mt-1 truncate">ACTIVE: {track.videoUrl}</p>
+                <p className="text-violet-400/60 text-[9px] mt-1 truncate">{track.videoUrl}</p>
               )}
             </div>
           ))}

@@ -5039,13 +5039,50 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     return Math.max(0.25, parseFloat(price.toFixed(2)));
   }
 
+  function getTargetPrice(listing: any): number {
+    const base = parseFloat(listing.basePrice || "1.00");
+    const current = parseFloat(listing.currentPrice || base.toString());
+    const high = parseFloat(listing.highPrice || current.toString());
+    const volume = listing.totalSold || 0;
+    const t = Date.now() / 1000;
+    const seed = listing.id ? listing.id.charCodeAt(0) * 4793 + (listing.id.charCodeAt(2) || 0) * 2311 : 0;
+
+    const momentumWave = Math.sin(seed + t * 0.0003) * 0.5 + 0.5;
+    const demandCurve = Math.min(2.0, volume * 0.02);
+    const scarcityPremium = 1.5 + momentumWave * 1.5;
+    const highWaterMark = Math.max(high, current) * 1.2;
+
+    const rawTarget = current * scarcityPremium + demandCurve + highWaterMark * 0.3;
+    const jitter = Math.sin(seed * 1.7 + t * 0.0007) * 0.1 + 1.0;
+    const target = rawTarget * jitter;
+
+    return Math.max(current * 1.5, parseFloat(target.toFixed(2)));
+  }
+
+  function getAnalystSignal(listing: any): { signal: string; momentum: string } {
+    const live = getMarketPrice(listing);
+    const target = getTargetPrice(listing);
+    const spread = ((target - live) / live) * 100;
+
+    const signal = spread > 200 ? "STRONG BUY" : spread > 100 ? "BUY" : spread > 50 ? "ACCUMULATE" : "NEUTRAL";
+    const momentum = spread > 150 ? "SURGING" : spread > 80 ? "BULLISH" : spread > 30 ? "RISING" : "STEADY";
+
+    return { signal, momentum };
+  }
+
   app.get("/api/market/listings", async (_req, res) => {
     try {
       const listings = await db.select().from(marketListings).where(eq(marketListings.active, true)).orderBy(desc(marketListings.totalSold));
-      const withPrices = listings.map(l => ({
-        ...l,
-        livePrice: getMarketPrice(l),
-      }));
+      const withPrices = listings.map(l => {
+        const analyst = getAnalystSignal(l);
+        return {
+          ...l,
+          livePrice: getMarketPrice(l),
+          targetPrice: getTargetPrice(l),
+          analystSignal: analyst.signal,
+          momentum: analyst.momentum,
+        };
+      });
       res.json(withPrices);
     } catch (error) {
       console.error("Market listings error:", error);
