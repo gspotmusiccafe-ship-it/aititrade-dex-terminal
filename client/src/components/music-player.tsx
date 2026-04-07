@@ -27,6 +27,15 @@ function isYouTubeUrl(url: string): boolean {
   return /(?:youtube\.com|youtu\.be)/.test(url);
 }
 
+function isVideoUrl(url: string): boolean {
+  return isYouTubeUrl(url) || /\.(mp4|webm|mov)(\?|$)/i.test(url);
+}
+
+function truncateUrl(url: string, max = 50): string {
+  if (url.length <= max) return url;
+  return url.slice(0, max) + "...";
+}
+
 function VideoPanel({ videoUrl, onClose }: { videoUrl: string; onClose: () => void }) {
   const youtubeId = extractYouTubeId(videoUrl);
   const isDirectVideo = !youtubeId && (videoUrl.includes(".mp4") || videoUrl.includes(".webm") || videoUrl.includes(".mov") || videoUrl.startsWith("http"));
@@ -143,7 +152,11 @@ export function MusicPlayer() {
         <img src={logoImage} alt="AITIFY" className="w-8 h-8 object-cover" style={{ filter: "drop-shadow(0 0 8px rgba(34,197,94,0.4))" }} />
         <div className="text-center">
           <p className="text-xs font-black text-lime-400 tracking-wider drop-shadow-[0_0_8px_rgba(132,204,22,0.4)]" data-testid="text-radio-blocked-name">97.7 THE FLAME</p>
-          <p className="text-[10px] text-amber-400 font-bold">{currentTrack.title.toUpperCase()} — <span className="text-cyan-400">{currentTrack.artist?.name}</span></p>
+          {(isVideoUrl(currentTrack.audioUrl) || isVideoUrl((currentTrack as any)?.videoUrl || "")) ? (
+            <p className="text-[10px] text-violet-400 font-bold truncate max-w-[250px]">{truncateUrl((currentTrack as any)?.videoUrl || currentTrack.audioUrl, 45)}</p>
+          ) : (
+            <p className="text-[10px] text-amber-400 font-bold">{currentTrack.title.toUpperCase()} — <span className="text-cyan-400">{currentTrack.artist?.name}</span></p>
+          )}
         </div>
         <Play className="h-4 w-4 text-lime-400 animate-pulse drop-shadow-[0_0_8px_rgba(132,204,22,0.6)]" />
       </div>
@@ -151,6 +164,8 @@ export function MusicPlayer() {
   }
 
   const ticker = `$${(currentTrack.title || "").replace(/\s+/g, '').toUpperCase().slice(0, 10)}`;
+  const isUrlTrack = isVideoUrl(currentTrack.audioUrl) || isVideoUrl((currentTrack as any)?.videoUrl || "");
+  const sourceUrl = (currentTrack as any)?.videoUrl || currentTrack.audioUrl;
 
   return (
     <>
@@ -229,8 +244,14 @@ export function MusicPlayer() {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-bold truncate text-emerald-400">{currentTrack.title.toUpperCase()}</p>
-                  <p className="text-[9px] text-emerald-500/40 truncate">{currentTrack.artist?.name}</p>
+                  {isUrlTrack ? (
+                    <p className="text-[10px] font-bold truncate text-violet-400">{truncateUrl(sourceUrl, 35)}</p>
+                  ) : (
+                    <>
+                      <p className="text-[11px] font-bold truncate text-emerald-400">{currentTrack.title.toUpperCase()}</p>
+                      <p className="text-[9px] text-emerald-500/40 truncate">{currentTrack.artist?.name}</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -270,8 +291,14 @@ export function MusicPlayer() {
                           </button>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] text-white truncate">{track.title}</p>
-                          <p className="text-[9px] text-emerald-500/40 truncate">{track.artist?.name}</p>
+                          {isVideoUrl(track.audioUrl) || isVideoUrl((track as any)?.videoUrl || "") ? (
+                            <p className="text-[10px] text-violet-400 truncate">{truncateUrl((track as any)?.videoUrl || track.audioUrl, 30)}</p>
+                          ) : (
+                            <>
+                              <p className="text-[10px] text-white truncate">{track.title}</p>
+                              <p className="text-[9px] text-emerald-500/40 truncate">{track.artist?.name}</p>
+                            </>
+                          )}
                         </div>
                         <Button
                           variant="ghost"
@@ -363,21 +390,53 @@ export function MusicPlayer() {
           <div className="flex-1 min-w-0">
             <div className="flex justify-between items-start mb-1.5">
               <div className="min-w-0 flex-1">
-                <h2 className="text-white font-black italic text-base md:text-xl tracking-tighter uppercase truncate" data-testid="text-current-track-title">
-                  {currentTrack.title.toUpperCase()} <span className="text-lime-400 not-italic text-xs md:text-sm drop-shadow-[0_0_6px_rgba(132,204,22,0.5)]">// ASSET_ACTIVE</span>
-                </h2>
-                <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-widest truncate max-w-full overflow-hidden" data-testid="text-current-track-artist">
-                  <span className="text-amber-400 font-bold">{currentTrack.artist?.name}</span>
-                  <span className="text-emerald-500/40"> | </span>
-                  <span className="text-cyan-400">TICKER: <span className="text-lime-400 font-bold">{ticker}</span></span>
-                  <span className="text-emerald-500/40"> | </span>
-                  <span className="text-emerald-400">MARKET: <span className="text-emerald-300 font-bold">AITITRADE_SOVEREIGN</span></span>
-                  {broadcast && broadcastUptime > 0 && (
-                    <span className="text-amber-400/70 ml-2">
-                      UPTIME: {Math.floor(broadcastUptime / 3600)}:{String(Math.floor((broadcastUptime % 3600) / 60)).padStart(2, "0")}:{String(broadcastUptime % 60).padStart(2, "0")}
-                    </span>
-                  )}
-                </p>
+                {isUrlTrack ? (
+                  <>
+                    <h2 className="text-white font-black italic text-base md:text-xl tracking-tighter uppercase truncate" data-testid="text-current-track-title">
+                      STREAMED MEDIA <span className="text-violet-400 not-italic text-xs md:text-sm drop-shadow-[0_0_6px_rgba(139,92,246,0.5)]">// URL_LOADED</span>
+                    </h2>
+                    <a
+                      href={sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-[9px] md:text-[10px] tracking-wider truncate max-w-full overflow-hidden block text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                      data-testid="text-current-track-url"
+                      title={sourceUrl}
+                    >
+                      {truncateUrl(sourceUrl, 70)}
+                    </a>
+                    <p className="font-mono text-[8px] text-emerald-500/40 mt-0.5" data-testid="text-current-track-artist">
+                      <span className="text-emerald-400">MP4/VIDEO</span>
+                      <span className="text-emerald-500/40"> | </span>
+                      <span className="text-amber-400">NON-NATIVE</span>
+                      <span className="text-emerald-500/40"> | </span>
+                      <span className="text-emerald-400">97.7 THE FLAME</span>
+                      {broadcast && broadcastUptime > 0 && (
+                        <span className="text-amber-400/70 ml-2">
+                          UPTIME: {Math.floor(broadcastUptime / 3600)}:{String(Math.floor((broadcastUptime % 3600) / 60)).padStart(2, "0")}:{String(broadcastUptime % 60).padStart(2, "0")}
+                        </span>
+                      )}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-white font-black italic text-base md:text-xl tracking-tighter uppercase truncate" data-testid="text-current-track-title">
+                      {currentTrack.title.toUpperCase()} <span className="text-lime-400 not-italic text-xs md:text-sm drop-shadow-[0_0_6px_rgba(132,204,22,0.5)]">// ASSET_ACTIVE</span>
+                    </h2>
+                    <p className="font-mono text-[9px] md:text-[10px] uppercase tracking-widest truncate max-w-full overflow-hidden" data-testid="text-current-track-artist">
+                      <span className="text-amber-400 font-bold">{currentTrack.artist?.name}</span>
+                      <span className="text-emerald-500/40"> | </span>
+                      <span className="text-cyan-400">TICKER: <span className="text-lime-400 font-bold">{ticker}</span></span>
+                      <span className="text-emerald-500/40"> | </span>
+                      <span className="text-emerald-400">MARKET: <span className="text-emerald-300 font-bold">AITITRADE_SOVEREIGN</span></span>
+                      {broadcast && broadcastUptime > 0 && (
+                        <span className="text-amber-400/70 ml-2">
+                          UPTIME: {Math.floor(broadcastUptime / 3600)}:{String(Math.floor((broadcastUptime % 3600) / 60)).padStart(2, "0")}:{String(broadcastUptime % 60).padStart(2, "0")}
+                        </span>
+                      )}
+                    </p>
+                  </>
+                )}
               </div>
               <div className="text-right flex-shrink-0 ml-3 hidden md:block">
                 <div className="flex items-center gap-1.5 justify-end">
