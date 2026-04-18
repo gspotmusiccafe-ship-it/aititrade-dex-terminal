@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import CryptoSettlementModal from "@/components/CryptoSettlementModal";
 import GlobalTradePortal from "@/components/GlobalTradePortal";
+import { JamSessionCard, SpotifyConnectionPanel, type ActiveSession } from "@/pages/radio";
+import { Headphones, LogIn } from "lucide-react";
 
 interface BankerData {
   position: number | null;
@@ -601,6 +603,65 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
   );
 }
 
+function LiveJamFloor({ userId }: { userId: string }) {
+  const { data: activeSessions } = useQuery<ActiveSession[]>({
+    queryKey: ["/api/jam-sessions/active"],
+    staleTime: 0,
+    refetchInterval: 30000,
+  });
+
+  return (
+    <div className="mb-6 bg-gradient-to-br from-emerald-950/40 via-black to-black border border-emerald-500/30 rounded-lg p-4 sm:p-5" data-testid="section-live-jam-stream">
+      <div className="flex items-center gap-3 mb-3">
+        <Disc className="h-5 w-5 text-emerald-400 animate-spin-slow" />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base sm:text-lg font-black text-white tracking-tight">LIVE STREAM · SPOTIFY JAM</h2>
+          <p className="text-emerald-500/60 text-[9px] sm:text-[10px] tracking-widest">
+            CONTROL SPOTIFY · DRIVE STREAM ROYALTIES TO O/I SEATS BELOW
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="text-[9px] text-emerald-400 font-black tracking-widest">LIVE</span>
+        </div>
+      </div>
+
+      {userId ? (
+        <SpotifyConnectionPanel />
+      ) : (
+        <div className="mb-4 border border-emerald-500/20 bg-black">
+          <div className="py-4 text-center">
+            <LogIn className="h-8 w-8 mx-auto mb-2 text-emerald-500/30" />
+            <p className="text-[10px] text-emerald-500/40 font-mono">AUTHENTICATE TO CREATE OR JOIN JAM SESSIONS</p>
+          </div>
+        </div>
+      )}
+
+      {activeSessions && activeSessions.length > 0 ? (
+        <div className="space-y-3 mt-3">
+          {activeSessions.map((session) => (
+            <JamSessionCard key={session.id} session={session} userId={userId} />
+          ))}
+        </div>
+      ) : (
+        <div className="border border-emerald-500/20 bg-black mt-3">
+          <div className="py-8 text-center">
+            <Headphones className="h-10 w-10 mx-auto mb-2 text-emerald-500/20" />
+            <h3 className="text-sm font-bold text-emerald-400 mb-1 font-mono">NO ACTIVE SESSIONS</h3>
+            <p className="text-[10px] text-emerald-500/40 max-w-md mx-auto font-mono">
+              {userId ? "CONNECT SPOTIFY ABOVE TO CREATE A JAM SESSION" : "AUTHENTICATE AND CONNECT SPOTIFY TO CREATE SESSIONS"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <p className="text-center text-[9px] text-emerald-500/40 mt-3 tracking-wider font-mono">
+        EVERY STREAM = ROYALTY ACCRUAL TO O/I SEATS · BUY A SEAT BELOW TO COLLECT
+      </p>
+    </div>
+  );
+}
+
 export default function InvestorPortalsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -699,38 +760,8 @@ export default function InvestorPortalsPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <TsbBankerSection />
 
-        <div className="mb-6 bg-gradient-to-br from-emerald-950/40 via-black to-black border border-emerald-500/30 rounded-lg p-4 sm:p-5" data-testid="section-live-jam-stream">
-          <div className="flex items-center gap-3 mb-3">
-            <Disc className="h-5 w-5 text-emerald-400 animate-spin-slow" />
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">LIVE STREAM · SPOTIFY JAM</h2>
-              <p className="text-emerald-500/60 text-[9px] sm:text-[10px] tracking-widest">
-                THESE ARE THE ASSETS LISTED BELOW — STREAMS DRIVE PORTAL ROYALTIES IN REAL-TIME
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[9px] text-emerald-400 font-black tracking-widest">LIVE</span>
-            </div>
-          </div>
-          <GlobalTradePortal
-            portalIndex={0}
-            assetsOverride={(portals || [])
-              .filter(p => p.spotifyUri || p.spotifyUrl)
-              .map((p, i) => ({
-                ticker: `PORTAL-${String(i + 1).padStart(2, "0")}`,
-                title: p.songTitle,
-                type: "track",
-                spotifyUri: p.spotifyUri || "",
-                spotifyUrl: p.spotifyUrl || "",
-                coverImage: "",
-                artistName: "AITITRADE Catalog",
-              }))}
-          />
-          <p className="text-center text-[9px] text-emerald-500/40 mt-3 tracking-wider">
-            EVERY STREAM = ROYALTY ACCRUAL TO O/I SEATS · BUY A SEAT BELOW TO COLLECT
-          </p>
-        </div>
+        <LiveJamFloor userId={(user as any)?.id || ""} />
+
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {portals?.map((portal) => (

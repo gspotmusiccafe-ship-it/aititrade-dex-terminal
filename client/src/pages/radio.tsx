@@ -412,7 +412,7 @@ function ShowCard({ show }: { show: RadioShow }) {
   );
 }
 
-interface ActiveSession extends JamSession {
+export interface ActiveSession extends JamSession {
   ownerName: string;
   activeListeners: number;
   totalEngagements: number;
@@ -430,7 +430,7 @@ interface EngagementStats {
   };
 }
 
-function JamSessionCard({ session, userId }: { session: ActiveSession; userId: string }) {
+export function JamSessionCard({ session, userId }: { session: ActiveSession; userId: string }) {
   const { toast } = useToast();
   const [showStats, setShowStats] = useState(false);
   const [shuffleOn, setShuffleOn] = useState(false);
@@ -963,7 +963,7 @@ function JamSessionCard({ session, userId }: { session: ActiveSession; userId: s
   );
 }
 
-function CreateJamSessionForm({ onCreated }: { onCreated: () => void }) {
+export function CreateJamSessionForm({ onCreated }: { onCreated: () => void }) {
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [spotifyUri, setSpotifyUri] = useState("");
@@ -1095,7 +1095,7 @@ function CreateJamSessionForm({ onCreated }: { onCreated: () => void }) {
   );
 }
 
-function MyJamSessions() {
+export function MyJamSessions() {
   const { toast } = useToast();
 
   const { data: mySessions, isLoading } = useQuery<JamSession[]>({
@@ -1163,7 +1163,7 @@ function MyJamSessions() {
   );
 }
 
-function SpotifyConnectionPanel() {
+export function SpotifyConnectionPanel() {
   const { toast } = useToast();
   const [showCreate, setShowCreate] = useState(false);
 
