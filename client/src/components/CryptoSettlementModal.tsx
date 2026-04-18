@@ -9,7 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { AlertTriangle, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, Copy, ExternalLink, Loader2, QrCode, Search, ClipboardPaste } from "lucide-react";
+
+// EIP-681 payment URI for BSC (chain id 56) — opens MetaMask mobile with prefilled amount when scanned
+function buildPaymentUri(coin: string, contract: string | null, wallet: string, amountUsd: number): string {
+  if (coin === "BNB") {
+    // BNB amount in wei (assume 1 BNB = $600 ballpark — user will see/edit amount in their wallet)
+    return `ethereum:${wallet}@56`;
+  }
+  // BEP-20 token transfer (USDC/USDT both 18 decimals on BSC)
+  const amountWei = BigInt(Math.round(amountUsd * 1e6)) * BigInt(1e12); // 18 decimals
+  return `ethereum:${contract}@56/transfer?address=${wallet}&uint256=${amountWei.toString()}`;
+}
+function qrUrl(data: string): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(data)}`;
+}
 
 type CryptoModalProps = {
   open: boolean;
@@ -156,6 +170,25 @@ export default function CryptoSettlementModal({ open, onClose, amountUsd, purpos
               <AlertDescription className="text-xs">{payment.warning}</AlertDescription>
             </Alert>
 
+            {/* 3-STEP VISUAL GUIDE — eliminates user error */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 border rounded-lg bg-muted/30">
+                <QrCode className="h-5 w-5 mx-auto text-amber-500" />
+                <div className="text-[10px] font-bold mt-1">1. SCAN</div>
+                <div className="text-[9px] text-muted-foreground">Send total in MetaMask</div>
+              </div>
+              <div className="p-2 border rounded-lg bg-muted/30">
+                <Search className="h-5 w-5 mx-auto text-amber-500" />
+                <div className="text-[10px] font-bold mt-1">2. VERIFY</div>
+                <div className="text-[9px] text-muted-foreground">Find tx on BscScan</div>
+              </div>
+              <div className="p-2 border rounded-lg bg-muted/30">
+                <ClipboardPaste className="h-5 w-5 mx-auto text-amber-500" />
+                <div className="text-[10px] font-bold mt-1">3. PASTE</div>
+                <div className="text-[9px] text-muted-foreground">Hash → I HAVE PAID</div>
+              </div>
+            </div>
+
             <div className="p-3 border rounded-lg bg-muted/40">
               <Label className="text-xs uppercase">Send</Label>
               <div className="text-2xl font-bold" data-testid="text-crypto-amount">${payment.amountUsd?.toFixed(2)} of {payment.coin}</div>
@@ -168,21 +201,49 @@ export default function CryptoSettlementModal({ open, onClose, amountUsd, purpos
               )}
             </div>
 
+            {/* QR CODE — dynamically encodes wallet + amount + token contract */}
+            <div className="flex gap-3 p-3 border rounded-lg bg-white">
+              <img
+                src={qrUrl(buildPaymentUri(payment.coin!, payment.contract || null, payment.wallet!, payment.amountUsd!))}
+                alt="BSC Payment QR"
+                width={140}
+                height={140}
+                className="rounded"
+                data-testid="img-payment-qr"
+              />
+              <div className="flex-1 text-xs text-zinc-700 space-y-1">
+                <div className="font-bold text-zinc-900">Scan with MetaMask Mobile</div>
+                <div>Auto-fills <span className="font-mono">${payment.amountUsd?.toFixed(2)} {payment.coin}</span> on BSC.</div>
+                <div className="text-[10px] text-zinc-500">If your wallet doesn't auto-fill the amount, enter <span className="font-mono">${payment.amountUsd?.toFixed(2)}</span> manually.</div>
+              </div>
+            </div>
+
             <div className="p-3 border rounded-lg">
               <Label className="text-xs uppercase">Founder Wallet (BSC)</Label>
               <div className="flex items-center gap-2 mt-1">
                 <code className="text-xs break-all flex-1" data-testid="text-founder-wallet">{payment.wallet}</code>
                 <Button size="sm" variant="outline" onClick={() => copy(payment.wallet!)} data-testid="button-copy-wallet"><Copy className="h-3 w-3" /></Button>
               </div>
-              <a className="text-xs text-primary inline-flex items-center gap-1 mt-2" target="_blank" rel="noreferrer" href={`https://bscscan.com/address/${payment.wallet}`}>
-                View on BscScan <ExternalLink className="h-3 w-3" />
-              </a>
             </div>
 
             <div>
               <Label htmlFor="tx-hash" className="text-sm font-semibold">Transaction Hash *</Label>
               <Input id="tx-hash" placeholder="0x..." value={txHash} onChange={(e) => setTxHash(e.target.value.trim())} className="font-mono text-xs" data-testid="input-tx-hash" />
-              <p className="text-xs text-muted-foreground mt-1">After sending in MetaMask, copy the tx hash and paste here.</p>
+
+              {/* BSCSCAN HELPER LINK — Command #015 */}
+              <div className="mt-2 text-xs text-muted-foreground">
+                <p>Having trouble finding your hash?</p>
+                <a
+                  href={`https://bscscan.com/address/${payment.wallet}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline hover:opacity-80 inline-flex items-center gap-1"
+                  data-testid="link-bscscan-helper"
+                >
+                  Click here to find your transaction on the Blockchain Explorer
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
             </div>
 
             <DialogFooter>
