@@ -7896,32 +7896,16 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (!entry) return res.status(404).json({ message: "Entry not found" });
       const newTotal = parseFloat(entry.totalPaid || "0") + amount;
       const isDown = !entry.downPaymentPaid && amount >= 25;
-      const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, entry.portalId));
-      const trackingNumber = `PRP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      // Portal Primary intake is tracked on globalInvestorEntries.totalPaid
+      // (read by getGrossIntake() as the "portalIntake" stream — single source of truth)
+      await db.update(globalInvestorEntries).set({
+        totalPaid: newTotal.toFixed(2),
+        downPaymentPaid: isDown ? true : entry.downPaymentPaid,
+        monthsPaid: (entry.monthsPaid || 0) + 1,
+        status: "ACTIVE",
+      }).where(eq(globalInvestorEntries.id, req.params.id));
 
-      await db.transaction(async (tx) => {
-        await tx.update(globalInvestorEntries).set({
-          totalPaid: newTotal.toFixed(2),
-          downPaymentPaid: isDown ? true : entry.downPaymentPaid,
-          monthsPaid: (entry.monthsPaid || 0) + 1,
-          status: "ACTIVE",
-        }).where(eq(globalInvestorEntries.id, req.params.id));
-
-        // Portal Primary feeds Universal Gross Intake — every confirmed $25/$19.79/$500 hits the $1K cycle
-        await tx.insert(orders).values({
-          trackId: entry.portalId,
-          trackingNumber,
-          buyerEmail: entry.userEmail || entry.userId || "PORTAL_PRIMARY",
-          buyerName: entry.displayName || "INVESTOR",
-          buyerCashTag: entry.cashTag || null,
-          unitPrice: amount.toFixed(2),
-          creatorCredit: "0.00",
-          status: "confirmed",
-          portalName: portal?.songTitle || "PORTAL_PRIMARY",
-        });
-      });
-
-      res.json({ success: true, newTotal, trackingNumber, contributedToGrossIntake: amount });
+      res.json({ success: true, newTotal, contributedToGrossIntake: amount });
     } catch (error: any) {
       console.error("[CONFIRM PAYMENT]", error);
       res.status(500).json({ message: "Failed to confirm payment" });
@@ -8090,19 +8074,8 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           verified: Math.abs(houseTake - price * 0.04) < 0.01,
         }).returning();
 
-        // Feed the $1K Block Settlement Cycle — gross intake includes P2P liquidity
+        // P2P intake feeds gross via the p2p_trades table directly (single source of truth)
         const [portalRow] = await tx.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, offer.portalId));
-        await tx.insert(orders).values({
-          trackId: offer.portalId,
-          trackingNumber,
-          buyerEmail: buyer?.email || buyerId,
-          buyerName: buyerName.toUpperCase(),
-          buyerCashTag: cashTag || buyer?.cashTag || null,
-          unitPrice: price.toFixed(2),
-          creatorCredit: "0.00",
-          status: "confirmed",
-          portalName: portalRow?.songTitle || "PORTAL_P2P",
-        });
 
         return { offer, price, buyerFee, sellerFee, buyerPays, sellerNet, houseTake, sellerName: offer.displayName, tradeId: tradeRow.id, portal: portalRow };
       });
@@ -8174,6 +8147,29 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           buyerPays: parseFloat(tx.buyerPays),
           sellerNet: parseFloat(tx.sellerNet),
         },
+      });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  // Universal Gross Intake breakdown — Floor + P2P + Portal Primary
+  app.get("/api/audit/intake", async (_req, res) => {
+    try {
+      const { getMarketIntakeBreakdown } = await import("./market-governor");
+      const breakdown = await getMarketIntakeBreakdown();
+      const cyclePct = parseFloat(((breakdown.total % 1000) / 10).toFixed(2));
+      const remainingToNextK = parseFloat((1000 - (breakdown.total % 1000)).toFixed(2));
+      const cyclesCompleted = Math.floor(breakdown.total / 1000);
+      res.json({
+        ok: true,
+        streams: {
+          floorIntake: breakdown.floorIntake,
+          p2pIntake: breakdown.p2pIntake,
+          portalIntake: breakdown.portalIntake,
+        },
+        total: breakdown.total,
+        cycle: { cyclesCompleted, cyclePct, remainingToNextK, nextKAt: (cyclesCompleted + 1) * 1000 },
       });
     } catch (e: any) {
       res.status(500).json({ ok: false, error: e.message });

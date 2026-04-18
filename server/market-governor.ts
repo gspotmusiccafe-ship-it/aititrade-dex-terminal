@@ -1090,17 +1090,39 @@ export async function enqueueTrader(
   console.log(`[GOVERNOR] Trader enqueued FLAT: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Block #${block.blockNumber} | Rank: ${block.blockRank}/${BLOCK_MAX_TRADERS} | ${eligible ? "ELIGIBLE" : "ROLLOVER-PENDING"}${block.willLock ? " | BLOCK LOCKED ($1K ceiling reached)" : ""}`);
 }
 
+// ════════════════════════════════════════════════════════════════════
+// UNIVERSAL GROSS INTAKE — three independent streams, one true total
+//   1. floorIntake  : orders.unit_price (Floor Trades + Music Stock initial buys)
+//   2. p2pIntake    : p2p_trades.sale_price (verified Music Stock + Portal Seat resales)
+//   3. portalIntake : global_investor_entries.total_paid (Portal $25 down + $19.79/mo + $500)
+// ════════════════════════════════════════════════════════════════════
+export async function getMarketIntakeBreakdown(): Promise<{ floorIntake: number; p2pIntake: number; portalIntake: number; total: number }> {
+  const floorRes = await db.execute(sql`
+    SELECT COALESCE(SUM(CAST(o.unit_price AS DECIMAL)), 0)::text AS total
+    FROM orders o
+    WHERE o.buyer_email IS NOT NULL
+      AND o.buyer_email <> ''
+      AND o.status IN ('confirmed', 'settled', 'settled_early')
+      AND NOT EXISTS (SELECT 1 FROM p2p_trades p WHERE p.tracking_number = o.tracking_number)
+  `);
+  const p2pRes = await db.execute(sql`
+    SELECT COALESCE(SUM(CAST(sale_price AS DECIMAL)), 0)::text AS total
+    FROM p2p_trades WHERE verified = true
+  `);
+  const portalRes = await db.execute(sql`
+    SELECT COALESCE(SUM(CAST(total_paid AS DECIMAL)), 0)::text AS total
+    FROM global_investor_entries
+  `);
+
+  const floorIntake = parseFloat((floorRes.rows[0] as any)?.total || "0");
+  const p2pIntake = parseFloat((p2pRes.rows[0] as any)?.total || "0");
+  const portalIntake = parseFloat((portalRes.rows[0] as any)?.total || "0");
+  return { floorIntake, p2pIntake, portalIntake, total: parseFloat((floorIntake + p2pIntake + portalIntake).toFixed(2)) };
+}
+
 export async function getGrossIntake(): Promise<number> {
-  const [result] = await db.select({
-    total: sql<string>`COALESCE(SUM(CAST(unit_price AS DECIMAL)), 0)`,
-  }).from(orders).where(
-    and(
-      isNotNull(orders.buyerEmail),
-      sql`${orders.buyerEmail} != ''`,
-      inArray(orders.status, ["confirmed", "settled", "settled_early"])
-    )
-  );
-  return parseFloat(result?.total || "0");
+  const { total } = await getMarketIntakeBreakdown();
+  return total;
 }
 
 export async function getTotalPaidOut(): Promise<number> {
