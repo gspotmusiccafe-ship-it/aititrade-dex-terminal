@@ -1486,6 +1486,65 @@ export async function registerRoutes(
   });
 
   // ════════════════════════════════════════════════════════════════════
+  // GENESIS PURGE — Admin-only nuclear reset (preserves catalog/users/portals)
+  // ════════════════════════════════════════════════════════════════════
+  app.post("/api/admin/genesis-purge", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin access required" });
+      const { confirm } = req.body || {};
+      if (confirm !== "GENESIS") {
+        return res.status(400).json({ message: "Confirmation required: send { confirm: 'GENESIS' }" });
+      }
+
+      const purgeSql = `
+        BEGIN;
+        TRUNCATE TABLE orders RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE p2p_trades RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE settlement_queue RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE settlement_cycles RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE asset_blocks RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE global_investor_entries RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE trust_vault_ledger RESTART IDENTITY CASCADE;
+        DELETE FROM trust_vault;
+        INSERT INTO trust_vault (balance, updated_at) VALUES ('0.00', NOW());
+        TRUNCATE TABLE treasury_logs RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE global_stream_logs RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE ten_k_winners RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE ten_k_bonus_distributions RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE banker_queue RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE banker_ledger RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE banker_deposits RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE stake_positions RESTART IDENTITY CASCADE;
+        TRUNCATE TABLE crypto_payments RESTART IDENTITY CASCADE;
+        COMMIT;
+      `;
+      await db.execute(sql.raw(purgeSql));
+
+      console.log(`[GENESIS-PURGE] 🔥 Executed by admin ${user.email || userId} at ${new Date().toISOString()}`);
+      logEvent({ type: "GENESIS_PURGE", admin: user.email || userId, at: new Date().toISOString() });
+
+      res.json({
+        ok: true,
+        message: "GENESIS PURGE COMPLETE — Market reset to Absolute Zero",
+        wiped: [
+          "orders", "p2p_trades", "settlement_queue", "settlement_cycles", "asset_blocks",
+          "global_investor_entries", "trust_vault_ledger", "treasury_logs", "global_stream_logs",
+          "ten_k_winners", "ten_k_bonus_distributions", "banker_queue", "banker_ledger",
+          "banker_deposits", "stake_positions", "crypto_payments",
+        ],
+        preserved: ["tracks", "artists", "albums", "users", "memberships", "global_investor_portals", "portal_settings", "wallets"],
+        vaultBalance: "0.00",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (e: any) {
+      console.error("Genesis purge failed:", e);
+      res.status(500).json({ message: "Purge failed", error: e.message });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════
   // 10K SPRINT — First-to-$10,000 realized profit competition
   // ════════════════════════════════════════════════════════════════════
   app.get("/api/leaderboard/sprint", async (_req, res) => {
