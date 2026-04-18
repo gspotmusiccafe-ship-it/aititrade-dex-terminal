@@ -267,7 +267,7 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
   const fillPct = ((portal.currentInvestors || 0) / (portal.maxInvestors || 10)) * 100;
   const mySeat = portal.investors?.find(i => i.userId && currentUserId && i.userId === currentUserId);
   const portalResales = portal.investors?.filter(i => i.listedForResale && i.userId !== currentUserId) || [];
-  const [askInput, setAskInput] = useState("250");
+  const [askInput, setAskInput] = useState(parseFloat(portal.entryPrice).toFixed(2));
 
   const listMut = useMutation({
     mutationFn: async ({ entryId, askPrice }: { entryId: string; askPrice: string }) => {
