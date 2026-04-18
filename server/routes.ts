@@ -8022,6 +8022,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const buyerId = req.user.claims.sub;
       const buyer = await storage.getUser(buyerId);
       const { cashTag } = req.body;
+      const trackingNumber = `PRT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
       const result = await db.transaction(async (tx) => {
         const [offer] = await tx.select().from(globalInvestorEntries)
@@ -8065,14 +8066,28 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           houseFeeCollected: houseTake.toFixed(2),
           buyerPays: buyerPays.toFixed(2),
           sellerNet: sellerNet.toFixed(2),
+          trackingNumber,
           verified: Math.abs(houseTake - price * 0.04) < 0.01,
         }).returning();
 
-        return { offer, price, buyerFee, sellerFee, buyerPays, sellerNet, houseTake, sellerName: offer.displayName, tradeId: tradeRow.id };
+        // Feed the $1K Block Settlement Cycle — gross intake includes P2P liquidity
+        const [portalRow] = await tx.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, offer.portalId));
+        await tx.insert(orders).values({
+          trackId: offer.portalId,
+          trackingNumber,
+          buyerEmail: buyer?.email || buyerId,
+          buyerName: buyerName.toUpperCase(),
+          buyerCashTag: cashTag || buyer?.cashTag || null,
+          unitPrice: price.toFixed(2),
+          creatorCredit: "0.00",
+          status: "confirmed",
+          portalName: portalRow?.songTitle || "PORTAL_P2P",
+        });
+
+        return { offer, price, buyerFee, sellerFee, buyerPays, sellerNet, houseTake, sellerName: offer.displayName, tradeId: tradeRow.id, portal: portalRow };
       });
 
-      const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, result.offer.portalId));
-      const trackingNumber = `PRT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const portal = result.portal;
       const cashtag = "$AITITRADEBROKERAGE";
 
       await depositToVaultExternal(
