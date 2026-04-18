@@ -7795,8 +7795,12 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         investors: entries.filter(e => e.portalId === p.id).map(e => ({
           id: e.id,
           portalId: e.portalId,
+          userId: e.userId,
           displayName: e.displayName,
           status: e.status,
+          downPaymentPaid: e.downPaymentPaid,
+          listedForResale: e.listedForResale,
+          askPrice: e.askPrice,
           joinedAt: e.joinedAt,
         })),
         spotsRemaining: (p.maxInvestors || 10) - (p.currentInvestors || 0),
@@ -7926,6 +7930,143 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error: any) {
       console.error("[INVESTOR PORTAL] Create failed:", error.message);
       res.status(500).json({ message: "Failed to create portal" });
+    }
+  });
+
+  // ─── PORTAL SEAT P2P RESALE — links Global Trading Portals to the same 2% two-way fee + Vault logic ───
+  const PORTAL_FEE_RATE = 0.02;
+
+  app.post("/api/investor-portals/entries/:entryId/list-resale", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { askPrice } = req.body;
+      const ask = parseFloat(askPrice);
+      if (!ask || ask < 25) return res.status(400).json({ message: "Ask price must be ≥ $25" });
+      if (ask > 500) return res.status(400).json({ message: "Ask price cannot exceed $500 portal ceiling" });
+
+      const [entry] = await db.select().from(globalInvestorEntries)
+        .where(and(eq(globalInvestorEntries.id, req.params.entryId), eq(globalInvestorEntries.userId, userId)));
+      if (!entry) return res.status(404).json({ message: "Entry not found or not yours" });
+      if (!entry.downPaymentPaid) return res.status(400).json({ message: "Down payment must be confirmed before resale" });
+
+      await db.update(globalInvestorEntries).set({
+        listedForResale: true,
+        askPrice: ask.toFixed(2),
+        listedAt: new Date(),
+      }).where(eq(globalInvestorEntries.id, req.params.entryId));
+
+      logEvent("PORTAL_LIST_RESALE", `${entry.displayName} listed seat in ${entry.portalId} @ $${ask.toFixed(2)}`);
+      res.json({ success: true, message: `Seat listed for resale at $${ask.toFixed(2)}` });
+    } catch (e: any) {
+      console.error("[PORTAL RESALE] List error:", e);
+      res.status(500).json({ message: "Failed to list seat" });
+    }
+  });
+
+  app.post("/api/investor-portals/entries/:entryId/cancel-resale", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [entry] = await db.select().from(globalInvestorEntries)
+        .where(and(eq(globalInvestorEntries.id, req.params.entryId), eq(globalInvestorEntries.userId, userId)));
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      await db.update(globalInvestorEntries).set({
+        listedForResale: false,
+        askPrice: null,
+        listedAt: null,
+      }).where(eq(globalInvestorEntries.id, req.params.entryId));
+      res.json({ success: true, message: "Listing cancelled" });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to cancel listing" });
+    }
+  });
+
+  app.get("/api/investor-portals/resale-board", async (_req, res) => {
+    try {
+      const offers = await db.select().from(globalInvestorEntries)
+        .where(eq(globalInvestorEntries.listedForResale, true))
+        .orderBy(asc(globalInvestorEntries.askPrice));
+      res.json(offers.map(o => ({
+        entryId: o.id,
+        portalId: o.portalId,
+        sellerName: o.displayName,
+        askPrice: parseFloat(o.askPrice || "0"),
+        buyerPays: parseFloat((parseFloat(o.askPrice || "0") * (1 + PORTAL_FEE_RATE)).toFixed(2)),
+        sellerNets: parseFloat((parseFloat(o.askPrice || "0") * (1 - PORTAL_FEE_RATE)).toFixed(2)),
+        listedAt: o.listedAt,
+      })));
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to load resale board" });
+    }
+  });
+
+  app.post("/api/investor-portals/buy-resale/:entryId", isAuthenticated, async (req: any, res) => {
+    try {
+      const buyerId = req.user.claims.sub;
+      const buyer = await storage.getUser(buyerId);
+      const { cashTag } = req.body;
+
+      const result = await db.transaction(async (tx) => {
+        const [offer] = await tx.select().from(globalInvestorEntries)
+          .where(and(eq(globalInvestorEntries.id, req.params.entryId), eq(globalInvestorEntries.listedForResale, true)))
+          .for("update");
+        if (!offer) throw new Error("OFFER_GONE");
+        if (offer.userId === buyerId) throw new Error("SELF_BUY");
+
+        const dup = await tx.select().from(globalInvestorEntries)
+          .where(and(eq(globalInvestorEntries.portalId, offer.portalId), eq(globalInvestorEntries.userId, buyerId)));
+        if (dup.length > 0) throw new Error("ALREADY_IN_PORTAL");
+
+        const price = parseFloat(offer.askPrice || "0");
+        const buyerFee = parseFloat((price * PORTAL_FEE_RATE).toFixed(2));
+        const sellerFee = parseFloat((price * PORTAL_FEE_RATE).toFixed(2));
+        const buyerPays = parseFloat((price + buyerFee).toFixed(2));
+        const sellerNet = parseFloat((price - sellerFee).toFixed(2));
+        const houseTake = parseFloat((buyerFee + sellerFee).toFixed(2));
+
+        const buyerName = buyer?.firstName ? `${buyer.firstName}${buyer.lastName ? ' ' + buyer.lastName : ''}` : buyer?.email?.split("@")[0] || "INVESTOR";
+
+        await tx.update(globalInvestorEntries).set({
+          userId: buyerId,
+          userEmail: buyer?.email || "",
+          displayName: buyerName.toUpperCase(),
+          cashTag: cashTag || buyer?.cashTag || "",
+          listedForResale: false,
+          askPrice: null,
+          listedAt: null,
+        }).where(eq(globalInvestorEntries.id, offer.id));
+
+        return { offer, price, buyerFee, sellerFee, buyerPays, sellerNet, houseTake, sellerName: offer.displayName };
+      });
+
+      const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, result.offer.portalId));
+      const trackingNumber = `PRT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const cashtag = "$AITITRADEBROKERAGE";
+
+      await depositToVaultExternal(
+        result.houseTake,
+        `Portal P2P: ${portal?.songTitle || result.offer.portalId} | Buyer fee $${result.buyerFee.toFixed(2)} + Seller fee $${result.sellerFee.toFixed(2)}`,
+        portal?.songTitle || null,
+        "PORTAL_P2P_FEE"
+      );
+
+      logEvent("PORTAL_P2P_BUY", `Seat in "${portal?.songTitle}" — Seller ${result.sellerName} → Buyer ${buyerId} | Price $${result.price.toFixed(2)} | Buyer pays $${result.buyerPays.toFixed(2)} | Seller nets $${result.sellerNet.toFixed(2)} | Vault +$${result.houseTake.toFixed(2)} — ${trackingNumber}`);
+
+      res.json({
+        success: true,
+        ...result,
+        portalName: portal?.portalName,
+        songTitle: portal?.songTitle,
+        trackingNumber,
+        cashtag,
+        cashAppUrl: `https://cash.app/$AITITRADEBROKERAGE/${result.buyerPays.toFixed(2)}`,
+        message: `PORTAL SEAT ACQUIRED — "${portal?.songTitle}" @ $${result.price.toFixed(2)}. You pay $${result.buyerPays.toFixed(2)} (incl. 2% fee). Seller receives $${result.sellerNet.toFixed(2)}. Send to ${cashtag}.`,
+      });
+    } catch (e: any) {
+      if (e.message === "OFFER_GONE") return res.status(410).json({ message: "This seat was just bought by someone else." });
+      if (e.message === "SELF_BUY") return res.status(400).json({ message: "Cannot buy your own listed seat." });
+      if (e.message === "ALREADY_IN_PORTAL") return res.status(400).json({ message: "You already own a seat in this portal." });
+      console.error("[PORTAL P2P BUY] Error:", e);
+      res.status(500).json({ message: "Failed to buy seat" });
     }
   });
 

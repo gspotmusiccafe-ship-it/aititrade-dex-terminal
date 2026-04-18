@@ -210,12 +210,23 @@ interface InvestorPortal {
   royaltyProgress: number;
   investors: Array<{
     id: string;
+    userId: string | null;
     displayName: string;
     status: string;
     downPaymentPaid: boolean;
-    totalPaid: string;
-    monthsPaid: number;
+    listedForResale?: boolean;
+    askPrice?: string | null;
   }>;
+}
+
+interface ResaleOffer {
+  entryId: string;
+  portalId: string;
+  sellerName: string;
+  askPrice: number;
+  buyerPays: number;
+  sellerNets: number;
+  listedAt: string | null;
 }
 
 function StreamProgress({ streams, royaltyEarned, royaltyProgress }: { streams: number; royaltyEarned: number; royaltyProgress: number }) {
@@ -250,9 +261,49 @@ function StreamProgress({ streams, royaltyEarned, royaltyProgress }: { streams: 
   );
 }
 
-function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoin: (id: string) => void; joining: boolean }) {
+function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: InvestorPortal; onJoin: (id: string) => void; joining: boolean; currentUserId: string | null }) {
+  const { toast } = useToast();
   const isFull = portal.status === "FILLED" || portal.spotsRemaining <= 0;
   const fillPct = ((portal.currentInvestors || 0) / (portal.maxInvestors || 10)) * 100;
+  const mySeat = portal.investors?.find(i => i.userId && currentUserId && i.userId === currentUserId);
+  const portalResales = portal.investors?.filter(i => i.listedForResale && i.userId !== currentUserId) || [];
+  const [askInput, setAskInput] = useState("250");
+
+  const listMut = useMutation({
+    mutationFn: async ({ entryId, askPrice }: { entryId: string; askPrice: string }) => {
+      const res = await apiRequest("POST", `/api/investor-portals/entries/${entryId}/list-resale`, { askPrice: parseFloat(askPrice) });
+      return res.json();
+    },
+    onSuccess: (d: any) => {
+      toast({ title: "SEAT LISTED", description: d.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/investor-portals"] });
+    },
+    onError: (e: any) => toast({ title: "LIST FAILED", description: e.message, variant: "destructive" }),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: async (entryId: string) => {
+      const res = await apiRequest("POST", `/api/investor-portals/entries/${entryId}/cancel-resale`, {});
+      return res.json();
+    },
+    onSuccess: (d: any) => {
+      toast({ title: "LISTING CANCELLED", description: d.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/investor-portals"] });
+    },
+  });
+
+  const buyMut = useMutation({
+    mutationFn: async (entryId: string) => {
+      const res = await apiRequest("POST", `/api/investor-portals/buy-resale/${entryId}`, {});
+      return res.json();
+    },
+    onSuccess: (d: any) => {
+      toast({ title: "P2P SEAT ACQUIRED", description: d.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/investor-portals"] });
+      if (d.cashAppUrl) window.open(d.cashAppUrl, "_blank");
+    },
+    onError: (e: any) => toast({ title: "P2P BUY FAILED", description: e.message, variant: "destructive" }),
+  });
 
   return (
     <div
@@ -368,6 +419,87 @@ function PortalCard({ portal, onJoin, joining }: { portal: InvestorPortal; onJoi
         <div className="text-[8px] text-emerald-500/40 bg-emerald-950/30 border border-emerald-500/15 rounded p-2 font-mono leading-relaxed">
           <span className="text-emerald-500/60 font-bold">TERMS:</span> ${parseFloat(portal.downPayment).toFixed(0)} DOWN + ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO × {portal.termMonths} MO = ${parseFloat(portal.entryPrice).toFixed(0)} | 0% INTEREST | PAID VIA $AITITRADEBROKERAGE
         </div>
+
+        {/* P2P RESALE — owner's seat management */}
+        {mySeat && (
+          <div className="border-2 border-violet-500/40 bg-violet-950/20 rounded p-2.5 space-y-2" data-testid={`my-seat-${portal.id}`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-violet-400 font-black tracking-wider">YOUR SEAT — P2P RESALE</span>
+              <span className="text-[7px] text-violet-500/60">2% TWO-WAY FEE → VAULT</span>
+            </div>
+            {!mySeat.downPaymentPaid ? (
+              <p className="text-[9px] text-amber-400/70">Confirm down payment before listing for resale.</p>
+            ) : mySeat.listedForResale ? (
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[8px] text-violet-500/60">LISTED AT</p>
+                  <p className="text-violet-400 font-black text-sm">${parseFloat(mySeat.askPrice || "0").toFixed(2)}</p>
+                </div>
+                <button
+                  onClick={() => cancelMut.mutate(mySeat.id)}
+                  disabled={cancelMut.isPending}
+                  className="px-3 py-1.5 text-[9px] font-black bg-violet-950/60 hover:bg-violet-900/60 text-violet-300 border border-violet-500/40 rounded disabled:opacity-50"
+                  data-testid={`btn-cancel-resale-${mySeat.id}`}
+                >
+                  {cancelMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "CANCEL LISTING"}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={askInput}
+                  onChange={e => setAskInput(e.target.value)}
+                  placeholder="ASK $25-$500"
+                  min="25"
+                  max="500"
+                  step="0.01"
+                  className="flex-1 bg-black/60 border border-violet-500/30 rounded px-2 py-1.5 text-violet-300 text-[10px] font-mono placeholder:text-violet-500/30 focus:outline-none focus:border-violet-400"
+                  data-testid={`input-ask-${mySeat.id}`}
+                />
+                <button
+                  onClick={() => listMut.mutate({ entryId: mySeat.id, askPrice: askInput })}
+                  disabled={listMut.isPending || !askInput || parseFloat(askInput) < 25}
+                  className="px-3 py-1.5 text-[9px] font-black bg-violet-600 hover:bg-violet-500 text-white border border-violet-500 rounded disabled:opacity-50"
+                  data-testid={`btn-list-resale-${mySeat.id}`}
+                >
+                  {listMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "LIST FOR RESALE"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* P2P RESALE — buy a peer's seat */}
+        {portalResales.length > 0 && (
+          <div className="border-2 border-cyan-500/40 bg-cyan-950/20 rounded p-2.5 space-y-2" data-testid={`resale-board-${portal.id}`}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] text-cyan-400 font-black tracking-wider">P2P RESALE BOARD — BUY FROM OWNERS</span>
+              <span className="text-[7px] text-cyan-500/60">+2% FEE</span>
+            </div>
+            {portalResales.map(offer => {
+              const ask = parseFloat(offer.askPrice || "0");
+              const buyerPays = ask * 1.02;
+              return (
+                <div key={offer.id} className="flex items-center justify-between border border-cyan-500/20 bg-cyan-950/30 rounded px-2.5 py-1.5">
+                  <div>
+                    <p className="text-[8px] text-zinc-400">{offer.displayName}</p>
+                    <p className="text-cyan-400 font-black text-sm">${ask.toFixed(2)}</p>
+                    <p className="text-[7px] text-cyan-500/50">YOU PAY ${buyerPays.toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => buyMut.mutate(offer.id)}
+                    disabled={buyMut.isPending || !currentUserId}
+                    className="px-3 py-1.5 text-[9px] font-black bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-500 rounded disabled:opacity-50"
+                    data-testid={`btn-buy-resale-${offer.id}`}
+                  >
+                    {buyMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "BUY SEAT"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <a
           href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.downPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20DOWN%20PAYMENT`}
@@ -496,6 +628,7 @@ export default function InvestorPortalsPage() {
               key={portal.id}
               portal={portal}
               onJoin={handleJoin}
+              currentUserId={(user as any)?.id || null}
               joining={joiningId === portal.id && joinMut.isPending}
             />
           ))}

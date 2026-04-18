@@ -768,6 +768,9 @@ export const globalInvestorEntries = pgTable("global_investor_entries", {
   totalPaid: decimal("total_paid", { precision: 10, scale: 2 }).default("0"),
   monthsPaid: integer("months_paid").default(0),
   status: varchar("status").default("PENDING"),
+  listedForResale: boolean("listed_for_resale").default(false),
+  askPrice: decimal("ask_price", { precision: 10, scale: 2 }),
+  listedAt: timestamp("listed_at"),
   joinedAt: timestamp("joined_at").defaultNow(),
 });
 
