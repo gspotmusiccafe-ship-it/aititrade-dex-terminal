@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -4336,6 +4336,71 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error: any) {
       console.error("[SETTLEMENT] Discount sell error:", error);
       res.status(500).json({ message: "Failed to discount sell position" });
+    }
+  });
+
+  app.get("/api/blocks/:trackId", async (req, res) => {
+    try {
+      const { trackId } = req.params;
+      const { assetBlocks } = await import("@shared/schema");
+      const rows = await db.select().from(assetBlocks)
+        .where(eq(assetBlocks.trackId, trackId))
+        .orderBy(desc(assetBlocks.blockNumber))
+        .limit(50);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[BLOCKS] List error:", error);
+      res.status(500).json({ message: "Failed to fetch blocks" });
+    }
+  });
+
+  app.get("/api/admin/blocks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { assetBlocks } = await import("@shared/schema");
+      const rows = await db.select().from(assetBlocks).orderBy(desc(assetBlocks.id)).limit(200);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[ADMIN BLOCKS] Error:", error);
+      res.status(500).json({ message: "Failed to fetch blocks" });
+    }
+  });
+
+  app.post("/api/admin/blocks/:id/finalize", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const blockId = parseInt(req.params.id, 10);
+      if (!Number.isFinite(blockId)) return res.status(400).json({ message: "Invalid block id" });
+      const result = await finalizeBlock(blockId);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[ADMIN BLOCKS] Finalize error:", error);
+      res.status(500).json({ message: "Failed to finalize block" });
+    }
+  });
+
+  app.get("/api/trust-vault/balance", async (_req, res) => {
+    try {
+      const balance = await getTrustVaultBalance();
+      res.json({ balance, updatedAt: new Date().toISOString() });
+    } catch (error: any) {
+      console.error("[VAULT] Balance error:", error);
+      res.status(500).json({ message: "Failed to fetch vault balance" });
+    }
+  });
+
+  app.get("/api/trust-vault/ledger", async (_req, res) => {
+    try {
+      const { trustVaultLedger } = await import("@shared/schema");
+      const rows = await db.select().from(trustVaultLedger).orderBy(desc(trustVaultLedger.id)).limit(100);
+      res.json(rows);
+    } catch (error: any) {
+      console.error("[VAULT] Ledger error:", error);
+      res.status(500).json({ message: "Failed to fetch vault ledger" });
     }
   });
 

@@ -1,6 +1,136 @@
 import { db } from "./db";
-import { tracks, orders, portalSettings, settlementQueue, settlementCycles } from "@shared/schema";
-import { desc, sql, eq, asc, and, inArray, isNotNull } from "drizzle-orm";
+import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger } from "@shared/schema";
+import { desc, sql, eq, asc, and, inArray, isNotNull, lte } from "drizzle-orm";
+
+const BLOCK_CEILING = 1000.00;
+const BLOCK_BUDGET = 522.00;
+const BLOCK_MAX_TRADERS = 115;
+
+async function getOrOpenBlock(trackId: string, buyIn: number): Promise<{ blockId: number; blockNumber: number; blockRank: number; willLock: boolean; }> {
+  return await db.transaction(async (tx) => {
+    const [open] = await tx.select().from(assetBlocks)
+      .where(and(eq(assetBlocks.trackId, trackId), eq(assetBlocks.status, "OPEN")))
+      .orderBy(desc(assetBlocks.blockNumber))
+      .limit(1);
+
+    let block = open;
+    if (block) {
+      const intake = parseFloat(block.totalIntake || "0");
+      if (intake >= BLOCK_CEILING) {
+        await tx.update(assetBlocks).set({ status: "LOCKED", lockedAt: new Date() })
+          .where(eq(assetBlocks.id, block.id));
+        block = undefined as any;
+      }
+    }
+
+    if (!block) {
+      const [maxRow] = await tx.select({
+        n: sql<number>`COALESCE(MAX(block_number), 0)`,
+      }).from(assetBlocks).where(eq(assetBlocks.trackId, trackId));
+      const nextNum = (Number(maxRow?.n) || 0) + 1;
+      const [created] = await tx.insert(assetBlocks).values({
+        trackId,
+        blockNumber: nextNum,
+        totalIntake: "0.00",
+        status: "OPEN",
+        ceiling: BLOCK_CEILING.toFixed(2),
+        budget: BLOCK_BUDGET.toFixed(2),
+        maxTraders: BLOCK_MAX_TRADERS,
+      }).returning();
+      block = created;
+    }
+
+    const newIntake = parseFloat((parseFloat(block.totalIntake || "0") + buyIn).toFixed(2));
+    const willLock = newIntake >= BLOCK_CEILING;
+    const [{ rank }] = await tx.select({
+      rank: sql<number>`COALESCE(COUNT(*), 0)`,
+    }).from(settlementQueue).where(eq(settlementQueue.blockId, block.id));
+    const blockRank = Number(rank) + 1;
+
+    await tx.update(assetBlocks).set({
+      totalIntake: newIntake.toFixed(2),
+      status: willLock ? "LOCKED" : "OPEN",
+      lockedAt: willLock ? new Date() : block.lockedAt,
+    }).where(eq(assetBlocks.id, block.id));
+
+    return { blockId: block.id, blockNumber: block.blockNumber, blockRank, willLock };
+  });
+}
+
+async function ensureVaultRow(): Promise<void> {
+  await db.execute(sql`INSERT INTO trust_vault (id, balance) VALUES (1, '0.00') ON CONFLICT (id) DO NOTHING`);
+}
+
+export async function getTrustVaultBalance(): Promise<number> {
+  await ensureVaultRow();
+  const [row] = await db.select().from(trustVault).where(eq(trustVault.id, 1));
+  return parseFloat(row?.balance || "0");
+}
+
+async function depositToVault(amount: number, blockId: number, trackId: string, note: string): Promise<void> {
+  await ensureVaultRow();
+  await db.update(trustVault).set({
+    balance: sql`balance + ${amount.toFixed(2)}`,
+    updatedAt: new Date(),
+  }).where(eq(trustVault.id, 1));
+  await db.insert(trustVaultLedger).values({
+    blockId,
+    trackId,
+    amount: amount.toFixed(2),
+    type: "BLOCK_SURPLUS",
+    note,
+  });
+}
+
+export async function finalizeBlock(blockId: number): Promise<{
+  success: boolean;
+  blockId: number;
+  totalPaid: number;
+  surplus: number;
+  eligibleCount: number;
+  rolledOver: number;
+  message: string;
+}> {
+  const [block] = await db.select().from(assetBlocks).where(eq(assetBlocks.id, blockId));
+  if (!block) return { success: false, blockId, totalPaid: 0, surplus: 0, eligibleCount: 0, rolledOver: 0, message: "Block not found" };
+  if (block.status === "SETTLED") return { success: false, blockId, totalPaid: 0, surplus: 0, eligibleCount: 0, rolledOver: 0, message: "Block already settled" };
+
+  const eligible = await db.select().from(settlementQueue)
+    .where(and(eq(settlementQueue.blockId, blockId), lte(settlementQueue.blockRank, BLOCK_MAX_TRADERS)))
+    .orderBy(asc(settlementQueue.blockRank));
+
+  const totalPaid = eligible.reduce((s, e) => s + parseFloat(e.payoutAmount || "0"), 0);
+  const surplus = parseFloat((BLOCK_BUDGET - totalPaid).toFixed(2));
+
+  const overflow = await db.select().from(settlementQueue)
+    .where(and(eq(settlementQueue.blockId, blockId), sql`block_rank > ${BLOCK_MAX_TRADERS}`, eq(settlementQueue.status, "QUEUED")));
+
+  let rolledOver = 0;
+  for (const pos of overflow) {
+    const buyIn = parseFloat(pos.buyIn || "0");
+    const newAssign = await getOrOpenBlock(pos.trackId, buyIn);
+    await db.update(settlementQueue).set({
+      blockId: newAssign.blockId,
+      blockRank: newAssign.blockRank,
+    }).where(eq(settlementQueue.id, pos.id));
+    rolledOver += 1;
+  }
+
+  if (surplus > 0) {
+    await depositToVault(surplus, blockId, block.trackId, `Block #${block.blockNumber} surplus: $${BLOCK_BUDGET.toFixed(2)} - paid $${totalPaid.toFixed(2)}`);
+  }
+
+  await db.update(assetBlocks).set({
+    status: "SETTLED",
+    totalPaid: totalPaid.toFixed(2),
+    surplus: surplus.toFixed(2),
+    settledAt: new Date(),
+  }).where(eq(assetBlocks.id, blockId));
+
+  console.log(`[BLOCK SETTLE] Block #${block.blockNumber} (track ${block.trackId}) | Eligible: ${eligible.length} | Paid: $${totalPaid.toFixed(2)} | Surplus: $${surplus.toFixed(2)} → Vault | Rolled over: ${rolledOver}`);
+
+  return { success: true, blockId, totalPaid, surplus, eligibleCount: eligible.length, rolledOver, message: `Block settled. Surplus $${surplus.toFixed(2)} routed to Trust Vault.` };
+}
 
 let FLOOR_SPLIT = 0.54;
 let CEO_SPLIT = 0.46;
@@ -661,6 +791,8 @@ export async function enqueueTrader(
   );
   const nextPos = parseInt(maxPos?.maxPos || "0") + 1;
 
+  const block = await getOrOpenBlock(trackId, buyIn);
+
   await db.insert(settlementQueue).values({
     orderId,
     userId,
@@ -675,9 +807,12 @@ export async function enqueueTrader(
     cyclesHeld: 0,
     status: "QUEUED",
     queuePosition: nextPos,
+    blockId: block.blockId,
+    blockRank: block.blockRank,
   });
 
-  console.log(`[GOVERNOR] Trader enqueued FLAT: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | Initial Value: $${buyIn.toFixed(2)} | CashTag: ${cashTag || "NONE"}`);
+  const eligible = block.blockRank <= BLOCK_MAX_TRADERS;
+  console.log(`[GOVERNOR] Trader enqueued FLAT: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Block #${block.blockNumber} | Rank: ${block.blockRank}/${BLOCK_MAX_TRADERS} | ${eligible ? "ELIGIBLE" : "ROLLOVER-PENDING"}${block.willLock ? " | BLOCK LOCKED ($1K ceiling reached)" : ""}`);
 }
 
 export async function getGrossIntake(): Promise<number> {
@@ -820,6 +955,10 @@ export async function traderAcceptOffer(queueId: string, userId: string, caughtP
   const offerAmount = parseFloat(caughtPrice.toFixed(2));
   const locked = parseFloat((offerAmount / buyIn).toFixed(4));
 
+  if (entry.blockId && entry.blockRank && entry.blockRank > BLOCK_MAX_TRADERS) {
+    return { success: false, message: `Position rank #${entry.blockRank} in block — only the first ${BLOCK_MAX_TRADERS} are eligible. Your position will be rolled over to the next block when this one finalizes.` };
+  }
+
   const grossIntake = await getGrossIntake();
   const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
   const totalPayoutBudget = totalKsReached * getPayoutPerCycle();
@@ -847,6 +986,12 @@ export async function traderAcceptOffer(queueId: string, userId: string, caughtP
       finalPayout: offerAmount.toFixed(2),
       status: "settled",
     }).where(eq(orders.id, entry.orderId));
+  }
+
+  if (entry.blockId) {
+    await db.update(assetBlocks).set({
+      totalPaid: sql`total_paid + ${offerAmount.toFixed(2)}`,
+    }).where(eq(assetBlocks.id, entry.blockId));
   }
 
   const profitLoss = parseFloat((offerAmount - buyIn).toFixed(2));

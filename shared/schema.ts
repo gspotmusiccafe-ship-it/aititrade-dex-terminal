@@ -110,9 +110,47 @@ export const settlementQueue = pgTable("settlement_queue", {
   cyclesHeld: integer("cycles_held").notNull().default(0),
   status: varchar("status").notNull().default("QUEUED"),
   queuePosition: integer("queue_position").notNull().default(0),
+  blockId: integer("block_id"),
+  blockRank: integer("block_rank"),
   settledAt: timestamp("settled_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+export const assetBlocks = pgTable("asset_blocks", {
+  id: serial("id").primaryKey(),
+  trackId: varchar("track_id").notNull().references(() => tracks.id),
+  blockNumber: integer("block_number").notNull(),
+  totalIntake: decimal("total_intake", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  totalPaid: decimal("total_paid", { precision: 10, scale: 2 }).notNull().default("0.00"),
+  surplus: decimal("surplus", { precision: 10, scale: 2 }),
+  status: varchar("status").notNull().default("OPEN"),
+  ceiling: decimal("ceiling", { precision: 10, scale: 2 }).notNull().default("1000.00"),
+  budget: decimal("budget", { precision: 10, scale: 2 }).notNull().default("522.00"),
+  maxTraders: integer("max_traders").notNull().default(115),
+  lockedAt: timestamp("locked_at"),
+  settledAt: timestamp("settled_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type AssetBlock = typeof assetBlocks.$inferSelect;
+
+export const trustVault = pgTable("trust_vault", {
+  id: integer("id").primaryKey().default(1),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const trustVaultLedger = pgTable("trust_vault_ledger", {
+  id: serial("id").primaryKey(),
+  blockId: integer("block_id"),
+  trackId: varchar("track_id"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  type: varchar("type").notNull().default("BLOCK_SURPLUS"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type TrustVaultLedger = typeof trustVaultLedger.$inferSelect;
 
 export const insertSettlementQueueSchema = createInsertSchema(settlementQueue).omit({ id: true, createdAt: true });
 export type InsertSettlementQueue = z.infer<typeof insertSettlementQueueSchema>;
