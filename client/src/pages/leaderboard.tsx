@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
+import AitiCoinTicker from "@/components/AitiCoinTicker";
 
 interface LeaderboardTrack {
   id: string;
@@ -507,6 +508,8 @@ export default function LeaderboardPage() {
             Top performers on the exchange
           </p>
         </div>
+
+        <AitiCoinTicker />
 
         <Tabs value={tab} onValueChange={setTab} className="mb-8">
           <TabsList className="grid w-full grid-cols-3">

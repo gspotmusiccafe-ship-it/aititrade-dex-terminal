@@ -9,6 +9,7 @@ import {
   Trophy, Loader2, ArrowUpRight, ArrowDownRight, Activity, Zap,
   Crown, Star, Medal, Eye, X, RefreshCw, ChevronRight, Music, QrCode, ExternalLink
 } from "lucide-react";
+import AitiCoinTicker from "@/components/AitiCoinTicker";
 
 interface MarketListing {
   id: string;
@@ -800,6 +801,8 @@ export default function MusicMarketPage() {
               </Link>
             </div>
           </div>
+
+          <AitiCoinTicker />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-black/60 border border-emerald-500/20 p-3 text-center">

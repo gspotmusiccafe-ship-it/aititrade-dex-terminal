@@ -190,6 +190,8 @@ function TsbBankerSection() {
   );
 }
 import { SiSpotify } from "react-icons/si";
+import AitiCoinTicker from "@/components/AitiCoinTicker";
+import CeoBuyInBanner from "@/components/CeoBuyInBanner";
 
 interface InvestorPortal {
   id: string;
@@ -758,6 +760,14 @@ export default function InvestorPortalsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <AitiCoinTicker />
+
+        <CeoBuyInBanner
+          onCryptoClick={(amount, purpose, refId) =>
+            setCryptoModal({ open: true, amount, purpose: "portal_entry", refId })
+          }
+        />
+
         <TsbBankerSection />
 
         <LiveJamFloor userId={(user as any)?.id || ""} />
