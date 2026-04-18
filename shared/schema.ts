@@ -782,6 +782,25 @@ export const insertGlobalInvestorEntrySchema = createInsertSchema(globalInvestor
 export type InsertGlobalInvestorEntry = z.infer<typeof insertGlobalInvestorEntrySchema>;
 export type GlobalInvestorEntry = typeof globalInvestorEntries.$inferSelect;
 
+export const p2pTrades = pgTable("p2p_trades", {
+  id: serial("id").primaryKey(),
+  assetType: varchar("asset_type").notNull(),
+  assetId: varchar("asset_id").notNull(),
+  assetLabel: varchar("asset_label"),
+  sellerId: varchar("seller_id").notNull(),
+  buyerId: varchar("buyer_id").notNull(),
+  salePrice: decimal("sale_price", { precision: 10, scale: 2 }).notNull(),
+  buyerFee: decimal("buyer_fee", { precision: 10, scale: 2 }).notNull(),
+  sellerFee: decimal("seller_fee", { precision: 10, scale: 2 }).notNull(),
+  houseFeeCollected: decimal("house_fee_collected", { precision: 10, scale: 2 }).notNull(),
+  buyerPays: decimal("buyer_pays", { precision: 10, scale: 2 }).notNull(),
+  sellerNet: decimal("seller_net", { precision: 10, scale: 2 }).notNull(),
+  trackingNumber: varchar("tracking_number"),
+  verified: boolean("verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type P2PTrade = typeof p2pTrades.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

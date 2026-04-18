@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { generateArtwork } from "./image-gen";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries, payToPlay, marketListings, marketHoldings, marketTransactions } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries, payToPlay, marketListings, marketHoldings, marketTransactions, p2pTrades } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -5501,6 +5501,24 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           type: fromResaleId ? "P2P_RESALE" : "BUY",
         });
 
+        if (isP2P && sellerId) {
+          await tx.insert(p2pTrades).values({
+            assetType: "MUSIC_STOCK",
+            assetId: listingId,
+            assetLabel: listing.title,
+            sellerId,
+            buyerId: userId,
+            salePrice: price.toFixed(2),
+            buyerFee: buyerFee.toFixed(2),
+            sellerFee: sellerFee.toFixed(2),
+            houseFeeCollected: houseTake.toFixed(2),
+            buyerPays: buyerPays.toFixed(2),
+            sellerNet: sellerNet.toFixed(2),
+            trackingNumber,
+            verified: Math.abs(houseTake - price * 0.04) < 0.01,
+          });
+        }
+
         if (sellerId) {
           await tx.update(marketHoldings).set({
             listedForSale: false,
@@ -8035,7 +8053,22 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           listedAt: null,
         }).where(eq(globalInvestorEntries.id, offer.id));
 
-        return { offer, price, buyerFee, sellerFee, buyerPays, sellerNet, houseTake, sellerName: offer.displayName };
+        const [tradeRow] = await tx.insert(p2pTrades).values({
+          assetType: "PORTAL_SEAT",
+          assetId: offer.id,
+          assetLabel: offer.portalId,
+          sellerId: offer.userId || "UNKNOWN",
+          buyerId,
+          salePrice: price.toFixed(2),
+          buyerFee: buyerFee.toFixed(2),
+          sellerFee: sellerFee.toFixed(2),
+          houseFeeCollected: houseTake.toFixed(2),
+          buyerPays: buyerPays.toFixed(2),
+          sellerNet: sellerNet.toFixed(2),
+          verified: Math.abs(houseTake - price * 0.04) < 0.01,
+        }).returning();
+
+        return { offer, price, buyerFee, sellerFee, buyerPays, sellerNet, houseTake, sellerName: offer.displayName, tradeId: tradeRow.id };
       });
 
       const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, result.offer.portalId));
@@ -8067,6 +8100,73 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (e.message === "ALREADY_IN_PORTAL") return res.status(400).json({ message: "You already own a seat in this portal." });
       console.error("[PORTAL P2P BUY] Error:", e);
       res.status(500).json({ message: "Failed to buy seat" });
+    }
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // P2P EXCHANGE AUDIT — verifies Buyer 2% + Seller 2% = 4% to Vault
+  // ═══════════════════════════════════════════════════════════════
+  app.get("/api/audit/p2p/:txId", async (req, res) => {
+    try {
+      const txId = parseInt(req.params.txId);
+      const [tx] = await db.select().from(p2pTrades).where(eq(p2pTrades.id, txId));
+      if (!tx) return res.status(404).json({ ok: false, error: "TRADE_NOT_FOUND" });
+
+      const salePrice = parseFloat(tx.salePrice);
+      const houseFeeCollected = parseFloat(tx.houseFeeCollected);
+      const expected = parseFloat((salePrice * 0.04).toFixed(2));
+      const drift = parseFloat((houseFeeCollected - expected).toFixed(2));
+
+      if (Math.abs(drift) >= 0.01) {
+        return res.status(409).json({
+          ok: false,
+          error: "FEE CALCULATION ERROR: Double-dip not enforced.",
+          tx, expected, actual: houseFeeCollected, drift,
+        });
+      }
+
+      const message = `P2P Sync Verified: Asset ${tx.assetId} moved to New Owner. Vault +${tx.houseFeeCollected}`;
+      console.log(`[P2P AUDIT] ${message}`);
+      res.json({
+        ok: true,
+        verified: true,
+        message,
+        tx,
+        math: {
+          salePrice, expected, actual: houseFeeCollected, drift,
+          buyerFee: parseFloat(tx.buyerFee),
+          sellerFee: parseFloat(tx.sellerFee),
+          buyerPays: parseFloat(tx.buyerPays),
+          sellerNet: parseFloat(tx.sellerNet),
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
+  app.get("/api/audit/p2p", async (_req, res) => {
+    try {
+      const trades = await db.select().from(p2pTrades).orderBy(desc(p2pTrades.createdAt));
+      let passed = 0, failed = 0;
+      const breaches: any[] = [];
+      for (const t of trades) {
+        const sp = parseFloat(t.salePrice);
+        const expected = parseFloat((sp * 0.04).toFixed(2));
+        const actual = parseFloat(t.houseFeeCollected);
+        if (Math.abs(actual - expected) < 0.01) passed++;
+        else { failed++; breaches.push({ id: t.id, expected, actual, drift: actual - expected }); }
+      }
+      res.json({
+        ok: failed === 0,
+        totalTrades: trades.length,
+        passed, failed, breaches,
+        totalVaultGain: trades.reduce((s, t) => s + parseFloat(t.houseFeeCollected), 0).toFixed(2),
+        totalVolume: trades.reduce((s, t) => s + parseFloat(t.salePrice), 0).toFixed(2),
+        trades,
+      });
+    } catch (e: any) {
+      res.status(500).json({ ok: false, error: e.message });
     }
   });
 
