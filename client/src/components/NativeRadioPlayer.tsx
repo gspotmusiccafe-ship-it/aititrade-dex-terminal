@@ -29,12 +29,36 @@ const STREAM_STATIONS: Station[] = [
     color: "#34d399",
   },
   {
-    id: "long-ride",
-    label: "LONG RIDE",
+    id: "hiphop",
+    label: "HIP HOP",
+    tagline: "Hip-Hop · Trap · Bangers",
+    streamUrl: "https://stream.laut.fm/hiphop24",
+    isNative: false,
+    color: "#f472b6",
+  },
+  {
+    id: "rnb",
+    label: "R&B SOUL",
     tagline: "Smooth R&B · Soul · Late-Night Drives",
     streamUrl: "https://ice1.somafm.com/lush-128-mp3",
     isNative: false,
     color: "#a78bfa",
+  },
+  {
+    id: "jazz",
+    label: "JAZZ",
+    tagline: "Sonic Universe · Jazz Fusion · Smooth",
+    streamUrl: "https://ice1.somafm.com/sonicuniverse-128-mp3",
+    isNative: false,
+    color: "#fbbf24",
+  },
+  {
+    id: "country",
+    label: "COUNTRY",
+    tagline: "Country Hits · Outlaw · Modern Twang",
+    streamUrl: "https://stream.laut.fm/countryradio",
+    isNative: false,
+    color: "#f87171",
   },
   {
     id: "backyard-boogie",
@@ -212,20 +236,20 @@ export default function NativeRadioPlayer() {
 
       <div className="bg-black/95 backdrop-blur-sm border-b border-emerald-500/20">
         {/* Station selector strip */}
-        <div className="flex items-stretch gap-0 border-b border-emerald-500/10 overflow-x-auto scrollbar-hide">
+        <div className="flex items-stretch gap-0 border-b border-emerald-500/20 overflow-x-auto scrollbar-hide bg-black">
           {STREAM_STATIONS.map(s => {
             const active = s.id === stationId;
             return (
               <button
                 key={s.id}
                 onClick={() => { setStationId(s.id); userPausedRef.current = false; }}
-                className={`flex-shrink-0 px-3 py-1 text-[8px] sm:text-[9px] font-extrabold tracking-widest border-r border-emerald-500/10 transition-colors ${
-                  active ? "bg-emerald-500/15 text-white" : "text-emerald-500/50 hover:text-emerald-300 hover:bg-emerald-500/5"
+                className={`flex-shrink-0 px-4 py-2.5 text-[11px] sm:text-xs font-extrabold tracking-wider border-r border-emerald-500/20 transition-colors whitespace-nowrap ${
+                  active ? "bg-emerald-500/20 text-white" : "text-emerald-300/80 hover:text-white hover:bg-emerald-500/10"
                 }`}
-                style={active ? { borderBottom: `2px solid ${s.color}`, color: s.color } : {}}
+                style={active ? { borderBottom: `3px solid ${s.color}`, color: s.color } : {}}
                 data-testid={`btn-station-${s.id}`}
               >
-                {active && <span className="inline-block w-1.5 h-1.5 rounded-full mr-1 align-middle animate-pulse" style={{ background: s.color }} />}
+                {active && <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle animate-pulse" style={{ background: s.color }} />}
                 {s.label}
               </button>
             );
