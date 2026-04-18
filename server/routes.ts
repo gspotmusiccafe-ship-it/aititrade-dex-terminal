@@ -4339,6 +4339,68 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.get("/api/blocks/active-leader", async (_req, res) => {
+    try {
+      const { assetBlocks } = await import("@shared/schema");
+      const [leader] = await db.select({
+        id: assetBlocks.id,
+        trackId: assetBlocks.trackId,
+        blockNumber: assetBlocks.blockNumber,
+        totalIntake: assetBlocks.totalIntake,
+        ceiling: assetBlocks.ceiling,
+        budget: assetBlocks.budget,
+        maxTraders: assetBlocks.maxTraders,
+        status: assetBlocks.status,
+      }).from(assetBlocks)
+        .where(eq(assetBlocks.status, "OPEN"))
+        .orderBy(desc(sql`CAST(${assetBlocks.totalIntake} AS DECIMAL)`))
+        .limit(1);
+
+      if (!leader) {
+        return res.json({
+          active: false,
+          ceiling: 1000,
+          totalIntake: 0,
+          remaining: 1000,
+          fillPct: 0,
+          budget: 522,
+          maxTraders: 115,
+          eligibleCount: 0,
+          rolloverCount: 0,
+        });
+      }
+
+      const intake = parseFloat(leader.totalIntake || "0");
+      const ceiling = parseFloat(leader.ceiling || "1000");
+      const [{ traders }] = await db.select({
+        traders: sql<number>`CAST(COUNT(*) AS INTEGER)`,
+      }).from(settlementQueue).where(eq(settlementQueue.blockId, leader.id));
+      const traderCount = Number(traders) || 0;
+      const eligibleCount = Math.min(traderCount, leader.maxTraders);
+      const rolloverCount = Math.max(0, traderCount - leader.maxTraders);
+
+      res.json({
+        active: true,
+        blockId: leader.id,
+        blockNumber: leader.blockNumber,
+        trackId: leader.trackId,
+        totalIntake: intake,
+        ceiling,
+        remaining: parseFloat(Math.max(0, ceiling - intake).toFixed(2)),
+        fillPct: parseFloat(Math.min(100, (intake / ceiling) * 100).toFixed(2)),
+        budget: parseFloat(leader.budget || "522"),
+        maxTraders: leader.maxTraders,
+        traderCount,
+        eligibleCount,
+        rolloverCount,
+        status: leader.status,
+      });
+    } catch (error: any) {
+      console.error("[BLOCKS] Active leader error:", error);
+      res.status(500).json({ message: "Failed to fetch active block" });
+    }
+  });
+
   app.get("/api/blocks/:trackId", async (req, res) => {
     try {
       const { trackId } = req.params;

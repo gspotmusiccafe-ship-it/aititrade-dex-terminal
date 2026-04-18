@@ -1666,6 +1666,21 @@ export default function HomePage() {
     staleTime: 60000,
   });
 
+  const { data: blockLeader } = useQuery<{
+    active: boolean;
+    blockNumber?: number;
+    totalIntake: number;
+    ceiling: number;
+    remaining: number;
+    fillPct: number;
+    eligibleCount: number;
+    rolloverCount: number;
+    maxTraders: number;
+  }>({
+    queryKey: ["/api/blocks/active-leader"],
+    refetchInterval: 2000,
+  });
+
   const { data: settlementData } = useQuery<SettlementStatus>({
     queryKey: ["/api/settlement/status"],
     refetchInterval: 15000,
@@ -1899,10 +1914,21 @@ export default function HomePage() {
           {engineDiscount > 0 && (
             <span className="text-yellow-400 font-bold animate-pulse">OFFER ${engineDiscount.toFixed(2)}</span>
           )}
-          {settlementData && (
-            <span className={`font-bold ${(settlementData.nextKAt - settlementData.grossIntake) <= 100 ? "text-red-400 animate-pulse" : "text-lime-400"}`}>
-              ${Math.max(0, settlementData.nextKAt - settlementData.grossIntake).toLocaleString('en-US', { minimumFractionDigits: 0 })} TO SETTLE
-            </span>
+          {blockLeader && (
+            <>
+              <span
+                className={`font-bold ${blockLeader.remaining <= 100 ? "text-red-400 animate-pulse" : "text-lime-400"}`}
+                data-testid="text-block-countdown"
+              >
+                BLOCK{blockLeader.blockNumber ? ` #${blockLeader.blockNumber}` : ""} ${blockLeader.totalIntake.toFixed(2)}/${blockLeader.ceiling.toFixed(0)} — ${blockLeader.remaining.toFixed(2)} TO LOCK
+              </span>
+              <span
+                className={`font-bold ${blockLeader.rolloverCount > 0 ? "text-orange-400 animate-pulse" : "text-cyan-400"}`}
+                data-testid="text-block-filter"
+              >
+                {blockLeader.eligibleCount}/{blockLeader.maxTraders}{blockLeader.rolloverCount > 0 ? ` +${blockLeader.rolloverCount} ROLLOVER` : ""}
+              </span>
+            </>
           )}
           <span className="ml-auto text-emerald-500/40 text-[8px] sm:text-[10px]">{user?.firstName || user?.email || "PUBLIC"}{user?.cashTag && <span className="text-green-400 ml-1">{user.cashTag}</span>}</span>
         </div>
