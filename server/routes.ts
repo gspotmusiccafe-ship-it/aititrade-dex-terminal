@@ -7896,14 +7896,34 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (!entry) return res.status(404).json({ message: "Entry not found" });
       const newTotal = parseFloat(entry.totalPaid || "0") + amount;
       const isDown = !entry.downPaymentPaid && amount >= 25;
-      await db.update(globalInvestorEntries).set({
-        totalPaid: newTotal.toFixed(2),
-        downPaymentPaid: isDown ? true : entry.downPaymentPaid,
-        monthsPaid: (entry.monthsPaid || 0) + 1,
-        status: "ACTIVE",
-      }).where(eq(globalInvestorEntries.id, req.params.id));
-      res.json({ success: true, newTotal });
+      const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, entry.portalId));
+      const trackingNumber = `PRP-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      await db.transaction(async (tx) => {
+        await tx.update(globalInvestorEntries).set({
+          totalPaid: newTotal.toFixed(2),
+          downPaymentPaid: isDown ? true : entry.downPaymentPaid,
+          monthsPaid: (entry.monthsPaid || 0) + 1,
+          status: "ACTIVE",
+        }).where(eq(globalInvestorEntries.id, req.params.id));
+
+        // Portal Primary feeds Universal Gross Intake — every confirmed $25/$19.79/$500 hits the $1K cycle
+        await tx.insert(orders).values({
+          trackId: entry.portalId,
+          trackingNumber,
+          buyerEmail: entry.userEmail || entry.userId || "PORTAL_PRIMARY",
+          buyerName: entry.displayName || "INVESTOR",
+          buyerCashTag: entry.cashTag || null,
+          unitPrice: amount.toFixed(2),
+          creatorCredit: "0.00",
+          status: "confirmed",
+          portalName: portal?.songTitle || "PORTAL_PRIMARY",
+        });
+      });
+
+      res.json({ success: true, newTotal, trackingNumber, contributedToGrossIntake: amount });
     } catch (error: any) {
+      console.error("[CONFIRM PAYMENT]", error);
       res.status(500).json({ message: "Failed to confirm payment" });
     }
   });

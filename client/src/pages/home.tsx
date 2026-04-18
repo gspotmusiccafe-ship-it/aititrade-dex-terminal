@@ -666,8 +666,9 @@ interface SettlementStatus {
 function useSettlementStatus() {
   return useQuery<SettlementStatus>({
     queryKey: ["/api/settlement/status"],
-    refetchInterval: 15000,
-    staleTime: 10000,
+    refetchInterval: 3000,
+    staleTime: 1500,
+    refetchOnWindowFocus: true,
   });
 }
 

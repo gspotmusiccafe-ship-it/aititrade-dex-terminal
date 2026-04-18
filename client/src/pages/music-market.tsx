@@ -275,6 +275,8 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
       queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/market/portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["/api/market/leaderboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trust-vault/balance"] });
       toast({
         title: data.isP2P ? "P2P TRADE LOCKED" : "POSITION LOCKED",
         description: `${data.trackingNumber} — Send $${(data.buyerPays ?? data.price).toFixed(2)} to ${data.cashtag}${data.escalation ? ` | LADDER +${data.escalation.pct.toFixed(1)}% → $${data.escalation.to.toFixed(2)}` : ""}`,

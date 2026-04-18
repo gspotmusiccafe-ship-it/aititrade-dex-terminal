@@ -300,6 +300,9 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
     onSuccess: (d: any) => {
       toast({ title: "P2P SEAT ACQUIRED", description: d.message });
       queryClient.invalidateQueries({ queryKey: ["/api/investor-portals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/settlement/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/trust-vault/balance"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/audit/p2p"] });
       if (d.cashAppUrl) window.open(d.cashAppUrl, "_blank");
     },
     onError: (e: any) => toast({ title: "P2P BUY FAILED", description: e.message, variant: "destructive" }),
@@ -485,22 +488,35 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
             </div>
             {portalResales.map(offer => {
               const ask = parseFloat(offer.askPrice || "0");
-              const buyerPays = ask * 1.02;
+              const fee = parseFloat((ask * 0.02).toFixed(2));
+              const buyerPays = parseFloat((ask + fee).toFixed(2));
               return (
-                <div key={offer.id} className="flex items-center justify-between border border-cyan-500/20 bg-cyan-950/30 rounded px-2.5 py-1.5">
-                  <div>
-                    <p className="text-[8px] text-zinc-400">{offer.displayName}</p>
-                    <p className="text-cyan-400 font-black text-sm">${ask.toFixed(2)}</p>
-                    <p className="text-[7px] text-cyan-500/50">YOU PAY ${buyerPays.toFixed(2)}</p>
+                <div key={offer.id} className="border border-cyan-500/20 bg-cyan-950/30 rounded px-2.5 py-2 space-y-1.5" data-testid={`resale-offer-${offer.id}`}>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[8px] text-zinc-400 truncate">FROM {offer.displayName}</p>
+                    <button
+                      onClick={() => buyMut.mutate(offer.id)}
+                      disabled={buyMut.isPending || !currentUserId}
+                      className="px-2.5 py-1 text-[9px] font-black bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-500 rounded disabled:opacity-50"
+                      data-testid={`btn-buy-resale-${offer.id}`}
+                    >
+                      {buyMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "BUY SEAT"}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => buyMut.mutate(offer.id)}
-                    disabled={buyMut.isPending || !currentUserId}
-                    className="px-3 py-1.5 text-[9px] font-black bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-500 rounded disabled:opacity-50"
-                    data-testid={`btn-buy-resale-${offer.id}`}
-                  >
-                    {buyMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "BUY SEAT"}
-                  </button>
+                  <div className="grid grid-cols-3 gap-1 text-[8px] font-mono">
+                    <div className="bg-black/40 border border-cyan-500/15 rounded px-1.5 py-1">
+                      <p className="text-cyan-500/50">MARKET PRICE</p>
+                      <p className="text-cyan-300 font-black text-[10px]">${ask.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-black/40 border border-amber-500/15 rounded px-1.5 py-1">
+                      <p className="text-amber-500/60">SOVEREIGN FEE 2%</p>
+                      <p className="text-amber-300 font-black text-[10px]">+${fee.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-emerald-950/40 border border-emerald-500/30 rounded px-1.5 py-1">
+                      <p className="text-emerald-500/60">TOTAL SETTLE</p>
+                      <p className="text-emerald-300 font-black text-[10px]">${buyerPays.toFixed(2)}</p>
+                    </div>
+                  </div>
                 </div>
               );
             })}
