@@ -835,14 +835,22 @@ export async function traderAcceptOffer(queueId: string, userId: string, caughtP
 
   await db.update(settlementQueue).set({
     status: "SETTLED",
-    acceptedMultiplier: locked.toFixed(2),
+    acceptedMultiplier: locked.toFixed(4),
     payoutAmount: offerAmount.toFixed(2),
     currentOffer: offerAmount.toFixed(2),
-    currentMultiplier: locked.toFixed(2),
+    currentMultiplier: locked.toFixed(4),
     settledAt: new Date(),
   }).where(eq(settlementQueue.id, queueId));
 
-  console.log(`[GOVERNOR] TRADER ACCEPTED: ${userId} | $${buyIn} × LOCKED ${locked}x = $${offerAmount} | Fund remaining: $${(available - offerAmount).toFixed(2)}`);
+  if (entry.orderId) {
+    await db.update(orders).set({
+      finalPayout: offerAmount.toFixed(2),
+      status: "settled",
+    }).where(eq(orders.id, entry.orderId));
+  }
+
+  const profitLoss = parseFloat((offerAmount - buyIn).toFixed(2));
+  console.log(`[GOVERNOR] LIVE CATCH SETTLED: ${userId} | IN: $${buyIn.toFixed(2)} | CATCH: $${offerAmount.toFixed(2)} | P/L: ${profitLoss >= 0 ? "+" : ""}$${profitLoss.toFixed(2)} | Fund remaining: $${(available - offerAmount).toFixed(2)}`);
 
   return {
     success: true,
