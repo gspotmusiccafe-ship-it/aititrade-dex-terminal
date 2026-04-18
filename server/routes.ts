@@ -8057,6 +8057,61 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  app.post("/api/admin/investor-portals/bulk-create", isAdmin, async (req: any, res) => {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "items array required" });
+      }
+      const extractUri = (url: string): string | null => {
+        if (!url) return null;
+        const m = url.match(/open\.spotify\.com\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
+        return m ? `spotify:${m[1]}:${m[2]}` : null;
+      };
+      const created: any[] = [];
+      const skipped: any[] = [];
+      for (const raw of items) {
+        const songTitle = String(raw.songTitle || "").trim();
+        const spotifyUrl = String(raw.spotifyUrl || "").trim() || null;
+        const totalStreams = Math.max(0, parseInt(raw.totalStreams) || 0);
+        if (!songTitle) { skipped.push({ raw, reason: "missing songTitle" }); continue; }
+        const existing = await db.select().from(globalInvestorPortals)
+          .where(sql`UPPER(${globalInvestorPortals.songTitle}) = UPPER(${songTitle})`);
+        if (existing.length > 0) {
+          await db.update(globalInvestorPortals).set({
+            totalStreams,
+            spotifyUrl: spotifyUrl || existing[0].spotifyUrl,
+            spotifyUri: spotifyUrl ? extractUri(spotifyUrl) : existing[0].spotifyUri,
+          }).where(eq(globalInvestorPortals.id, existing[0].id));
+          skipped.push({ songTitle, reason: "updated existing", id: existing[0].id });
+          continue;
+        }
+        const [portal] = await db.insert(globalInvestorPortals).values({
+          portalName: songTitle,
+          songTitle,
+          totalStreams,
+          targetRaise: "5000",
+          entryPrice: "500",
+          downPayment: "25",
+          monthlyPayment: "19.79",
+          termMonths: 24,
+          maxInvestors: 10,
+          baseReturnPct: "25",
+          maxReturnPct: "100",
+          spotifyUrl,
+          spotifyUri: extractUri(spotifyUrl || ""),
+          status: "OPEN",
+        }).returning();
+        created.push(portal);
+      }
+      console.log(`[BULK PORTALS] Created ${created.length}, updated/skipped ${skipped.length}`);
+      res.json({ created: created.length, skipped: skipped.length, details: { created, skipped } });
+    } catch (error: any) {
+      console.error("[BULK PORTALS] Failed:", error.message);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
   // ─── PORTAL SEAT P2P RESALE — links Global Trading Portals to the same 2% two-way fee + Vault logic ───
   const PORTAL_FEE_RATE = 0.02;
 

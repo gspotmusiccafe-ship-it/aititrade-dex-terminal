@@ -4162,6 +4162,9 @@ function InvestorManagementTab() {
   const [streamInputs, setStreamInputs] = useState<Record<string, string>>({});
   const [savingStreams, setSavingStreams] = useState<string | null>(null);
   const [showCreatePortal, setShowCreatePortal] = useState(false);
+  const [showBulkPortal, setShowBulkPortal] = useState(false);
+  const [bulkPaste, setBulkPaste] = useState("");
+  const [bulkRunning, setBulkRunning] = useState(false);
   const [creatingPortal, setCreatingPortal] = useState(false);
   const [newPortal, setNewPortal] = useState({
     songTitle: "", portalName: "", totalStreams: "0", targetRaise: "5000",
@@ -4251,8 +4254,80 @@ function InvestorManagementTab() {
 
   const allInvestors = portals?.flatMap(p => p.investors?.map((inv: any) => ({ ...inv, songTitle: p.songTitle, portalName: p.portalName, entryPrice: p.entryPrice, termMonths: p.termMonths, monthlyPayment: p.monthlyPayment })) || []) || [];
 
+  const runBulk = async () => {
+    const lines = bulkPaste.split("\n").map(l => l.trim()).filter(Boolean);
+    const items = lines.map(line => {
+      const parts = line.split("|").map(p => p.trim());
+      return { songTitle: parts[0] || "", spotifyUrl: parts[1] || "", totalStreams: parts[2] || "0" };
+    }).filter(i => i.songTitle);
+    if (items.length === 0) {
+      toast({ title: "NOTHING TO IMPORT", description: "Paste at least one line: TITLE | URL | STREAMS", variant: "destructive" });
+      return;
+    }
+    setBulkRunning(true);
+    try {
+      const res = await apiRequest("POST", "/api/admin/investor-portals/bulk-create", { items });
+      const data = await res.json();
+      toast({ title: "BULK IMPORT COMPLETE", description: `${data.created} new portals created, ${data.skipped} updated/skipped` });
+      setBulkPaste("");
+      setShowBulkPortal(false);
+      refetch();
+    } catch (e: any) {
+      toast({ title: "BULK IMPORT FAILED", description: e.message, variant: "destructive" });
+    }
+    setBulkRunning(false);
+  };
+
   return (
     <div className="space-y-6" data-testid="investor-management-tab">
+      <div className="bg-black border border-lime-500/40 rounded-lg p-5 font-mono mb-4" data-testid="bulk-import-portals">
+        <div className="flex items-center justify-between mb-3 border-b border-lime-500/20 pb-2">
+          <div>
+            <h2 className="text-sm text-lime-400 font-black uppercase">⚡ BULK IMPORT PORTALS — PASTE 55 SONGS AT ONCE</h2>
+            <p className="text-[9px] text-lime-500/60 mt-0.5">One song per line · Format: <span className="text-lime-300">TITLE | SPOTIFY URL | STREAM COUNT</span></p>
+          </div>
+          <button
+            onClick={() => setShowBulkPortal(!showBulkPortal)}
+            className="px-3 py-1 bg-lime-900/60 border border-lime-500/30 text-lime-400 text-[10px] font-bold rounded hover:bg-lime-800/60"
+            data-testid="btn-toggle-bulk-portal"
+          >
+            {showBulkPortal ? "CLOSE" : "+ BULK PASTE"}
+          </button>
+        </div>
+        {showBulkPortal && (
+          <div className="space-y-3">
+            <textarea
+              value={bulkPaste}
+              onChange={e => setBulkPaste(e.target.value)}
+              rows={12}
+              className="w-full bg-black border border-lime-500/30 text-lime-300 text-[11px] p-3 rounded font-mono leading-relaxed"
+              placeholder={`QUEEN BEE | https://open.spotify.com/track/6Qv8vrx2LttmBWLLuWBwrN | 12450
+ZODIAC SIGN | https://open.spotify.com/track/4iSUSYeTXgTP7Bk8NdXEH8 | 8910
+SCENE BY SCENE | https://open.spotify.com/track/3q3S1IcGkvpKUTjKAYzVIW | 5230
+...one song per line...`}
+              data-testid="textarea-bulk-portals"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] text-lime-500/60">
+                {bulkPaste.split("\n").filter(l => l.trim()).length} lines parsed · existing songs by title get stream count + URL UPDATED
+              </div>
+              <button
+                onClick={runBulk}
+                disabled={bulkRunning || !bulkPaste.trim()}
+                className="px-6 py-2 bg-lime-700 hover:bg-lime-600 border border-lime-400 text-black text-sm font-black rounded disabled:opacity-50 font-mono"
+                data-testid="btn-run-bulk-import"
+              >
+                {bulkRunning ? "IMPORTING..." : "🚀 IMPORT ALL PORTALS"}
+              </button>
+            </div>
+            <p className="text-[9px] text-lime-500/40 leading-relaxed">
+              Each new portal defaults to: $500 entry · 10 O/I seats · $25 down + $19.79/mo × 24 mo · 25% base / 100% max return.
+              Spotify URI is auto-extracted from the URL. Re-pasting the same TITLE updates streams + URL without creating duplicates.
+            </p>
+          </div>
+        )}
+      </div>
+
       <div className="bg-black border border-green-500/30 rounded-lg p-5 font-mono mb-4">
         <div className="flex items-center justify-between mb-3 border-b border-green-500/20 pb-2">
           <h2 className="text-sm text-green-400 font-black uppercase">CREATE NEW INVESTOR PORTAL</h2>
