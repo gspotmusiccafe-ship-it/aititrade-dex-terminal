@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, enrollStake, getStakePositions, withdrawStakePosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, enrollStake, getStakePositions, withdrawStakePosition, depositToVaultExternal, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -5281,6 +5281,34 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
   // === MUSIC MARKET — RETAIL STOCK EXCHANGE ===
 
+  const STOCK_PRICE_CEILING = 500.00;
+  const P2P_FEE_RATE = 0.02;
+  const ESCALATION_INTERVAL = 5;
+
+  function applyPriceCeiling(price: number): number {
+    return Math.min(STOCK_PRICE_CEILING, parseFloat(price.toFixed(2)));
+  }
+
+  async function applyEscalationTx(tx: any, listingId: string, title: string): Promise<{ stepped: boolean; oldPrice: number; newPrice: number; pct: number; totalSold: number }> {
+    const [fresh] = await tx.select({
+      totalSold: marketListings.totalSold,
+      currentPrice: marketListings.currentPrice,
+    }).from(marketListings).where(eq(marketListings.id, listingId)).for("update");
+    const totalSold = Number(fresh?.totalSold || 0);
+    const oldPrice = parseFloat(fresh?.currentPrice || "0");
+    if (totalSold === 0 || totalSold % ESCALATION_INTERVAL !== 0 || oldPrice >= STOCK_PRICE_CEILING) {
+      return { stepped: false, oldPrice, newPrice: oldPrice, pct: 0, totalSold };
+    }
+    const pct = 1 + Math.random() * 19;
+    const stepped = applyPriceCeiling(oldPrice * (1 + pct / 100));
+    await tx.update(marketListings).set({
+      currentPrice: stepped.toFixed(2),
+      highPrice: sql`GREATEST(CAST(high_price AS DECIMAL), ${stepped.toFixed(2)})`,
+    }).where(eq(marketListings.id, listingId));
+    console.log(`[ESCALATION LADDER] ${title} | ${totalSold} units sold | $${oldPrice.toFixed(2)} → $${stepped.toFixed(2)} (+${pct.toFixed(2)}%)`);
+    return { stepped: true, oldPrice, newPrice: stepped, pct, totalSold };
+  }
+
   function getMarketPrice(listing: any): number {
     const base = parseFloat(listing.basePrice || "1.00");
     const current = parseFloat(listing.currentPrice || base.toString());
@@ -5419,6 +5447,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
 
       let price: number;
       let sellerId: string | null = null;
+      const isP2P = !!fromResaleId;
 
       if (fromResaleId) {
         const [resale] = await db.select().from(marketHoldings).where(
@@ -5427,16 +5456,22 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         if (!resale) return res.status(404).json({ message: "Resale offer not found" });
         if (resale.listingId !== listingId) return res.status(400).json({ message: "Resale offer does not match this listing" });
         if (resale.userId === userId) return res.status(400).json({ message: "Cannot buy your own listing" });
-        price = parseFloat(resale.askPrice || "0");
+        price = applyPriceCeiling(parseFloat(resale.askPrice || "0"));
         sellerId = resale.userId;
         await db.delete(marketHoldings).where(eq(marketHoldings.id, fromResaleId));
       } else {
-        price = getMarketPrice(listing);
+        price = applyPriceCeiling(parseFloat(listing.currentPrice || listing.basePrice || "1.00"));
       }
+
+      const buyerFee = parseFloat((price * P2P_FEE_RATE).toFixed(2));
+      const sellerFee = parseFloat((price * P2P_FEE_RATE).toFixed(2));
+      const buyerPays = parseFloat((price + buyerFee).toFixed(2));
+      const sellerNet = parseFloat((price - sellerFee).toFixed(2));
+      const houseTake = isP2P ? parseFloat((buyerFee + sellerFee).toFixed(2)) : buyerFee;
 
       const trackingNumber = `MKT-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
       const cashtag = "$AITITRADEBROKERAGE";
-      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${price.toFixed(2)}`;
+      const cashAppUrl = `https://cash.app/$AITITRADEBROKERAGE/${buyerPays.toFixed(2)}`;
 
       const userRecord = await db.select().from(users).where(eq(users.id, userId)).then(r => r[0]);
 
@@ -5463,8 +5498,15 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           buyerId: userId,
           sellerId,
           price: price.toFixed(2),
-          type: fromResaleId ? "RESALE" : "BUY",
+          type: fromResaleId ? "P2P_RESALE" : "BUY",
         });
+
+        if (sellerId) {
+          await tx.update(marketHoldings).set({
+            listedForSale: false,
+            askPrice: null,
+          }).where(and(eq(marketHoldings.userId, sellerId), eq(marketHoldings.listingId, listingId)));
+        }
 
         const buyerDisplayName = userRecord ? [userRecord.firstName, userRecord.lastName].filter(Boolean).join(" ") || "Market Buyer" : "Market Buyer";
         await tx.insert(orders).values({
@@ -5483,28 +5525,48 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
         const newLow = listing.lowPrice && parseFloat(listing.lowPrice) > 0
           ? Math.min(parseFloat(listing.lowPrice), price) : price;
         await tx.update(marketListings).set({
-          currentPrice: price.toFixed(2),
-          highPrice: newHigh.toFixed(2),
+          currentPrice: applyPriceCeiling(price).toFixed(2),
+          highPrice: applyPriceCeiling(newHigh).toFixed(2),
           lowPrice: newLow.toFixed(2),
           volume: sql`COALESCE(${marketListings.volume}, 0) + 1`,
           totalSold: sql`COALESCE(${marketListings.totalSold}, 0) + 1`,
         }).where(eq(marketListings.id, listingId));
 
-        return holding;
+        const escalationResult = await applyEscalationTx(tx, listingId, listing.title);
+
+        return { holding, escalationResult };
       });
 
-      logEvent("MARKET_BUY", `${userRecord?.displayName || userId} bought "${listing.title}" at $${price.toFixed(2)} — ${trackingNumber}`);
+      const escalation = result.escalationResult;
+
+      const vaultNote = isP2P
+        ? `P2P trade: ${listing.title} @ $${price.toFixed(2)} | Buyer fee $${buyerFee.toFixed(2)} + Seller fee $${sellerFee.toFixed(2)}`
+        : `Initial buy: ${listing.title} @ $${price.toFixed(2)} | Fee $${buyerFee.toFixed(2)}`;
+      await depositToVaultExternal(houseTake, vaultNote, listing.trackId || listingId, isP2P ? "P2P_TRADE_FEE" : "MARKET_BUY_FEE");
+
+      logEvent("MARKET_BUY", `${userRecord?.displayName || userId} bought "${listing.title}" @ $${price.toFixed(2)} | Buyer pays $${buyerPays.toFixed(2)} | Seller nets $${sellerNet.toFixed(2)} | Vault +$${houseTake.toFixed(2)}${escalation.stepped ? ` | LADDER STEP +${escalation.pct.toFixed(2)}% → $${escalation.newPrice.toFixed(2)}` : ""} — ${trackingNumber}`);
 
       res.json({
         success: true,
         holding: result,
         price,
+        buyerFee,
+        sellerFee,
+        buyerPays,
+        sellerNet,
+        houseTake,
+        isP2P,
+        sellerId,
+        escalation: escalation.stepped ? { from: escalation.oldPrice, to: escalation.newPrice, pct: escalation.pct } : null,
+        priceCeiling: STOCK_PRICE_CEILING,
         trackingNumber,
         cashtag,
         cashAppUrl,
         title: listing.title,
         artistName: listing.artistName,
-        message: `Position locked for "${listing.title}" at $${price.toFixed(2)} — Send payment to ${cashtag}`,
+        message: isP2P
+          ? `P2P TRADE LOCKED: "${listing.title}" @ $${price.toFixed(2)}. You pay $${buyerPays.toFixed(2)} (incl. 2% fee). Seller receives $${sellerNet.toFixed(2)}. Send payment to ${cashtag}.`
+          : `Position locked: "${listing.title}" @ $${price.toFixed(2)}. You pay $${buyerPays.toFixed(2)} (incl. 2% house fee). Send payment to ${cashtag}.`,
       });
     } catch (error: any) {
       if (error?.message?.startsWith("POOL_FULL:")) {

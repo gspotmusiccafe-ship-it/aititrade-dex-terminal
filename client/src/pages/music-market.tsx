@@ -275,7 +275,10 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
       queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
       queryClient.invalidateQueries({ queryKey: ["/api/market/portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["/api/market/leaderboard"] });
-      toast({ title: "POSITION LOCKED", description: `${data.trackingNumber} — Send $${data.price.toFixed(2)} to ${data.cashtag}` });
+      toast({
+        title: data.isP2P ? "P2P TRADE LOCKED" : "POSITION LOCKED",
+        description: `${data.trackingNumber} — Send $${(data.buyerPays ?? data.price).toFixed(2)} to ${data.cashtag}${data.escalation ? ` | LADDER +${data.escalation.pct.toFixed(1)}% → $${data.escalation.to.toFixed(2)}` : ""}`,
+      });
     } catch (e: any) {
       setError(e.message || "Failed to lock position");
     } finally {
@@ -364,6 +367,50 @@ function CashAppBuyDialog({ listing, onClose }: { listing: MarketListing; onClos
 
           {buyData && (
             <>
+              <div className={`border-2 ${buyData.isP2P ? "border-violet-500/50 bg-violet-950/30" : "border-cyan-500/40 bg-cyan-950/20"} p-3`} data-testid="fee-breakdown">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[9px] font-black tracking-wider ${buyData.isP2P ? "text-violet-400" : "text-cyan-400"}`}>
+                    {buyData.isP2P ? "P2P TRADE — ESCROW SETTLEMENT" : "INITIAL BUY — HOUSE FEE"}
+                  </span>
+                  <span className="text-[8px] text-zinc-500">2% TWO-WAY</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
+                  <div className="border border-zinc-800 bg-black/40 p-1.5">
+                    <p className="text-[7px] text-zinc-500">PRICE</p>
+                    <p className="text-white font-black">${buyData.price.toFixed(2)}</p>
+                  </div>
+                  <div className="border border-zinc-800 bg-black/40 p-1.5">
+                    <p className="text-[7px] text-zinc-500">YOU PAY</p>
+                    <p className="text-amber-400 font-black">${buyData.buyerPays.toFixed(2)}</p>
+                  </div>
+                  {buyData.isP2P && (
+                    <>
+                      <div className="border border-zinc-800 bg-black/40 p-1.5">
+                        <p className="text-[7px] text-zinc-500">SELLER NETS</p>
+                        <p className="text-emerald-400 font-black">${buyData.sellerNet.toFixed(2)}</p>
+                      </div>
+                      <div className="border border-zinc-800 bg-black/40 p-1.5">
+                        <p className="text-[7px] text-zinc-500">VAULT TAKE</p>
+                        <p className="text-yellow-400 font-black">+${buyData.houseTake.toFixed(2)}</p>
+                      </div>
+                    </>
+                  )}
+                  {!buyData.isP2P && (
+                    <div className="col-span-2 border border-zinc-800 bg-black/40 p-1.5">
+                      <p className="text-[7px] text-zinc-500">VAULT TAKE</p>
+                      <p className="text-yellow-400 font-black">+${buyData.houseTake.toFixed(2)}</p>
+                    </div>
+                  )}
+                </div>
+                {buyData.escalation && (
+                  <div className="mt-2 border-t border-amber-500/30 pt-2 text-center">
+                    <p className="text-[8px] text-amber-400 font-black tracking-wider">⚡ LADDER STEP-UP TRIGGERED</p>
+                    <p className="text-[9px] text-amber-300 font-mono">${buyData.escalation.from.toFixed(2)} → ${buyData.escalation.to.toFixed(2)} (+{buyData.escalation.pct.toFixed(2)}%)</p>
+                  </div>
+                )}
+                <p className="text-[7px] text-zinc-600 text-center mt-2">CEILING ${buyData.priceCeiling?.toFixed(2) || "500.00"} • LADDER FIRES EVERY 5 SOLD</p>
+              </div>
+
               <div className="border border-emerald-500/30 bg-emerald-950/20 p-2.5 text-center">
                 <p className="text-[8px] text-emerald-500/50 tracking-wider">TRACKING NUMBER</p>
                 <p className="text-sm text-emerald-400 font-black" data-testid="text-tracking-number">{buyData.trackingNumber}</p>

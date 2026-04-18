@@ -67,6 +67,21 @@ export async function getTrustVaultBalance(): Promise<number> {
   return parseFloat(row?.balance || "0");
 }
 
+export async function depositToVaultExternal(amount: number, note: string, trackId?: string, type: string = "MARKET_FEE"): Promise<void> {
+  if (amount <= 0) return;
+  await db.insert(trustVault).values({ id: 1, balance: amount.toFixed(2) }).onConflictDoUpdate({
+    target: trustVault.id,
+    set: { balance: sql`balance + ${amount.toFixed(2)}`, updatedAt: new Date() },
+  });
+  await db.insert(trustVaultLedger).values({
+    blockId: null,
+    trackId: trackId || null,
+    amount: amount.toFixed(2),
+    type,
+    note,
+  });
+}
+
 async function depositToVault(amount: number, blockId: number, trackId: string, note: string): Promise<void> {
   await ensureVaultRow();
   await db.update(trustVault).set({
