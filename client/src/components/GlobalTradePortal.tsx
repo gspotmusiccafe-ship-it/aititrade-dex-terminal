@@ -39,11 +39,22 @@ function formatSessionTime(ms: number) {
   return `${s}s`;
 }
 
-interface GlobalTradePortalProps {
-  portalIndex: number;
+interface AssetOverride {
+  ticker: string;
+  title: string;
+  type: string;
+  spotifyUri: string;
+  spotifyUrl: string;
+  coverImage?: string;
+  artistName?: string;
 }
 
-export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProps) {
+interface GlobalTradePortalProps {
+  portalIndex: number;
+  assetsOverride?: AssetOverride[];
+}
+
+export default function GlobalTradePortal({ portalIndex, assetsOverride }: GlobalTradePortalProps) {
   const { toast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(portalIndex);
   const [tunedIn, setTunedIn] = useState(false);
@@ -66,17 +77,19 @@ export default function GlobalTradePortal({ portalIndex }: GlobalTradePortalProp
     staleTime: 60000,
   });
 
-  const assets = (dbRotation && dbRotation.length > 0)
-    ? dbRotation.map(item => ({
-        ticker: item.ticker,
-        title: item.title,
-        type: item.type,
-        spotifyUri: item.spotifyUri || "",
-        spotifyUrl: item.spotifyUrl || "",
-        coverImage: item.coverImage || "",
-        artistName: item.artistName || "",
-      }))
-    : rotation.rotation;
+  const assets = (assetsOverride && assetsOverride.length > 0)
+    ? assetsOverride
+    : (dbRotation && dbRotation.length > 0)
+      ? dbRotation.map(item => ({
+          ticker: item.ticker,
+          title: item.title,
+          type: item.type,
+          spotifyUri: item.spotifyUri || "",
+          spotifyUrl: item.spotifyUrl || "",
+          coverImage: item.coverImage || "",
+          artistName: item.artistName || "",
+        }))
+      : rotation.rotation;
 
   const currentAsset = assets[currentIndex % (assets.length || 1)] || assets[0];
 

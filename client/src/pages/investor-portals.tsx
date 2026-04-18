@@ -713,7 +713,20 @@ export default function InvestorPortalsPage() {
               <span className="text-[9px] text-emerald-400 font-black tracking-widest">LIVE</span>
             </div>
           </div>
-          <GlobalTradePortal portalIndex={0} />
+          <GlobalTradePortal
+            portalIndex={0}
+            assetsOverride={(portals || [])
+              .filter(p => p.spotifyUri || p.spotifyUrl)
+              .map((p, i) => ({
+                ticker: `PORTAL-${String(i + 1).padStart(2, "0")}`,
+                title: p.songTitle,
+                type: "track",
+                spotifyUri: p.spotifyUri || "",
+                spotifyUrl: p.spotifyUrl || "",
+                coverImage: "",
+                artistName: "AITITRADE Catalog",
+              }))}
+          />
           <p className="text-center text-[9px] text-emerald-500/40 mt-3 tracking-wider">
             EVERY STREAM = ROYALTY ACCRUAL TO O/I SEATS · BUY A SEAT BELOW TO COLLECT
           </p>
