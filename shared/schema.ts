@@ -192,6 +192,23 @@ export const bankerLedger = pgTable("banker_ledger", {
 
 export type BankerLedgerEntry = typeof bankerLedger.$inferSelect;
 
+export const stakePositions = pgTable("stake_positions", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  principal: decimal("principal", { precision: 12, scale: 2 }).notNull(),
+  yieldPct: decimal("yield_pct", { precision: 5, scale: 2 }).notNull().default("20.00"),
+  expectedYield: decimal("expected_yield", { precision: 12, scale: 2 }).notNull(),
+  termDays: integer("term_days").notNull().default(180),
+  depositDate: timestamp("deposit_date").notNull().defaultNow(),
+  unlockDate: timestamp("unlock_date").notNull(),
+  status: varchar("status").notNull().default("LOCKED"),
+  withdrawnAt: timestamp("withdrawn_at"),
+  cashTag: varchar("cash_tag"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type StakePosition = typeof stakePositions.$inferSelect;
+
 export const insertSettlementQueueSchema = createInsertSchema(settlementQueue).omit({ id: true, createdAt: true });
 export type InsertSettlementQueue = z.infer<typeof insertSettlementQueueSchema>;
 export type SettlementQueueEntry = typeof settlementQueue.$inferSelect;

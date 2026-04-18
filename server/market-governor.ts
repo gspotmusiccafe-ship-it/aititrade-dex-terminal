@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger, bankerQueue, bankerLedger, bankerDeposits } from "@shared/schema";
+import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger, bankerQueue, bankerLedger, bankerDeposits, stakePositions } from "@shared/schema";
 import { desc, sql, eq, asc, and, inArray, isNotNull, lte } from "drizzle-orm";
 
 const BLOCK_CEILING = 1000.00;
@@ -279,6 +279,103 @@ export async function getBankerEarnings(userId: string): Promise<{
       description: l.description,
     })),
   };
+}
+
+const STAKE_PRINCIPAL = 1000.00;
+const STAKE_YIELD_PCT = 20.00;
+const STAKE_TERM_DAYS = 180;
+
+export async function enrollStake(userId: string, principal: number, cashTag?: string): Promise<{
+  success: boolean;
+  positionId?: number;
+  unlockDate?: Date;
+  expectedYield?: number;
+  message: string;
+}> {
+  if (principal !== STAKE_PRINCIPAL) {
+    return { success: false, message: `Sovereign 1K Stake requires exactly $${STAKE_PRINCIPAL.toFixed(2)}.` };
+  }
+  const unlockDate = new Date();
+  unlockDate.setDate(unlockDate.getDate() + STAKE_TERM_DAYS);
+  const expectedYield = parseFloat((principal * STAKE_YIELD_PCT / 100).toFixed(2));
+
+  const [pos] = await db.insert(stakePositions).values({
+    userId,
+    principal: principal.toFixed(2),
+    yieldPct: STAKE_YIELD_PCT.toFixed(2),
+    expectedYield: expectedYield.toFixed(2),
+    termDays: STAKE_TERM_DAYS,
+    unlockDate,
+    cashTag: cashTag || null,
+  }).returning();
+
+  console.log(`[STAKE] ${userId} | $${principal.toFixed(2)} @ ${STAKE_YIELD_PCT}% | Yield: $${expectedYield.toFixed(2)} | Unlock: ${unlockDate.toISOString()}`);
+  return {
+    success: true,
+    positionId: pos.id,
+    unlockDate,
+    expectedYield,
+    message: `Sovereign 1K Stake locked. $${principal.toFixed(2)} → +$${expectedYield.toFixed(2)} yield in ${STAKE_TERM_DAYS} days.`,
+  };
+}
+
+export async function getStakePositions(userId: string): Promise<Array<{
+  id: number;
+  principal: number;
+  yieldPct: number;
+  expectedYield: number;
+  termDays: number;
+  depositDate: Date;
+  unlockDate: Date;
+  daysRemaining: number;
+  daysElapsed: number;
+  progressPct: number;
+  accruedYield: number;
+  canWithdraw: boolean;
+  status: string;
+}>> {
+  const rows = await db.select().from(stakePositions).where(eq(stakePositions.userId, userId)).orderBy(desc(stakePositions.id));
+  const now = Date.now();
+  return rows.map(r => {
+    const dep = r.depositDate.getTime();
+    const unl = r.unlockDate.getTime();
+    const total = unl - dep;
+    const elapsed = Math.max(0, Math.min(total, now - dep));
+    const progressPct = total > 0 ? parseFloat(((elapsed / total) * 100).toFixed(2)) : 0;
+    const expectedYield = parseFloat(r.expectedYield);
+    const accruedYield = parseFloat((expectedYield * (progressPct / 100)).toFixed(2));
+    const daysRemaining = Math.max(0, Math.ceil((unl - now) / (1000 * 60 * 60 * 24)));
+    const daysElapsed = Math.max(0, Math.floor(elapsed / (1000 * 60 * 60 * 24)));
+    return {
+      id: r.id,
+      principal: parseFloat(r.principal),
+      yieldPct: parseFloat(r.yieldPct),
+      expectedYield,
+      termDays: r.termDays,
+      depositDate: r.depositDate,
+      unlockDate: r.unlockDate,
+      daysRemaining,
+      daysElapsed,
+      progressPct,
+      accruedYield,
+      canWithdraw: now >= unl && r.status === "LOCKED",
+      status: r.status,
+    };
+  });
+}
+
+export async function withdrawStakePosition(userId: string, positionId: number): Promise<{ success: boolean; message: string; payout?: number }> {
+  const [pos] = await db.select().from(stakePositions).where(and(eq(stakePositions.id, positionId), eq(stakePositions.userId, userId)));
+  if (!pos) return { success: false, message: "Stake position not found." };
+  if (pos.status !== "LOCKED") return { success: false, message: `Position already ${pos.status}.` };
+  if (Date.now() < pos.unlockDate.getTime()) {
+    const days = Math.ceil((pos.unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return { success: false, message: `180-Day Hold active. ${days} day(s) remaining.` };
+  }
+  await db.update(stakePositions).set({ status: "WITHDRAWN", withdrawnAt: new Date() }).where(eq(stakePositions.id, positionId));
+  const payout = parseFloat(pos.principal) + parseFloat(pos.expectedYield);
+  console.log(`[STAKE] Withdrawal ${userId} #${positionId} | Payout: $${payout.toFixed(2)} (principal $${pos.principal} + yield $${pos.expectedYield})`);
+  return { success: true, message: `Withdrawal of $${payout.toFixed(2)} approved (principal + 20% yield).`, payout };
 }
 
 export async function withdrawBankerDeposit(userId: string, depositId: number): Promise<{ success: boolean; message: string; amount?: number }> {

@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, enrollStake, getStakePositions, withdrawStakePosition, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -4504,6 +4504,46 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       res.json(result);
     } catch (error: any) {
       console.error("[BANKER] Withdraw error:", error);
+      res.status(500).json({ message: "Failed to process withdrawal" });
+    }
+  });
+
+  app.post("/api/stake/enroll", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { amount, cashTag } = req.body || {};
+      const parsed = parseFloat(amount);
+      if (!Number.isFinite(parsed)) return res.status(400).json({ message: "Invalid amount" });
+      const result = await enrollStake(userId, parsed, cashTag);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[STAKE] Enroll error:", error);
+      res.status(500).json({ message: "Failed to enroll stake" });
+    }
+  });
+
+  app.get("/api/stake/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const positions = await getStakePositions(userId);
+      res.json({ positions });
+    } catch (error: any) {
+      console.error("[STAKE] Me error:", error);
+      res.status(500).json({ message: "Failed to fetch stake positions" });
+    }
+  });
+
+  app.post("/api/stake/withdraw/:positionId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const positionId = parseInt(req.params.positionId, 10);
+      if (!Number.isFinite(positionId)) return res.status(400).json({ message: "Invalid position id" });
+      const result = await withdrawStakePosition(userId, positionId);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[STAKE] Withdraw error:", error);
       res.status(500).json({ message: "Failed to process withdrawal" });
     }
   });

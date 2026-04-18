@@ -30,6 +30,7 @@ import TrustVaultPage from "@/pages/trust-vault";
 import ProductionPage from "@/pages/production";
 import TraderPage from "@/pages/trader";
 import InvestorPortalsPage from "@/pages/investor-portals";
+import StakingPage from "@/pages/staking";
 import MusicMarketPage from "@/pages/music-market";
 import { useEffect } from "react";
 
@@ -108,6 +109,7 @@ function AuthenticatedLayout() {
                 <Route path="/trader/:userId">{() => <AuthGate><TraderPage /></AuthGate>}</Route>
                 <Route path="/trader">{() => <AuthGate><TraderPage /></AuthGate>}</Route>
                 <Route path="/investor-portals">{() => <AuthGate><InvestorPortalsPage /></AuthGate>}</Route>
+                <Route path="/staking">{() => <AuthGate><StakingPage /></AuthGate>}</Route>
                 <Route path="/music-market">{() => <AuthGate><MusicMarketPage /></AuthGate>}</Route>
                 <Route path="/login" component={LandingPage} />
                 <Route component={NotFound} />

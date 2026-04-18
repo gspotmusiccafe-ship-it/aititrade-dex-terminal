@@ -129,10 +129,10 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/investor-portals"}>
-                  <Link href="/investor-portals" data-testid="nav-investor-portals">
-                    <DollarSign className="h-5 w-5 text-emerald-400" />
-                    <span className="text-emerald-400 font-extrabold">Investor Portals</span>
+                <SidebarMenuButton asChild isActive={location === "/staking" || location === "/investor-portals"}>
+                  <Link href="/staking" data-testid="nav-staking">
+                    <Lock className="h-5 w-5 text-amber-400" />
+                    <span className="text-amber-400 font-extrabold">Staking</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
