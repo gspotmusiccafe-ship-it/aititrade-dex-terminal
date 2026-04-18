@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Trophy, Flame, Medal, Crown, Star, Share2, Mail, MessageSquare, TrendingUp, BarChart3, DollarSign, Shield } from "lucide-react";
+import { Trophy, Flame, Medal, Crown, Star, Share2, Mail, MessageSquare, TrendingUp, BarChart3, DollarSign, Shield, Rocket, Lock } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -341,8 +342,130 @@ function TradersLeaderboard() {
   );
 }
 
+interface SprintRow {
+  rank: number;
+  userId: string;
+  displayName: string;
+  realizedProfit: number;
+  streamRoyalties: number;
+  totalGains: number;
+  percentToGoal: number;
+  capped: boolean;
+  cappedAt?: string;
+}
+interface SprintWinner { id: number; userId: string; displayName: string; realizedProfitAtWin: string; cycleAtWin: number | null; hitAt: string; }
+interface SprintBonus { distributed: boolean; blockTen?: number; recipients?: string[]; total?: number; }
+
+function SprintLeaderboard() {
+  const { data, isLoading } = useQuery<{ target: number; rows: SprintRow[]; winners: SprintWinner[]; latestBonus: SprintBonus | null }>({
+    queryKey: ["/api/leaderboard/sprint"],
+    refetchInterval: 15000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+      </div>
+    );
+  }
+
+  const rows = data?.rows || [];
+  const winners = data?.winners || [];
+  const latestBonus = data?.latestBonus;
+
+  return (
+    <div>
+      <div className="rounded-2xl border-2 border-yellow-500/40 bg-gradient-to-br from-yellow-500/10 via-background to-orange-500/5 p-5 mb-6" data-testid="section-sprint-banner">
+        <div className="flex items-center gap-3 mb-2">
+          <Rocket className="h-7 w-7 text-yellow-400 animate-pulse" />
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight">FIRST TO $10,000</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Realized profit = <span className="text-emerald-400 font-bold">(Sell − Buy)</span> + Stream Royalties.
+          First trader to <span className="text-yellow-400 font-bold">$10,000</span> wins. Capped until next season — protects the Trust Vault.
+        </p>
+        <p className="text-xs text-muted-foreground mt-2">
+          Every <span className="text-yellow-400">10th $1K cycle</span>, <span className="text-emerald-400">1% of the Trust Vault</span> drops to the top 3 as a Performance Bonus.
+        </p>
+      </div>
+
+      {latestBonus?.distributed && (
+        <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/5 p-4 mb-6" data-testid="banner-block-ten-bonus">
+          <p className="text-emerald-400 font-bold text-sm">
+            💰 Block-{latestBonus.blockTen} Bonus Just Distributed: ${latestBonus.total?.toFixed(2)} → Top {latestBonus.recipients?.length}
+          </p>
+        </div>
+      )}
+
+      {winners.length > 0 && (
+        <div className="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4 mb-6" data-testid="section-recent-winners">
+          <p className="text-xs text-cyan-400 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+            <Crown className="h-4 w-4" /> RECENT 10K CHAMPIONS
+          </p>
+          <div className="space-y-1">
+            {winners.map(w => (
+              <div key={w.id} className="flex items-center justify-between text-sm" data-testid={`winner-${w.userId}`}>
+                <span className="font-bold text-cyan-300">{w.displayName}</span>
+                <span className="text-muted-foreground">${parseFloat(w.realizedProfitAtWin).toLocaleString()} • cycle {w.cycleAtWin || "—"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {rows.map(r => (
+          <Card key={r.userId} className={`border ${r.capped ? "border-cyan-500/40 bg-cyan-500/5" : r.rank <= 3 ? "border-yellow-500/30 bg-yellow-500/5" : "border-border/30 bg-card/60"}`} data-testid={`sprint-row-${r.userId}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm ${
+                  r.rank === 1 ? "bg-yellow-500 text-black" :
+                  r.rank === 2 ? "bg-gray-300 text-black" :
+                  r.rank === 3 ? "bg-orange-500 text-black" :
+                  "bg-muted text-muted-foreground"
+                }`}>
+                  {r.rank}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold truncate" data-testid={`text-sprint-name-${r.userId}`}>{r.displayName}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Realized: ${r.realizedProfit.toLocaleString()} {r.streamRoyalties > 0 && <>· Royalties: ${r.streamRoyalties.toLocaleString()}</>}
+                  </p>
+                </div>
+                {r.capped ? (
+                  <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/40 gap-1" data-testid={`badge-capped-${r.userId}`}>
+                    <Lock className="h-3 w-3" /> CAPPED
+                  </Badge>
+                ) : (
+                  <div className="text-right">
+                    <p className="font-black text-lg text-yellow-400" data-testid={`text-sprint-gains-${r.userId}`}>
+                      ${r.totalGains.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">/ $10,000</p>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1">
+                <Progress value={r.percentToGoal} className="h-2" data-testid={`progress-sprint-${r.userId}`} />
+                <p className="text-[10px] text-muted-foreground text-right">{r.percentToGoal.toFixed(1)}%</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {rows.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <Rocket className="h-12 w-12 mx-auto mb-4 opacity-30" />
+            <p>The race is open — start trading to claim the $10K throne.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function LeaderboardPage() {
-  const [tab, setTab] = useState("songs");
+  const [tab, setTab] = useState("sprint");
 
   const { data, isLoading } = useQuery<{ tracks: LeaderboardTrack[]; stats: LeaderboardStats }>({
     queryKey: ["/api/leaderboard"],
@@ -386,7 +509,11 @@ export default function LeaderboardPage() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="mb-8">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="sprint" data-testid="tab-sprint-leaderboard">
+              <Rocket className="h-4 w-4 mr-1.5" />
+              10K Sprint
+            </TabsTrigger>
             <TabsTrigger value="songs" data-testid="tab-songs-leaderboard">
               <Flame className="h-4 w-4 mr-1.5" />
               Songs
@@ -396,6 +523,10 @@ export default function LeaderboardPage() {
               Traders
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="sprint" className="mt-6">
+            <SprintLeaderboard />
+          </TabsContent>
 
           <TabsContent value="songs" className="mt-6">
             {stats && (

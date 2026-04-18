@@ -829,6 +829,31 @@ export const insertCryptoPaymentSchema = createInsertSchema(cryptoPayments).omit
 export type InsertCryptoPayment = z.infer<typeof insertCryptoPaymentSchema>;
 export type CryptoPayment = typeof cryptoPayments.$inferSelect;
 
+// ════════════════════════════════════════════════════════════════════
+// 10K SPRINT — First-to-$10,000 realized profit competition
+//   Once a user hits $10K, they're recorded as a Winner and CAPPED until next season.
+//   Every 10th $1K cycle, 1% of Trust Vault → top 3 sprint leaders as bonus.
+// ════════════════════════════════════════════════════════════════════
+export const tenKWinners = pgTable("ten_k_winners", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  displayName: varchar("display_name"),
+  realizedProfitAtWin: decimal("realized_profit_at_win", { precision: 12, scale: 2 }).notNull(),
+  cycleAtWin: integer("cycle_at_win"),
+  hitAt: timestamp("hit_at").defaultNow(),
+});
+export type TenKWinner = typeof tenKWinners.$inferSelect;
+
+export const tenKBonusDistributions = pgTable("ten_k_bonus_distributions", {
+  id: serial("id").primaryKey(),
+  blockTen: integer("block_ten").notNull().unique(), // 10, 20, 30 ... = $10K, $20K, $30K cycle
+  vaultAtDistribution: decimal("vault_at_distribution", { precision: 12, scale: 2 }).notNull(),
+  totalBonusPaid: decimal("total_bonus_paid", { precision: 12, scale: 2 }).notNull(),
+  recipients: text("recipients").array(),
+  distributedAt: timestamp("distributed_at").defaultNow(),
+});
+export type TenKBonusDistribution = typeof tenKBonusDistributions.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };

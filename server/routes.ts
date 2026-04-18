@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, enrollStake, getStakePositions, withdrawStakePosition, depositToVaultExternal, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, enrollStake, getStakePositions, withdrawStakePosition, depositToVaultExternal, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent, getSprintLeaderboard, getUserRealizedProfit, checkAllTenKWinners, maybeDistributeBlockTenBonus, getRecentTenKWinners } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1482,6 +1482,46 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching traders leaderboard:", error);
       res.status(500).json({ message: "Failed to fetch traders leaderboard" });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════
+  // 10K SPRINT — First-to-$10,000 realized profit competition
+  // ════════════════════════════════════════════════════════════════════
+  app.get("/api/leaderboard/sprint", async (_req, res) => {
+    try {
+      await checkAllTenKWinners();
+      const bonus = await maybeDistributeBlockTenBonus();
+      const rows = await getSprintLeaderboard(50);
+      const winners = await getRecentTenKWinners(5);
+      res.json({
+        target: 10000,
+        rows,
+        winners,
+        latestBonus: bonus.distributed ? bonus : null,
+      });
+    } catch (e: any) {
+      console.error("Sprint leaderboard error:", e);
+      res.status(500).json({ message: "Failed to load sprint leaderboard" });
+    }
+  });
+
+  app.get("/api/leaderboard/sprint/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) return res.status(401).json({ message: "auth required" });
+      const r = await getUserRealizedProfit(userId);
+      res.json({
+        userId,
+        target: 10000,
+        realizedProfit: parseFloat(r.profit.toFixed(2)),
+        streamRoyalties: parseFloat(r.streamRoyalties.toFixed(2)),
+        totalGains: parseFloat(r.totalGains.toFixed(2)),
+        percentToGoal: Math.min(100, parseFloat(((Math.max(r.totalGains, 0) / 10000) * 100).toFixed(2))),
+        capped: r.capped,
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: "Failed to load your sprint progress" });
     }
   });
 

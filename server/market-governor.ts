@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger, bankerQueue, bankerLedger, bankerDeposits, stakePositions } from "@shared/schema";
+import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger, bankerQueue, bankerLedger, bankerDeposits, stakePositions, p2pTrades, globalInvestorEntries, tenKWinners, tenKBonusDistributions, type TenKWinner } from "@shared/schema";
 import { desc, sql, eq, asc, and, inArray, isNotNull, lte } from "drizzle-orm";
 
 const BLOCK_CEILING = 1000.00;
@@ -2574,6 +2574,173 @@ setInterval(() => {
     }
   }
 }, 1000);
+
+// ════════════════════════════════════════════════════════════════════
+// 10K SPRINT — realized profit per user, $10K cap, Block-10 bonus
+// ════════════════════════════════════════════════════════════════════
+const TENK_TARGET = 10000;
+const TENK_BONUS_VAULT_PCT = 0.01; // 1% of vault to top 3 every Block-10
+
+export interface SprintRow {
+  rank: number;
+  userId: string;
+  displayName: string;
+  realizedProfit: number;
+  streamRoyalties: number;
+  totalGains: number;
+  percentToGoal: number;
+  capped: boolean;
+  cappedAt?: string;
+}
+
+export async function getUserRealizedProfit(userId: string): Promise<{
+  profit: number;
+  streamRoyalties: number;
+  totalGains: number;
+  capped: boolean;
+}> {
+  const winner = await db.select().from(tenKWinners).where(eq(tenKWinners.userId, userId)).limit(1);
+  // P2P realized: sales proceeds - purchase costs (matched on user as seller / buyer)
+  const [p2pSales] = await db.select({
+    s: sql<string>`COALESCE(SUM(CAST(seller_net AS DECIMAL)), 0)`,
+  }).from(p2pTrades).where(eq(p2pTrades.sellerId, userId));
+  const [p2pBuys] = await db.select({
+    s: sql<string>`COALESCE(SUM(CAST(buyer_pays AS DECIMAL)), 0)`,
+  }).from(p2pTrades).where(eq(p2pTrades.buyerId, userId));
+  // Floor realized: settled order payouts minus their unit price
+  const [floorRealized] = await db.select({
+    s: sql<string>`COALESCE(SUM(CAST(final_payout AS DECIMAL) - CAST(unit_price AS DECIMAL)), 0)`,
+  }).from(orders).where(and(eq(orders.buyerEmail, userId), inArray(orders.status, ["settled", "settled_early"])));
+  // Portal capital outlay (cost) — counts against gains until resold
+  const [portalOut] = await db.select({
+    s: sql<string>`COALESCE(SUM(CAST(total_paid AS DECIMAL)), 0)`,
+  }).from(globalInvestorEntries).where(eq(globalInvestorEntries.userId, userId));
+
+  const profit =
+    parseFloat(p2pSales?.s || "0") -
+    parseFloat(p2pBuys?.s || "0") +
+    parseFloat(floorRealized?.s || "0") -
+    parseFloat(portalOut?.s || "0");
+  const streamRoyalties = 0; // reserved — per-user royalty ledger not tracked yet
+  const totalGains = profit + streamRoyalties;
+  return { profit, streamRoyalties, totalGains, capped: winner.length > 0 };
+}
+
+export async function getSprintLeaderboard(limit = 50): Promise<SprintRow[]> {
+  // Aggregate candidate userIds across all profit sources
+  const sellers = await db.select({ id: p2pTrades.sellerId }).from(p2pTrades).groupBy(p2pTrades.sellerId);
+  const buyers = await db.select({ id: p2pTrades.buyerId }).from(p2pTrades).groupBy(p2pTrades.buyerId);
+  const floorBuyers = await db.select({ id: orders.buyerEmail, name: orders.buyerName })
+    .from(orders).where(and(isNotNull(orders.buyerEmail), sql`${orders.buyerEmail} != ''`))
+    .groupBy(orders.buyerEmail, orders.buyerName);
+  const portalUsers = await db.select({ id: globalInvestorEntries.userId, name: globalInvestorEntries.displayName })
+    .from(globalInvestorEntries).where(isNotNull(globalInvestorEntries.userId))
+    .groupBy(globalInvestorEntries.userId, globalInvestorEntries.displayName);
+
+  const nameMap = new Map<string, string>();
+  for (const r of floorBuyers) if (r.id) nameMap.set(r.id, r.name || r.id);
+  for (const r of portalUsers) if (r.id) nameMap.set(r.id, r.name || r.id);
+
+  const ids = new Set<string>();
+  for (const r of sellers) if (r.id) ids.add(r.id);
+  for (const r of buyers) if (r.id) ids.add(r.id);
+  for (const r of floorBuyers) if (r.id) ids.add(r.id);
+  for (const r of portalUsers) if (r.id) ids.add(r.id);
+
+  const winners = await db.select().from(tenKWinners);
+  const winnerMap = new Map<string, TenKWinner>(winners.map(w => [w.userId, w]));
+
+  const rows: Omit<SprintRow, "rank">[] = [];
+  for (const userId of ids) {
+    const r = await getUserRealizedProfit(userId);
+    const capped = winnerMap.has(userId);
+    const cappedProfit = capped ? Math.max(r.totalGains, TENK_TARGET) : r.totalGains;
+    rows.push({
+      userId,
+      displayName: nameMap.get(userId) || userId,
+      realizedProfit: parseFloat(r.profit.toFixed(2)),
+      streamRoyalties: parseFloat(r.streamRoyalties.toFixed(2)),
+      totalGains: parseFloat(cappedProfit.toFixed(2)),
+      percentToGoal: Math.min(100, parseFloat(((cappedProfit / TENK_TARGET) * 100).toFixed(2))),
+      capped,
+      cappedAt: capped ? winnerMap.get(userId)?.hitAt?.toISOString() : undefined,
+    });
+  }
+  rows.sort((a, b) => b.totalGains - a.totalGains);
+  return rows.slice(0, limit).map((r, i) => ({ rank: i + 1, ...r }));
+}
+
+export async function checkAndRecordTenKWinner(userId: string): Promise<TenKWinner | null> {
+  const existing = await db.select().from(tenKWinners).where(eq(tenKWinners.userId, userId)).limit(1);
+  if (existing.length > 0) return existing[0];
+  const r = await getUserRealizedProfit(userId);
+  if (r.totalGains < TENK_TARGET) return null;
+  const [cycle] = await db.select({ n: sql<number>`COALESCE(MAX(cycle_number), 0)` }).from(settlementCycles);
+  const portalUser = await db.select({ name: globalInvestorEntries.displayName })
+    .from(globalInvestorEntries).where(eq(globalInvestorEntries.userId, userId)).limit(1);
+  const orderUser = await db.select({ name: orders.buyerName })
+    .from(orders).where(eq(orders.buyerEmail, userId)).limit(1);
+  const displayName = portalUser[0]?.name || orderUser[0]?.name || userId;
+  const [winner] = await db.insert(tenKWinners).values({
+    userId,
+    displayName,
+    realizedProfitAtWin: r.totalGains.toFixed(2),
+    cycleAtWin: Number(cycle?.n) || 0,
+  }).returning();
+  console.log(`[10K-SPRINT] 🏆 WINNER: ${displayName} hit $${r.totalGains.toFixed(2)} at cycle ${cycle?.n || 0}`);
+  logEvent({ type: "TENK_WINNER", userId, displayName, profit: r.totalGains });
+  return winner;
+}
+
+export async function checkAllTenKWinners(): Promise<TenKWinner[]> {
+  // Lazy scan top 5 of leaderboard for any uncrowned winners (cheap)
+  const top = await getSprintLeaderboard(5);
+  const newWinners: TenKWinner[] = [];
+  for (const row of top) {
+    if (!row.capped && row.totalGains >= TENK_TARGET) {
+      const w = await checkAndRecordTenKWinner(row.userId);
+      if (w) newWinners.push(w);
+    }
+  }
+  return newWinners;
+}
+
+export async function maybeDistributeBlockTenBonus(): Promise<{ distributed: boolean; blockTen?: number; recipients?: string[]; total?: number }> {
+  // Block-10 = every 10th $1K cycle ($10K mark, $20K, ...). Use closed cycles count.
+  const [closed] = await db.select({ n: sql<number>`CAST(COUNT(*) AS INTEGER)` })
+    .from(settlementCycles).where(eq(settlementCycles.status, "CLOSED"));
+  const closedCount = Number(closed?.n) || 0;
+  if (closedCount === 0 || closedCount % 10 !== 0) return { distributed: false };
+  const blockTen = closedCount;
+  const already = await db.select().from(tenKBonusDistributions).where(eq(tenKBonusDistributions.blockTen, blockTen)).limit(1);
+  if (already.length > 0) return { distributed: false };
+
+  const vault = await getTrustVaultBalance();
+  const totalBonus = parseFloat((vault * TENK_BONUS_VAULT_PCT).toFixed(2));
+  if (totalBonus <= 0) return { distributed: false };
+  const top3 = (await getSprintLeaderboard(3)).filter(r => !r.capped);
+  if (top3.length === 0) return { distributed: false };
+
+  const share = parseFloat((totalBonus / top3.length).toFixed(2));
+  const recipients: string[] = [];
+  for (const t of top3) {
+    recordWalletPayout(t.userId, share, `Block-${blockTen} Performance Bonus (1% Trust Vault)`);
+    recipients.push(t.userId);
+  }
+  await db.insert(tenKBonusDistributions).values({
+    blockTen,
+    vaultAtDistribution: vault.toFixed(2),
+    totalBonusPaid: totalBonus.toFixed(2),
+    recipients,
+  });
+  console.log(`[10K-SPRINT] 💰 Block-${blockTen} bonus: $${totalBonus} → top ${top3.length}`);
+  logEvent({ type: "TENK_BLOCK_BONUS", blockTen, totalBonus, recipients });
+  return { distributed: true, blockTen, recipients, total: totalBonus };
+}
+
+export async function getRecentTenKWinners(limit = 10): Promise<TenKWinner[]> {
+  return await db.select().from(tenKWinners).orderBy(desc(tenKWinners.hitAt)).limit(limit);
+}
 
 export {
   POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, TRUST_VAULT_SPLIT_TIERS,
