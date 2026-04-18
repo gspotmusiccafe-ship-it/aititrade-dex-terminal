@@ -7,8 +7,184 @@ import { Link } from "wouter";
 import {
   Globe, TrendingUp, Users, DollarSign, Music, ExternalLink, Lock,
   ChevronRight, Loader2, CheckCircle, Zap, BarChart3, ArrowUpRight,
-  Crown, Disc
+  Crown, Disc, Landmark, Timer
 } from "lucide-react";
+
+interface BankerData {
+  position: number | null;
+  totalStrikes: number;
+  totalEarned: number;
+  deposits: Array<{
+    id: number;
+    amount: number;
+    depositDate: string;
+    unlockDate: string;
+    daysRemaining: number;
+    canWithdraw: boolean;
+    status: string;
+  }>;
+  ledger: Array<{ blockId: number | null; amount: number; createdAt: string | null; description: string | null }>;
+}
+
+function TsbBankerSection() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [amount, setAmount] = useState("1000");
+  const [cashTag, setCashTag] = useState("");
+
+  const { data: banker, isLoading } = useQuery<BankerData>({
+    queryKey: ["/api/banker/me"],
+    enabled: !!user,
+    refetchInterval: 5000,
+  });
+
+  const enrollMut = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/banker/enroll", { amount: parseFloat(amount), cashTag });
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "TSB ENROLLED", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/banker/me"] });
+    },
+    onError: (err: any) => toast({ title: "ENROLLMENT FAILED", description: err.message, variant: "destructive" }),
+  });
+
+  const withdrawMut = useMutation({
+    mutationFn: async (depositId: number) => {
+      const res = await apiRequest("POST", `/api/banker/withdraw/${depositId}`, {});
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({ title: "WITHDRAWAL APPROVED", description: data.message });
+      queryClient.invalidateQueries({ queryKey: ["/api/banker/me"] });
+    },
+    onError: (err: any) => toast({ title: "WITHDRAWAL DENIED", description: err.message, variant: "destructive" }),
+  });
+
+  if (!user) return null;
+
+  return (
+    <div className="mb-8 bg-gradient-to-br from-amber-950/40 via-black to-amber-950/20 border border-amber-500/30 rounded-lg p-5" data-testid="section-tsb-banker">
+      <div className="flex items-center gap-3 mb-4">
+        <Landmark className="h-6 w-6 text-amber-400" />
+        <div>
+          <h2 className="text-xl font-black text-white tracking-tight">TSB — TRADE SETTLEMENT BANKER</h2>
+          <p className="text-amber-500/70 text-[10px] tracking-widest">$40 STRIKE PER 1K BLOCK · 180-DAY SOVEREIGN HOLD · ASSET-BACKED BY 200+ AI CATALOG</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div className="bg-black/60 border border-amber-500/20 rounded p-3 text-center">
+          <p className="text-[8px] text-amber-500/60 tracking-widest">QUEUE POSITION</p>
+          <p className="text-amber-400 font-black text-xl" data-testid="text-banker-position">{banker?.position ?? "—"}</p>
+        </div>
+        <div className="bg-black/60 border border-lime-500/20 rounded p-3 text-center">
+          <p className="text-[8px] text-amber-500/60 tracking-widest">TOTAL STRIKES</p>
+          <p className="text-lime-400 font-black text-xl" data-testid="text-banker-strikes">{banker?.totalStrikes ?? 0}</p>
+        </div>
+        <div className="bg-black/60 border border-emerald-500/20 rounded p-3 text-center">
+          <p className="text-[8px] text-amber-500/60 tracking-widest">RENT EARNED</p>
+          <p className="text-emerald-400 font-black text-xl" data-testid="text-banker-earned">${(banker?.totalEarned ?? 0).toFixed(2)}</p>
+        </div>
+        <div className="bg-black/60 border border-cyan-500/20 rounded p-3 text-center">
+          <p className="text-[8px] text-amber-500/60 tracking-widest">ACTIVE DEPOSITS</p>
+          <p className="text-cyan-400 font-black text-xl" data-testid="text-banker-deposits-count">
+            {banker?.deposits.filter(d => d.status === "LOCKED").length ?? 0}
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-black/40 border border-amber-500/15 rounded p-3 mb-4">
+        <p className="text-[10px] text-amber-500/60 tracking-widest mb-2">ENROLL — LEASE CAPITAL TO THE FLOOR</p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="number"
+            min="1000"
+            step="100"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="$1,000 minimum"
+            className="flex-1 bg-black border border-amber-500/30 rounded px-3 py-2 text-amber-400 font-mono text-sm focus:outline-none focus:border-amber-400"
+            data-testid="input-banker-amount"
+          />
+          <input
+            type="text"
+            value={cashTag}
+            onChange={(e) => setCashTag(e.target.value)}
+            placeholder="$YourCashTag"
+            className="flex-1 bg-black border border-amber-500/30 rounded px-3 py-2 text-amber-400 font-mono text-sm focus:outline-none focus:border-amber-400"
+            data-testid="input-banker-cashtag"
+          />
+          <button
+            onClick={() => enrollMut.mutate()}
+            disabled={enrollMut.isPending || !amount || parseFloat(amount) < 1000}
+            className="bg-amber-500 hover:bg-amber-400 disabled:bg-amber-900 disabled:text-amber-700 text-black font-black px-4 py-2 rounded text-sm tracking-wider transition-colors"
+            data-testid="button-banker-enroll"
+          >
+            {enrollMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "ENROLL"}
+          </button>
+        </div>
+        <p className="text-[9px] text-amber-500/40 mt-2">
+          Send via Cash App to <span className="text-amber-400 font-bold">$AITITRADEBROKERAGE</span> after enrollment. Capital is locked 180 days; rent strikes are credited live as blocks settle.
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="text-center py-4"><Loader2 className="h-5 w-5 animate-spin text-amber-500 inline" /></div>
+      ) : banker && banker.deposits.length > 0 ? (
+        <div className="space-y-2 mb-4">
+          <p className="text-[10px] text-amber-500/60 tracking-widest">YOUR DEPOSITS</p>
+          {banker.deposits.map(d => (
+            <div key={d.id} className="bg-black/60 border border-amber-500/15 rounded p-3 flex items-center justify-between" data-testid={`row-deposit-${d.id}`}>
+              <div className="flex items-center gap-3">
+                <Lock className={`h-4 w-4 ${d.canWithdraw ? "text-lime-400" : "text-amber-500"}`} />
+                <div>
+                  <p className="text-amber-400 font-bold text-sm">${d.amount.toFixed(2)}</p>
+                  <p className="text-[9px] text-amber-500/50">
+                    Unlocks {new Date(d.unlockDate).toLocaleDateString()} · Status: <span className={d.status === "LOCKED" ? "text-amber-400" : "text-lime-400"}>{d.status}</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="flex items-center gap-1 text-[10px]">
+                    <Timer className={`h-3 w-3 ${d.canWithdraw ? "text-lime-400" : "text-amber-500"}`} />
+                    <span className={`font-mono font-bold ${d.canWithdraw ? "text-lime-400" : "text-amber-400"}`} data-testid={`text-days-remaining-${d.id}`}>
+                      {d.canWithdraw ? "UNLOCKED" : `${d.daysRemaining}d`}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => withdrawMut.mutate(d.id)}
+                  disabled={!d.canWithdraw || withdrawMut.isPending || d.status !== "LOCKED"}
+                  className="bg-lime-500 hover:bg-lime-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-black px-3 py-1.5 rounded text-xs tracking-wider transition-colors"
+                  data-testid={`button-withdraw-${d.id}`}
+                >
+                  WITHDRAW
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {banker && banker.ledger.length > 0 && (
+        <div>
+          <p className="text-[10px] text-amber-500/60 tracking-widest mb-2">RECENT RENT STRIKES</p>
+          <div className="bg-black/60 border border-amber-500/15 rounded max-h-40 overflow-y-auto">
+            {banker.ledger.slice(0, 10).map((l, i) => (
+              <div key={i} className="flex items-center justify-between px-3 py-1.5 border-b border-amber-500/10 last:border-b-0" data-testid={`row-strike-${i}`}>
+                <span className="text-[10px] text-amber-500/70 font-mono">{l.description || `Block #${l.blockId}`}</span>
+                <span className="text-lime-400 font-bold text-xs">+${l.amount.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 import { SiSpotify } from "react-icons/si";
 
 interface InvestorPortal {
@@ -313,6 +489,7 @@ export default function InvestorPortalsPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        <TsbBankerSection />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {portals?.map((portal) => (
             <PortalCard

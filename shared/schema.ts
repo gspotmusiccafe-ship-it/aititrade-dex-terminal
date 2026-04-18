@@ -152,6 +152,46 @@ export const trustVaultLedger = pgTable("trust_vault_ledger", {
 
 export type TrustVaultLedger = typeof trustVaultLedger.$inferSelect;
 
+export const bankerQueue = pgTable("banker_queue", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  position: integer("position").notNull(),
+  status: varchar("status").notNull().default("ACTIVE"),
+  totalStrikes: integer("total_strikes").notNull().default(0),
+  totalEarned: decimal("total_earned", { precision: 12, scale: 2 }).notNull().default("0.00"),
+  lastStrikeAt: timestamp("last_strike_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type BankerQueueEntry = typeof bankerQueue.$inferSelect;
+
+export const bankerDeposits = pgTable("banker_deposits", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  depositDate: timestamp("deposit_date").notNull().defaultNow(),
+  unlockDate: timestamp("unlock_date").notNull(),
+  status: varchar("status").notNull().default("LOCKED"),
+  withdrawnAt: timestamp("withdrawn_at"),
+  cashTag: varchar("cash_tag"),
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type BankerDeposit = typeof bankerDeposits.$inferSelect;
+
+export const bankerLedger = pgTable("banker_ledger", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  blockId: integer("block_id"),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  type: varchar("type").notNull().default("BANKER_RENT_STRIKE"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type BankerLedgerEntry = typeof bankerLedger.$inferSelect;
+
 export const insertSettlementQueueSchema = createInsertSchema(settlementQueue).omit({ id: true, createdAt: true });
 export type InsertSettlementQueue = z.infer<typeof insertSettlementQueueSchema>;
 export type SettlementQueueEntry = typeof settlementQueue.$inferSelect;

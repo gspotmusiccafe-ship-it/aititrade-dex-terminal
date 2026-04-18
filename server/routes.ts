@@ -17,7 +17,7 @@ import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
 import { objectStorageClient } from "./replit_integrations/object_storage";
-import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
+import { getMarketState, getBreathingState, computeLiquiditySplit, computeGlobalRoyaltySplit, generateRecycleValues, invalidateCache, POOL_CEILING, FLOOR_SPLIT, CEO_SPLIT, initTrackPricing, getPortalForPrice, calculateTradeStatus, calculateEarlyExit, checkTreasuryMilestones, loadPortalsFromDb, getPortalConfigs, invalidatePortalCache, PORTALS, enqueueTrader, getSettlementFundBalance, getTraderPositions, traderAcceptOffer, traderDiscountSell, finalizeBlock, getTrustVaultBalance, enrollBanker, getBankerEarnings, withdrawBankerDeposit, getSettlementDashboard, checkAndTriggerSettlement, runSettlementCycle, SETTLEMENT_CYCLE_THRESHOLD, seed81Portals, getPortalTiers, getGrossIntake, getTotalPaidOut, VALID_ENTRIES, getKineticState, setKineticBias, getKineticBias, freezeKineticSplit, unfreezeKineticSplit, isKineticFrozen, liveEngine, getEngineIO, enterSafe, addPosition, getPortfolioValue, getPortfolio, getWallet, recordWalletDeposit, recordWalletEntry, recordWalletPayout, recordWalletWithdrawal, getWalletSummary, computeGlobalIndex, buildMonitor, getEventLog, emergencyReset, logEvent } from "./market-governor";
 import { logRadioEvent, logMarketEvent, getSignalStatus, setWebhookUrls, initFromEnv as initSheetsFromEnv } from "./sheets-logger";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
@@ -4463,6 +4463,63 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     } catch (error: any) {
       console.error("[VAULT] Ledger error:", error);
       res.status(500).json({ message: "Failed to fetch vault ledger" });
+    }
+  });
+
+  app.post("/api/banker/enroll", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { amount, cashTag, note } = req.body || {};
+      const parsed = parseFloat(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      const result = await enrollBanker(userId, parsed, cashTag, note);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[BANKER] Enroll error:", error);
+      res.status(500).json({ message: "Failed to enroll banker" });
+    }
+  });
+
+  app.get("/api/banker/me", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const data = await getBankerEarnings(userId);
+      res.json(data);
+    } catch (error: any) {
+      console.error("[BANKER] Earnings error:", error);
+      res.status(500).json({ message: "Failed to fetch banker data" });
+    }
+  });
+
+  app.post("/api/banker/withdraw/:depositId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const depositId = parseInt(req.params.depositId, 10);
+      if (!Number.isFinite(depositId)) return res.status(400).json({ message: "Invalid deposit id" });
+      const result = await withdrawBankerDeposit(userId, depositId);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (error: any) {
+      console.error("[BANKER] Withdraw error:", error);
+      res.status(500).json({ message: "Failed to process withdrawal" });
+    }
+  });
+
+  app.get("/api/admin/banker/queue", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
+      const { bankerQueue, bankerLedger } = await import("@shared/schema");
+      const queue = await db.select().from(bankerQueue).orderBy(asc(bankerQueue.position));
+      const recentStrikes = await db.select().from(bankerLedger).orderBy(desc(bankerLedger.id)).limit(50);
+      res.json({ queue, recentStrikes });
+    } catch (error: any) {
+      console.error("[ADMIN BANKER] Error:", error);
+      res.status(500).json({ message: "Failed to fetch banker queue" });
     }
   });
 

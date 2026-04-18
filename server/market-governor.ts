@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger } from "@shared/schema";
+import { tracks, orders, portalSettings, settlementQueue, settlementCycles, assetBlocks, trustVault, trustVaultLedger, bankerQueue, bankerLedger, bankerDeposits } from "@shared/schema";
 import { desc, sql, eq, asc, and, inArray, isNotNull, lte } from "drizzle-orm";
 
 const BLOCK_CEILING = 1000.00;
@@ -127,9 +127,172 @@ export async function finalizeBlock(blockId: number): Promise<{
     settledAt: new Date(),
   }).where(eq(assetBlocks.id, blockId));
 
-  console.log(`[BLOCK SETTLE] Block #${block.blockNumber} (track ${block.trackId}) | Eligible: ${eligible.length} | Paid: $${totalPaid.toFixed(2)} | Surplus: $${surplus.toFixed(2)} → Vault | Rolled over: ${rolledOver}`);
+  const bankerStrike = await triggerBankerPayout(blockId);
 
-  return { success: true, blockId, totalPaid, surplus, eligibleCount: eligible.length, rolledOver, message: `Block settled. Surplus $${surplus.toFixed(2)} routed to Trust Vault.` };
+  console.log(`[BLOCK SETTLE] Block #${block.blockNumber} (track ${block.trackId}) | Eligible: ${eligible.length} | Paid: $${totalPaid.toFixed(2)} | Surplus: $${surplus.toFixed(2)} → Vault | Rolled over: ${rolledOver} | Banker: ${bankerStrike.message}`);
+
+  return { success: true, blockId, totalPaid, surplus, eligibleCount: eligible.length, rolledOver, message: `Block settled. Surplus $${surplus.toFixed(2)} routed to Trust Vault. ${bankerStrike.message}` };
+}
+
+const BANKER_STRIKE_AMOUNT = 40.00;
+const BANKER_LOCK_DAYS = 180;
+const BANKER_LEASE_PER_BLOCK = 1000.00;
+
+export async function enrollBanker(userId: string, depositAmount: number, cashTag?: string, note?: string): Promise<{
+  success: boolean;
+  queuePosition?: number;
+  depositId?: number;
+  unlockDate?: Date;
+  message: string;
+}> {
+  if (depositAmount < BANKER_LEASE_PER_BLOCK) {
+    return { success: false, message: `Minimum TSB lease is $${BANKER_LEASE_PER_BLOCK.toFixed(2)} per block.` };
+  }
+
+  const unlockDate = new Date();
+  unlockDate.setDate(unlockDate.getDate() + BANKER_LOCK_DAYS);
+
+  const [deposit] = await db.insert(bankerDeposits).values({
+    userId,
+    amount: depositAmount.toFixed(2),
+    unlockDate,
+    cashTag: cashTag || null,
+    note: note || null,
+  }).returning();
+
+  const [{ maxPos }] = await db.select({
+    maxPos: sql<number>`COALESCE(MAX(position), 0)`,
+  }).from(bankerQueue);
+  const nextPos = (Number(maxPos) || 0) + 1;
+
+  const [existing] = await db.select().from(bankerQueue).where(eq(bankerQueue.userId, userId));
+  let queuePosition = existing?.position;
+  if (!existing) {
+    const [row] = await db.insert(bankerQueue).values({
+      userId,
+      position: nextPos,
+      status: "ACTIVE",
+    }).returning();
+    queuePosition = row.position;
+  }
+
+  console.log(`[BANKER] Enrolled ${userId} | Deposit: $${depositAmount.toFixed(2)} | Position: ${queuePosition} | Unlock: ${unlockDate.toISOString()}`);
+
+  return {
+    success: true,
+    queuePosition,
+    depositId: deposit.id,
+    unlockDate,
+    message: `TSB enrolled. Position #${queuePosition} in round-robin. $${depositAmount.toFixed(2)} locked until ${unlockDate.toDateString()}.`,
+  };
+}
+
+export async function triggerBankerPayout(blockId: number): Promise<{
+  success: boolean;
+  bankerId?: string;
+  amount: number;
+  message: string;
+}> {
+  const activeBankers = await db.select().from(bankerQueue)
+    .where(eq(bankerQueue.status, "ACTIVE"))
+    .orderBy(asc(bankerQueue.position));
+
+  if (activeBankers.length === 0) {
+    return { success: false, amount: 0, message: "No active TSB — strike skipped." };
+  }
+
+  const sorted = [...activeBankers].sort((a, b) => {
+    const aTime = a.lastStrikeAt?.getTime() || 0;
+    const bTime = b.lastStrikeAt?.getTime() || 0;
+    if (aTime !== bTime) return aTime - bTime;
+    return a.position - b.position;
+  });
+
+  const activeTSB = sorted[0];
+  const strike = BANKER_STRIKE_AMOUNT;
+
+  await db.update(bankerQueue).set({
+    totalStrikes: sql`total_strikes + 1`,
+    totalEarned: sql`total_earned + ${strike.toFixed(2)}`,
+    lastStrikeAt: new Date(),
+  }).where(eq(bankerQueue.id, activeTSB.id));
+
+  await db.insert(bankerLedger).values({
+    userId: activeTSB.userId,
+    blockId,
+    amount: strike.toFixed(2),
+    type: "BANKER_RENT_STRIKE",
+    description: `Settlement Rent for Block ID: ${blockId}`,
+  });
+
+  console.log(`[BANKER STRIKE] Block #${blockId} | TSB ${activeTSB.userId} (pos ${activeTSB.position}) | +$${strike.toFixed(2)} | Total strikes: ${activeTSB.totalStrikes + 1}`);
+
+  return {
+    success: true,
+    bankerId: activeTSB.userId,
+    amount: strike,
+    message: `+$${strike.toFixed(2)} → TSB pos #${activeTSB.position}`,
+  };
+}
+
+export async function getBankerEarnings(userId: string): Promise<{
+  position: number | null;
+  totalStrikes: number;
+  totalEarned: number;
+  deposits: Array<{
+    id: number;
+    amount: number;
+    depositDate: Date;
+    unlockDate: Date;
+    daysRemaining: number;
+    canWithdraw: boolean;
+    status: string;
+  }>;
+  ledger: Array<{ blockId: number | null; amount: number; createdAt: Date | null; description: string | null }>;
+}> {
+  const [queue] = await db.select().from(bankerQueue).where(eq(bankerQueue.userId, userId));
+  const deposits = await db.select().from(bankerDeposits).where(eq(bankerDeposits.userId, userId)).orderBy(desc(bankerDeposits.id));
+  const ledger = await db.select().from(bankerLedger).where(eq(bankerLedger.userId, userId)).orderBy(desc(bankerLedger.id)).limit(100);
+
+  const now = Date.now();
+  return {
+    position: queue?.position ?? null,
+    totalStrikes: queue?.totalStrikes ?? 0,
+    totalEarned: parseFloat(queue?.totalEarned || "0"),
+    deposits: deposits.map(d => {
+      const unlock = d.unlockDate.getTime();
+      const daysRemaining = Math.max(0, Math.ceil((unlock - now) / (1000 * 60 * 60 * 24)));
+      return {
+        id: d.id,
+        amount: parseFloat(d.amount),
+        depositDate: d.depositDate,
+        unlockDate: d.unlockDate,
+        daysRemaining,
+        canWithdraw: now >= unlock && d.status === "LOCKED",
+        status: d.status,
+      };
+    }),
+    ledger: ledger.map(l => ({
+      blockId: l.blockId,
+      amount: parseFloat(l.amount),
+      createdAt: l.createdAt,
+      description: l.description,
+    })),
+  };
+}
+
+export async function withdrawBankerDeposit(userId: string, depositId: number): Promise<{ success: boolean; message: string; amount?: number }> {
+  const [deposit] = await db.select().from(bankerDeposits).where(and(eq(bankerDeposits.id, depositId), eq(bankerDeposits.userId, userId)));
+  if (!deposit) return { success: false, message: "Deposit not found." };
+  if (deposit.status !== "LOCKED") return { success: false, message: `Deposit already ${deposit.status}.` };
+  if (Date.now() < deposit.unlockDate.getTime()) {
+    const days = Math.ceil((deposit.unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return { success: false, message: `Sovereign Hold active. ${days} day(s) remaining.` };
+  }
+  await db.update(bankerDeposits).set({ status: "WITHDRAWN", withdrawnAt: new Date() }).where(eq(bankerDeposits.id, depositId));
+  const amount = parseFloat(deposit.amount);
+  console.log(`[BANKER] Withdrawal: ${userId} | Deposit #${depositId} | $${amount.toFixed(2)}`);
+  return { success: true, message: `Withdrawal of $${amount.toFixed(2)} approved.`, amount };
 }
 
 let FLOOR_SPLIT = 0.54;
