@@ -10,6 +10,7 @@ import {
   Crown, Disc, Landmark, Timer, Bitcoin
 } from "lucide-react";
 import CryptoSettlementModal from "@/components/CryptoSettlementModal";
+import GlobalTradePortal from "@/components/GlobalTradePortal";
 
 interface BankerData {
   position: number | null;
@@ -697,6 +698,27 @@ export default function InvestorPortalsPage() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
         <TsbBankerSection />
+
+        <div className="mb-6 bg-gradient-to-br from-emerald-950/40 via-black to-black border border-emerald-500/30 rounded-lg p-4 sm:p-5" data-testid="section-live-jam-stream">
+          <div className="flex items-center gap-3 mb-3">
+            <Disc className="h-5 w-5 text-emerald-400 animate-spin-slow" />
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base sm:text-lg font-black text-white tracking-tight">LIVE STREAM · SPOTIFY JAM</h2>
+              <p className="text-emerald-500/60 text-[9px] sm:text-[10px] tracking-widest">
+                THESE ARE THE ASSETS LISTED BELOW — STREAMS DRIVE PORTAL ROYALTIES IN REAL-TIME
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded">
+              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[9px] text-emerald-400 font-black tracking-widest">LIVE</span>
+            </div>
+          </div>
+          <GlobalTradePortal portalIndex={0} />
+          <p className="text-center text-[9px] text-emerald-500/40 mt-3 tracking-wider">
+            EVERY STREAM = ROYALTY ACCRUAL TO O/I SEATS · BUY A SEAT BELOW TO COLLECT
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {portals?.map((portal) => (
             <PortalCard
