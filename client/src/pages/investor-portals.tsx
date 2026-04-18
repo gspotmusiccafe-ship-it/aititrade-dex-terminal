@@ -386,8 +386,14 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
               }}
             />
           </div>
-          <p className="text-[8px] text-emerald-500/40 mt-1 text-right">
-            {portal.spotsRemaining > 0 ? `${portal.spotsRemaining} SPOTS LEFT` : "PORTAL FULL"}
+          <p className="text-[8px] mt-1 text-right">
+            {portal.spotsRemaining > 0 ? (
+              <span className="text-emerald-500/40">{portal.spotsRemaining} SPOTS LEFT</span>
+            ) : portalResales.length > 0 ? (
+              <span className="text-cyan-400 font-black tracking-wider">⚡ {portalResales.length} MARKET OFFER{portalResales.length === 1 ? "" : "S"} LIVE</span>
+            ) : (
+              <span className="text-amber-400/70 font-black tracking-wider">SECONDARY MARKET ONLY</span>
+            )}
           </p>
         </div>
 
@@ -501,25 +507,48 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
           </div>
         )}
 
-        <a
-          href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.downPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20DOWN%20PAYMENT`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-2.5 rounded font-black text-xs text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
-          style={{ background: "linear-gradient(135deg, #00D632, #00C244)", boxShadow: "0 0 12px rgba(0,214,50,0.25)" }}
-          data-testid={`btn-cashapp-down-${portal.id}`}
-        >
-          <DollarSign className="h-3.5 w-3.5" /> PAY ${parseFloat(portal.downPayment).toFixed(0)} DOWN VIA CASH APP
-        </a>
-        <a
-          href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.monthlyPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20MONTHLY%20PAYMENT`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-2 rounded font-bold text-[10px] text-emerald-300 flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-950/40 transition-all hover:bg-emerald-950/60"
-          data-testid={`btn-cashapp-monthly-${portal.id}`}
-        >
-          <DollarSign className="h-3 w-3" /> PAY ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO VIA CASH APP
-        </a>
+        {!isFull && !mySeat && (
+          <>
+            <a
+              href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.downPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20DOWN%20PAYMENT`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 rounded font-black text-xs text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.01]"
+              style={{ background: "linear-gradient(135deg, #00D632, #00C244)", boxShadow: "0 0 12px rgba(0,214,50,0.25)" }}
+              data-testid={`btn-cashapp-down-${portal.id}`}
+            >
+              <DollarSign className="h-3.5 w-3.5" /> PAY ${parseFloat(portal.downPayment).toFixed(0)} DOWN VIA CASH APP
+            </a>
+            <a
+              href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.monthlyPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20MONTHLY%20PAYMENT`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2 rounded font-bold text-[10px] text-emerald-300 flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-950/40 transition-all hover:bg-emerald-950/60"
+              data-testid={`btn-cashapp-monthly-${portal.id}`}
+            >
+              <DollarSign className="h-3 w-3" /> PAY ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO VIA CASH APP
+            </a>
+          </>
+        )}
+
+        {isFull && !mySeat && portalResales.length === 0 && (
+          <div className="w-full py-3 rounded border-2 border-amber-500/40 bg-amber-950/20 text-center" data-testid={`portal-locked-${portal.id}`}>
+            <p className="text-[10px] text-amber-400 font-black tracking-wider">⛔ SOLD OUT — SECONDARY MARKET ONLY</p>
+            <p className="text-[8px] text-amber-500/60 mt-1">Awaiting owner listings. Entry now requires buying a seat from a current owner via P2P resale.</p>
+          </div>
+        )}
+
+        {mySeat && mySeat.downPaymentPaid && parseFloat(mySeat.totalPaid || "0") < parseFloat(portal.entryPrice) && (
+          <a
+            href={`https://cash.app/$AITITRADEBROKERAGE/${parseFloat(portal.monthlyPayment).toFixed(2)}?note=INVESTOR%20PORTAL%20${encodeURIComponent(portal.songTitle)}%20MONTHLY%20PAYMENT`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 rounded font-bold text-[10px] text-emerald-300 flex items-center justify-center gap-2 border border-emerald-500/30 bg-emerald-950/40 transition-all hover:bg-emerald-950/60"
+            data-testid={`btn-cashapp-monthly-mine-${portal.id}`}
+          >
+            <DollarSign className="h-3 w-3" /> CONTINUE MONTHLY ${parseFloat(portal.monthlyPayment).toFixed(2)} VIA CASH APP
+          </a>
+        )}
       </div>
     </div>
   );
