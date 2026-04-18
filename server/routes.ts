@@ -4315,9 +4315,10 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
   app.post("/api/settlement/accept", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const { queueId } = req.body;
+      const { queueId, caughtPrice } = req.body;
       if (!queueId) return res.status(400).json({ message: "queueId required" });
-      const result = await traderAcceptOffer(queueId, userId);
+      const parsedCatch = typeof caughtPrice === "number" ? caughtPrice : parseFloat(caughtPrice);
+      const result = await traderAcceptOffer(queueId, userId, parsedCatch);
       res.json(result);
     } catch (error: any) {
       console.error("[SETTLEMENT] Accept error:", error);

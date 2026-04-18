@@ -170,8 +170,8 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
   }, []);
 
   const acceptMut = useMutation({
-    mutationFn: async (queueId: string) => {
-      const res = await apiRequest("POST", "/api/settlement/accept", { queueId });
+    mutationFn: async ({ queueId, caughtPrice }: { queueId: string; caughtPrice: number }) => {
+      const res = await apiRequest("POST", "/api/settlement/accept", { queueId, caughtPrice });
       const data = await res.json();
       if (data.success === false) throw new Error(data.message || "Position not found");
       return data;
@@ -276,7 +276,6 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
               <div key={pos.id} className="px-4 py-3 hover:bg-emerald-950/10 transition-colors" data-testid={`desk-position-${pos.id}`}>
                 <div className="flex items-center gap-3">
                   <div className="flex-shrink-0 relative">
-                    <span className="text-emerald-500/25 text-[10px] font-mono absolute -top-1 -left-1 bg-black px-0.5">#{i + 1}</span>
                     {pos.coverImage ? (
                       <img src={pos.coverImage} alt="" className="w-12 h-12 border border-emerald-500/20" />
                     ) : (
@@ -287,45 +286,45 @@ function TraderDesk({ positions, userId }: { positions: TraderData["positions"];
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-white text-sm font-black truncate">{pos.trackTitle}</p>
-                      <span className={`text-[7px] px-1 py-0.5 font-bold border ${
-                        pos.queueStatus === "SETTLED" ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10" :
-                        "text-cyan-400 border-cyan-500/30 bg-cyan-500/10"
-                      }`}>{pos.queueStatus || "QUEUED"}</span>
-                    </div>
+                    <p className="text-white text-sm font-black truncate">{pos.trackTitle}</p>
                     <div className="flex items-center gap-3 mt-0.5">
-                      <span className="text-emerald-500/40 text-[9px] font-mono">{pos.trackingNumber}</span>
+                      <span className="text-emerald-500/40 text-[9px] font-mono" data-testid={`text-tx-id-${pos.id}`}>ID: {pos.trackingNumber}</span>
                       {pos.queuePosition && (
                         <span className="text-emerald-500/40 text-[8px]">QUEUE #{pos.queuePosition}</span>
                       )}
-                      <span className="text-emerald-500/40 text-[8px]">{mult.toFixed(2)}x MULT</span>
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0 text-right mr-3">
-                    <div className="flex items-center gap-2 justify-end">
-                      <span className="text-emerald-500/60 text-xs font-mono">${pos.buyIn.toFixed(2)}</span>
-                      <span className="text-emerald-500/25">→</span>
-                      <span className="text-emerald-400 text-sm font-black font-mono">${offer.toFixed(2)}</span>
+                  <div className="flex-shrink-0 text-right mr-3 grid grid-cols-4 gap-3 items-center font-mono">
+                    <div className="text-center">
+                      <p className="text-[7px] text-emerald-500/50 font-bold tracking-widest">STATUS</p>
+                      <p className="text-cyan-400 text-[10px] font-black" data-testid={`status-${pos.id}`}>QUEUED</p>
                     </div>
-                    <div className={`flex items-center justify-end gap-1 ${roiPositive ? "text-emerald-400" : "text-red-400"}`}>
-                      {roiPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                      <span className="text-[10px] font-black">{profitLoss >= 0 ? "+" : "-"}${Math.abs(profitLoss).toFixed(2)} ({roiPct}%)</span>
+                    <div className="text-center">
+                      <p className="text-[7px] text-emerald-500/50 font-bold tracking-widest">IN</p>
+                      <p className="text-emerald-500/80 text-xs font-black" data-testid={`in-${pos.id}`}>${pos.buyIn.toFixed(2)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[7px] text-emerald-500/50 font-bold tracking-widest">LOCKED</p>
+                      <p className={`text-xs font-black ${roiPositive ? "text-emerald-400" : "text-red-400"}`} data-testid={`locked-${pos.id}`}>${offer.toFixed(2)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[7px] text-emerald-500/50 font-bold tracking-widest">SETTLE</p>
+                      <p className="text-emerald-500/40 text-xs font-black" data-testid={`settle-${pos.id}`}>—</p>
                     </div>
                   </div>
 
                   {canTrade && (
                     <div className="flex-shrink-0 flex gap-1.5">
                       <button
-                        onClick={() => { if (pos.queueId) { setPendingAction(pos.id); acceptMut.mutate(pos.queueId); } }}
+                        onClick={() => { if (pos.queueId) { setPendingAction(pos.id); acceptMut.mutate({ queueId: pos.queueId, caughtPrice: offer }); } }}
                         disabled={isPending || !pos.queueId}
                         className="flex items-center gap-1 px-3 py-2 text-[10px] font-black bg-emerald-600 hover:bg-emerald-500 text-white border border-emerald-500 transition-all disabled:opacity-50"
                         style={{ boxShadow: "0 0 8px rgba(16,185,129,0.3)" }}
-                        data-testid={`btn-accept-${pos.id}`}
+                        data-testid={`btn-settle-now-${pos.id}`}
                       >
                         {isPending && acceptMut.isPending ? <RefreshCw className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
-                        SELL
+                        SETTLE NOW
                       </button>
                       <button
                         onClick={() => { if (pos.queueId) { setPendingAction(pos.id); discountSellMut.mutate(pos.queueId); } }}

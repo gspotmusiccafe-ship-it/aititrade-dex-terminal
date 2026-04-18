@@ -653,9 +653,6 @@ export async function enqueueTrader(
   cashTag?: string,
 ): Promise<void> {
   const portal = getPortalForPrice(buyIn);
-  const liveMbbp = lockedMbbpPrice || liveEngine.mbbp;
-  const settlementOffer = parseFloat((buyIn * liveMbbp).toFixed(2));
-  const multiplier = parseFloat(liveMbbp.toFixed(4));
 
   const [maxPos] = await db.select({
     maxPos: sql<string>`COALESCE(MAX(queue_position), 0)`,
@@ -672,15 +669,15 @@ export async function enqueueTrader(
     buyIn: buyIn.toString(),
     portalName: portal.name,
     baseMbb: portal.mbb.toString(),
-    lockedMbbp: liveMbbp.toFixed(4),
-    currentOffer: settlementOffer.toString(),
-    currentMultiplier: multiplier.toString(),
+    lockedMbbp: "1.0000",
+    currentOffer: buyIn.toFixed(2),
+    currentMultiplier: "1.0000",
     cyclesHeld: 0,
     status: "QUEUED",
     queuePosition: nextPos,
   });
 
-  console.log(`[GOVERNOR] Trader enqueued: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | LOCKED MBBP: $${liveMbbp.toFixed(4)} | Settle At: $${settlementOffer} | CashTag: ${cashTag || "NONE"}`);
+  console.log(`[GOVERNOR] Trader enqueued FLAT: Order ${orderId} | BuyIn: $${buyIn} | Portal: ${portal.name} | Position: #${nextPos} | Initial Value: $${buyIn.toFixed(2)} | CashTag: ${cashTag || "NONE"}`);
 }
 
 export async function getGrossIntake(): Promise<number> {
@@ -802,7 +799,7 @@ export async function runSettlementCycle(forceAdmin: boolean = false): Promise<{
   return { cycleNumber, settled, holding, payoutBudget, totalPaidOut };
 }
 
-export async function traderAcceptOffer(queueId: string, userId: string): Promise<{
+export async function traderAcceptOffer(queueId: string, userId: string, caughtPrice?: number): Promise<{
   success: boolean;
   payout?: number;
   multiplier?: number;
@@ -815,8 +812,13 @@ export async function traderAcceptOffer(queueId: string, userId: string): Promis
   if (entry.status === "SETTLED") return { success: false, message: "Already settled" };
 
   const buyIn = parseFloat(entry.buyIn || "0");
-  const locked = parseFloat(entry.lockedMbbp || entry.currentMultiplier || "1.25");
-  const offerAmount = parseFloat((buyIn * locked).toFixed(2));
+  const minCatch = parseFloat((buyIn * 0.5).toFixed(2));
+  const maxCatch = parseFloat((buyIn * 2).toFixed(2));
+  if (typeof caughtPrice !== "number" || !isFinite(caughtPrice) || caughtPrice < minCatch || caughtPrice > maxCatch) {
+    return { success: false, message: `Invalid catch price. Must be between $${minCatch.toFixed(2)} and $${maxCatch.toFixed(2)}.` };
+  }
+  const offerAmount = parseFloat(caughtPrice.toFixed(2));
+  const locked = parseFloat((offerAmount / buyIn).toFixed(4));
 
   const grossIntake = await getGrossIntake();
   const totalKsReached = Math.floor(grossIntake / SETTLEMENT_CYCLE_THRESHOLD);
