@@ -4936,6 +4936,30 @@ function SettlementGovernorTab() {
     onError: () => toast({ title: "Purge Failed", variant: "destructive" }),
   });
 
+  const genesisPurgeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/genesis-purge", { confirm: "GENESIS" });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Genesis purge failed"); }
+      return res.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "🔥 GENESIS PURGE COMPLETE",
+        description: `Market reset to Absolute Zero. Trust Vault: $${data.vaultBalance}. ${data.wiped.length} tables wiped, engine + wallets + audit cleared in real-time.`,
+      });
+      queryClient.invalidateQueries();
+    },
+    onError: (e: any) => toast({ title: "Genesis Purge Failed", description: e.message, variant: "destructive" }),
+  });
+
+  const handleGenesisPurge = () => {
+    const c1 = window.confirm("⚠️ GENESIS PURGE — This wipes ALL orders, trades, settlements, vault, leaderboard, AND in-memory engine state + wallets + audit log. Catalog/users/portals stay. CONTINUE?");
+    if (!c1) return;
+    const c2 = window.prompt('Type "GENESIS" in caps to confirm absolute zero reset:');
+    if (c2 !== "GENESIS") { toast({ title: "Cancelled", description: "Confirmation text did not match." }); return; }
+    genesisPurgeMutation.mutate();
+  };
+
   const acceptMutation = useMutation({
     mutationFn: async (queueId: string) => {
       const res = await apiRequest("POST", "/api/settlement/accept", { queueId });
@@ -4984,6 +5008,15 @@ function SettlementGovernorTab() {
             data-testid="button-purge-inflated"
           >
             {purgeMutation.isPending ? "PURGING..." : "PURGE FAKE"}
+          </Button>
+          <Button
+            onClick={handleGenesisPurge}
+            disabled={genesisPurgeMutation.isPending}
+            className="bg-gradient-to-r from-red-900 to-orange-700 hover:from-red-800 hover:to-orange-600 text-white font-black text-[10px] sm:text-sm h-7 sm:h-9 px-2 sm:px-4 border border-yellow-500/40"
+            data-testid="button-genesis-purge"
+            title="Wipes ALL trade data + in-memory engine + persisted snapshots — Absolute Zero"
+          >
+            {genesisPurgeMutation.isPending ? "RESETTING..." : "🔥 GENESIS"}
           </Button>
           <Button
             onClick={() => runCycleMutation.mutate()}

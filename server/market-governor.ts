@@ -2576,6 +2576,44 @@ setInterval(() => {
 }, 1000);
 
 // ════════════════════════════════════════════════════════════════════
+// GENESIS RESET — Deep purge of in-memory engine + persisted snapshots
+//   Wipes liveEngine, wallets, eventLog, settlementHistory, and
+//   deletes engine-state.json + audit.json so restart starts clean.
+// ════════════════════════════════════════════════════════════════════
+export function resetEngineToGenesis(): { wiped: string[]; vaultBalance: string } {
+  // 1. In-memory engine state
+  liveEngine.P_current = 0.01;
+  liveEngine.totalVolume = 0;
+  liveEngine.demand = 0;
+  liveEngine.supply = 0;
+  liveEngine.cycle = 1;
+  liveEngine.settled = false;
+  liveEngine.marketOpen = true;
+  liveEngine.mbbp = 1.0;
+  liveEngine.closePrice = 0.01;
+  liveEngine.queue = [];
+  liveEngine.cash = { deposits: 0, entries: 0, totalIn: 0, lastDeposit: 0, lastEntry: 0 };
+
+  // 2. In-memory ledgers
+  for (const k of Object.keys(wallets)) delete wallets[k];
+  eventLog.length = 0;
+  settlementHistory.length = 0;
+
+  // 3. Persisted snapshots — delete then immediately re-write empty so
+  //    the auto-save interval can't resurrect old data
+  try { if (fs.existsSync(STATE_FILE)) fs.unlinkSync(STATE_FILE); } catch (e) { console.error("[GENESIS] state unlink:", e); }
+  try { if (fs.existsSync(AUDIT_FILE)) fs.unlinkSync(AUDIT_FILE); } catch (e) { console.error("[GENESIS] audit unlink:", e); }
+  saveState();
+  saveAudit();
+
+  console.log(`[GENESIS-RESET] 🔥 Engine + wallets + audit wiped to absolute zero`);
+  return {
+    wiped: ["liveEngine", "wallets (in-memory)", "eventLog", "settlementHistory", "engine-state.json", "audit.json"],
+    vaultBalance: "0.00",
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
 // 10K SPRINT — realized profit per user, $10K cap, Block-10 bonus
 // ════════════════════════════════════════════════════════════════════
 const TENK_TARGET = 10000;
