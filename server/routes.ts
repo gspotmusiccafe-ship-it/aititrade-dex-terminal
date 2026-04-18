@@ -546,7 +546,14 @@ export async function registerRoutes(
       const user = await storage.getUser(userId);
       if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
       const logs = await db.select().from(globalStreamLogs).orderBy(desc(globalStreamLogs.createdAt)).limit(200);
-      res.json(logs);
+      const userIds = Array.from(new Set(logs.map((l: any) => l.userId).filter(Boolean)));
+      const userRows = userIds.length > 0
+        ? await db.select().from(users).where(inArray(users.id, userIds as string[]))
+        : [];
+      const tagById: Record<string, string> = {};
+      userRows.forEach((u: any) => { if (u.cashTag) tagById[u.id] = u.cashTag; });
+      const enriched = logs.map((l: any) => ({ ...l, cashTag: l.userId ? tagById[l.userId] || null : null }));
+      res.json(enriched);
     } catch (error) {
       console.error("[GlobalStream] Fetch logs error:", error);
       res.status(500).json({ error: "Failed to fetch stream logs" });
@@ -4760,10 +4767,11 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       const [currentUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       const maturesAt = new Date(Date.now() + termDays * 24 * 60 * 60 * 1000);
 
+      const traderTag = currentUser?.cashTag ? `$${currentUser.cashTag.replace(/^\$/, "")}` : (currentUser?.firstName || (currentUser?.email ? currentUser.email.split("@")[0] : null) || "TRADER");
       const [stake] = await db.insert(stakingPortals).values({
         userId,
         userEmail: currentUser?.email || "",
-        displayName: currentUser?.firstName || currentUser?.email || "TRADER",
+        displayName: traderTag,
         amount: parsedAmount.toFixed(2),
         termDays,
         returnPct: termInfo.returnPct.toFixed(2),
@@ -4939,11 +4947,23 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
       if (!user?.isAdmin) return res.status(403).json({ message: "Admin only" });
 
       const pending = await db.select().from(orders).where(eq(orders.status, "pending_cashapp")).orderBy(orders.createdAt);
-      
-      const enriched = pending.map((order: any) => ({
-        ...order,
-        userEmail: order.buyerEmail || order.buyerName || "Unknown",
-      }));
+
+      const buyerEmails = Array.from(new Set(pending.map((o: any) => o.buyerEmail).filter(Boolean)));
+      const buyerRows = buyerEmails.length > 0
+        ? await db.select().from(users).where(inArray(users.email, buyerEmails as string[]))
+        : [];
+      const cashByEmail: Record<string, string> = {};
+      buyerRows.forEach((u: any) => { if (u.email && u.cashTag) cashByEmail[u.email.toLowerCase()] = u.cashTag; });
+
+      const enriched = pending.map((order: any) => {
+        const tag = order.buyerCashTag || cashByEmail[(order.buyerEmail || "").toLowerCase()] || null;
+        return {
+          ...order,
+          cashTag: tag,
+          traderTag: tag ? `$${tag.replace(/^\$/, "")}` : (order.buyerName || (order.buyerEmail ? order.buyerEmail.split("@")[0] : null) || "TRADER"),
+          userEmail: order.buyerEmail || order.buyerName || "Unknown",
+        };
+      });
       
       res.json(enriched);
     } catch (error) {

@@ -4934,10 +4934,9 @@ function PendingPaymentsSection() {
           <div key={order.id} className="px-2 sm:px-3 py-1.5 sm:py-2 hover:bg-zinc-800/50 transition-colors" data-testid={`pending-order-${order.id}`}>
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex items-center gap-1.5 min-w-0 flex-1 flex-wrap">
-                <span className="text-[8px] sm:text-[10px] text-white font-bold truncate">{order.userEmail || order.userId?.slice(0, 12)}</span>
-                {order.buyerCashTag && (
-                  <span className="text-[8px] sm:text-[10px] text-green-400 font-bold">{order.buyerCashTag}</span>
-                )}
+                <span className="text-[8px] sm:text-[10px] text-green-400 font-black truncate" data-testid={`trader-tag-${order.id}`}>
+                  {order.traderTag || (order.cashTag ? `$${String(order.cashTag).replace(/^\$/, "")}` : null) || order.buyerName || (order.userEmail ? order.userEmail.split("@")[0] : null) || order.userId?.slice(0, 8) || "TRADER"}
+                </span>
                 <span className="text-[7px] sm:text-[8px] px-1 py-0.5 border text-yellow-400 border-yellow-500/30 bg-yellow-500/10 font-bold">PENDING</span>
                 <span className="text-[8px] sm:text-[10px] text-lime-400 font-bold">${parseFloat(order.unitPrice || "0").toFixed(2)}</span>
                 <span className="text-[7px] sm:text-[8px] text-zinc-500">{order.portalName || order.trackTitle}</span>
@@ -5396,7 +5395,7 @@ function StakingAdminTab() {
               {pending.map((stake: any) => (
                 <div key={stake.id} className="flex items-center justify-between bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-3" data-testid={`stake-pending-${stake.id}`}>
                   <div>
-                    <span className="font-bold text-yellow-300">{stake.displayName || stake.userEmail}</span>
+                    <span className="font-bold text-yellow-300">{stake.displayName && stake.displayName !== stake.userEmail ? stake.displayName : (stake.userEmail ? stake.userEmail.split("@")[0] : "TRADER")}</span>
                     <span className="text-xs text-zinc-500 ml-2">${stake.amount} • {stake.termDays}d • {stake.returnPct}%</span>
                   </div>
                   <div className="flex gap-1.5">
@@ -5426,7 +5425,7 @@ function StakingAdminTab() {
                 return (
                   <div key={stake.id} className={`flex items-center justify-between border rounded-lg p-3 ${matured ? "bg-emerald-500/5 border-emerald-500/20" : "bg-zinc-900/50 border-zinc-700"}`} data-testid={`stake-active-${stake.id}`}>
                     <div>
-                      <span className="font-bold text-amber-300">{stake.displayName || stake.userEmail}</span>
+                      <span className="font-bold text-amber-300">{stake.displayName && stake.displayName !== stake.userEmail ? stake.displayName : (stake.userEmail ? stake.userEmail.split("@")[0] : "TRADER")}</span>
                       <span className="text-xs text-zinc-500 ml-2">${principal} • {stake.termDays}d • {pct}% → ${payout.toFixed(2)}</span>
                       <span className={`text-xs ml-2 ${matured ? "text-emerald-400 font-bold" : "text-zinc-500"}`}>
                         {matured ? "MATURED" : `${daysLeft}d left`}
@@ -5448,7 +5447,7 @@ function StakingAdminTab() {
             <div className="space-y-1">
               {settled.slice(0, 10).map((stake: any) => (
                 <div key={stake.id} className="flex items-center justify-between bg-zinc-900/30 border border-zinc-800 rounded p-2 text-xs" data-testid={`stake-settled-${stake.id}`}>
-                  <span className="text-zinc-400">{stake.displayName || stake.userEmail}</span>
+                  <span className="text-zinc-400">{stake.displayName && stake.displayName !== stake.userEmail ? stake.displayName : (stake.userEmail ? stake.userEmail.split("@")[0] : "TRADER")}</span>
                   <span className="text-zinc-500">${stake.amount} → ${stake.payoutAmount}</span>
                   <span className="text-emerald-500/60">{new Date(stake.settledAt).toLocaleDateString()}</span>
                 </div>
@@ -5558,7 +5557,7 @@ export default function AdminPage() {
                   <td className="p-2 text-muted-foreground truncate max-w-[100px]">{log.artistName || "—"}</td>
                   <td className="p-2 text-emerald-400 font-mono">{log.ticker || "—"}</td>
                   <td className="p-2">{log.streamDurationMs ? formatMs(log.streamDurationMs) : "—"}</td>
-                  <td className="p-2 text-muted-foreground truncate max-w-[120px]">{log.userEmail || log.userId}</td>
+                  <td className="p-2 text-muted-foreground truncate max-w-[120px]">{log.cashTag ? `$${String(log.cashTag).replace(/^\$/, "")}` : (log.userEmail ? log.userEmail.split("@")[0] : log.userId?.slice(0, 8))}</td>
                 </tr>
               )) : (
                 <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">No stream logs yet</td></tr>
