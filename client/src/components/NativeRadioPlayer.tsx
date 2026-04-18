@@ -21,6 +21,14 @@ interface Station {
 
 const STREAM_STATIONS: Station[] = [
   {
+    id: "aitify-native",
+    label: "97.7 THE FLAME",
+    tagline: "AITIFY Native Catalog · The Penny Is King",
+    streamUrl: null,
+    isNative: true,
+    color: "#34d399",
+  },
+  {
     id: "long-ride",
     label: "LONG RIDE",
     tagline: "Smooth R&B · Soul · Late-Night Drives",
@@ -44,14 +52,6 @@ const STREAM_STATIONS: Station[] = [
     isNative: false,
     color: "#22d3ee",
   },
-  {
-    id: "aitify-native",
-    label: "97.7 THE FLAME",
-    tagline: "AITIFY Native Catalog · The Penny Is King",
-    streamUrl: null,
-    isNative: true,
-    color: "#34d399",
-  },
 ];
 
 const STORAGE_KEY = "aitify_radio_v1";
@@ -59,8 +59,8 @@ const STORAGE_KEY = "aitify_radio_v1";
 export default function NativeRadioPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [stationId, setStationId] = useState<string>(() => {
-    if (typeof window === "undefined") return "long-ride";
-    return localStorage.getItem(STORAGE_KEY + ".station") || "long-ride";
+    if (typeof window === "undefined") return "aitify-native";
+    return localStorage.getItem(STORAGE_KEY + ".station") || "aitify-native";
   });
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
