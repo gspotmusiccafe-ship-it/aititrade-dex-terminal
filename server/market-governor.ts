@@ -1096,7 +1096,7 @@ export async function enqueueTrader(
 //   2. p2pIntake    : p2p_trades.sale_price (verified Music Stock + Portal Seat resales)
 //   3. portalIntake : global_investor_entries.total_paid (Portal $25 down + $19.79/mo + $500)
 // ════════════════════════════════════════════════════════════════════
-export async function getMarketIntakeBreakdown(): Promise<{ floorIntake: number; p2pIntake: number; portalIntake: number; total: number }> {
+export async function getMarketIntakeBreakdown(): Promise<{ floorIntake: number; p2pIntake: number; portalIntake: number; cryptoIntake: number; total: number }> {
   const floorRes = await db.execute(sql`
     SELECT COALESCE(SUM(CAST(o.unit_price AS DECIMAL)), 0)::text AS total
     FROM orders o
@@ -1113,11 +1113,17 @@ export async function getMarketIntakeBreakdown(): Promise<{ floorIntake: number;
     SELECT COALESCE(SUM(CAST(total_paid AS DECIMAL)), 0)::text AS total
     FROM global_investor_entries
   `);
+  // Crypto-settled payments (USDC/USDT/BNB on BSC) — counted at USD face value
+  const cryptoRes = await db.execute(sql`
+    SELECT COALESCE(SUM(CAST(amount_usd AS DECIMAL)), 0)::text AS total
+    FROM crypto_payments WHERE status = 'settled'
+  `);
 
   const floorIntake = parseFloat((floorRes.rows[0] as any)?.total || "0");
   const p2pIntake = parseFloat((p2pRes.rows[0] as any)?.total || "0");
   const portalIntake = parseFloat((portalRes.rows[0] as any)?.total || "0");
-  return { floorIntake, p2pIntake, portalIntake, total: parseFloat((floorIntake + p2pIntake + portalIntake).toFixed(2)) };
+  const cryptoIntake = parseFloat((cryptoRes.rows[0] as any)?.total || "0");
+  return { floorIntake, p2pIntake, portalIntake, cryptoIntake, total: parseFloat((floorIntake + p2pIntake + portalIntake + cryptoIntake).toFixed(2)) };
 }
 
 export async function getGrossIntake(): Promise<number> {

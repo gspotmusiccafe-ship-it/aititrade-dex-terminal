@@ -12,7 +12,7 @@ import { openai, textToSpeech, performVocal } from "./replit_integrations/audio/
 import { sunoGenerate, sunoCheckStatus, sunoGenerateAndWait, downloadSunoAudio, isSunoConfigured } from "./suno-client";
 import { generateArtwork } from "./image-gen";
 import { sonicGenerate, sonicCheckStatus, sonicGenerateAndWait, downloadSonicAudio, isSonicConfigured } from "./sonic-client";
-import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries, payToPlay, marketListings, marketHoldings, marketTransactions, p2pTrades } from "@shared/schema";
+import { insertArtistSchema, insertTrackSchema, insertPlaylistSchema, insertVideoSchema, artists, tracks, orders, likedTracks, jamSessions, jamSessionEngagement, jamSessionListeners, insertJamSessionSchema, streamQualifiers, spotifyRoyaltyTracks, creditSteps, memberships, spotifyTokens, globalRotation, insertGlobalRotationSchema, globalStreamLogs, playbackSchedules, trusts, trustMembers, treasuryLogs, portalSettings, settlementQueue, settlementCycles, stakingPortals, users, masteringRequests, globalInvestorPortals, globalInvestorEntries, payToPlay, marketListings, marketHoldings, marketTransactions, p2pTrades, cryptoPayments } from "@shared/schema";
 import { eq, and, or, desc, asc, sql, count, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getSpotifyClientForUser, getSpotifyProfile } from "./spotify";
 import { createPaypalOrder, capturePaypalOrder, loadPaypalDefault, verifyPaypalOrder, createTipOrder, captureTipOrder, createGoldSubscription, getSubscriptionDetails, cancelSubscription } from "./paypal";
@@ -8153,6 +8153,302 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
     }
   });
 
+  // ════════════════════════════════════════════════════════════════════
+  // DUAL-TRACK CRYPTO BRIDGE — BSC (BEP-20) USDC / USDT / BNB
+  //   Manual Lane (≥$50)  — Founder wallet display + tx-hash + admin verify
+  //   Auto Lane   (<$50)  — NOWPayments invoice + IPN webhook
+  // ════════════════════════════════════════════════════════════════════
+  const CRYPTO_MANUAL_THRESHOLD = 50;
+  const FOUNDER_BSC_WALLET = process.env.FOUNDER_BSC_WALLET || "0x0000000000000000000000000000000000000000";
+  const SUPPORTED_COINS = ["USDC", "USDT", "BNB"] as const;
+  const COIN_META: Record<string, { contract: string | null; decimals: number; label: string }> = {
+    USDC: { contract: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d", decimals: 18, label: "USD Coin (BEP-20)" },
+    USDT: { contract: "0x55d398326f99059ff775485246999027b3197955", decimals: 18, label: "Tether (BEP-20)" },
+    BNB:  { contract: null, decimals: 18, label: "Build and Build (Native BSC Gas)" },
+  };
+
+  // Public coin manifest — used by frontend selector
+  app.get("/api/crypto/manifest", (_req, res) => {
+    res.json({
+      coins: SUPPORTED_COINS.map(c => ({ symbol: c, ...COIN_META[c] })),
+      chain: "BNB Smart Chain (BEP-20)",
+      manualThreshold: CRYPTO_MANUAL_THRESHOLD,
+      walletAddress: FOUNDER_BSC_WALLET,
+      walletConfigured: FOUNDER_BSC_WALLET !== "0x0000000000000000000000000000000000000000",
+      autoEnabled: !!process.env.NOWPAYMENTS_API_KEY,
+      warning: "SEND ONLY VIA BNB SMART CHAIN (BEP-20). Sending via Ethereum or other chains will result in permanent loss of funds.",
+    });
+  });
+
+  // ── FULFILLMENT — translates a settled crypto payment into the actual asset transfer
+  async function fulfillCryptoSettlement(payment: any): Promise<{ fulfilled: boolean; detail: string }> {
+    const { id: paymentId, purpose, referenceId, userId, userEmail, amountUsd } = payment;
+    const amt = parseFloat(amountUsd);
+    if (!purpose) return { fulfilled: false, detail: "no purpose" };
+
+    if (purpose === "portal_entry") {
+      const portalId = referenceId;
+      if (!portalId) return { fulfilled: false, detail: "missing portal referenceId" };
+      const [portal] = await db.select().from(globalInvestorPortals).where(eq(globalInvestorPortals.id, portalId));
+      if (!portal) return { fulfilled: false, detail: `portal ${portalId} not found` };
+
+      const existing = await db.select().from(globalInvestorEntries)
+        .where(and(eq(globalInvestorEntries.portalId, portalId), eq(globalInvestorEntries.userId, userId)));
+
+      if (existing.length === 0) {
+        if ((portal.currentInvestors || 0) >= (portal.maxInvestors || 10)) {
+          return { fulfilled: false, detail: "portal full — refund manually" };
+        }
+        const user = await storage.getUser(userId);
+        const displayName = user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : (user?.email || userEmail || "INVESTOR").split("@")[0];
+        await db.insert(globalInvestorEntries).values({
+          portalId, userId, userEmail: user?.email || userEmail || "",
+          displayName: displayName.toUpperCase(), cashTag: user?.cashTag || "",
+          status: "ACTIVE", downPaymentPaid: amt >= 25, totalPaid: amt.toFixed(2), monthsPaid: 1,
+        });
+        await db.update(globalInvestorPortals)
+          .set({ currentInvestors: sql`COALESCE(current_investors, 0) + 1` })
+          .where(eq(globalInvestorPortals.id, portalId));
+        const updatedCount = (portal.currentInvestors || 0) + 1;
+        if (updatedCount >= (portal.maxInvestors || 10)) {
+          await db.update(globalInvestorPortals).set({ status: "FILLED" }).where(eq(globalInvestorPortals.id, portalId));
+        }
+        return { fulfilled: true, detail: `Portal seat granted in "${portal.songTitle}" — $${amt.toFixed(2)} crypto` };
+      } else {
+        const entry = existing[0];
+        const newTotal = parseFloat(entry.totalPaid || "0") + amt;
+        await db.update(globalInvestorEntries).set({
+          totalPaid: newTotal.toFixed(2),
+          downPaymentPaid: !entry.downPaymentPaid && amt >= 25 ? true : entry.downPaymentPaid,
+          monthsPaid: (entry.monthsPaid || 0) + 1,
+          status: "ACTIVE",
+        }).where(eq(globalInvestorEntries.id, entry.id));
+        return { fulfilled: true, detail: `Portal payment +$${amt.toFixed(2)} → totalPaid $${newTotal.toFixed(2)}` };
+      }
+    }
+
+    if (purpose === "portal_resale") {
+      const offerId = referenceId;
+      if (!offerId) return { fulfilled: false, detail: "missing resale referenceId" };
+      const trackingNumber = `PRT-CRYPTO-${Date.now().toString(36).toUpperCase()}`;
+      try {
+        const result = await db.transaction(async (tx) => {
+          const [offer] = await tx.select().from(globalInvestorEntries)
+            .where(and(eq(globalInvestorEntries.id, offerId), eq(globalInvestorEntries.listedForResale, true)))
+            .for("update");
+          if (!offer) throw new Error("OFFER_GONE");
+          if (offer.userId === userId) throw new Error("SELF_BUY");
+          const dup = await tx.select().from(globalInvestorEntries)
+            .where(and(eq(globalInvestorEntries.portalId, offer.portalId), eq(globalInvestorEntries.userId, userId)));
+          if (dup.length > 0) throw new Error("ALREADY_IN_PORTAL");
+
+          const price = parseFloat(offer.askPrice || "0");
+          const buyerFee = parseFloat((price * 0.02).toFixed(2));
+          const sellerFee = parseFloat((price * 0.02).toFixed(2));
+          const houseTake = parseFloat((buyerFee + sellerFee).toFixed(2));
+          const buyerPays = parseFloat((price + buyerFee).toFixed(2));
+          const sellerNet = parseFloat((price - sellerFee).toFixed(2));
+
+          const buyer = await storage.getUser(userId);
+          const buyerName = buyer?.firstName ? `${buyer.firstName}${buyer.lastName ? ' ' + buyer.lastName : ''}` : (buyer?.email || userEmail || "INVESTOR").split("@")[0];
+
+          await tx.update(globalInvestorEntries).set({
+            userId, userEmail: buyer?.email || userEmail || "",
+            displayName: buyerName.toUpperCase(), cashTag: buyer?.cashTag || "",
+            listedForResale: false, askPrice: null, listedAt: null,
+          }).where(eq(globalInvestorEntries.id, offer.id));
+
+          await tx.insert(p2pTrades).values({
+            assetType: "PORTAL_SEAT", assetId: offer.id, assetLabel: offer.portalId,
+            sellerId: offer.userId || "UNKNOWN", buyerId: userId,
+            salePrice: price.toFixed(2), buyerFee: buyerFee.toFixed(2),
+            sellerFee: sellerFee.toFixed(2), houseFeeCollected: houseTake.toFixed(2),
+            buyerPays: buyerPays.toFixed(2), sellerNet: sellerNet.toFixed(2),
+            trackingNumber, verified: Math.abs(houseTake - price * 0.04) < 0.01,
+          });
+          return { offer, price, houseTake };
+        });
+        await depositToVaultExternal(result.houseTake, `Crypto P2P: portal seat | Vault double-dip 4% on $${result.price.toFixed(2)}`, null, "PORTAL_P2P_FEE_CRYPTO");
+        return { fulfilled: true, detail: `Portal seat ownership transferred via crypto — Vault +$${result.houseTake.toFixed(2)}` };
+      } catch (e: any) {
+        return { fulfilled: false, detail: `resale-fulfill: ${e.message}` };
+      }
+    }
+
+    return { fulfilled: false, detail: `purpose "${purpose}" fulfillment not yet implemented` };
+  }
+
+  // Initiate — routes to manual or auto lane based on amount
+  app.post("/api/crypto/initiate", async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub || req.body.userId;
+      const userEmail = (req as any).user?.claims?.email || req.body.userEmail || null;
+      const { amountUsd, coin, purpose, referenceId } = req.body;
+      if (!userId) return res.status(401).json({ error: "Authentication required" });
+      if (!SUPPORTED_COINS.includes(coin)) return res.status(400).json({ error: "Unsupported coin. Use USDC, USDT, or BNB on BSC." });
+      const amt = parseFloat(String(amountUsd));
+      if (!isFinite(amt) || amt <= 0) return res.status(400).json({ error: "Invalid amount" });
+      if (!purpose) return res.status(400).json({ error: "purpose required (portal_entry|portal_resale|floor_trade|music_stock)" });
+
+      const lane = amt >= CRYPTO_MANUAL_THRESHOLD ? "manual" : "auto";
+
+      if (lane === "manual") {
+        const [row] = await db.insert(cryptoPayments).values({
+          userId, userEmail, purpose, referenceId: referenceId || null,
+          amountUsd: amt.toFixed(2), coin, chain: "BSC", lane: "manual",
+          walletAddress: FOUNDER_BSC_WALLET, status: "awaiting_payment",
+        }).returning();
+        return res.json({
+          ok: true, lane: "manual", paymentId: row.id,
+          wallet: FOUNDER_BSC_WALLET, coin, amountUsd: amt,
+          chain: "BNB Smart Chain (BEP-20)",
+          contract: COIN_META[coin].contract,
+          warning: "SEND ONLY VIA BNB SMART CHAIN (BEP-20). Other chains = permanent loss.",
+          instruction: `Send exactly $${amt.toFixed(2)} of ${coin} to the address above, then paste your Transaction Hash below.`,
+        });
+      }
+
+      // AUTO LANE — NOWPayments
+      if (!process.env.NOWPAYMENTS_API_KEY) {
+        // Graceful fallback: if processor not yet configured, still create a manual record
+        const [row] = await db.insert(cryptoPayments).values({
+          userId, userEmail, purpose, referenceId: referenceId || null,
+          amountUsd: amt.toFixed(2), coin, chain: "BSC", lane: "manual",
+          walletAddress: FOUNDER_BSC_WALLET, status: "awaiting_payment",
+        }).returning();
+        return res.json({
+          ok: true, lane: "manual", paymentId: row.id, fallback: true,
+          wallet: FOUNDER_BSC_WALLET, coin, amountUsd: amt,
+          chain: "BNB Smart Chain (BEP-20)",
+          contract: COIN_META[coin].contract,
+          notice: "Auto processor not configured — routed to manual verification.",
+        });
+      }
+
+      const payCurrency = coin === "BNB" ? "bnbbsc" : (coin === "USDC" ? "usdcbsc" : "usdtbsc");
+      const npRes = await fetch("https://api.nowpayments.io/v1/invoice", {
+        method: "POST",
+        headers: { "x-api-key": process.env.NOWPAYMENTS_API_KEY!, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          price_amount: amt, price_currency: "usd", pay_currency: payCurrency,
+          order_id: `${purpose}-${Date.now()}`,
+          order_description: `AITITRADE ${purpose} ${referenceId || ""}`.trim(),
+          ipn_callback_url: `${req.protocol}://${req.get("host")}/api/crypto/webhook/nowpayments`,
+        }),
+      });
+      if (!npRes.ok) {
+        const errText = await npRes.text();
+        return res.status(502).json({ error: "NOWPayments invoice failed", detail: errText });
+      }
+      const invoice: any = await npRes.json();
+      const [row] = await db.insert(cryptoPayments).values({
+        userId, userEmail, purpose, referenceId: referenceId || null,
+        amountUsd: amt.toFixed(2), coin, chain: "BSC", lane: "auto",
+        nowPaymentsId: String(invoice.id || invoice.invoice_id || ""),
+        status: "awaiting_payment",
+      }).returning();
+      return res.json({ ok: true, lane: "auto", paymentId: row.id, invoiceUrl: invoice.invoice_url, nowPaymentsId: row.nowPaymentsId });
+    } catch (e: any) {
+      console.error("[CRYPTO] initiate error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Manual: user submits tx hash → status=awaiting_admin
+  app.post("/api/crypto/submit-hash", async (req, res) => {
+    try {
+      const { paymentId, txHash } = req.body;
+      if (!paymentId || !txHash) return res.status(400).json({ error: "paymentId and txHash required" });
+      if (!/^0x[a-fA-F0-9]{64}$/.test(txHash)) return res.status(400).json({ error: "Invalid BSC transaction hash format (must be 0x + 64 hex chars)" });
+      const [row] = await db.update(cryptoPayments)
+        .set({ txHash, status: "awaiting_admin" })
+        .where(and(eq(cryptoPayments.id, paymentId), eq(cryptoPayments.lane, "manual")))
+        .returning();
+      if (!row) return res.status(404).json({ error: "Payment not found" });
+      res.json({ ok: true, paymentId: row.id, status: row.status, bscScanUrl: `https://bscscan.com/tx/${txHash}` });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Admin verify — settles a manual crypto payment AND fulfills the asset
+  app.post("/api/crypto/admin/verify/:id", isAdmin, async (req: any, res) => {
+    try {
+      const adminEmail = req.user?.claims?.email;
+      const id = parseInt(req.params.id);
+      const [row] = await db.update(cryptoPayments)
+        .set({ status: "settled", verifiedAt: new Date(), verifiedBy: adminEmail || "admin" })
+        .where(and(eq(cryptoPayments.id, id), eq(cryptoPayments.status, "awaiting_admin")))
+        .returning();
+      if (!row) return res.status(404).json({ error: "Payment not found or not awaiting verification" });
+      const fulfilled = await fulfillCryptoSettlement(row);
+      console.log(`[CRYPTO][ADMIN] #${id} settled by ${adminEmail} — fulfillment: ${fulfilled.detail}`);
+      res.json({ ok: true, payment: row, fulfillment: fulfilled });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // NOWPayments IPN webhook — verifies HMAC signature, auto-settles, then fulfills
+  app.post("/api/crypto/webhook/nowpayments", async (req, res) => {
+    try {
+      // Signature verification per NOWPayments IPN spec (HMAC-SHA512 of sorted JSON body)
+      const ipnSecret = process.env.NOWPAYMENTS_IPN_SECRET;
+      if (ipnSecret) {
+        const sig = req.headers["x-nowpayments-sig"] as string | undefined;
+        if (!sig) return res.status(401).json({ error: "missing x-nowpayments-sig" });
+        const crypto = await import("crypto");
+        const sortedBody = JSON.stringify(req.body, Object.keys(req.body).sort());
+        const expected = crypto.createHmac("sha512", ipnSecret).update(sortedBody).digest("hex");
+        if (sig !== expected) {
+          console.warn("[CRYPTO][WEBHOOK] Invalid signature — rejected");
+          return res.status(401).json({ error: "invalid signature" });
+        }
+      } else {
+        console.warn("[CRYPTO][WEBHOOK] NOWPAYMENTS_IPN_SECRET not configured — webhook accepted WITHOUT signature verification (dev only)");
+      }
+
+      const { payment_status, invoice_id, payment_id, pay_address } = req.body || {};
+      const npId = String(invoice_id || payment_id || "");
+      if (!npId) return res.status(400).json({ error: "missing id" });
+      if (["finished", "confirmed", "sending"].includes(String(payment_status))) {
+        const [row] = await db.update(cryptoPayments)
+          .set({
+            status: "settled",
+            verifiedAt: new Date(),
+            verifiedBy: "nowpayments-webhook",
+            walletAddress: pay_address || null,
+          })
+          .where(and(eq(cryptoPayments.nowPaymentsId, npId), eq(cryptoPayments.status, "awaiting_payment")))
+          .returning();
+        if (row) {
+          const fulfilled = await fulfillCryptoSettlement(row);
+          console.log(`[CRYPTO][AUTO] Webhook settled #${row.id} (${npId}) — fulfillment: ${fulfilled.detail}`);
+        } else {
+          console.log(`[CRYPTO][AUTO] Webhook ${npId} — no matching pending row`);
+        }
+      }
+      res.json({ ok: true });
+    } catch (e: any) {
+      console.error("[CRYPTO][WEBHOOK]", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // Admin queue — pending manual verifications
+  app.get("/api/crypto/admin/pending", isAdmin, async (_req, res) => {
+    const pending = await db.select().from(cryptoPayments).where(eq(cryptoPayments.status, "awaiting_admin")).orderBy(desc(cryptoPayments.createdAt));
+    res.json(pending);
+  });
+
+  // User's own crypto payment history
+  app.get("/api/crypto/my-payments", async (req, res) => {
+    const userId = (req as any).user?.claims?.sub || (req.query.userId as string);
+    if (!userId) return res.status(401).json({ error: "Authentication required" });
+    const rows = await db.select().from(cryptoPayments).where(eq(cryptoPayments.userId, userId)).orderBy(desc(cryptoPayments.createdAt));
+    res.json(rows);
+  });
+
   // Universal Gross Intake breakdown — Floor + P2P + Portal Primary
   app.get("/api/audit/intake", async (_req, res) => {
     try {
@@ -8167,6 +8463,7 @@ Make the lyrics emotionally engaging, with strong hooks and memorable phrases. U
           floorIntake: breakdown.floorIntake,
           p2pIntake: breakdown.p2pIntake,
           portalIntake: breakdown.portalIntake,
+          cryptoIntake: breakdown.cryptoIntake,
         },
         total: breakdown.total,
         cycle: { cyclesCompleted, cyclePct, remainingToNextK, nextKAt: (cyclesCompleted + 1) * 1000 },

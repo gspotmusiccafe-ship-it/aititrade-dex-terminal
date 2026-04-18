@@ -7,8 +7,9 @@ import { Link } from "wouter";
 import {
   Globe, TrendingUp, Users, DollarSign, Music, ExternalLink, Lock,
   ChevronRight, Loader2, CheckCircle, Zap, BarChart3, ArrowUpRight,
-  Crown, Disc, Landmark, Timer
+  Crown, Disc, Landmark, Timer, Bitcoin
 } from "lucide-react";
+import CryptoSettlementModal from "@/components/CryptoSettlementModal";
 
 interface BankerData {
   position: number | null;
@@ -268,6 +269,7 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
   const mySeat = portal.investors?.find(i => i.userId && currentUserId && i.userId === currentUserId);
   const portalResales = portal.investors?.filter(i => i.listedForResale && i.userId !== currentUserId) || [];
   const [askInput, setAskInput] = useState(parseFloat(portal.entryPrice).toFixed(2));
+  const [cryptoModal, setCryptoModal] = useState<{ open: boolean; amount: number; purpose: "portal_entry" | "portal_resale"; refId?: string }>({ open: false, amount: 0, purpose: "portal_entry" });
 
   const listMut = useMutation({
     mutationFn: async ({ entryId, askPrice }: { entryId: string; askPrice: string }) => {
@@ -494,14 +496,24 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
                 <div key={offer.id} className="border border-cyan-500/20 bg-cyan-950/30 rounded px-2.5 py-2 space-y-1.5" data-testid={`resale-offer-${offer.id}`}>
                   <div className="flex items-center justify-between">
                     <p className="text-[8px] text-zinc-400 truncate">FROM {offer.displayName}</p>
-                    <button
-                      onClick={() => buyMut.mutate(offer.id)}
-                      disabled={buyMut.isPending || !currentUserId}
-                      className="px-2.5 py-1 text-[9px] font-black bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-500 rounded disabled:opacity-50"
-                      data-testid={`btn-buy-resale-${offer.id}`}
-                    >
-                      {buyMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "BUY SEAT"}
-                    </button>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => buyMut.mutate(offer.id)}
+                        disabled={buyMut.isPending || !currentUserId}
+                        className="px-2.5 py-1 text-[9px] font-black bg-cyan-600 hover:bg-cyan-500 text-white border border-cyan-500 rounded disabled:opacity-50"
+                        data-testid={`btn-buy-resale-${offer.id}`}
+                      >
+                        {buyMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "BUY (CASH APP)"}
+                      </button>
+                      <button
+                        onClick={() => setCryptoModal({ open: true, amount: buyerPays, purpose: "portal_resale", refId: offer.id })}
+                        disabled={!currentUserId}
+                        className="px-2 py-1 text-[9px] font-black bg-amber-600 hover:bg-amber-500 text-white border border-amber-500 rounded disabled:opacity-50 flex items-center gap-1"
+                        data-testid={`btn-buy-resale-crypto-${offer.id}`}
+                      >
+                        <Bitcoin className="h-3 w-3" /> CRYPTO
+                      </button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-3 gap-1 text-[8px] font-mono">
                     <div className="bg-black/40 border border-cyan-500/15 rounded px-1.5 py-1">
@@ -544,8 +556,26 @@ function PortalCard({ portal, onJoin, joining, currentUserId }: { portal: Invest
             >
               <DollarSign className="h-3 w-3" /> PAY ${parseFloat(portal.monthlyPayment).toFixed(2)}/MO VIA CASH APP
             </a>
+            <button
+              onClick={() => setCryptoModal({ open: true, amount: parseFloat(portal.downPayment), purpose: "portal_entry", refId: portal.id })}
+              className="w-full py-2 rounded font-black text-[11px] text-white flex items-center justify-center gap-2 border border-amber-500/40 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 transition-all"
+              data-testid={`btn-crypto-down-${portal.id}`}
+            >
+              <Bitcoin className="h-3.5 w-3.5" /> PAY ${parseFloat(portal.downPayment).toFixed(0)} DOWN VIA CRYPTO (BSC)
+            </button>
           </>
         )}
+
+        <CryptoSettlementModal
+          open={cryptoModal.open}
+          onClose={() => setCryptoModal({ ...cryptoModal, open: false })}
+          amountUsd={cryptoModal.amount}
+          purpose={cryptoModal.purpose}
+          referenceId={cryptoModal.refId}
+          userId={currentUserId || ""}
+          onSettled={() => queryClient.invalidateQueries({ queryKey: ["/api/investor-portals"] })}
+        />
+
 
         {isFull && !mySeat && portalResales.length === 0 && (
           <div className="w-full py-3 rounded border-2 border-amber-500/40 bg-amber-950/20 text-center" data-testid={`portal-locked-${portal.id}`}>

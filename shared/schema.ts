@@ -801,6 +801,34 @@ export const p2pTrades = pgTable("p2p_trades", {
 });
 export type P2PTrade = typeof p2pTrades.$inferSelect;
 
+// ════════════════════════════════════════════════════════════════════
+// CRYPTO PAYMENTS — Dual-Track BSC Bridge (USDC / USDT / BNB)
+//   lane: "manual" (≥$50, admin verifies tx hash) | "auto" (<$50, NOWPayments webhook)
+//   coin: USDC | USDT | BNB         chain: BSC (BEP-20) only
+//   purpose: portal_entry | portal_resale | floor_trade | music_stock
+// ════════════════════════════════════════════════════════════════════
+export const cryptoPayments = pgTable("crypto_payments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  userEmail: varchar("user_email"),
+  purpose: varchar("purpose").notNull(),
+  referenceId: varchar("reference_id"),
+  amountUsd: decimal("amount_usd", { precision: 10, scale: 2 }).notNull(),
+  coin: varchar("coin").notNull(),
+  chain: varchar("chain").default("BSC").notNull(),
+  lane: varchar("lane").notNull(),
+  walletAddress: varchar("wallet_address"),
+  txHash: varchar("tx_hash"),
+  nowPaymentsId: varchar("nowpayments_id"),
+  status: varchar("status").default("awaiting_payment").notNull(),
+  verifiedAt: timestamp("verified_at"),
+  verifiedBy: varchar("verified_by"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertCryptoPaymentSchema = createInsertSchema(cryptoPayments).omit({ id: true, createdAt: true, verifiedAt: true, verifiedBy: true });
+export type InsertCryptoPayment = z.infer<typeof insertCryptoPaymentSchema>;
+export type CryptoPayment = typeof cryptoPayments.$inferSelect;
+
 // Extended types for frontend use
 export type TrackWithArtist = Track & { artist: Artist };
 export type AlbumWithArtist = Album & { artist: Artist };
