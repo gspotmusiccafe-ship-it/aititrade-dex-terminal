@@ -668,6 +668,7 @@ export default function InvestorPortalsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [joiningId, setJoiningId] = useState<string | null>(null);
+  const [ceoCryptoModal, setCeoCryptoModal] = useState<{ open: boolean; amount: number; refId: string }>({ open: false, amount: 0, refId: "" });
 
   const { data: portals, isLoading } = useQuery<InvestorPortal[]>({
     queryKey: ["/api/investor-portals"],
@@ -763,9 +764,19 @@ export default function InvestorPortalsPage() {
         <AitiCoinTicker />
 
         <CeoBuyInBanner
-          onCryptoClick={(amount, purpose, refId) =>
-            setCryptoModal({ open: true, amount, purpose: "portal_entry", refId })
+          onCryptoClick={(amount, _purpose, refId) =>
+            setCeoCryptoModal({ open: true, amount, refId })
           }
+        />
+
+        <CryptoSettlementModal
+          open={ceoCryptoModal.open}
+          onClose={() => setCeoCryptoModal({ ...ceoCryptoModal, open: false })}
+          amountUsd={ceoCryptoModal.amount}
+          purpose="portal_entry"
+          referenceId={ceoCryptoModal.refId}
+          userId={(user as any)?.id || ""}
+          onSettled={() => queryClient.invalidateQueries({ queryKey: ["/api/ceo-buyin/progress"] })}
         />
 
         <TsbBankerSection />
