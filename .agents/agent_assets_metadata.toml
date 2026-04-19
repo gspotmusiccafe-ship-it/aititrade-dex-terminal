@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "xCWbu6uJtTESJvwchWR0r"
+uri = "file://exports/aititrade-dex.zip"
+type = "unspecified"
+title = "AITITRADE DEX — Full Source (4.3MB)"
