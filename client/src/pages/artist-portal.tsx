@@ -96,6 +96,7 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
   const [fileName, setFileName] = useState("");
+  const [unitPrice, setUnitPrice] = useState("2.00");
   const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,7 +146,9 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
       setCoverPreview(null);
       setFileName("");
       setAudioDuration(0);
-      toast({ title: "Track uploaded!", description: "Your track is now available." });
+      setUnitPrice("2.00");
+      queryClient.invalidateQueries({ queryKey: ["/api/market/listings"] });
+      toast({ title: "Track minted!", description: "Live on the trade floor at your set price." });
     },
     onError: (error: Error) => {
       toast({ title: "Upload failed", description: error.message || "Please try again.", variant: "destructive" });
@@ -167,6 +170,12 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
     formData.append("genre", genre);
     formData.append("duration", String(audioDuration || 180));
     formData.append("isPrerelease", String(isPrerelease));
+    const priceNum = parseFloat(unitPrice);
+    if (isNaN(priceNum) || priceNum < 0.5 || priceNum > 1000) {
+      toast({ title: "Set a trading price", description: "Price must be between $0.50 and $1,000.", variant: "destructive" });
+      return;
+    }
+    formData.append("unitPrice", priceNum.toFixed(2));
     uploadMutation.mutate(formData);
   };
 
@@ -265,6 +274,31 @@ function UploadTrackDialog({ artistId }: { artistId: string }) {
               placeholder="Pop, Rock, Hip-Hop..."
               data-testid="input-track-genre"
             />
+          </div>
+          <div className="space-y-2 rounded-lg border-2 border-amber-500/40 bg-amber-950/20 p-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="unitPrice" className="text-amber-300 font-black tracking-wider text-xs">TRADING PRICE PER ASSET</Label>
+              <span className="text-[9px] text-amber-500/60 font-mono tracking-widest">SET BY CEO</span>
+            </div>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400 font-black text-lg pointer-events-none">$</span>
+              <Input
+                id="unitPrice"
+                type="number"
+                min="0.50"
+                step="0.50"
+                max="1000"
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(e.target.value)}
+                placeholder="2.00"
+                required
+                className="pl-7 text-amber-300 font-black text-lg bg-black/60 border-amber-500/40 focus-visible:border-amber-400"
+                data-testid="input-unit-price"
+              />
+            </div>
+            <p className="text-[10px] text-amber-200/70 leading-snug">
+              Floor entry price per share. Asset goes <strong className="text-amber-300">straight to the trade floor</strong> at this price the moment you upload. Use $1–$5 for entry tier, $10/$20+ for premium portals.
+            </p>
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">

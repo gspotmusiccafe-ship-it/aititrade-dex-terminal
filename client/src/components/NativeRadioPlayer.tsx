@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Play, Pause, Volume2, VolumeX, Disc3, Music2, Radio as RadioIcon, SkipForward } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, Disc3, Music2, SkipForward } from "lucide-react";
 
 interface TrackData {
   id: string;
@@ -10,223 +10,287 @@ interface TrackData {
   artist: { name: string; profileImage: string | null } | null;
 }
 
-interface Station {
-  id: string;
-  label: string;
-  tagline: string;
-  streamUrl: string | null;
-  isNative: boolean;
-  color: string;
-}
-
-const STREAM_STATIONS: Station[] = [
-  {
-    id: "aitify-native",
-    label: "97.7 THE FLAME",
-    tagline: "AITIFY Native Catalog · The Penny Is King",
-    streamUrl: null,
-    isNative: true,
-    color: "#34d399",
-  },
-];
+const STATION = {
+  id: "aitify-native",
+  label: "97.7 THE FLAME",
+  tagline: "AITIFY Native Catalog · The Penny Is King",
+  color: "#34d399",
+};
 
 const STORAGE_KEY = "aitify_radio_v1";
+const FADE_MS = 800; // crossfade duration
+const FADE_TAIL_MS = 1200; // start fade this many ms before track end
 
 export default function NativeRadioPlayer() {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [stationId, setStationId] = useState<string>(() => {
-    if (typeof window === "undefined") return "aitify-native";
-    return localStorage.getItem(STORAGE_KEY + ".station") || "aitify-native";
-  });
+  const audioARef = useRef<HTMLAudioElement>(null);
+  const audioBRef = useRef<HTMLAudioElement>(null);
+  const activeRef = useRef<"A" | "B">("A");
+  const fadeTimerRef = useRef<number | null>(null);
+  const transitionRef = useRef(false);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(0.7);
   const [nativeIdx, setNativeIdx] = useState(0);
   const [bufferState, setBufferState] = useState<"loading" | "live" | "error">("loading");
-  const nativeIdxRef = useRef(0);
-
-  const station = STREAM_STATIONS.find(s => s.id === stationId) || STREAM_STATIONS[0];
 
   const { data: tracks } = useQuery<TrackData[]>({
     queryKey: ["/api/tracks/featured"],
-    enabled: station.isNative,
+    refetchInterval: 60000,
   });
   const playlist = (tracks || []).filter(t => t.audioUrl);
   const playlistRef = useRef(playlist);
   playlistRef.current = playlist;
+  const nativeIdxRef = useRef(0);
   nativeIdxRef.current = nativeIdx;
 
-  const currentNativeTrack = station.isNative ? playlist[nativeIdx % Math.max(1, playlist.length)] : null;
+  const currentTrack = playlist[nativeIdx % Math.max(1, playlist.length)] || null;
+  const nextTrack = playlist.length > 0
+    ? playlist[(nativeIdx + 1) % playlist.length]
+    : null;
 
-  const sourceUrl = station.isNative
-    ? (currentNativeTrack?.audioUrl || null)
-    : station.streamUrl;
+  const getActive = () => activeRef.current === "A" ? audioARef.current : audioBRef.current;
+  const getInactive = () => activeRef.current === "A" ? audioBRef.current : audioARef.current;
 
-  // Persist station choice
+  const targetVolume = isMuted ? 0 : volume;
+
+  // Sync user volume to whichever element is currently active (when not crossfading)
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY + ".station", stationId);
-  }, [stationId]);
+    if (transitionRef.current) return;
+    const active = getActive();
+    const inactive = getInactive();
+    if (active) active.volume = targetVolume;
+    if (inactive) inactive.volume = 0;
+  }, [targetVolume]);
 
-  // Volume sync
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = isMuted ? 0 : volume;
+  // Smoothly ramp volume on an audio element
+  const rampVolume = (el: HTMLAudioElement, from: number, to: number, ms: number, onDone?: () => void) => {
+    const start = performance.now();
+    const tick = () => {
+      const t = Math.min(1, (performance.now() - start) / ms);
+      // ease-in-out cosine
+      const eased = (1 - Math.cos(Math.PI * t)) / 2;
+      el.volume = Math.max(0, Math.min(1, from + (to - from) * eased));
+      if (t < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        el.volume = to;
+        onDone && onDone();
+      }
+    };
+    requestAnimationFrame(tick);
+  };
+
+  // Load a track into the inactive element and crossfade in
+  const crossfadeTo = useCallback((url: string, advanceIdx: boolean) => {
+    if (transitionRef.current || !url) return;
+    const inactive = getInactive();
+    const active = getActive();
+    if (!inactive || !active) return;
+
+    transitionRef.current = true;
+    inactive.src = url;
+    inactive.preload = "auto";
+    inactive.volume = 0;
+    inactive.load();
+
+    const onCanPlay = () => {
+      inactive.removeEventListener("canplay", onCanPlay);
+      inactive.play().then(() => {
+        const userVol = isMuted ? 0 : volume;
+        rampVolume(inactive, 0, userVol, FADE_MS);
+        rampVolume(active, active.volume, 0, FADE_MS, () => {
+          try { active.pause(); } catch {}
+          activeRef.current = activeRef.current === "A" ? "B" : "A";
+          transitionRef.current = false;
+          if (advanceIdx) {
+            const pl = playlistRef.current;
+            if (pl.length > 0) {
+              const next = (nativeIdxRef.current + 1) % pl.length;
+              nativeIdxRef.current = next;
+              setNativeIdx(next);
+            }
+          }
+          setIsPlaying(true);
+          setBufferState("live");
+        });
+      }).catch(() => {
+        transitionRef.current = false;
+        setBufferState("error");
+      });
+    };
+
+    if (inactive.readyState >= 3) {
+      onCanPlay();
+    } else {
+      inactive.addEventListener("canplay", onCanPlay);
+    }
   }, [isMuted, volume]);
 
-  // Source binding + autoplay-resume
+  // Initial load: kick off active audio with first track
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !sourceUrl) return;
-    setBufferState("loading");
-    if (audio.src !== sourceUrl) {
-      audio.src = sourceUrl;
-      audio.preload = "auto";
-      audio.load();
-    }
-    const tryPlay = () => audio.play().then(() => { setIsPlaying(true); setBufferState("live"); }).catch(() => setIsPlaying(false));
-    tryPlay();
-  }, [sourceUrl]);
-
-  // Audio event listeners
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onPlaying = () => { setIsPlaying(true); setBufferState("live"); };
-    const onPause = () => setIsPlaying(false);
-    const onWaiting = () => setBufferState("loading");
-    const onError = () => {
-      setBufferState("error");
+    if (!currentTrack?.audioUrl) return;
+    const active = getActive();
+    if (!active) return;
+    if (active.src.endsWith(currentTrack.audioUrl) || active.src === currentTrack.audioUrl) return;
+    active.src = currentTrack.audioUrl;
+    active.preload = "auto";
+    active.volume = isMuted ? 0 : volume;
+    active.load();
+    active.play().then(() => {
+      setIsPlaying(true);
+      setBufferState("live");
+    }).catch(() => {
       setIsPlaying(false);
-      // Auto-recover live streams after 3s
-      if (!station.isNative && station.streamUrl) {
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentTrack?.audioUrl]);
+
+  // Watchdog: monitor active element for end-approach + handle ended fallback
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      if (transitionRef.current) return;
+      const active = getActive();
+      if (!active || active.paused) return;
+      if (!active.duration || isNaN(active.duration)) return;
+      const remaining = (active.duration - active.currentTime) * 1000;
+      if (remaining > 0 && remaining < FADE_TAIL_MS && nextTrack?.audioUrl) {
+        crossfadeTo(nextTrack.audioUrl, true);
+      }
+    }, 200);
+    return () => clearInterval(checkInterval);
+  }, [crossfadeTo, nextTrack?.audioUrl]);
+
+  // Setup ended/error listeners on both elements
+  useEffect(() => {
+    const a = audioARef.current;
+    const b = audioBRef.current;
+    if (!a || !b) return;
+
+    const handleEnded = (which: "A" | "B") => () => {
+      // Only fire if this was the active element and crossfade didn't already advance us
+      if (activeRef.current === which && !transitionRef.current && nextTrack?.audioUrl) {
+        crossfadeTo(nextTrack.audioUrl, true);
+      }
+    };
+    const handleError = (which: "A" | "B") => () => {
+      if (activeRef.current === which) {
+        setBufferState("error");
+        setIsPlaying(false);
+        // Try next track after 2s
         setTimeout(() => {
-          audio.src = station.streamUrl + "?cb=" + Date.now();
-          audio.load();
-          audio.play().catch(() => {});
-        }, 3000);
-      } else {
-        // Skip native track on error
-        const pl = playlistRef.current;
-        if (pl.length > 1) {
-          const next = (nativeIdxRef.current + 1) % pl.length;
-          nativeIdxRef.current = next;
-          setNativeIdx(next);
-        }
+          if (nextTrack?.audioUrl) crossfadeTo(nextTrack.audioUrl, true);
+        }, 2000);
       }
     };
-    const onEnded = () => {
-      // Only fires for native tracks (live streams never end)
-      const pl = playlistRef.current;
-      if (pl.length > 0) {
-        const next = (nativeIdxRef.current + 1) % pl.length;
-        nativeIdxRef.current = next;
-        setNativeIdx(next);
-      }
+    const handleWaiting = (which: "A" | "B") => () => {
+      if (activeRef.current === which && !transitionRef.current) setBufferState("loading");
+    };
+    const handlePlaying = (which: "A" | "B") => () => {
+      if (activeRef.current === which) setBufferState("live");
     };
 
-    audio.addEventListener("playing", onPlaying);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("waiting", onWaiting);
-    audio.addEventListener("error", onError);
-    audio.addEventListener("ended", onEnded);
+    const onA_end = handleEnded("A"); const onB_end = handleEnded("B");
+    const onA_err = handleError("A"); const onB_err = handleError("B");
+    const onA_wait = handleWaiting("A"); const onB_wait = handleWaiting("B");
+    const onA_play = handlePlaying("A"); const onB_play = handlePlaying("B");
+
+    a.addEventListener("ended", onA_end);
+    b.addEventListener("ended", onB_end);
+    a.addEventListener("error", onA_err);
+    b.addEventListener("error", onB_err);
+    a.addEventListener("waiting", onA_wait);
+    b.addEventListener("waiting", onB_wait);
+    a.addEventListener("playing", onA_play);
+    b.addEventListener("playing", onB_play);
+
     return () => {
-      audio.removeEventListener("playing", onPlaying);
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("waiting", onWaiting);
-      audio.removeEventListener("error", onError);
-      audio.removeEventListener("ended", onEnded);
+      a.removeEventListener("ended", onA_end);
+      b.removeEventListener("ended", onB_end);
+      a.removeEventListener("error", onA_err);
+      b.removeEventListener("error", onB_err);
+      a.removeEventListener("waiting", onA_wait);
+      b.removeEventListener("waiting", onB_wait);
+      a.removeEventListener("playing", onA_play);
+      b.removeEventListener("playing", onB_play);
     };
-  }, [station.id, station.streamUrl, station.isNative]);
+  }, [crossfadeTo, nextTrack?.audioUrl]);
 
-  // Watchdog: if not playing and not paused-by-user, try resume every 10s
   const userPausedRef = useRef(false);
+
+  const togglePlay = useCallback(() => {
+    const active = getActive();
+    if (!active) return;
+    if (isPlaying) {
+      userPausedRef.current = true;
+      // Smooth fade out instead of hard pause to avoid click
+      rampVolume(active, active.volume, 0, 200, () => {
+        try { active.pause(); } catch {}
+        setIsPlaying(false);
+      });
+    } else {
+      userPausedRef.current = false;
+      active.volume = 0;
+      active.play().then(() => {
+        rampVolume(active, 0, isMuted ? 0 : volume, 200);
+        setIsPlaying(true);
+      }).catch(() => {});
+    }
+  }, [isPlaying, isMuted, volume]);
+
+  const skipNative = useCallback(() => {
+    if (nextTrack?.audioUrl) crossfadeTo(nextTrack.audioUrl, true);
+  }, [crossfadeTo, nextTrack?.audioUrl]);
+
+  // Watchdog: if not playing and not user-paused, try resume every 10s
   useEffect(() => {
     const iv = setInterval(() => {
-      const audio = audioRef.current;
-      if (!audio || !sourceUrl || userPausedRef.current) return;
-      if (audio.paused && !isPlaying) {
-        audio.play().catch(() => {});
+      const active = getActive();
+      if (!active || userPausedRef.current) return;
+      if (active.paused && !isPlaying && currentTrack?.audioUrl) {
+        active.play().catch(() => {});
       }
     }, 10000);
     return () => clearInterval(iv);
-  }, [sourceUrl, isPlaying]);
+  }, [isPlaying, currentTrack?.audioUrl]);
 
-  const togglePlay = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      userPausedRef.current = true;
-      audio.pause();
-    } else {
-      userPausedRef.current = false;
-      audio.play().then(() => setIsPlaying(true)).catch(() => {});
-    }
-  }, [isPlaying]);
-
-  const skipNative = useCallback(() => {
-    const pl = playlistRef.current;
-    if (!pl.length) return;
-    const next = (nativeIdxRef.current + 1) % pl.length;
-    nativeIdxRef.current = next;
-    setNativeIdx(next);
-  }, []);
-
-  const coverSrc = station.isNative
-    ? (currentNativeTrack?.coverImage || currentNativeTrack?.artist?.profileImage || null)
-    : null;
-
-  const nowPlayingTitle = station.isNative
-    ? (currentNativeTrack?.title || "AITIFY NATIVE")
-    : station.label;
-  const nowPlayingSub = station.isNative
-    ? (currentNativeTrack?.artist?.name || "AITITRADE")
-    : station.tagline;
+  const coverSrc = currentTrack?.coverImage || currentTrack?.artist?.profileImage || null;
+  const nowPlayingTitle = currentTrack?.title || "AITIFY NATIVE";
+  const nowPlayingSub = currentTrack?.artist?.name || "AITITRADE";
 
   return (
     <div className="fixed top-[74px] left-0 right-0 z-40 font-mono" data-testid="native-radio-player">
-      <audio ref={audioRef} preload="auto" crossOrigin="anonymous" />
+      <audio ref={audioARef} preload="auto" crossOrigin="anonymous" />
+      <audio ref={audioBRef} preload="auto" crossOrigin="anonymous" />
 
       <div className="bg-black/95 backdrop-blur-sm border-b border-emerald-500/20">
-        {/* Station selector strip */}
-        <div className="flex items-stretch gap-0 border-b border-emerald-500/20 overflow-x-auto scrollbar-hide bg-black">
-          {STREAM_STATIONS.map(s => {
-            const active = s.id === stationId;
-            return (
-              <button
-                key={s.id}
-                onClick={() => { setStationId(s.id); userPausedRef.current = false; }}
-                className={`flex-shrink-0 px-4 py-2.5 text-[11px] sm:text-xs font-extrabold tracking-wider border-r border-emerald-500/20 transition-colors whitespace-nowrap ${
-                  active ? "bg-emerald-500/20 text-white" : "text-emerald-300/80 hover:text-white hover:bg-emerald-500/10"
-                }`}
-                style={active ? { borderBottom: `3px solid ${s.color}`, color: s.color } : {}}
-                data-testid={`btn-station-${s.id}`}
-              >
-                {active && <span className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle animate-pulse" style={{ background: s.color }} />}
-                {s.label}
-              </button>
-            );
-          })}
+        {/* Station strip */}
+        <div className="bg-black border-b border-emerald-500/20 px-4 py-2 flex items-center justify-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full animate-pulse" style={{ background: STATION.color }} />
+          <span className="text-[12px] sm:text-sm font-extrabold tracking-wider" style={{ color: STATION.color }}>
+            {STATION.label}
+          </span>
+          <span className="hidden sm:inline text-[9px] text-emerald-500/60 ml-2">{STATION.tagline}</span>
         </div>
 
         {/* Now playing bar */}
         <div className="max-w-7xl mx-auto px-4 flex items-center gap-2.5 h-10">
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <Disc3 className={`h-3 w-3 ${isPlaying ? "animate-spin" : ""}`} style={{ color: station.color, animationDuration: "2s" }} />
-            <span className="text-[8px] font-extrabold tracking-widest hidden sm:inline" style={{ color: station.color }}>{station.label}</span>
+            <Disc3 className={`h-3 w-3 ${isPlaying ? "animate-spin" : ""}`} style={{ color: STATION.color, animationDuration: "2s" }} />
           </div>
 
           <div className="w-7 h-7 flex-shrink-0 bg-emerald-950 border border-emerald-500/20 overflow-hidden">
             {coverSrc ? (
               <img src={coverSrc} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: `${station.color}15` }}>
-                {station.isNative ? <Music2 className="h-3 w-3" style={{ color: station.color }} /> : <RadioIcon className="h-3 w-3" style={{ color: station.color }} />}
+              <div className="w-full h-full flex items-center justify-center" style={{ background: `${STATION.color}15` }}>
+                <Music2 className="h-3 w-3" style={{ color: STATION.color }} />
               </div>
             )}
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-extrabold truncate" style={{ color: station.color }}>{nowPlayingTitle.toUpperCase()}</p>
+            <p className="text-[10px] font-extrabold truncate" style={{ color: STATION.color }}>{nowPlayingTitle.toUpperCase()}</p>
             <p className="text-[8px] text-emerald-500/60 truncate">{nowPlayingSub}</p>
           </div>
 
@@ -239,17 +303,15 @@ export default function NativeRadioPlayer() {
             >
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 ml-0.5" />}
             </button>
-            {station.isNative && (
-              <button
-                onClick={skipNative}
-                disabled={!playlist.length}
-                className="p-0.5 text-emerald-500/60 hover:text-lime-400 disabled:opacity-20"
-                data-testid="btn-radio-skip"
-                aria-label="Skip"
-              >
-                <SkipForward className="h-3 w-3" />
-              </button>
-            )}
+            <button
+              onClick={skipNative}
+              disabled={!playlist.length || transitionRef.current}
+              className="p-0.5 text-emerald-500/60 hover:text-lime-400 disabled:opacity-20"
+              data-testid="btn-radio-skip"
+              aria-label="Skip"
+            >
+              <SkipForward className="h-3 w-3" />
+            </button>
             <button
               onClick={() => setIsMuted(!isMuted)}
               className="p-0.5 text-emerald-500/40 hover:text-emerald-400/70 ml-1"

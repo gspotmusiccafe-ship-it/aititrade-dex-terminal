@@ -1840,6 +1840,9 @@ export async function registerRoutes(
       }
       const duration = parseInt(req.body.duration);
 
+      const rawPrice = parseFloat(req.body.unitPrice);
+      const unitPrice = isNaN(rawPrice) ? 2.00 : Math.max(0.50, Math.min(1000, rawPrice));
+
       const trackData = {
         artistId: artist.id,
         title,
@@ -1850,10 +1853,35 @@ export async function registerRoutes(
         coverImage,
         albumId: null,
         releaseDate: null,
+        unitPrice: unitPrice.toFixed(2),
       };
 
       const validated = insertTrackSchema.parse(trackData);
       const track = await storage.createTrack(validated);
+
+      // Auto-list on the Music Market trade floor at the CEO's set price
+      try {
+        const poolSize = unitPrice >= 20 ? 8 : unitPrice >= 10 ? 12 : unitPrice >= 4 ? 15 : unitPrice >= 2 ? 20 : 25;
+        await db.insert(marketListings).values({
+          trackId: track.id,
+          title: track.title,
+          artistName: artist.name || "AITITRADE",
+          coverImage: track.coverImage || null,
+          genre: track.genre || null,
+          basePrice: unitPrice.toFixed(2),
+          currentPrice: unitPrice.toFixed(2),
+          highPrice: unitPrice.toFixed(2),
+          lowPrice: unitPrice.toFixed(2),
+          volume: 0,
+          totalSold: 0,
+          maxSupply: poolSize,
+          active: true,
+        });
+        console.log(`[MARKET] Minted "${track.title}" → trade floor @ $${unitPrice.toFixed(2)} (pool: ${poolSize})`);
+      } catch (listErr) {
+        console.error("[MARKET] Failed to auto-list new track:", listErr);
+      }
+
       res.status(201).json(track);
     } catch (error) {
       console.error("Error creating track:", error);
