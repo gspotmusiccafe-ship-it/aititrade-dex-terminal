@@ -169,7 +169,7 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 const PORT = process.env.PORT || 8080;
-app.listen(Number(PORT), "0.0.0.0", () => {
-  console.log(`AITITRADE Station Live on Port ${PORT}`);
-});
-})();
+  app.listen(Number(PORT), "0.0.0.0", () => {
+    console.log(`AITITRADE Station Live on Port ${PORT}`);
+  });
+})(); // This closes the main async function and keeps the signal clean
