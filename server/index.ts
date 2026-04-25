@@ -168,9 +168,8 @@ app.use((req, res, next) => {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
-
-  const PORT = Number(process.env.PORT) || 5000;
-  httpServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`Exchange Server live on port ${PORT}`);
-  });
-})();
+const PORT = process.env.PORT || 8080;
+app.listen(Number(PORT), "0.0.0.0", () => {
+  console.log(`AITITRADE Station Live on Port ${PORT}`);
+});
+ 
