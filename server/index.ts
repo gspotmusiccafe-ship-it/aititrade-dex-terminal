@@ -167,9 +167,9 @@ app.use((req, res, next) => {
   } else {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
-  }
-const PORT = process.env.PORT || 8080;
+ // Start the server on Port 8080 for Google Cloud
+  const PORT = process.env.PORT || 8080;
   app.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`AITITRADE Station Live on Port ${PORT}`);
   });
-})(); // This closes the main async function and keeps the signal clean
+})(); // This bracket closes the main async function
