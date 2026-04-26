@@ -7,3 +7,6 @@ steps:
     args: ['run', 'build']
   - name: 'gcr.io/cloud-builders/firebase'
     args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
