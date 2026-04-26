@@ -6,7 +6,7 @@ steps:
     entrypoint: 'npm'
     args: ['run', 'build']
   - name: 'gcr.io/cloud-builders/firebase'
- args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting', '--config', 'server/firebase.json']
+    args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting', '--config', 'server/firebase.json']
 
 options:
   logging: CLOUD_LOGGING_ONLY
