@@ -5,7 +5,7 @@ steps:
   - name: 'node:20'
     entrypoint: 'npm'
     args: ['run', 'build']
-  # We are pinning this version to stop the "Retry Budget Exhausted" error
+  # We pinned this version to kill the "Retry Budget Exhausted" error
   - name: 'gcr.io/cloud-builders/firebase:3.12.0'
     args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting']
 
