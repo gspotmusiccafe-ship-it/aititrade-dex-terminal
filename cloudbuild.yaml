@@ -6,10 +6,10 @@ steps:
   - name: 'node:20'
     entrypoint: 'npm'
     args: ['run', 'build']
-    # THIS IS THE BRIDGE - WITHOUT THIS, THE CODE CAN'T SEE THE FUEL
+    # THIS PULLS THE VARIABLES YOU ADDED TO THE TRIGGER INTO THE CODE
     env:
       - 'DATABASE_URL=$_DATABASE_URL'
 
-  # THE NEW 2026 OFFICIAL GOOGLE PATH
+  # THE OFFICIAL FIREBASE DEPLOY PATH
   - name: 'us-docker.pkg.dev/firebase-cli/us/firebase'
     args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting']
