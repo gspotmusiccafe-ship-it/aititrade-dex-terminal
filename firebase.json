@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "aititrade-exchange-pro",
+    "site": "aititrade-exchange-pro-68e08",
     "public": "dist/public",
     "rewrites": [
       {
@@ -13,3 +13,4 @@
     ]
   }
 }
+
