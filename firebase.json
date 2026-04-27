@@ -1,14 +1,16 @@
 {
   "hosting": {
+    "site": "aititrade-exchange-pro-fac49",
     "public": "dist/public",
     "rewrites": [
       {
         "source": "**",
         "run": {
-          "serviceId": "aititrade-exchange-pro-fac49",
+          "serviceId": "aititrade-dex-terminal",
           "region": "us-east4"
         }
       }
     ]
   }
 }
+
