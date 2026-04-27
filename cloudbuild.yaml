@@ -15,3 +15,5 @@ steps:
     args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting']
 options:
   logging: CLOUD_LOGGING_ONLY
+options:
+  logging: CLOUD_LOGGING_ONLY
