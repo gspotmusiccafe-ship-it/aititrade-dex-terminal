@@ -9,11 +9,7 @@
     "rewrites": [
       {
         "source": "**",
-        "run": {
-          "serviceId": "aititrade-dex-terminal", 
-          "region": "us-central1"
-        }
-      }
-    ]
-  }
-}
+     "run": {
+  "serviceId": "aititrade-dex-terminal",
+  "region": "us-east4" 
+}  
