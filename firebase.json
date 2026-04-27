@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist",
+    "public": ".",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -9,7 +9,10 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "/index.html"
+        "run": {
+          "serviceId": "aititrade-dex-terminal", 
+          "region": "us-central1"
+        }
       }
     ]
   }
