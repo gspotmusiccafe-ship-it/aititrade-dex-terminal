@@ -1,15 +1,14 @@
 {
   "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "public": "dist/public",
     "rewrites": [
       {
         "source": "**",
-     "run": {
-  "serviceId": "aititrade-dex-terminal",
-  "region": "us-east4" 
-}  
+        "run": {
+          "serviceId": "aititrade-dex-terminal",
+          "region": "us-east4"
+        }
+      }
+    ]
+  }
+}
