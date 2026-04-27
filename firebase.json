@@ -5,11 +5,10 @@
       {
         "source": "**",
         "run": {
-          "serviceId": "aititrade-dex-terminal",
+          "serviceId": "aititrade-exchange-pro-fac49",
           "region": "us-east4"
         }
       }
     ]
   }
 }
-
