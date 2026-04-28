@@ -7,7 +7,8 @@
         "source": "**",
         "run": {
           "serviceId": "aititrade-dex-terminal",
-          "region": "us-east4"
+          "region": "us-east4",
+          "projectId": "aititrade-dex-9d041"
         }
       }
     ]
