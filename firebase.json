@@ -1,7 +1,7 @@
 {
   "hosting": {
     "site": "aititrade-exchange-pro-68e08",
-    "public": "dist/public",
+    "public": "client/dist",
     "rewrites": [
       {
         "source": "**",
