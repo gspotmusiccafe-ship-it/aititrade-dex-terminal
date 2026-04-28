@@ -12,7 +12,7 @@ steps:
 
   # THE OFFICIAL 2026 FIREBASE DEPLOY
   - name: 'us-docker.pkg.dev/firebase-cli/us/firebase'
-    args: ['deploy', '--project', 'aititrade-exchange-pro', '--only', 'hosting']
+    args: ['deploy', '--project', 'aititrade-dex-9d041', '--only', 'hosting']
 options:
   logging: CLOUD_LOGGING_ONLY
 options:
