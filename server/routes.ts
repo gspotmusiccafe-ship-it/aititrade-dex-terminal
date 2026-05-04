@@ -1,34 +1,23 @@
-// THE ACCUMULATIVE ACCOUNTING ENGINE
-export async function finalizeTradeCycle(blockId: number, selectedROIs: number[]) {
-    // 1. Calculate the actual yield based on the Predetermined ROI of the 10 Portals
-    // selectedROIs is an array of the 10 percentages the user picked (e.g., [0.65, 0.80, 0.50...])
+import { getSheetData } from './sheets-logger'; // This links to your Drizzell/Global Index
+
+export async function finalizeTradeCycle(blockId: number, songIds: string[]) {
+    // 1. Fetch the Live ROI from your Google Sheet Index
+    const globalIndex = await getSheetData(process.env.SPREADSHEET_ID);
     
+    // 2. Match the played songs to their Sheet Rows to get the Real ROI
+    const selectedSongs = globalIndex.filter(row => songIds.includes(row.id));
+    const totalROI = selectedSongs.reduce((sum, song) => sum + parseFloat(song.roi), 0) / 10;
+
+    // 3. Update the Neon Ledger with the Accumulative Total
     const fetchBlock = await pool.query(`SELECT * FROM asset_ledger WHERE block_id = $1`, [blockId]);
-    const currentPrincipal = parseFloat(block.rows[0].current_block_value);
-    
-    // Calculate the total yield for this specific 10-song block
-    const totalROI = selectedROIs.reduce((a, b) => a + b, 0) / 10; 
-    const cycleProfit = currentPrincipal * totalROI;
-    const newAccumulatedValue = currentPrincipal + cycleProfit;
+    const currentPrincipal = parseFloat(fetchBlock.rows[0].current_block_value);
+    const newAccumulatedValue = currentPrincipal * (1 + (totalROI / 100));
 
-    // 2. Log the Results (No Payout yet, just Accounting)
-    const updateQuery = `
+    await pool.query(`
         UPDATE asset_ledger 
-        SET current_block_value = $1, 
-            trades_completed = trades_completed + 1,
-            last_broadcast_sync = NOW()
+        SET current_block_value = $1, trades_completed = trades_completed + 1 
         WHERE block_id = $2
-        RETURNING trades_completed;
-    `;
-    
-    const result = await pool.query(updateQuery, [newAccumulatedValue, blockId]);
-    const cyclesDone = result.rows[0].trades_completed;
+    `, [newAccumulatedValue, blockId]);
 
-    // 3. Check for the 10th Cycle Settlement
-    if (cyclesDone >= 10) {
-        await pool.query(`UPDATE asset_ledger SET exit_status = 'SETTLED' WHERE block_id = $1`, [blockId]);
-        return { status: "FINAL_SETTLEMENT", value: newAccumulatedValue };
-    }
-
-    return { status: "CYCLE_COMPLETE", current_value: newAccumulatedValue, next_cycle: cyclesDone + 1 };
+    return { status: "SUCCESS", newValue: newAccumulatedValue };
 }
